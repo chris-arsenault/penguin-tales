@@ -36,7 +36,14 @@
       "subtypes": [
         "colony"
       ],
-      "pickStrategy": "random"
+      "pickStrategy": "random",
+      "saturationLimits": [
+        {
+          "relationshipKind": "resident_of",
+          "direction": "in",
+          "maxCount": 5
+        }
+      ]
     },
     "creation": [
       {
@@ -560,6 +567,18 @@
     "selection": {
       "strategy": "by_kind",
       "kind": "faction",
+      "saturationLimits": [
+        {
+          "relationshipKind": "splinter_of",
+          "direction": "in",
+          "maxCount": 1
+        },
+        {
+          "relationshipKind": "allied_with",
+          "direction": "out",
+          "maxCount": 3
+        }
+      ],
       "filters": [
         {
           "type": "graph_path",
@@ -740,7 +759,14 @@
       "subtypes": [
         "colony"
       ],
-      "pickStrategy": "random"
+      "pickStrategy": "random",
+      "saturationLimits": [
+        {
+          "relationshipKind": "originated_in",
+          "direction": "in",
+          "maxCount": 4
+        }
+      ]
     },
     "creation": [
       {
@@ -1365,7 +1391,14 @@
         "mayor"
       ],
       "statusFilter": "alive",
-      "pickStrategy": "random"
+      "pickStrategy": "random",
+      "saturationLimits": [
+        {
+          "relationshipKind": "discovered_by",
+          "direction": "in",
+          "maxCount": 2
+        }
+      ]
     },
     "creation": [
       {
@@ -1719,6 +1752,13 @@
     "selection": {
       "strategy": "by_kind",
       "kind": "faction",
+      "saturationLimits": [
+        {
+          "relationshipKind": "participant_in",
+          "direction": "out",
+          "maxCount": 2
+        }
+      ],
       "filters": [
         {
           "type": "has_relationship",
@@ -2308,7 +2348,14 @@
       "subtypes": [
         "colony"
       ],
-      "pickStrategy": "random"
+      "pickStrategy": "random",
+      "saturationLimits": [
+        {
+          "relationshipKind": "originated_in",
+          "direction": "in",
+          "maxCount": 4
+        }
+      ]
     },
     "creation": [
       {
@@ -2430,6 +2477,13 @@
         "colony"
       ],
       "pickStrategy": "random",
+      "saturationLimits": [
+        {
+          "relationshipKind": "originated_in",
+          "direction": "in",
+          "maxCount": 4
+        }
+      ],
       "filters": [
         {
           "type": "graph_path",
@@ -2642,7 +2696,14 @@
     "selection": {
       "strategy": "by_kind",
       "kind": "faction",
-      "pickStrategy": "random"
+      "pickStrategy": "random",
+      "saturationLimits": [
+        {
+          "relationshipKind": "practitioner_of",
+          "direction": "out",
+          "maxCount": 3
+        }
+      ]
     },
     "creation": [
       {
@@ -2914,6 +2975,13 @@
         "outlaw"
       ],
       "statusFilter": "alive",
+      "saturationLimits": [
+        {
+          "relationshipKind": "practitioner_of",
+          "direction": "out",
+          "maxCount": 3
+        }
+      ],
       "filters": [
         {
           "type": "graph_path",
@@ -3043,6 +3111,13 @@
       "statusFilter": "alive",
       "pickStrategy": "random",
       "minProminence": "renowned",
+      "saturationLimits": [
+        {
+          "relationshipKind": "believer_of",
+          "direction": "out",
+          "maxCount": 2
+        }
+      ],
       "filters": [
         {
           "type": "graph_path",

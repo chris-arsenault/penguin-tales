@@ -235,10 +235,14 @@ export default function StyleSelector({
 
 /**
  * Pick a random element from an array
+ * Uses crypto.getRandomValues for better randomness in rapid succession
  */
 function pickRandom(arr) {
   if (!arr || arr.length === 0) return null;
-  return arr[Math.floor(Math.random() * arr.length)];
+  const randomBuffer = new Uint32Array(1);
+  crypto.getRandomValues(randomBuffer);
+  const randomValue = randomBuffer[0] / (0xFFFFFFFF + 1);
+  return arr[Math.floor(randomValue * arr.length)];
 }
 
 /**

@@ -81,7 +81,9 @@ export interface EntityContext {
     /** Full description (if any) - used for text prompts */
     description: string;
     tags: Record<string, string | number | boolean>;
-    /** Distinctive visual traits for image generation */
+    /** One-sentence visual thesis - the primary visual signal for this entity */
+    visualThesis?: string;
+    /** Distinctive visual traits for image generation (support the thesis) */
     visualTraits?: string[];
   };
 
@@ -118,6 +120,8 @@ export interface DescriptionTemplate {
   tone: string;
   constraints: string;
   outputFormat: string;
+  /** Elements to avoid in visual thesis/traits (e.g., overused motifs) */
+  visualAvoid?: string;
   fullTemplate?: string;        // Advanced mode override
 }
 
@@ -195,12 +199,13 @@ Consider their age in the world ({{entityAge}}) - ancient entities carry history
 
 Don't invent major relationships not implied by the data - the relationships provided are canonical.`,
 
-  outputFormat: `Return JSON only with keys summary, description, aliases, visualTraits.
+  outputFormat: `Return JSON only with keys summary, description, aliases, visualThesis, visualTraits.
 
 summary: 1-2 sentences, compressed and faithful to the description.
 description: 2-4 sentences, vivid and specific.
 aliases: array of alternate names or titles (can be empty).
-visualTraits: array of 2-4 distinctive visual traits that make this entity unique and recognizable.
+visualThesis: ONE sentence - the dominant visual signal (must pass silhouette test).
+visualTraits: array of 2-4 traits that support and reinforce the thesis.
 
 Summary and description must not contradict; the summary should not add new facts.`,
 };
@@ -341,12 +346,13 @@ export function buildDescriptionPrompt(
   descriptiveInfo?: DescriptiveInfo
 ): string {
   const requiredOutput = `OUTPUT FORMAT (required):
-Return JSON only with keys summary, description, aliases, visualTraits.
+Return JSON only with keys summary, description, aliases, visualThesis, visualTraits.
 
 summary: 1-2 sentences, compressed and faithful to the description.
 description: 2-4 sentences, vivid and specific.
 aliases: array of alternate names or titles (can be empty).
-visualTraits: array of 2-4 distinctive visual traits that make this entity unique and recognizable.
+visualThesis: ONE sentence - the dominant visual signal (must pass silhouette test).
+visualTraits: array of 2-4 traits that support and reinforce the thesis.
 
 Summary and description must not contradict; the summary should not add new facts.`;
 
@@ -426,10 +432,24 @@ ${lines.join('\n')}`;
 }
 
 /**
+ * Build the visual thesis section - the PRIMARY visual signal
+ */
+function buildVisualThesisSection(visualThesis: string | undefined): string {
+  if (!visualThesis) {
+    return '';
+  }
+  return `VISUAL THESIS (PRIMARY - this is the dominant visual signal):
+${visualThesis}`;
+}
+
+/**
  * Build an image prompt from template + context
  *
  * This prompt is sent to Claude for refinement before being sent to an image model.
  * It focuses on visual elements only - narrative context is handled elsewhere.
+ *
+ * HIERARCHY: Visual Thesis → Supporting Traits → Cultural Identity → Style
+ * The thesis is THE identifying feature; everything else supports it.
  */
 export function buildImagePrompt(
   template: ImageTemplate,
@@ -444,6 +464,9 @@ export function buildImagePrompt(
   // Use summary for image prompts (shorter), fall back to description
   const summaryText = e.summary || e.description;
 
+  // Visual thesis - THE primary visual signal (silhouette-testable)
+  const visualThesisSection = buildVisualThesisSection(e.visualThesis);
+
   // Build style sections
   const styleSection = styleInfo?.artisticPromptFragment
     ? `STYLE: ${styleInfo.artisticPromptFragment}`
@@ -457,34 +480,35 @@ export function buildImagePrompt(
     ? `COMPOSITION: ${styleInfo.compositionPromptFragment}`
     : '';
 
-  // Individual traits section - the key differentiator
-  const individualTraitsSection = buildIndividualTraitsSection(e.visualTraits);
+  // Supporting traits - reinforce the thesis, don't compete with it
+  const supportingTraitsSection = e.visualTraits?.length
+    ? `SUPPORTING TRAITS (reinforce the thesis):\n${e.visualTraits.map(t => `- ${t}`).join('\n')}`
+    : '';
 
   // Cultural visual identity - shared visual elements
   const visualIdentitySection = buildVisualIdentitySection(styleInfo?.visualIdentity, e.culture);
 
-  // Differentiation instruction when traits are present
-  const differentiationSection = e.visualTraits?.length
-    ? `BALANCE: Individual traits are the focal point. Cultural identity provides context. Both should be visible.`
-    : '';
+  // Stylization mandate
+  const stylizationSection = 'RENDER: Favor stylized exaggeration over anatomical realism. Push proportions to emphasize the thesis.';
 
   const parts = [
     // Instructions for Claude (how to build the image prompt)
     `IMAGE INSTRUCTIONS: ${expandTemplate(template.imageInstructions, context)}`,
     '',
-    // Visual style settings
-    styleSection,
-    colorPaletteSection,
-    compositionSection,
-    '',
     // Subject identification
     `SUBJECT: ${e.name}, a ${e.subtype} ${e.kind}`,
     summaryText ? `CONTEXT: ${summaryText}` : '',
     '',
-    // Visual details (priority order)
-    individualTraitsSection,
+    // VISUAL HIERARCHY (in priority order)
+    visualThesisSection,
+    supportingTraitsSection,
     visualIdentitySection,
-    differentiationSection,
+    '',
+    // Visual style settings
+    styleSection,
+    colorPaletteSection,
+    compositionSection,
+    stylizationSection,
     '',
     // World context (brief)
     `SETTING: ${context.world.name}`,
@@ -598,16 +622,40 @@ function buildVisualIdentitySection(visualIdentity: Record<string, string> | und
   return `VISUAL IDENTITY (${culture}):\n${lines.join('\n')}`;
 }
 
+/**
+ * Humanize relationship strength for natural prompt text
+ */
+function humanizeStrength(strength: number | undefined): 'strong' | 'moderate' | 'weak' {
+  if (strength === undefined) return 'moderate';
+  if (strength >= 0.7) return 'strong';
+  if (strength >= 0.4) return 'moderate';
+  return 'weak';
+}
+
 function formatRelationships(relationships: ResolvedRelationship[]): string {
   if (!relationships.length) return '(No established relationships)';
 
-  return relationships
+  // Categorize by strength
+  const strongOrModerate = relationships.filter(r => {
+    const strength = humanizeStrength(r.strength);
+    return strength === 'strong' || strength === 'moderate';
+  });
+
+  // Filter out weak relationships if entity has 5+ strong/moderate ones
+  // (keep weak relationships if that's all they have)
+  const filtered = strongOrModerate.length >= 5
+    ? strongOrModerate
+    : relationships;
+
+  return filtered
     .slice(0, 8) // Limit to avoid prompt bloat
     .map(r => {
       let line = `- ${r.kind}: ${r.targetName} (${r.targetKind}`;
       if (r.targetSubtype) line += `/${r.targetSubtype}`;
       line += ')';
-      if (r.strength !== undefined) line += ` [strength: ${r.strength.toFixed(2)}]`;
+      // Use humanized strength instead of raw number
+      const strength = humanizeStrength(r.strength);
+      line += ` [${strength}]`;
       return line;
     })
     .join('\n');

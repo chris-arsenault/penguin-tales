@@ -229,6 +229,8 @@ export function useEnrichmentQueue(
         paletteEntityKind: nextItem.paletteEntityKind,
         paletteWorldContext: nextItem.paletteWorldContext,
         paletteCultureContext: nextItem.paletteCultureContext,
+        // Visual avoid for thesis generation
+        visualAvoid: nextItem.visualAvoid,
       };
 
       workerState.worker.postMessage({ type: 'execute', task });
@@ -411,6 +413,8 @@ export function useEnrichmentQueue(
         description?: string;
         visualIdentity?: Record<string, string>;
       }>;
+      // Visual avoid for thesis generation
+      visualAvoid?: string;
     }>) => {
       const newItems: QueueItem[] = [];
       const currentQueue = queueRef.current;
@@ -437,6 +441,8 @@ export function useEnrichmentQueue(
           paletteEntityKind: item.paletteEntityKind,
           paletteWorldContext: item.paletteWorldContext,
           paletteCultureContext: item.paletteCultureContext,
+          // Visual avoid for thesis generation
+          visualAvoid: item.visualAvoid,
         };
 
         // Find the least busy worker and assign this task

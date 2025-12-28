@@ -18,6 +18,20 @@ const CHRONICLE_MODELS = [
   { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (faster/cheaper)' },
 ];
 
+// Models that support extended thinking
+const THINKING_MODELS = [
+  { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5 (highest quality)' },
+  { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5 (recommended)' },
+];
+
+const THINKING_BUDGETS = [
+  { value: 0, label: 'Disabled' },
+  { value: 4096, label: '4K tokens (light reasoning)' },
+  { value: 8192, label: '8K tokens (moderate)' },
+  { value: 16384, label: '16K tokens (deep reasoning)' },
+  { value: 32768, label: '32K tokens (maximum)' },
+];
+
 const IMAGE_MODELS = [
   { value: 'gpt-image-1.5', label: 'GPT Image 1.5' },
   { value: 'gpt-image-1', label: 'GPT Image 1' },
@@ -153,6 +167,63 @@ export default function ConfigPanel({ config, onConfigChange }) {
           </select>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             Used for Chronicle generation (stories and documents). Long-form narrative generation benefits from higher-quality models.
+          </p>
+        </div>
+      </div>
+
+      <div className="illuminator-card">
+        <div className="illuminator-card-header">
+          <h2 className="illuminator-card-title">Extended Thinking</h2>
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          Used for complex reasoning tasks like trait palette curation. Extended thinking allows the model to reason before responding.
+        </p>
+
+        <div className="illuminator-form-group">
+          <label className="illuminator-label">Model</label>
+          <select
+            value={config.thinkingModel || 'claude-sonnet-4-5-20250929'}
+            onChange={(e) => onConfigChange({ thinkingModel: e.target.value })}
+            className="illuminator-select"
+          >
+            {THINKING_MODELS.map((model) => (
+              <option key={model.value} value={model.value}>
+                {model.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="illuminator-form-group">
+          <label className="illuminator-label">Thinking Budget</label>
+          <select
+            value={config.thinkingBudget || 8192}
+            onChange={(e) => onConfigChange({ thinkingBudget: parseInt(e.target.value, 10) })}
+            className="illuminator-select"
+          >
+            {THINKING_BUDGETS.map((budget) => (
+              <option key={budget.value} value={budget.value}>
+                {budget.label}
+              </option>
+            ))}
+          </select>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Token budget for reasoning before output. Higher values allow deeper analysis but cost more.
+          </p>
+        </div>
+
+        <div className="illuminator-form-group" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+          <label className="illuminator-label" style={{ fontWeight: '600', marginBottom: '8px' }}>Use Thinking For</label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={config.useThinkingForDescriptions || false}
+              onChange={(e) => onConfigChange({ useThinkingForDescriptions: e.target.checked })}
+            />
+            <span>Descriptions (Visual Thesis)</span>
+          </label>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Enable extended thinking for entity descriptions. Helps with visual thesis generation but increases cost.
           </p>
         </div>
       </div>

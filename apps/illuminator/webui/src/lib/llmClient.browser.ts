@@ -21,6 +21,8 @@ export interface LLMRequest {
   model?: string;
   maxTokens?: number;
   temperature?: number;
+  /** Enable extended thinking with budget in tokens (Sonnet/Opus only) */
+  thinkingBudget?: number;
 }
 
 export interface NetworkDebugInfo {
@@ -101,13 +103,26 @@ export class LLMClient {
       attempt++;
       try {
         const logEntry = this.logRequest(request, attempt, callNumber, resolvedModel);
-        const requestBody = {
+
+        // Build request body - extended thinking requires special handling
+        const useThinking = request.thinkingBudget && request.thinkingBudget > 0;
+        const requestBody: Record<string, unknown> = {
           model: resolvedModel,
           max_tokens: request.maxTokens || this.config.maxTokens || 256,
-          temperature: request.temperature ?? this.config.temperature ?? 0.4,
+          // Temperature must be 1 when using extended thinking
+          temperature: useThinking ? 1 : (request.temperature ?? this.config.temperature ?? 0.4),
           system: request.systemPrompt,
           messages: [{ role: 'user', content: request.prompt }],
         };
+
+        // Add extended thinking if requested (Sonnet/Opus only)
+        if (useThinking) {
+          requestBody.thinking = {
+            type: 'enabled',
+            budget_tokens: request.thinkingBudget,
+          };
+        }
+
         const rawRequest = JSON.stringify(requestBody);
         lastDebug = { request: rawRequest };
 

@@ -6,13 +6,14 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import type { QueueItem, NetworkDebugInfo } from '../lib/enrichmentTypes';
+import type { QueueItem, NetworkDebugInfo, DescriptionChainDebug } from '../lib/enrichmentTypes';
 
 interface EntityEnrichment {
   description?: {
     summary: string;
     description: string;
     aliases: string[];
+    visualThesis?: string;
     visualTraits: string[];
     generatedAt: number;
     model: string;
@@ -20,6 +21,8 @@ interface EntityEnrichment {
     actualCost?: number;
     inputTokens?: number;
     outputTokens?: number;
+    debug?: NetworkDebugInfo;
+    chainDebug?: DescriptionChainDebug;
   };
   image?: {
     imageId: string;
@@ -233,19 +236,22 @@ export default function EntityDetailsModal({
 }: EntityDetailsModalProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Get debug info - prefer persisted enrichment debug, fall back to queue
+  // Get debug info - prefer chain debug, fall back to legacy debug or queue
   const enrichment = entity?.enrichment;
   const descEnrichment = enrichment?.description;
 
-  // First check persisted debug on the entity
-  let debugInfo: NetworkDebugInfo | undefined = descEnrichment?.debug;
+  // Chain debug (narrative → thesis → traits)
+  const chainDebug: DescriptionChainDebug | undefined = descEnrichment?.chainDebug;
+
+  // Legacy single debug (for backwards compat)
+  let legacyDebug: NetworkDebugInfo | undefined = descEnrichment?.debug;
 
   // If no persisted debug, check queue for recent task
-  if (!debugInfo && entity) {
+  if (!legacyDebug && !chainDebug && entity) {
     const descriptionQueueItem = queue.find(
       (item) => item.entityId === entity.id && item.type === 'description' && item.debug
     );
-    debugInfo = descriptionQueueItem?.debug;
+    legacyDebug = descriptionQueueItem?.debug;
   }
 
   // Close on escape key
@@ -360,6 +366,34 @@ export default function EntityDetailsModal({
                 margin: 0,
               }}>
                 {descEnrichment.summary}
+              </p>
+            </div>
+          )}
+
+          {/* Visual Thesis - The primary visual signal */}
+          {descEnrichment?.visualThesis && (
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{
+                fontSize: '11px',
+                color: 'rgba(139, 92, 246, 0.8)',
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}>
+                Visual Thesis
+              </div>
+              <p style={{
+                fontSize: '14px',
+                color: 'rgba(255, 255, 255, 0.95)',
+                lineHeight: '1.6',
+                margin: 0,
+                padding: '12px 16px',
+                background: 'rgba(139, 92, 246, 0.1)',
+                border: '1px solid rgba(139, 92, 246, 0.3)',
+                borderRadius: '8px',
+                fontStyle: 'italic',
+              }}>
+                {descEnrichment.visualThesis}
               </p>
             </div>
           )}
@@ -501,8 +535,8 @@ export default function EntityDetailsModal({
             </>
           )}
 
-          {/* Debug Request/Response */}
-          {debugInfo && (
+          {/* Debug Request/Response - Chain Debug (all 3 steps) */}
+          {(chainDebug || legacyDebug) && (
             <>
               <div style={{
                 borderTop: '1px solid rgba(255, 255, 255, 0.1)',
@@ -517,22 +551,108 @@ export default function EntityDetailsModal({
               }}>
                 Debug Info
               </div>
-              <ExpandableSection
-                title="Request"
-                content={debugInfo.request}
-                defaultExpanded={false}
-                charCount={debugInfo.request?.length}
-              />
-              <ExpandableSection
-                title="Response"
-                content={debugInfo.response}
-                defaultExpanded={false}
-                charCount={debugInfo.response?.length}
-              />
+
+              {/* Chain debug: show all 3 steps */}
+              {chainDebug && (
+                <>
+                  {chainDebug.narrative && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{
+                        fontSize: '10px',
+                        color: 'rgba(59, 130, 246, 0.8)',
+                        marginBottom: '6px',
+                        fontWeight: 500,
+                      }}>
+                        Step 1: Narrative
+                      </div>
+                      <ExpandableSection
+                        title="Request"
+                        content={chainDebug.narrative.request}
+                        defaultExpanded={false}
+                        charCount={chainDebug.narrative.request?.length}
+                      />
+                      <ExpandableSection
+                        title="Response"
+                        content={chainDebug.narrative.response}
+                        defaultExpanded={false}
+                        charCount={chainDebug.narrative.response?.length}
+                      />
+                    </div>
+                  )}
+
+                  {chainDebug.thesis && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{
+                        fontSize: '10px',
+                        color: 'rgba(139, 92, 246, 0.8)',
+                        marginBottom: '6px',
+                        fontWeight: 500,
+                      }}>
+                        Step 2: Visual Thesis
+                      </div>
+                      <ExpandableSection
+                        title="Request"
+                        content={chainDebug.thesis.request}
+                        defaultExpanded={false}
+                        charCount={chainDebug.thesis.request?.length}
+                      />
+                      <ExpandableSection
+                        title="Response"
+                        content={chainDebug.thesis.response}
+                        defaultExpanded={false}
+                        charCount={chainDebug.thesis.response?.length}
+                      />
+                    </div>
+                  )}
+
+                  {chainDebug.traits && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{
+                        fontSize: '10px',
+                        color: 'rgba(34, 197, 94, 0.8)',
+                        marginBottom: '6px',
+                        fontWeight: 500,
+                      }}>
+                        Step 3: Visual Traits
+                      </div>
+                      <ExpandableSection
+                        title="Request"
+                        content={chainDebug.traits.request}
+                        defaultExpanded={false}
+                        charCount={chainDebug.traits.request?.length}
+                      />
+                      <ExpandableSection
+                        title="Response"
+                        content={chainDebug.traits.response}
+                        defaultExpanded={false}
+                        charCount={chainDebug.traits.response?.length}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Legacy debug (single step) */}
+              {!chainDebug && legacyDebug && (
+                <>
+                  <ExpandableSection
+                    title="Request"
+                    content={legacyDebug.request}
+                    defaultExpanded={false}
+                    charCount={legacyDebug.request?.length}
+                  />
+                  <ExpandableSection
+                    title="Response"
+                    content={legacyDebug.response}
+                    defaultExpanded={false}
+                    charCount={legacyDebug.response?.length}
+                  />
+                </>
+              )}
             </>
           )}
 
-          {!debugInfo && descEnrichment && (
+          {!chainDebug && !legacyDebug && descEnrichment && (
             <div style={{
               fontSize: '12px',
               color: 'rgba(255, 255, 255, 0.4)',

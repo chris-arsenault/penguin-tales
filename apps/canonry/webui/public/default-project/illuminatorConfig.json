@@ -13,7 +13,8 @@
         "instructions": "Write a description that emerges from who this entity IS and what they're CONNECTED to.\n\nUse the provided relationships to ground the description - if they're allied with a faction, that shapes who they are. If they have rivals, hint at tension. If they're a member of something, show belonging.\n\nThe entity's prominence ({{entity.prominence}}) should calibrate the scope:\n- mythic/renowned: World-shaping, widely known, legendary qualities\n- recognized: Notable within their sphere, respected or feared\n- marginal/forgotten: Intimate scale, personal details, local significance\n\nConsider their age in the world ({{entityAge}}) - ancient entities carry history, new ones have fresh energy.",
         "tone": "Match the world's tone ({{world.tone}}) but let the entity's nature lead. A grim warlord in a whimsical world creates interesting contrast. Write with specificity - name actual connections, reference the culture, ground details in the world of {{world.name}}.",
         "constraints": "Never contradict these facts: {{world.canonFacts}}\n\nWork WITH the existing description if present, expanding rather than replacing.\nDon't invent major relationships not implied by the data - the relationships provided are canonical.",
-        "outputFormat": "2-3 sentences. Dense with meaning, grounded in specifics. Name at least one relationship or cultural detail when relevant."
+        "outputFormat": "2-3 sentences. Dense with meaning, grounded in specifics. Name at least one relationship or cultural detail when relevant.",
+        "visualAvoid": "Flipper/wing gestures as primary identifying element (raised flipper, wing pressed to chest, arms folded). Generic upright penguin poses without distinctive equipment or markings. Body language alone as visual thesis - focus on structural elements: headgear, armor, tools, magical effects, scars, clothing, or other permanent features that define the character's silhouette."
       },
       "image": {
         "imageInstructions": "Create concept art that captures this entity's essence. Focus on the individual traits and visual identity provided. The image should feel like it belongs in an illustrated bestiary or game art book.",
@@ -84,28 +85,28 @@
     },
     "cultureVisualIdentities": {
       "orca": {
-        "SPECIES": "Aggresive barbarian orcas. Their skin shines with eldrich markings from their worship of dead gods",
-        "ARCHITECTURE": "Orcas shun permanent buildings, nomadically moving from hunting ground to hunting ground. They erect temporary traps and walls made of kelp and skulls.",
-        "TECH": "Highly advanced weaponry, using the current of the ocean as a form of near electricity like power. No other non-weapon technology to speak of",
-        "MAGIC": "Brutal, blood soaked rituals. Chthonic worship of dead gods"
+        "SPECIES": "Apex predators. Size and scarification vary by role - raiders lean and scarred, shamans massive and unmarked, warriors somewhere between. Posture ranges from coiled ambush stillness to rigid military display.",
+        "ARCHITECTURE": "No permanent structures. Temporary hunting camps marked by kelp-rope barriers, bone totems, skull warnings. Sacred spaces are natural formations claimed, not built.",
+        "TECH": "Ocean-current weaponry - shock-lances, current-whips, pressure harpoons. Equipment is brutal and functional. Trophy display varies: some drape kills, others maintain austere discipline.",
+        "MAGIC": "Blood and pressure. Rituals leave physical marks - scarification, tooth-notching, fin-splitting. Magic manifests as water distortion, pressure waves, cold spots. Dead god symbols are ancient, half-forgotten, inconsistently applied."
       },
       "nightshelf": {
-        "SPECIES": "Sly penguins of the night. The wear bone armor and glowing crystal jelwery.",
-        "ARCHITECTURE": "Subterranean caves, Glimmering underwater reefs, aritfiical lamps and lights everywhere. Making up for the darkness of their home with their own technology.",
-        "TECH": "Simpler tech than their counterparts, focus mainly on staying warm. Steampunk astect with a heavy use of elemental fire they capture and bring to their caves.",
-        "MAGIC": "Harmony of ice and fire. More natural in alignment. Practical."
+        "SPECIES": "Cave-adapted penguins. Builds range from compact tunnel-runners to broader cavern-dwellers. Bone and crystal mark status but placement varies - some favor crowns, others belts, others hidden talismans. Dress ranges from heavy wrappings to minimal stealth-wear.",
+        "ARCHITECTURE": "Subterranean networks mixing natural caverns and carved tunnels. Bioluminescent accents and fire-braziers for light. Sacred spaces go deeper and darker. Public areas glow; private areas don't.",
+        "TECH": "Captured elemental fire drives everything - braziers, forges, engines. Steampunk aesthetic but visibility varies: lamp-bearers are obvious, shadow-workers hide their gear. Bone integrated as structural material and decoration.",
+        "MAGIC": "Ice and fire in tension. Practical applications over spectacle. Magic users often understated - subtle warmth, quiet frost. Rituals happen in darkness. Effects are felt before seen."
       },
       "aurora-stack": {
-        "SPECIES": "Radiant day penguins. They wear furs and carry staves made of crystalline ice",
-        "ARCHITECTURE": "Hire spires of ice with open air designs, basking in the warms of the sun. Their architecture is elegent and clearly penguin-made, but also blends seamlessly into the surroundings.",
-        "TECH": "Highly advanced technology/m,agic synergy. Their technology is powered by the ice magic that is integral to their lives. They have high speed airships and boats, and significant defenseive capabilties.",
-        "MAGIC": "Harnessing the power of ice to it's fullest extent. Glowing blue power emanates from the very penguins themselves"
+        "SPECIES": "Open-ice penguins. Posture tends tall and proud but varies by role - merchants bustle, mystics stand still, soldiers brace. Crystalline ice integrated into equipment at varying degrees - some carry staves, others wear jewelry, others embed it in armor or tools.",
+        "ARCHITECTURE": "Vertical ice spires with open-air galleries designed to catch aurora-light. Elegant and organic-looking but clearly engineered. Public spaces soar; private quarters are modest cells within the ice.",
+        "TECH": "Ice-magic fusion powers everything. Crystalline conductors, aurora-charged capacitors. Prefer blunt and crushing weapons to blades. Airship crews dress for wind; wall-builders dress for cold; merchants dress for impression.",
+        "MAGIC": "Pure ice channeling. Adepts glow faintly from within - intensity varies by power level. Magic manifests as crystalline growth, temperature drops, aurora-reflection. Mundane members show no glow but may carry charged equipment."
       },
       "world": {
-        "SPECIES": "Desolate Icy Wasteland",
-        "ARCHITECTURE": "A giant, supernatural, iceberg",
-        "TECH": "No tech in da world.",
-        "MAGIC": "The world is magic."
+        "SPECIES": "The Berg itself - supernatural iceberg of impossible scale. Weather is entity, not backdrop.",
+        "ARCHITECTURE": "Natural ice formations that seem almost intentional. Crevasses, spires, shelves, grottos. The berg shifts slowly over generations.",
+        "TECH": "None. The world is pre-technological, post-magical.",
+        "MAGIC": "Ambient and ancient. The ice remembers. Aurora-light carries power. The cold thinks."
       }
     },
     "visualIdentityKeysByKind": {

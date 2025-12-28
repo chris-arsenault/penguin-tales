@@ -185,6 +185,102 @@ function sampleWeighted(entities: HardState[], count: number): HardState[] {
   return picks;
 }
 
+const CULTURE_MATCH_BOOST = 2.0;
+const CULTURE_MISMATCH_PENALTY = 0.5;
+const HUB_PENALTY_THRESHOLD = 5;
+const HUB_PENALTY_EXPONENT = 0.5;
+
+function resolveCultureAnchor(ctx: RuleContext): HardState | undefined {
+  return ctx.self
+    ?? ctx.resolver.resolveEntity('$actor')
+    ?? ctx.resolver.resolveEntity('$target')
+    ?? ctx.resolver.resolveEntity('$instigator')
+    ?? ctx.resolver.resolveEntity('$source');
+}
+
+function calculateHubPenalty(entity: HardState, ctx: RuleContext): number {
+  const totalLinks = ctx.graph.getEntityRelationships(entity.id, 'both').length;
+  if (totalLinks <= HUB_PENALTY_THRESHOLD) return 1.0;
+  const over = totalLinks - HUB_PENALTY_THRESHOLD;
+  return 1 / (1 + Math.pow(over, HUB_PENALTY_EXPONENT));
+}
+
+function computeBiasedWeight(
+  entity: HardState,
+  ctx: RuleContext,
+  baseWeight: number,
+  anchorCulture?: string
+): number {
+  let weight = baseWeight * calculateHubPenalty(entity, ctx);
+  if (anchorCulture) {
+    weight *= entity.culture === anchorCulture ? CULTURE_MATCH_BOOST : CULTURE_MISMATCH_PENALTY;
+  }
+  return weight;
+}
+
+function sampleWeightedByScore(
+  entities: HardState[],
+  weights: number[],
+  count: number
+): HardState[] {
+  if (count <= 0 || entities.length === 0) return [];
+  const pool = entities.map((entity, index) => ({
+    entity,
+    weight: Math.max(0, weights[index] || 0)
+  }));
+  const picks: HardState[] = [];
+  const limit = Math.min(count, pool.length);
+
+  for (let i = 0; i < limit; i++) {
+    const total = pool.reduce((sum, item) => sum + item.weight, 0);
+    if (total <= 0) {
+      const remaining = pool.map(item => item.entity);
+      return picks.concat(sampleRandom(remaining, limit - picks.length));
+    }
+    let roll = Math.random() * total;
+    let pickedIndex = -1;
+    for (let idx = 0; idx < pool.length; idx++) {
+      roll -= pool[idx].weight;
+      if (roll <= 0) {
+        pickedIndex = idx;
+        break;
+      }
+    }
+    if (pickedIndex < 0) {
+      pickedIndex = pool.length - 1;
+    }
+    const picked = pool.splice(pickedIndex, 1)[0];
+    picks.push(picked.entity);
+  }
+
+  return picks;
+}
+
+function applyPickStrategyWithBias(
+  entities: HardState[],
+  rule: SelectionRule,
+  ctx: RuleContext
+): HardState[] {
+  const limit = rule.maxResults && rule.maxResults > 0
+    ? Math.min(rule.maxResults, entities.length)
+    : undefined;
+  const pickStrategy = rule.pickStrategy;
+  const shouldBias = (rule.strategy === 'by_kind' || rule.strategy === 'by_preference_order')
+    && (pickStrategy === 'random' || pickStrategy === 'weighted');
+
+  if (!shouldBias) {
+    return applyPickStrategy(entities, pickStrategy, rule.maxResults);
+  }
+
+  const anchorCulture = resolveCultureAnchor(ctx)?.culture;
+  const baseWeights = entities.map(entity => (
+    pickStrategy === 'weighted' ? getProminenceWeight(entity) : 1
+  ));
+  const weights = entities.map((entity, idx) => computeBiasedWeight(entity, ctx, baseWeights[idx], anchorCulture));
+  const count = limit ?? 1;
+  return sampleWeightedByScore(entities, weights, count);
+}
+
 export function applyPickStrategy(
   entities: HardState[],
   pickStrategy: SelectionRule['pickStrategy'] | VariableSelectionRule['pickStrategy'] | undefined,
@@ -374,7 +470,7 @@ export function selectEntities(
 
   entities = applySaturationLimits(entities, rule.saturationLimits, ctx);
 
-  return applyPickStrategy(entities, rule.pickStrategy, rule.maxResults);
+  return applyPickStrategyWithBias(entities, rule, ctx);
 }
 
 /**

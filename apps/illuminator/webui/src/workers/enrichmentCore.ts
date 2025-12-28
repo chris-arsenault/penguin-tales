@@ -15,6 +15,7 @@ import type {
   SerializableChronicleContext,
   ChronicleStep,
   NetworkDebugInfo,
+  DescriptionChainDebug,
 } from '../lib/enrichmentTypes';
 import {
   estimateTextCost,
@@ -29,6 +30,7 @@ import {
 import {
   getTraitGuidance,
   registerUsedTraits,
+  incrementPaletteUsage,
   getPalette,
   getHistoricalTraits,
   updatePaletteItems,
@@ -85,6 +87,11 @@ export interface WorkerConfig {
   numWorkers?: number;
   useClaudeForImagePrompt?: boolean;
   claudeImagePromptTemplate?: string;
+  // Thinking model configuration (for complex reasoning tasks like palette curation)
+  thinkingModel?: string;       // Model ID (sonnet/opus - must support extended thinking)
+  thinkingBudget?: number;      // Token budget for extended thinking (0 = disabled)
+  // Use thinking model for description generation (visual thesis benefits from reasoning)
+  useThinkingForDescriptions?: boolean;
 }
 
 export type WorkerInbound =
@@ -225,6 +232,7 @@ function parseDescriptionPayload(text: string): {
   summary: string;
   description: string;
   aliases: string[];
+  visualThesis: string;
   visualTraits: string[];
 } {
   const cleaned = stripLeadingWrapper(text);
@@ -243,6 +251,7 @@ function parseDescriptionPayload(text: string): {
   const obj = parsed as Record<string, unknown>;
   const summary = typeof obj.summary === 'string' ? obj.summary.trim() : '';
   const description = typeof obj.description === 'string' ? obj.description.trim() : '';
+  const visualThesis = typeof obj.visualThesis === 'string' ? obj.visualThesis.trim() : '';
   const aliases = Array.isArray(obj.aliases)
     ? obj.aliases
       .filter((alias): alias is string => typeof alias === 'string')
@@ -260,7 +269,7 @@ function parseDescriptionPayload(text: string): {
     throw new Error('Description payload requires summary and description');
   }
 
-  return { summary, description, aliases, visualTraits };
+  return { summary, description, aliases, visualThesis, visualTraits };
 }
 
 async function markChronicleFailure(
@@ -275,6 +284,162 @@ async function markChronicleFailure(
   }
 }
 
+// ============================================================================
+// Chain Prompts: Narrative → Visual Thesis → Visual Traits
+// ============================================================================
+
+/**
+ * Humanize relationship strength for more natural prompt text
+ */
+export function humanizeStrength(strength: number | undefined): string {
+  if (strength === undefined) return 'moderate';
+  if (strength >= 0.7) return 'strong';
+  if (strength >= 0.4) return 'moderate';
+  return 'weak';
+}
+
+/**
+ * Humanize prominence level for natural prompt text
+ */
+export function humanizeProminence(prominence: string): string {
+  switch (prominence) {
+    case 'mythic': return 'legendary, world-shaping';
+    case 'renowned': return 'widely famous';
+    case 'recognized': return 'notable within their sphere';
+    case 'marginal': return 'locally known';
+    case 'forgotten': return 'obscure, fading from memory';
+    default: return prominence;
+  }
+}
+
+/**
+ * Step 1: Narrative prompt - rich description, summary, aliases
+ * This is the creative writing step - prioritize personality, relationships, legacy
+ */
+export function buildNarrativePrompt(): string {
+  return `You are a creative writer helping to build rich, consistent world lore.
+
+READING THE DATA:
+- Prominence indicates fame scope: "legendary" = world-shaping, "locally known" = personal-scale stories
+- Status indicates current state: "active" = alive/operating, "dead/historical" = past tense appropriate
+- Relationships marked [strong] are defining connections; [moderate] are significant; [weak] are flavor
+- Tags like "leader: true" indicate core identity traits - these should inform characterization
+- Cultural Peers are other entities of same culture - use for grounding references
+- Era indicates the time period most associated with this entity
+
+Use [strong] relationships as anchors for the narrative. [weak] relationships are color, not plot.
+
+WRITING FOCUS:
+- Personality: How do they think, speak, carry themselves?
+- Relationships: What ONE [strong] connection most shaped who they are?
+- Legacy: How are they remembered? What mark did they leave?
+- Specificity: Name actual places, people, events from their world
+
+IMPORTANT: Do NOT write a tour of relationships. The description should be ABOUT the entity, not a catalog. Reference ONE relationship that truly defines them.
+
+Bad: "She oversees the treasury of Place X, discovered the caverns of Place Y, and manages trade at Place Z."
+Good: "Pisa carried herself with the measured deliberation of someone who had learned to read currents beneath ice. She rose to prominence under High-Beak Auditor Selka's tutelage, absorbing the auditor's obsession with precise accounting but tempering it with genuine concern for survival."
+
+OUTPUT FORMAT:
+Return JSON with keys: summary, description, aliases
+- description: 3-5 sentences, rich with personality and world-grounding
+- summary: 1-2 sentences, compressed and faithful to description
+- aliases: array of alternate names or titles (can be empty)
+
+Be vivid and specific. Let the entity's nature lead.`;
+}
+
+/**
+ * Step 2: Visual thesis prompt - ONE silhouette sentence
+ * Uses fighting game/anime roster design as reference domain
+ * @param visualAvoid - Optional project-specific elements to avoid (overused motifs)
+ */
+export function buildVisualThesisPrompt(visualAvoid?: string): string {
+  let prompt = `You design characters for a fighting game roster or anime ensemble cast.
+
+Each character must be INSTANTLY RECOGNIZABLE from silhouette alone - like Overwatch heroes, League of Legends champions, or My Hero Academia students. When you see 20 characters as solid black shapes at thumbnail size, each one must be unmistakable.
+
+The visual thesis is the ONE THING that makes this character's shape unique in the roster.
+
+THINK LIKE A CHARACTER DESIGNER:
+- What's their "read" at thumbnail size?
+- What silhouette element would a cosplayer exaggerate?
+- If this were a fighting game select screen, what makes them pop?
+
+SHAPE ELEMENTS (what works):
+- Body shape: posture, proportions, mass distribution, asymmetry
+- Structural gear: oversized weapons, distinctive hats, floating objects, massive armor
+- Profile extensions: wings, tails, mounted equipment, carried tools
+
+RULES:
+- ONE sentence only - no compound sentences
+- Describe WHAT you see, not WHY it exists
+- No: "as if", "as though", "suggesting", "seeming"
+- Shape only - no colors, textures, or surface details
+
+REWRITES (causation → pure shape):
+- "Flipper raised as if blessing" → "Flipper raised, palm-forward, frozen at chest height"
+- "Hunched from years of labor" → "Shoulders drawn forward, spine curved into permanent stoop"
+- "Scarred flank showing battles" → "Asymmetrical bulk, left side visibly larger"`;
+
+  // Add project-specific avoid list with strong emphasis
+  if (visualAvoid) {
+    prompt += `
+
+CRITICAL - AVOID THESE (overused in this roster, will cause rejection):
+${visualAvoid}
+
+If your first instinct uses any of these, STOP and find a different dominant shape.`;
+  }
+
+  prompt += `
+
+OUTPUT FORMAT:
+Return JSON with key: visualThesis
+- visualThesis: ONE sentence, the dominant shape signal`;
+
+  return prompt;
+}
+
+/**
+ * Step 3: Visual traits prompt - 2-4 traits supporting the thesis
+ * Uses action figure / concept art design as reference
+ */
+export function buildVisualTraitsPrompt(guidance?: TraitGuidance): string {
+  let prompt = `You're adding detail to a character design brief for an action figure or concept art.
+
+The thesis defines the hero's silhouette. Traits are the 2-4 secondary details that reinforce it - the elements an artist would emphasize in key art.
+
+Think action figure design: what are the 3-4 features that make the toy recognizable even without the box?
+
+RULES:
+- 2-4 traits only, each 3-8 words
+- Each trait reinforces or complements the thesis
+- Mix body and equipment if appropriate
+- Favor stylized exaggeration over realism
+- No causation - describe WHAT, not WHY`;
+
+  if (guidance && guidance.assignedCategories.length > 0) {
+    prompt += `
+
+ASSIGNED DIRECTIONS (prioritize these):
+${guidance.assignedCategories.map(p => `
+### ${p.category}
+${p.description}
+Examples: ${p.examples.join(' · ')}`).join('\n')}
+
+Create traits within these directions. You may include 1 trait outside if it truly defines the entity.`;
+  }
+
+  prompt += `
+
+OUTPUT: Return JSON only. No prose. No explanation.
+{ "visualTraits": ["trait 1", "trait 2", "trait 3"] }`;
+
+  return prompt;
+}
+
+// Legacy combined prompt (kept for reference, but no longer used)
 export function buildSystemPrompt(guidance?: TraitGuidance): string {
   let basePrompt = `You are a creative writer helping to build rich, consistent world lore.
 
@@ -287,7 +452,40 @@ IMPORTANT: Do NOT write a tour of the entity's relationships. The description sh
 Bad example (relationship catalog): "She oversees the treasury of Place X, discovered the caverns of Place Y, and manages trade at Place Z."
 Good example (entity-focused): "Her obsidian beak angles perpetually downward, as if still searching for miscounted coins. Every word she speaks has the weight of a merchant's scale."
 
-VISUAL TRAITS: Generate 2-4 distinctive visual traits that make this entity visually unique and instantly recognizable. These should be SPECIFIC and MEMORABLE features - the details an artist would need to distinguish this entity from others of its type.`;
+VISUAL THESIS (critical - do this first):
+The visual thesis is ONE sentence describing what makes this entity's SILHOUETTE distinctive.
+
+SILHOUETTE TEST: If you filled this entity's outline solid black at 64px, would this feature still be visible and distinctive?
+
+SILHOUETTE ELEMENTS (what changes the outline):
+- Body shape: posture, proportions, mass distribution, asymmetry
+- Structural gear: oversized weapons, wide hats, floating objects, massive armor pieces
+- Profile extensions: wings, tails, mounted equipment, carried tools
+
+Use relationships, tags, and era to CHOOSE what fits - but don't explain WHY in the thesis.
+
+GOOD (changes silhouette):
+- "Compact, hunched frame with shoulders drawn permanently forward"
+- "Towering figure with an oversized ceremonial scythe slung across the back"
+- "Wide-brimmed hat casting the entire upper body in shadow"
+- "Three luminous orbs orbiting at waist height"
+- "Lopsided mass with one shoulder dramatically higher than the other"
+
+BAD (explains causation):
+- "Hunched from decades of guarding" ← don't explain why
+- "Carries a scythe inherited from his master" ← don't narrate history
+
+BAD (surface detail, not silhouette):
+- "Ritual scars across the chest" ← invisible at 64px
+- "Ornate earrings" ← too small
+- "Red ceremonial pants" ← color, not shape
+- "Intricate tattoo patterns" ← surface decoration
+
+BAD (too generic):
+- "Impressive figure" ← no shape information
+- "Distinguished-looking with wise eyes" ← eyes don't show in silhouette
+
+VISUAL TRAITS: Generate 2-4 traits that SUPPORT the visual thesis. Every trait should reinforce or complement the thesis - they are supporting details, not independent features.`;
 
   // Add positive category assignment if available
   if (guidance && guidance.assignedCategories.length > 0) {
@@ -316,10 +514,16 @@ Consider these independent visual dimensions:
   basePrompt += `
 
 DISTINCTIVENESS MANDATE:
-- At least one trait must be visible from 50 feet away
-- A stranger should be able to identify this entity by ONE trait alone
+- The visual thesis IS the 50-foot identifier - if it isn't, revise it
+- Traits support the thesis; they don't compete with it
+- Favor stylized exaggeration over anatomical realism
 - Mix the grandiose with the grounded - not everything needs to be supernatural
 - Avoid generic fantasy tropes (glowing eyes, mysterious aura) unless truly fitting
+
+OUTPUT FORMAT:
+Return JSON with keys: summary, description, aliases, visualThesis, visualTraits
+- visualThesis: ONE sentence - the dominant visual signal (silhouette-testable)
+- visualTraits: 2-4 supporting traits that reinforce the thesis
 
 Be concise but vivid.`;
 
@@ -555,6 +759,19 @@ export async function executeImageTask(
   };
 }
 
+/**
+ * Helper to parse a single JSON field from LLM response
+ */
+function parseJsonField<T>(text: string, fieldName: string): T {
+  const cleaned = stripLeadingWrapper(text);
+  const candidate = extractFirstJsonObject(cleaned) || cleaned;
+  const parsed = JSON.parse(candidate);
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error(`Expected JSON object with ${fieldName}`);
+  }
+  return parsed as T;
+}
+
 export async function executeTextTask(
   task: WorkerTask,
   config: WorkerConfig,
@@ -565,9 +782,131 @@ export async function executeTextTask(
     return { success: false, error: 'Text generation not configured - missing Anthropic API key' };
   }
 
-  const textModel = config.textModel || 'claude-sonnet-4-20250514';
-  const taskType: CostType = 'description';
-  const estimate = estimateTextCost(task.prompt, 'description', textModel);
+  // Use configured model (user controls whether it's thinking or not)
+  const model = config.textModel || 'claude-sonnet-4-20250514';
+
+  // Track cumulative costs across all chain steps
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let totalActualCost = 0;
+
+  // Track debug info for all steps
+  const chainDebug: DescriptionChainDebug = {};
+
+  // ============================================================================
+  // Step 1: Narrative (description, summary, aliases)
+  // ============================================================================
+  console.log('[Worker] Description chain step 1: Narrative');
+
+  // Strip output format instructions from task.prompt - each step has its own format
+  const entityContext = task.prompt
+    .replace(/OUTPUT FORMAT.*$/s, '')
+    .replace(/FORMAT:\s*\n.*$/s, '')
+    .trim();
+
+  const narrativeResult = await llmClient.complete({
+    systemPrompt: buildNarrativePrompt(),
+    prompt: entityContext,
+    model,
+    maxTokens: 1024,
+    temperature: 0.7,
+  });
+  chainDebug.narrative = narrativeResult.debug;
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted', debug: narrativeResult.debug };
+  }
+
+  if (narrativeResult.error || !narrativeResult.text) {
+    return { success: false, error: `Narrative step failed: ${narrativeResult.error || 'Empty response'}`, debug: narrativeResult.debug };
+  }
+
+  // Parse narrative response
+  let narrativePayload: { summary: string; description: string; aliases: string[] };
+  try {
+    const parsed = parseJsonField<Record<string, unknown>>(narrativeResult.text, 'summary/description');
+    narrativePayload = {
+      summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
+      description: typeof parsed.description === 'string' ? parsed.description.trim() : '',
+      aliases: Array.isArray(parsed.aliases)
+        ? parsed.aliases.filter((a): a is string => typeof a === 'string').map(a => a.trim()).filter(Boolean)
+        : [],
+    };
+    if (!narrativePayload.summary || !narrativePayload.description) {
+      throw new Error('Missing summary or description');
+    }
+  } catch (err) {
+    return {
+      success: false,
+      error: `Narrative parse failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      debug: narrativeResult.debug,
+    };
+  }
+
+  // Accumulate costs
+  if (narrativeResult.usage) {
+    totalInputTokens += narrativeResult.usage.inputTokens;
+    totalOutputTokens += narrativeResult.usage.outputTokens;
+    totalActualCost += calculateActualTextCost(narrativeResult.usage.inputTokens, narrativeResult.usage.outputTokens, model);
+  }
+
+  // ============================================================================
+  // Step 2: Visual Thesis (given description)
+  // ============================================================================
+  console.log('[Worker] Description chain step 2: Visual Thesis');
+
+  const thesisPrompt = `Entity context:
+${entityContext}
+
+Description (use to inform visual identity):
+${narrativePayload.description}
+
+Generate the visual thesis for this entity.`;
+
+  const thesisResult = await llmClient.complete({
+    systemPrompt: buildVisualThesisPrompt(task.visualAvoid),
+    prompt: thesisPrompt,
+    model,
+    maxTokens: 256,
+    temperature: 0.7,
+  });
+  chainDebug.thesis = thesisResult.debug;
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted', debug: thesisResult.debug };
+  }
+
+  if (thesisResult.error || !thesisResult.text) {
+    return { success: false, error: `Visual thesis step failed: ${thesisResult.error || 'Empty response'}`, debug: thesisResult.debug };
+  }
+
+  // Parse thesis response
+  let visualThesis = '';
+  try {
+    const parsed = parseJsonField<Record<string, unknown>>(thesisResult.text, 'visualThesis');
+    visualThesis = typeof parsed.visualThesis === 'string' ? parsed.visualThesis.trim() : '';
+    if (!visualThesis) {
+      throw new Error('Missing visualThesis');
+    }
+  } catch (err) {
+    return {
+      success: false,
+      error: `Visual thesis parse failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      debug: thesisResult.debug,
+    };
+  }
+
+  // Accumulate costs
+  if (thesisResult.usage) {
+    totalInputTokens += thesisResult.usage.inputTokens;
+    totalOutputTokens += thesisResult.usage.outputTokens;
+    totalActualCost += calculateActualTextCost(thesisResult.usage.inputTokens, thesisResult.usage.outputTokens, model);
+  }
+
+  // ============================================================================
+  // Step 3: Visual Traits (given thesis + palette guidance)
+  // ============================================================================
+  console.log('[Worker] Description chain step 3: Visual Traits');
 
   // Fetch trait guidance for diversity (run-scoped avoidance, project-scoped palette)
   let traitGuidance: TraitGuidance | undefined;
@@ -584,62 +923,80 @@ export async function executeTextTask(
     console.warn('[Worker] Failed to fetch trait guidance:', err);
   }
 
-  const result = await llmClient.complete({
-    systemPrompt: buildSystemPrompt(traitGuidance),
-    prompt: task.prompt,
-    model: textModel,
+  const traitsPrompt = `Visual Thesis (traits must support this):
+${visualThesis}
+
+Entity context:
+${entityContext}
+
+Generate 2-4 visual traits that reinforce the thesis.`;
+
+  const traitsResult = await llmClient.complete({
+    systemPrompt: buildVisualTraitsPrompt(traitGuidance),
+    prompt: traitsPrompt,
+    model,
     maxTokens: 512,
     temperature: 0.7,
   });
-  const debug = result.debug;
+  chainDebug.traits = traitsResult.debug;
 
   if (isAborted()) {
-    return { success: false, error: 'Task aborted' };
+    return { success: false, error: 'Task aborted', debug: traitsResult.debug };
   }
 
-  if (result.error) {
-    return { success: false, error: result.error, debug };
+  if (traitsResult.error || !traitsResult.text) {
+    return { success: false, error: `Visual traits step failed: ${traitsResult.error || 'Empty response'}`, debug: traitsResult.debug };
   }
 
-  let actualCost = estimate.estimatedCost;
-  let inputTokens = estimate.inputTokens;
-  let outputTokens = estimate.outputTokens;
-
-  if (result.usage) {
-    inputTokens = result.usage.inputTokens;
-    outputTokens = result.usage.outputTokens;
-    actualCost = calculateActualTextCost(inputTokens, outputTokens, textModel);
-  }
-
-  let payload;
+  // Parse traits response
+  let visualTraits: string[] = [];
   try {
-    payload = parseDescriptionPayload(result.text || '');
+    const parsed = parseJsonField<Record<string, unknown>>(traitsResult.text, 'visualTraits');
+    visualTraits = Array.isArray(parsed.visualTraits)
+      ? parsed.visualTraits.filter((t): t is string => typeof t === 'string').map(t => t.trim()).filter(Boolean)
+      : [];
   } catch (err) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Failed to parse description payload',
-      debug,
+      error: `Visual traits parse failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      debug: traitsResult.debug,
     };
   }
 
+  // Accumulate costs
+  if (traitsResult.usage) {
+    totalInputTokens += traitsResult.usage.inputTokens;
+    totalOutputTokens += traitsResult.usage.outputTokens;
+    totalActualCost += calculateActualTextCost(traitsResult.usage.inputTokens, traitsResult.usage.outputTokens, model);
+  }
+
+  // ============================================================================
+  // Register traits and save cost record
+  // ============================================================================
+
   // Register generated traits for future diversity guidance
   try {
-    if (task.projectId && task.simulationRunId && task.entityKind && payload.visualTraits.length > 0) {
+    if (task.projectId && task.simulationRunId && task.entityKind && visualTraits.length > 0) {
       await registerUsedTraits(
         task.projectId,
         task.simulationRunId,
         task.entityKind,
         task.entityId,
         task.entityName,
-        payload.visualTraits
+        visualTraits
       );
+      // Increment palette category usage counters (for weighted selection)
+      await incrementPaletteUsage(task.projectId, task.entityKind, visualTraits);
     }
   } catch (err) {
     // Non-fatal - continue without registration
     console.warn('[Worker] Failed to register traits:', err);
   }
 
-  // Save cost record independently
+  // Calculate estimated cost (for comparison)
+  const estimate = estimateTextCost(task.prompt, 'description', model);
+
+  // Save cost record with combined totals
   await saveCostRecord({
     id: generateCostId(),
     timestamp: Date.now(),
@@ -648,31 +1005,35 @@ export async function executeTextTask(
     entityId: task.entityId,
     entityName: task.entityName,
     entityKind: task.entityKind,
-    type: taskType as CostType,
-    model: textModel,
+    type: 'description' as CostType,
+    model,
     estimatedCost: estimate.estimatedCost,
-    actualCost,
-    inputTokens,
-    outputTokens,
+    actualCost: totalActualCost,
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
   });
+
+  console.log(`[Worker] Description chain complete: ${totalInputTokens} in / ${totalOutputTokens} out, $${totalActualCost.toFixed(4)}`);
 
   return {
     success: true,
     result: {
-      summary: payload.summary,
-      description: payload.description,
-      aliases: payload.aliases,
-      visualTraits: payload.visualTraits,
+      summary: narrativePayload.summary,
+      description: narrativePayload.description,
+      aliases: narrativePayload.aliases,
+      visualThesis,
+      visualTraits,
       generatedAt: Date.now(),
-      model: textModel,
+      model,
       estimatedCost: estimate.estimatedCost,
-      actualCost,
-      inputTokens,
-      outputTokens,
-      // Include debug in result for persistence to entity enrichment
-      debug,
+      actualCost: totalActualCost,
+      inputTokens: totalInputTokens,
+      outputTokens: totalOutputTokens,
+      // Include chain debug for all 3 steps
+      chainDebug,
     },
-    debug,
+    // Legacy single debug field for error reporting
+    debug: traitsResult.debug,
   };
 }
 
@@ -1834,26 +2195,22 @@ async function executeProseBlendStep(
 // Palette Expansion Task
 // ============================================================================
 
-const PALETTE_EXPANSION_SYSTEM_PROMPT = `You are a visual design consultant creating trait palettes for worldbuilding. Your categories will be assigned to entities to ensure visual diversity - each entity gets 1-2 categories to focus on.
+const PALETTE_EXPANSION_SYSTEM_PROMPT = `You curate visual trait palettes for worldbuilding. Each category gets assigned to entities to ensure visual diversity.
 
-CRITICAL REQUIREMENTS FOR ORTHOGONALITY:
-Categories must be INDEPENDENT - traits from one category should never overlap with another.
-Test: Could an entity have traits from ANY combination of your categories without contradiction?
+THUMBNAIL TEST (critical):
+If two categories would look similar when rendered as 128px thumbnails or black silhouettes, they are NOT orthogonal.
+- FAIL: "Weathered Feathers" vs "Environmental Scarring" → both produce worn-looking entities
+- FAIL: "Ceremonial Gear" vs "Technological Adornments" → both add stuff to the body
+- PASS: "Asymmetric Build" vs "Gait Abnormality" → one changes shape, one changes motion
 
-BAD (overlapping):
-- "Glowing Features" and "Bioluminescence" (both are light-based)
-- "Ice Manifestation" and "Cold Aura" (both are cold-based)
-- "Void Integration" and "Darkness Absorption" (both are darkness-based)
+THINK LIKE A RENDERER:
+Each category must create a distinct: silhouette, motion profile, spatial footprint, or high-contrast signal.
+Color/hue differences alone are insufficient. Semantic differences are insufficient.
+Ask: "Would an artist draw these differently?"
 
-GOOD (orthogonal):
-- "Asymmetric Proportions" (FORM) vs "Surface Weathering" (CONDITION) vs "Cultural Insignia" (SOCIAL)
-- An entity could be asymmetric, weathered, AND bearing insignia without overlap
-
-BALANCE MUNDANE AND SUPERNATURAL:
-- 40% should be achievable through natural variation, age, or craftsmanship
-- 30% should require cultural/technological modification
-- 30% can be supernatural/impossible
-NOT everything needs to be "void-consuming dimensional rifts"`;
+MUNDANE MATTERS:
+The most memorable characters have simple, drawable distinctions: a missing finger, a pronounced limp, sun-weathered skin, a distinctive hat.
+Ground categories in what survives stylization.`;
 
 interface CultureContext {
   name: string;
@@ -1868,113 +2225,68 @@ function buildPaletteExpansionPrompt(
   _historicalTraits: string[], // Unused in new approach
   cultureContext?: CultureContext[]
 ): string {
-  const paletteSection = currentPalette.length > 0
-    ? currentPalette.map(p =>
-      `- [${p.id}] ${p.category} (used ${p.timesUsed}x): ${p.description}`
-    ).join('\n')
-    : '(no categories yet)';
-
-  // Define required dimensions to ensure orthogonality
-  const requiredDimensions = entityKind === 'location'
-    ? [
-        'FORM: Overall shape, architecture, scale, silhouette',
-        'SURFACE: Textures, materials, patterns, color palette',
-        'CONDITION: State of repair, age, damage, growth',
-        'ATMOSPHERE: Environmental effects, weather, light behavior',
-        'ACTIVITY: Signs of use, inhabitants, ongoing processes',
-        'CULTURAL: Symbols, modifications, territorial markers',
-      ]
-    : [
-        'FORM: Body shape, proportions, silhouette, posture',
-        'SURFACE: Skin/feather patterns, colors, textures, markings',
-        'CONDITION: Age, wear, scars, enhancements, health',
-        'MOVEMENT: Gait, mannerisms, how they carry themselves',
-        'EQUIPMENT: Clothing, tools, accessories, adornments',
-        'PRESENCE: Environmental effects, aura, space they occupy',
-      ];
-
-  // Build culture visual identity section
+  // Build culture section if available
   let cultureSection = '';
   if (cultureContext && cultureContext.length > 0) {
-    const cultureDescriptions = cultureContext.map(c => {
-      let desc = `### ${c.name}`;
-      if (c.description) desc += `\n${c.description}`;
-      if (c.visualIdentity && Object.keys(c.visualIdentity).length > 0) {
-        desc += '\nVisual traditions:';
-        for (const [key, value] of Object.entries(c.visualIdentity)) {
-          desc += `\n- ${key}: ${value}`;
-        }
+    const cultureLines = cultureContext.map(c => {
+      const parts = [c.name];
+      if (c.description) parts.push(c.description);
+      if (c.visualIdentity) {
+        const traditions = Object.entries(c.visualIdentity)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join('; ');
+        if (traditions) parts.push(`Visual: ${traditions}`);
       }
-      return desc;
-    }).join('\n\n');
-    cultureSection = `
-
-## Culture Visual Identities
-Use these as grounding for culturally-specific trait categories:
-${cultureDescriptions}`;
+      return `- ${parts.join(' — ')}`;
+    }).join('\n');
+    cultureSection = `\nCultures in this world:\n${cultureLines}\n`;
   }
 
-  return `Design a VISUAL TRAIT PALETTE for "${entityKind}" entities.
+  // Current palette summary
+  let paletteSection = '';
+  if (currentPalette.length > 0) {
+    const lines = currentPalette.map(p => `- [${p.id}] "${p.category}" (used ${p.timesUsed}x)`);
+    paletteSection = `\nCurrent categories (${currentPalette.length}):\n${lines.join('\n')}\n`;
+  }
 
-## World Context
-${worldContext || 'A fantasy world with diverse entities.'}
-${cultureSection}
+  // Dimension hints based on entity type
+  const dimensionHints = entityKind === 'location'
+    ? 'shape/architecture, surface/texture, condition/age, atmosphere, activity, cultural markers'
+    : 'body shape, surface patterns, condition/scars, movement/gait, equipment, presence/aura';
 
-## Current Palette Categories
-${paletteSection}
+  return `Curate a visual trait palette for "${entityKind}" entities.
 
-## Required Visual Dimensions
-Each category you create should map to ONE of these independent dimensions:
-${requiredDimensions.map(d => `- ${d}`).join('\n')}
+WORLD: ${worldContext || 'A fantasy world.'}
+${cultureSection}${paletteSection}
+TASK:
+${currentPalette.length === 0
+    ? `Create 6-8 initial categories spanning different visual dimensions (${dimensionHints}).`
+    : `Review the ${currentPalette.length} existing categories. Remove overlapping ones, then add categories for underrepresented dimensions.`}
 
-Ensure coverage across dimensions. If current palette over-indexes on one dimension (e.g., multiple "supernatural aura" categories), remove duplicates and add categories from underrepresented dimensions.
+Each category must pass the SILHOUETTE TEST:
+- Would this trait be visible in a black silhouette or simple animation?
+- Would an artist draw this differently from other categories?
+- Does this change shape, motion, or spatial presence (not just color/texture)?
 
-## Your Task
+DIMENSION BOUNDARIES:
+- SURFACE = patterns, materials, textures (NOT damage or wear)
+- CONDITION = damage, aging, scars, modifications (NOT patterns)
+- EQUIPMENT = items that change the outline/negative space (NOT decorative detail)
 
-1. **AUDIT FOR OVERLAP**: Review current categories. Identify any that:
-   - Describe the same visual dimension differently
-   - Would produce similar-looking traits
-   - Are too abstract/generic to guide an artist
-   Mark overlapping categories for removal or merging.
+GOOD CATEGORIES (each reads differently at thumbnail size):
+- "Limb Asymmetry" — missing/extra/malformed limbs, uneven proportions
+- "Occupational Deformation" — specific muscle development, repetitive stress changes
+- "Mobility Impairment" — limps, favoring sides, compensatory movements
+- "Spatial Presence" — personal space behavior, how they occupy a room
 
-2. **EXPAND WITH ORTHOGONALITY**: Add 5-8 NEW categories ensuring:
-   - Each maps to a DIFFERENT dimension than existing categories
-   - Each produces visually DISTINCT results from all others
-   - Mix of mundane (natural variation) and supernatural
-
-3. **GROUND IN WORLD**: Reference specific world elements:
-   - Cultural practices, factions, traditions
-   - Environmental adaptations
-   - Historical events that left marks
-   - Technology or magic available
-
-4. **EXAMPLES MATTER**: Provide 3-5 specific, diverse examples per category. Examples should:
-   - Be concrete enough to draw
-   - Show the RANGE within the category
-   - Include at least one mundane and one dramatic option
-
-## Output Format (JSON only, no markdown)
-
+OUTPUT (JSON only):
 {
-  "removedCategories": ["id1", "id2"],
-  "mergedCategories": [
-    {
-      "keepId": "palette_xxx",
-      "mergeFromIds": ["palette_yyy"],
-      "newDescription": "Combined description"
-    }
-  ],
+  "removedCategories": ["palette_id_1"],
+  "mergedCategories": [{"keepId": "palette_x", "mergeFromIds": ["palette_y"], "newDescription": "..."}],
   "newCategories": [
-    {
-      "category": "Category Name",
-      "dimension": "Which dimension this covers (FORM/SURFACE/etc)",
-      "description": "What this category means - be specific to the world",
-      "examples": ["Concrete example 1", "Concrete example 2", "Concrete example 3"]
-    }
+    {"category": "Name", "description": "What this means", "examples": ["example 1", "example 2", "example 3"]}
   ]
-}
-
-Return ONLY valid JSON. No explanation, no markdown code blocks.`;
+}`;
 }
 
 interface PaletteExpansionResponse {
@@ -2039,7 +2351,9 @@ export async function executePaletteExpansionTask(
     return { success: false, error: 'Entity kind required for palette expansion' };
   }
 
-  const textModel = config.textModel || 'claude-sonnet-4-20250514';
+  // Use thinking model for palette curation (complex reasoning task)
+  const thinkingModel = config.thinkingModel || 'claude-sonnet-4-5-20250929';
+  const thinkingBudget = config.thinkingBudget ?? 8192;
 
   // Gather current state
   const currentPalette = await getPalette(task.projectId, entityKind);
@@ -2053,14 +2367,18 @@ export async function executePaletteExpansionTask(
     task.paletteCultureContext
   );
 
-  const estimate = estimateTextCost(prompt, 'description', textModel);
+  const estimate = estimateTextCost(prompt, 'description', thinkingModel);
+
+  // max_tokens must be > thinking budget; add response budget on top
+  const responseBudget = 4096;
+  const totalMaxTokens = thinkingBudget > 0 ? thinkingBudget + responseBudget : responseBudget;
 
   const result = await llmClient.complete({
     systemPrompt: PALETTE_EXPANSION_SYSTEM_PROMPT,
     prompt,
-    model: textModel,
-    maxTokens: 2048,
-    temperature: 0.7,
+    model: thinkingModel,
+    maxTokens: totalMaxTokens,
+    thinkingBudget: thinkingBudget > 0 ? thinkingBudget : undefined,
   });
   const debug = result.debug;
 
@@ -2095,7 +2413,7 @@ export async function executePaletteExpansionTask(
   const inputTokens = result.usage?.inputTokens || estimate.inputTokens;
   const outputTokens = result.usage?.outputTokens || estimate.outputTokens;
   const actualCost = result.usage
-    ? calculateActualTextCost(inputTokens, outputTokens, textModel)
+    ? calculateActualTextCost(inputTokens, outputTokens, thinkingModel)
     : estimate.estimatedCost;
 
   // Save cost record
@@ -2105,7 +2423,7 @@ export async function executePaletteExpansionTask(
     projectId: task.projectId,
     simulationRunId: task.simulationRunId,
     type: 'paletteExpansion' as CostType,
-    model: textModel,
+    model: thinkingModel,
     estimatedCost: estimate.estimatedCost,
     actualCost,
     inputTokens,
@@ -2116,7 +2434,7 @@ export async function executePaletteExpansionTask(
     success: true,
     result: {
       generatedAt: Date.now(),
-      model: textModel,
+      model: thinkingModel,
       estimatedCost: estimate.estimatedCost,
       actualCost,
       inputTokens,

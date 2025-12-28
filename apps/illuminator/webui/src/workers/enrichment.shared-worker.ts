@@ -110,7 +110,7 @@ ctx.onconnect = (event: MessageEvent) => {
     switch (message.type) {
       case 'init': {
         config = message.config;
-        console.log('[SharedWorker] Init with chronicleModel:', config.chronicleModel || '(not set)', 'textModel:', config.textModel || '(not set)');
+        console.log('[SharedWorker] Init - textModel:', config.textModel, 'thinkingModel:', config.thinkingModel, 'useThinkingForDescriptions:', config.useThinkingForDescriptions, 'thinkingBudget:', config.thinkingBudget);
         const clients = createClients(config);
         llmClient = clients.llmClient;
         imageClient = clients.imageClient;

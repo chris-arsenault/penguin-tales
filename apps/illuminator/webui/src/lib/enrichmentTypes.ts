@@ -15,13 +15,24 @@ export interface NetworkDebugInfo {
   response?: string;
 }
 
+/**
+ * Debug info for description chain (narrative → thesis → traits)
+ */
+export interface DescriptionChainDebug {
+  narrative?: NetworkDebugInfo;
+  thesis?: NetworkDebugInfo;
+  traits?: NetworkDebugInfo;
+}
+
 export type EnrichmentStatus = 'missing' | 'queued' | 'running' | 'complete' | 'error';
 
 export interface EnrichmentResult {
   summary?: string;
   description?: string;
   aliases?: string[];
-  /** Distinctive visual traits for image generation */
+  /** One-sentence visual thesis - the primary visual signal for this entity */
+  visualThesis?: string;
+  /** Distinctive visual traits for image generation (derived from thesis) */
   visualTraits?: string[];
   imageId?: string;  // Reference to stored image (worker saves directly to IndexedDB)
   chronicleId?: string;  // Reference to stored chronicle in chronicleStore
@@ -35,6 +46,8 @@ export interface EnrichmentResult {
   outputTokens?: number;
   // Debug info (persisted for description enrichments)
   debug?: NetworkDebugInfo;
+  /** Debug info for description chain (narrative → thesis → traits) */
+  chainDebug?: DescriptionChainDebug;
 }
 
 export interface EnrichmentError {
@@ -64,7 +77,9 @@ export interface EntityEnrichment {
     summary: string;
     description: string;
     aliases: string[];
-    /** Distinctive visual traits for image generation (e.g., scars, unusual build, distinctive gear) */
+    /** One-sentence visual thesis - the primary visual signal for this entity */
+    visualThesis?: string;
+    /** Distinctive visual traits for image generation (derived from thesis) */
     visualTraits: string[];
     generatedAt: number;
     model: string;
@@ -72,8 +87,10 @@ export interface EntityEnrichment {
     actualCost?: number;
     inputTokens?: number;
     outputTokens?: number;
-    /** Debug request/response from most recent generation */
+    /** Debug request/response from most recent generation (legacy single-shot) */
     debug?: NetworkDebugInfo;
+    /** Debug info for description chain (narrative → thesis → traits) */
+    chainDebug?: DescriptionChainDebug;
   };
   image?: {
     imageId: string;  // Reference to stored image in imageStore
@@ -136,6 +153,8 @@ export interface QueueItem {
     description?: string;
     visualIdentity?: Record<string, string>;
   }>;
+  /** Elements to avoid in visual thesis (overused motifs, from project config) */
+  visualAvoid?: string;
 }
 
 /**
@@ -267,6 +286,8 @@ export interface WorkerTask {
     description?: string;
     visualIdentity?: Record<string, string>;
   }>;
+  /** Elements to avoid in visual thesis (overused motifs, from project config) */
+  visualAvoid?: string;
 }
 
 /**
@@ -345,6 +366,7 @@ export function applyEnrichmentResult(
         summary: result.summary,
         description: result.description,
         aliases: result.aliases || [],
+        visualThesis: result.visualThesis,
         visualTraits: result.visualTraits || [],
         generatedAt: result.generatedAt,
         model: result.model,
@@ -353,6 +375,7 @@ export function applyEnrichmentResult(
         inputTokens: result.inputTokens,
         outputTokens: result.outputTokens,
         debug: result.debug,
+        chainDebug: result.chainDebug,
       },
     };
   }

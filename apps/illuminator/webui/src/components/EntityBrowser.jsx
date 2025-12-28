@@ -394,6 +394,7 @@ export default function EntityBrowser({
   config,
   onConfigChange,
   buildPrompt,
+  getVisualAvoid,
   styleLibrary,
   styleSelection,
   onStyleSelectionChange,
@@ -515,9 +516,11 @@ export default function EntityBrowser({
       const prompt = buildPrompt(entity, type);
       // For image tasks, pass previousImageId if entity already has an image (for cleanup on regen)
       const previousImageId = type === 'image' ? entity.enrichment?.image?.imageId : undefined;
-      onEnqueue([{ entity, type, prompt, previousImageId }]);
+      // For description tasks, pass visualAvoid from template
+      const visualAvoid = type === 'description' && getVisualAvoid ? getVisualAvoid(entity) : undefined;
+      onEnqueue([{ entity, type, prompt, previousImageId, visualAvoid }]);
     },
-    [onEnqueue, buildPrompt]
+    [onEnqueue, buildPrompt, getVisualAvoid]
   );
 
   // Cancel single item
@@ -539,13 +542,14 @@ export default function EntityBrowser({
     for (const entityId of selectedIds) {
       const entity = entities.find((e) => e.id === entityId);
       if (entity && getStatus(entity, 'description') === 'missing') {
-        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description') });
+        const visualAvoid = getVisualAvoid ? getVisualAvoid(entity) : undefined;
+        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), visualAvoid });
       }
     }
     if (items.length > 0) {
       onEnqueue(items);
     }
-  }, [selectedIds, entities, getStatus, onEnqueue, buildPrompt]);
+  }, [selectedIds, entities, getStatus, onEnqueue, buildPrompt, getVisualAvoid]);
 
   // Queue all missing images for selected
   const queueSelectedImages = useCallback(() => {
@@ -572,13 +576,14 @@ export default function EntityBrowser({
     for (const entityId of selectedIds) {
       const entity = entities.find((e) => e.id === entityId);
       if (entity && getStatus(entity, 'description') === 'complete') {
-        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description') });
+        const visualAvoid = getVisualAvoid ? getVisualAvoid(entity) : undefined;
+        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), visualAvoid });
       }
     }
     if (items.length > 0) {
       onEnqueue(items);
     }
-  }, [selectedIds, entities, getStatus, onEnqueue, buildPrompt]);
+  }, [selectedIds, entities, getStatus, onEnqueue, buildPrompt, getVisualAvoid]);
 
   // Regenerate all images for selected (those with existing images)
   const regenSelectedImages = useCallback(() => {
@@ -605,13 +610,14 @@ export default function EntityBrowser({
     const items = [];
     for (const entity of filteredEntities) {
       if (getStatus(entity, 'description') === 'missing') {
-        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description') });
+        const visualAvoid = getVisualAvoid ? getVisualAvoid(entity) : undefined;
+        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), visualAvoid });
       }
     }
     if (items.length > 0) {
       onEnqueue(items);
     }
-  }, [filteredEntities, getStatus, onEnqueue, buildPrompt]);
+  }, [filteredEntities, getStatus, onEnqueue, buildPrompt, getVisualAvoid]);
 
   // Quick action: queue all missing images (and dependent descriptions if required)
   const queueAllMissingImages = useCallback(() => {
@@ -627,7 +633,8 @@ export default function EntityBrowser({
           !(entity.enrichment?.description?.summary && entity.enrichment?.description?.description) &&
           getStatus(entity, 'description') === 'missing'
         ) {
-          items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description') });
+          const visualAvoid = getVisualAvoid ? getVisualAvoid(entity) : undefined;
+          items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), visualAvoid });
         }
         items.push({ entity, type: 'image', prompt: buildPrompt(entity, 'image') });
       }
@@ -635,7 +642,7 @@ export default function EntityBrowser({
     if (items.length > 0) {
       onEnqueue(items);
     }
-  }, [filteredEntities, getStatus, onEnqueue, buildPrompt, config.minProminenceForImage, config.requireDescription]);
+  }, [filteredEntities, getStatus, onEnqueue, buildPrompt, getVisualAvoid, config.minProminenceForImage, config.requireDescription]);
 
   // Count missing and calculate aggregate costs
   const { missingDescCount, missingDescCost } = useMemo(() => {
@@ -703,30 +710,51 @@ export default function EntityBrowser({
       const entity = entities.find((e) => e.id === entityId);
       if (!entity) continue;
 
-      // First check persisted debug on entity enrichment
-      let debug = entity.enrichment?.description?.debug;
-      let timestamp = entity.enrichment?.description?.generatedAt;
+      const descEnrichment = entity.enrichment?.description;
+      const timestamp = descEnrichment?.generatedAt;
+
+      // Check for chain debug (3-step: narrative → thesis → traits)
+      const chainDebug = descEnrichment?.chainDebug;
+
+      // Fall back to legacy single debug
+      let legacyDebug = descEnrichment?.debug;
 
       // Fall back to queue if no persisted debug
-      if (!debug) {
+      if (!chainDebug && !legacyDebug) {
         const queueItem = queue.find(
           (item) => item.entityId === entity.id && item.type === 'description' && item.debug
         );
         if (queueItem?.debug) {
-          debug = queueItem.debug;
-          timestamp = queueItem.completedAt || queueItem.startedAt || queueItem.queuedAt;
+          legacyDebug = queueItem.debug;
         }
       }
 
-      if (debug) {
-        debugData.push({
+      if (chainDebug || legacyDebug) {
+        const entry = {
           entityId: entity.id,
           entityName: entity.name,
           entityKind: entity.kind,
           timestamp,
-          request: debug.request,
-          response: debug.response,
-        });
+          model: descEnrichment?.model,
+          // Include generated content for review
+          summary: descEnrichment?.summary,
+          description: descEnrichment?.description,
+          visualThesis: descEnrichment?.visualThesis,
+          visualTraits: descEnrichment?.visualTraits,
+          aliases: descEnrichment?.aliases,
+        };
+
+        // Include chain debug if available (all 3 steps)
+        if (chainDebug) {
+          entry.chainDebug = chainDebug;
+        }
+
+        // Include legacy debug as fallback
+        if (legacyDebug && !chainDebug) {
+          entry.legacyDebug = legacyDebug;
+        }
+
+        debugData.push(entry);
       }
     }
 

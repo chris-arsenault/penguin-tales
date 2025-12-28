@@ -536,6 +536,10 @@ export default function IlluminatorRemote({
         // Multishot prompting options
         useClaudeForImagePrompt: config.useClaudeForImagePrompt,
         claudeImagePromptTemplate: config.claudeImagePromptTemplate,
+        // Extended thinking options
+        thinkingModel: config.thinkingModel,
+        thinkingBudget: config.thinkingBudget,
+        useThinkingForDescriptions: config.useThinkingForDescriptions,
       });
     }
   }, [anthropicApiKey, openaiApiKey, config, initializeWorker]);
@@ -593,6 +597,16 @@ export default function IlluminatorRemote({
   const hasOpenaiKey = openaiApiKey.length > 0;
   const hasRequiredKeys = hasAnthropicKey;
 
+  // Get visualAvoid for an entity (used to prevent overused motifs in visual thesis)
+  const getVisualAvoid = useCallback(
+    (entity) => {
+      const templates = mergedPromptTemplates;
+      const template = getEffectiveTemplate(templates, entity.kind, 'description');
+      return template.visualAvoid;
+    },
+    [mergedPromptTemplates]
+  );
+
   // Build prompt for entity
   const buildPrompt = useCallback(
     (entity, type) => {
@@ -628,6 +642,7 @@ export default function IlluminatorRemote({
             summary: entity.enrichment?.description?.summary || '',
             description: entity.enrichment?.description?.description || '',
             tags: entity.tags || {},
+            visualThesis: entity.enrichment?.description?.visualThesis || '',
             visualTraits: entity.enrichment?.description?.visualTraits || [],
           },
           relationships,
@@ -938,6 +953,7 @@ export default function IlluminatorRemote({
               config={config}
               onConfigChange={updateConfig}
               buildPrompt={buildPrompt}
+              getVisualAvoid={getVisualAvoid}
               styleLibrary={styleLibrary}
               styleSelection={styleSelection}
               onStyleSelectionChange={setStyleSelection}

@@ -287,8 +287,8 @@ export async function expandPalette(
     systemPrompt: EXPANSION_SYSTEM_PROMPT,
     prompt,
     model: textModel,
-    maxTokens: 2048,
-    temperature: 0.7,
+    maxTokens: 4096,
+    temperature: 0.9,
   });
 
   if (result.error || !result.text) {
