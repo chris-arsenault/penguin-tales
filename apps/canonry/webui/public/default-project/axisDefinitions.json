@@ -68,5 +68,12 @@
     "description": "",
     "lowTag": "west",
     "highTag": "east"
+  },
+  {
+    "id": "purpose",
+    "name": "Purpose",
+    "description": "The intended use of the artifact",
+    "lowTag": "destructive",
+    "highTag": "protective"
   }
 ]

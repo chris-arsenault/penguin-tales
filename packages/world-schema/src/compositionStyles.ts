@@ -115,4 +115,29 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
     description: 'Focused object with dramatic lighting',
     promptFragment: 'object study, dramatic lighting, showing scale and detail, museum quality',
   },
+  // Artifact-focused compositions
+  {
+    id: 'display-case',
+    name: 'Display Case',
+    description: 'Artifact presented in museum display case',
+    promptFragment: 'museum display case presentation, glass enclosure, carefully lit from multiple angles, velvet or neutral pedestal, subtle reflections, archival preservation context, reverent display',
+  },
+  {
+    id: 'artifact-diagram',
+    name: 'Artifact Diagram',
+    description: 'Technical diagram with annotations and cross-sections',
+    promptFragment: 'technical artifact diagram, exploded view, cross-section annotations, measurement indicators, multiple angle views, scientific illustration style, detailed construction breakdown',
+  },
+  {
+    id: 'relic-altar',
+    name: 'Relic Altar',
+    description: 'Sacred presentation on ceremonial altar or shrine',
+    promptFragment: 'sacred altar presentation, ceremonial shrine setting, devotional lighting, candles or incense suggested, religious reverence, offering context, mystical atmosphere',
+  },
+  {
+    id: 'treasure-hoard',
+    name: 'Treasure Hoard',
+    description: 'Artifact among treasures, showing context and wealth',
+    promptFragment: 'treasure hoard context, surrounded by coins and jewels, discovery moment, dramatic cave or vault lighting, archaeological find, sense of abundance and value',
+  },
 ];

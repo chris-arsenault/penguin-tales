@@ -238,7 +238,7 @@
     "config": {
       "id": "war_casualties",
       "name": "War Casualties",
-      "description": "NPCs serving factions at war can fall in battle",
+      "description": "NPCs serving factions at war can fall in battle, their artifacts looted or lost",
       "conditions": [
         {
           "type": "graph_path",
@@ -270,8 +270,76 @@
           "type": "change_status",
           "entity": "$self",
           "newStatus": "dead"
+        },
+        {
+          "type": "for_each_related",
+          "relationship": "owned_by",
+          "direction": "in",
+          "targetKind": "artifact",
+          "actions": [
+            {
+              "type": "conditional",
+              "condition": {
+                "type": "random_chance",
+                "chance": 0.5
+              },
+              "thenActions": [
+                {
+                  "type": "transfer_relationship",
+                  "entity": "$related",
+                  "relationshipKind": "owned_by",
+                  "from": "$self",
+                  "to": "$enemy_faction",
+                  "condition": {
+                    "type": "entity_exists",
+                    "entity": "$enemy_faction"
+                  }
+                },
+                {
+                  "type": "set_tag",
+                  "entity": "$related",
+                  "tag": "war_trophy",
+                  "value": true
+                }
+              ],
+              "elseActions": [
+                {
+                  "type": "change_status",
+                  "entity": "$related",
+                  "newStatus": "lost"
+                },
+                {
+                  "type": "archive_relationship",
+                  "entity": "$related",
+                  "relationshipKind": "owned_by",
+                  "with": "$self"
+                }
+              ]
+            }
+          ]
         }
       ],
+      "variables": {
+        "$enemy_faction": {
+          "select": {
+            "from": {
+              "path": [
+                {
+                  "from": "$self",
+                  "via": "member_of",
+                  "direction": "src"
+                },
+                {
+                  "via": "at_war_with",
+                  "direction": "both"
+                }
+              ]
+            },
+            "kind": "faction",
+            "pickStrategy": "random"
+          }
+        }
+      },
       "clusterMode": "individual",
       "throttleChance": 0.5,
       "selection": {
@@ -291,7 +359,7 @@
     "config": {
       "id": "heroic_sacrifice",
       "name": "Heroic Sacrifice",
-      "description": "Heroes caught in wars occasionally fall, seeding legends",
+      "description": "Heroes caught in wars occasionally fall, their weapons becoming legendary",
       "conditions": [
         {
           "type": "or",
@@ -348,6 +416,31 @@
           "type": "change_status",
           "entity": "$self",
           "newStatus": "dead"
+        },
+        {
+          "type": "for_each_related",
+          "relationship": "owned_by",
+          "direction": "in",
+          "targetKind": "artifact",
+          "actions": [
+            {
+              "type": "set_tag",
+              "entity": "$related",
+              "tag": "legendary",
+              "value": true
+            },
+            {
+              "type": "set_tag",
+              "entity": "$related",
+              "tag": "hero_relic",
+              "value": true
+            },
+            {
+              "type": "adjust_prominence",
+              "direction": "up",
+              "entity": "$related"
+            }
+          ]
         }
       ],
       "clusterMode": "individual",
@@ -368,7 +461,7 @@
     "config": {
       "id": "old_age_mortality",
       "name": "Old Age Mortality",
-      "description": "Aging NPCs occasionally pass away, keeping the legend pipeline active",
+      "description": "Aging NPCs occasionally pass away, their artifacts inherited or lost",
       "conditions": [
         {
           "type": "time_elapsed",
@@ -385,8 +478,62 @@
           "type": "change_status",
           "entity": "$self",
           "newStatus": "dead"
+        },
+        {
+          "type": "for_each_related",
+          "relationship": "owned_by",
+          "direction": "in",
+          "targetKind": "artifact",
+          "actions": [
+            {
+              "type": "conditional",
+              "condition": {
+                "type": "random_chance",
+                "chance": 0.6
+              },
+              "thenActions": [
+                {
+                  "type": "change_status",
+                  "entity": "$related",
+                  "newStatus": "lost"
+                },
+                {
+                  "type": "archive_relationship",
+                  "entity": "$related",
+                  "relationshipKind": "owned_by",
+                  "with": "$self"
+                }
+              ],
+              "elseActions": [
+                {
+                  "type": "transfer_relationship",
+                  "entity": "$related",
+                  "relationshipKind": "owned_by",
+                  "from": "$self",
+                  "to": "$faction",
+                  "condition": {
+                    "type": "entity_exists",
+                    "entity": "$faction"
+                  }
+                }
+              ]
+            }
+          ]
         }
       ],
+      "variables": {
+        "$faction": {
+          "select": {
+            "from": {
+              "relatedTo": "$self",
+              "relationship": "member_of",
+              "direction": "src"
+            },
+            "kind": "faction",
+            "pickStrategy": "random"
+          }
+        }
+      },
       "clusterMode": "individual",
       "throttleChance": 0.25,
       "selection": {
@@ -552,7 +699,7 @@
       ],
       "actions": [
         {
-          "type": "archive_relationship",
+          "type": "archive_all_relationships",
           "entity": "$self",
           "relationshipKind": "at_war_with",
           "direction": "both"
@@ -1572,6 +1719,162 @@
           {
             "type": "lacks_tag",
             "tag": "hostile"
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "artifact_degradation",
+      "name": "Artifact Degradation",
+      "description": "Over time, artifacts may become damaged",
+      "conditions": [
+        {
+          "type": "time_elapsed",
+          "minTicks": 40
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.1
+        }
+      ],
+      "actions": [
+        {
+          "type": "change_status",
+          "newStatus": "damaged",
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.6,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact",
+        "statusFilter": "intact"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "artifact_destruction",
+      "name": "Artifact Destruction",
+      "description": "Damaged artifacts may be destroyed over time",
+      "conditions": [
+        {
+          "type": "time_elapsed",
+          "minTicks": 20
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.15
+        }
+      ],
+      "actions": [
+        {
+          "type": "change_status",
+          "newStatus": "destroyed",
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.7,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact",
+        "statusFilter": "damaged"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "artifact_legendary_status",
+      "name": "Legendary Artifact Recognition",
+      "description": "Well-known artifacts gain legendary prominence",
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "owned_by",
+          "direction": "src",
+          "min": 2
+        },
+        {
+          "type": "time_elapsed",
+          "minTicks": 30
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "legendary",
+          "value": true,
+          "entity": "$self"
+        },
+        {
+          "type": "adjust_prominence",
+          "direction": "up",
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.4,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact",
+        "statusFilter": "intact",
+        "filters": [
+          {
+            "type": "lacks_tag",
+            "tag": "legendary"
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "graphContagion",
+    "config": {
+      "id": "artifact_corruption_spread",
+      "name": "Artifact Corruption",
+      "description": "Cursed or corrupted artifacts affect their owners",
+      "contagion": {
+        "type": "tag",
+        "tag": "corrupted"
+      },
+      "vectors": [
+        {
+          "relationshipKind": "owned_by",
+          "direction": "src",
+          "minStrength": 0.3
+        }
+      ],
+      "transmission": {
+        "baseRate": 0.15,
+        "contactMultiplier": 0.1,
+        "maxProbability": 0.5
+      },
+      "infectionAction": {
+        "type": "set_tag",
+        "tag": "corrupted",
+        "value": true,
+        "entity": "$target"
+      },
+      "throttleChance": 0.5,
+      "cooldown": 10,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact",
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "corrupted"
           }
         ]
       }

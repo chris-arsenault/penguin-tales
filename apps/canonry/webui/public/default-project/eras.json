@@ -26,11 +26,17 @@
       "war_outbreak": 0.2,
       "location_discovery": 0.9,
       "cult_formation": 0.4,
-      "war_apocalypse_resolution": 1
+      "war_apocalypse_resolution": 1,
+      "artifact_crafting": 0.8,
+      "artifact_discovery": 1.2
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
       "cultural_drift": 0.5,
+      "artifact_degradation": 0.5,
+      "artifact_destruction": 0.3,
+      "artifact_legendary_status": 0.8,
+      "artifact_corruption_spread": 0.3,
       "belief_contagion": 0.8,
       "thermal_diffusion": 1,
       "resource_diffusion": 1.5,
@@ -128,11 +134,17 @@
       "location_discovery": 0.6,
       "cult_formation": 0.6,
       "succession": 0.8,
-      "war_apocalypse_resolution": 1
+      "war_apocalypse_resolution": 1,
+      "artifact_crafting": 1.4,
+      "artifact_discovery": 0.6
     },
     "systemModifiers": {
       "conflict_contagion": 2,
       "alliance_formation": 2,
+      "artifact_degradation": 1.5,
+      "artifact_destruction": 1.2,
+      "artifact_legendary_status": 1.5,
+      "artifact_corruption_spread": 1.0,
       "belief_contagion": 2,
       "cultural_drift": 1.5,
       "thermal_diffusion": 1.2,
@@ -235,12 +247,18 @@
       "colony_founding": 0.8,
       "hero_emergence": 0.6,
       "succession": 0.6,
-      "war_apocalypse_resolution": 1
+      "war_apocalypse_resolution": 1,
+      "artifact_crafting": 1.6,
+      "artifact_discovery": 0.8
     },
     "systemModifiers": {
       "belief_contagion": 1.5,
       "cultural_drift": 1.5,
       "thermal_diffusion": 1.5,
+      "artifact_degradation": 0.8,
+      "artifact_destruction": 0.5,
+      "artifact_legendary_status": 1.2,
+      "artifact_corruption_spread": 0.5,
       "resource_diffusion": 1.2,
       "magic_school_formation": 2,
       "combat_technique_formation": 1.5,
@@ -334,11 +352,17 @@
       "location_discovery": 0.6,
       "cult_formation": 0.6,
       "succession": 0.8,
-      "war_apocalypse_resolution": 1
+      "war_apocalypse_resolution": 1,
+      "artifact_crafting": 1.8,
+      "artifact_discovery": 0.4
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
       "alliance_formation": 2.5,
+      "artifact_degradation": 1.2,
+      "artifact_destruction": 1.0,
+      "artifact_legendary_status": 1.8,
+      "artifact_corruption_spread": 0.8,
       "thermal_diffusion": 1.8,
       "belief_contagion": 1.2,
       "resource_diffusion": 0.8,
@@ -398,7 +422,7 @@
       {
         "type": "pressure",
         "pressureId": "security",
-        "min": 0
+        "min": -25
       }
     ],
     "exitEffects": {
@@ -406,7 +430,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "security",
-          "delta": 10
+          "delta": 15
         },
         {
           "type": "modify_pressure",
@@ -450,12 +474,18 @@
       "colony_founding": 1.2,
       "hero_emergence": 0.6,
       "crisis_legislation": 0.6,
-      "war_apocalypse_resolution": 1
+      "war_apocalypse_resolution": 1,
+      "artifact_crafting": 0.6,
+      "artifact_discovery": 1.0
     },
     "systemModifiers": {
       "cultural_drift": 1.5,
       "belief_contagion": 1,
       "thermal_diffusion": 0.8,
+      "artifact_degradation": 0.6,
+      "artifact_destruction": 0.4,
+      "artifact_legendary_status": 1.5,
+      "artifact_corruption_spread": 0.4,
       "resource_diffusion": 2,
       "alliance_formation": 1.5,
       "legal_code_formation": 2,

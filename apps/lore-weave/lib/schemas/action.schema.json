@@ -222,11 +222,12 @@
       "additionalProperties": false,
       "properties": {
         "via": { "$ref": "#/$defs/NonEmptyString" },
-        "direction": { "enum": ["out", "in", "any"] },
+        "direction": { "enum": ["out", "in", "any", "src", "dst"] },
         "targetKind": { "$ref": "#/$defs/AnyOrString" },
         "targetSubtype": { "$ref": "#/$defs/AnyOrString" },
         "targetStatus": { "$ref": "#/$defs/AnyOrString" },
-        "as": { "$ref": "#/$defs/NonEmptyString" }
+        "as": { "$ref": "#/$defs/NonEmptyString" },
+        "matchEntity": { "$ref": "#/$defs/NonEmptyString", "description": "Variable reference that must match the target entity" }
       }
     },
 
@@ -669,6 +670,7 @@
         { "$ref": "#/$defs/RemoveTagMutation" },
         { "$ref": "#/$defs/CreateRelationshipMutation" },
         { "$ref": "#/$defs/ArchiveRelationshipMutation" },
+        { "$ref": "#/$defs/ArchiveAllRelationshipsMutation" },
         { "$ref": "#/$defs/AdjustRelationshipStrengthMutation" },
         { "$ref": "#/$defs/ChangeStatusMutation" },
         { "$ref": "#/$defs/AdjustProminenceMutation" },
@@ -718,13 +720,25 @@
 
     "ArchiveRelationshipMutation": {
       "type": "object",
-      "required": ["type", "entity", "relationshipKind"],
+      "required": ["type", "entity", "relationshipKind", "with"],
       "additionalProperties": false,
       "properties": {
         "type": { "const": "archive_relationship" },
         "entity": { "$ref": "#/$defs/NonEmptyString" },
         "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
         "with": { "$ref": "#/$defs/NonEmptyString" },
+        "direction": { "enum": ["src", "dst", "both"] }
+      }
+    },
+
+    "ArchiveAllRelationshipsMutation": {
+      "type": "object",
+      "required": ["type", "entity", "relationshipKind"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "archive_all_relationships" },
+        "entity": { "$ref": "#/$defs/NonEmptyString" },
+        "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
         "direction": { "enum": ["src", "dst", "both"] }
       }
     },

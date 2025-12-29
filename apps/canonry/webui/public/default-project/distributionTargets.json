@@ -11,11 +11,12 @@
       "type": "uniform",
       "comment": "Distribution of entity kinds - should sum to 1.0",
       "targets": {
-        "npc": 0.19,
-        "location": 0.26,
-        "faction": 0.22,
-        "rules": 0.17,
-        "abilities": 0.16
+        "npc": 0.17,
+        "location": 0.23,
+        "faction": 0.19,
+        "rules": 0.15,
+        "abilities": 0.14,
+        "artifact": 0.12
       },
       "tolerance": 0.05
     },
@@ -272,6 +273,24 @@
           "target": 6,
           "comment": "Combat techniques"
         }
+      },
+      "artifact": {
+        "weapon": {
+          "target": 5,
+          "comment": "Combat artifacts - blades, war-horns, etc."
+        },
+        "relic": {
+          "target": 6,
+          "comment": "Sacred or historical objects"
+        },
+        "tome": {
+          "target": 4,
+          "comment": "Books of knowledge and magic"
+        },
+        "instrument": {
+          "target": 3,
+          "comment": "Tools and devices with special powers"
+        }
       }
     }
   ],
@@ -324,7 +343,15 @@
       "derived_from",
       "manifests_at",
       "discovered_by",
-      "explorer_of"
+      "explorer_of",
+      "empowered_by",
+      "central_to",
+      "catalyst_of"
+    ],
+    "artifact": [
+      "owned_by",
+      "created_by",
+      "stored_at"
     ]
   }
 }

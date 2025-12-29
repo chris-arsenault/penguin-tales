@@ -293,11 +293,14 @@ export default function IlluminatorRemote({
     } catch {}
     return DEFAULT_CONFIG;
   });
+  const pendingConfigSyncRef = useRef(null);
+  const skipConfigSyncRef = useRef(false);
 
   // Sync from external config when it changes
   useEffect(() => {
     if (externalEnrichmentConfig) {
       const normalized = normalizeEnrichmentConfig(externalEnrichmentConfig) || DEFAULT_CONFIG;
+      skipConfigSyncRef.current = true;
       setLocalConfig(normalized);
       if (onEnrichmentConfigChange && needsConfigSync(externalEnrichmentConfig)) {
         onEnrichmentConfigChange(normalized);
@@ -312,18 +315,28 @@ export default function IlluminatorRemote({
   const setConfig = useCallback((updater) => {
     setLocalConfig((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      // Sync to parent if callback provided
-      if (onEnrichmentConfigChange) {
-        onEnrichmentConfigChange(next);
-      } else {
-        // Fallback to localStorage if no parent callback
-        try {
-          localStorage.setItem('illuminator:config', JSON.stringify(next));
-        } catch {}
-      }
+      pendingConfigSyncRef.current = next;
       return next;
     });
-  }, [onEnrichmentConfigChange]);
+  }, []);
+
+  useEffect(() => {
+    if (skipConfigSyncRef.current) {
+      skipConfigSyncRef.current = false;
+      pendingConfigSyncRef.current = null;
+      return;
+    }
+    const pending = pendingConfigSyncRef.current;
+    if (!pending) return;
+    pendingConfigSyncRef.current = null;
+    if (onEnrichmentConfigChange) {
+      onEnrichmentConfigChange(pending);
+    } else {
+      try {
+        localStorage.setItem('illuminator:config', JSON.stringify(pending));
+      } catch {}
+    }
+  }, [localConfig, onEnrichmentConfigChange]);
 
   // Style selection - use external prop if provided, else localStorage fallback
   // Default to 'random' for all style types to encourage visual variety
@@ -341,10 +354,13 @@ export default function IlluminatorRemote({
     } catch {}
     return DEFAULT_STYLE_SELECTION;
   });
+  const pendingStyleSelectionSyncRef = useRef(null);
+  const skipStyleSelectionSyncRef = useRef(false);
 
   // Sync from external style selection when it changes
   useEffect(() => {
     if (externalStyleSelection) {
+      skipStyleSelectionSyncRef.current = true;
       setLocalStyleSelection(externalStyleSelection);
     }
   }, [externalStyleSelection]);
@@ -356,18 +372,28 @@ export default function IlluminatorRemote({
   const setStyleSelection = useCallback((updater) => {
     setLocalStyleSelection((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      // Sync to parent if callback provided
-      if (onStyleSelectionChange) {
-        onStyleSelectionChange(next);
-      } else {
-        // Fallback to localStorage if no parent callback
-        try {
-          localStorage.setItem('illuminator:styleSelection', JSON.stringify(next));
-        } catch {}
-      }
+      pendingStyleSelectionSyncRef.current = next;
       return next;
     });
-  }, [onStyleSelectionChange]);
+  }, []);
+
+  useEffect(() => {
+    if (skipStyleSelectionSyncRef.current) {
+      skipStyleSelectionSyncRef.current = false;
+      pendingStyleSelectionSyncRef.current = null;
+      return;
+    }
+    const pending = pendingStyleSelectionSyncRef.current;
+    if (!pending) return;
+    pendingStyleSelectionSyncRef.current = null;
+    if (onStyleSelectionChange) {
+      onStyleSelectionChange(pending);
+    } else {
+      try {
+        localStorage.setItem('illuminator:styleSelection', JSON.stringify(pending));
+      } catch {}
+    }
+  }, [localStyleSelection, onStyleSelectionChange]);
 
   // Style library - loaded from IndexedDB or defaults from world-schema
   const {

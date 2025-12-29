@@ -101,6 +101,18 @@
           "visualTraitsInstructions": "You're adding detail to a magic system diagram.\n\nThe thesis defines the core visual concept. Your job is to add 2-4 ADDITIONAL symbolic or diagrammatic elements that clarify how the system works.\n\nThink RPG rulebook illustrations: what secondary symbols, flows, or annotations make the system clearer?",
           "visualTraitsFraming": "This is a MAGICAL SYSTEM - traits should describe additional abstract elements (symbols, flows, connections, visual metaphors for the rules)."
         }
+      },
+      "artifact": {
+        "description": {
+          "instructions": "This is an artifact in {{world.name}}. Focus on its physical form, origin, and power.\n\nWho created or discovered it:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nConsider: What does it look like? What powers does it hold? Who desires it and why? The {{entity.prominence}} indicates how famous it is. The {{entity.status}} shows its current condition."
+        },
+        "image": {
+          "imageInstructions": "The main subject is an ARTIFACT or magical object. Create a detailed study of the item as if it were being catalogued in a museum or bestiary. Show the object in isolation or on a pedestal/display, emphasizing its unique features and craftsmanship.",
+          "visualThesisInstructions": "You design legendary items for a fantasy RPG or video game.\n\nThe visual thesis captures what makes THIS artifact instantly recognizable - its defining visual feature.\n\nARTIFACT ELEMENTS:\n- Form: sword, staff, orb, tome, crown, amulet, ring, gauntlet\n- Material: crystal, ice, bone, gold, shadow-metal, aurora-glass\n- Enchantment effects: glowing runes, emanating light, floating particles, frost crystals\n- Signs of age/power: weathering, cracks, embedded gems, inscriptions",
+          "visualThesisFraming": "This is an ARTIFACT or magical item - describe its primary visual form and distinguishing feature.\n\nFocus on: shape, material, enchantment effects, signs of power.\nThis should represent the OBJECT itself, not someone holding it.",
+          "visualTraitsInstructions": "You're adding detail to an artifact design brief.\n\nThe thesis defines the primary form. Your job is to add 2-4 ADDITIONAL visual details that make this artifact distinctive.\n\nThink legendary item design: what secondary details, inscriptions, or magical effects make it memorable?",
+          "visualTraitsFraming": "This is an ARTIFACT - traits should describe additional visual elements (material details, magical effects, inscriptions, ornamental features)."
+        }
       }
     },
     "cultureVisualIdentities": {
@@ -108,25 +120,29 @@
         "SPECIES": "Apex predators. Size and scarification vary by role - raiders lean and scarred, shamans massive and unmarked, warriors somewhere between. Posture ranges from coiled ambush stillness to rigid military display.",
         "ARCHITECTURE": "No permanent structures. Temporary hunting camps marked by kelp-rope barriers, bone totems, skull warnings. Sacred spaces are natural formations claimed, not built.",
         "TECH": "Ocean-current weaponry - shock-lances, current-whips, pressure harpoons. Equipment is brutal and functional. Trophy display varies: some drape kills, others maintain austere discipline.",
-        "MAGIC": "Blood and pressure. Rituals leave physical marks - scarification, tooth-notching, fin-splitting. Magic manifests as water distortion, pressure waves, cold spots. Dead god symbols are ancient, half-forgotten, inconsistently applied."
+        "MAGIC": "Blood and pressure. Rituals leave physical marks - scarification, tooth-notching, fin-splitting. Magic manifests as water distortion, pressure waves, cold spots. Dead god symbols are ancient, half-forgotten, inconsistently applied.",
+        "ARTIFACT": "War trophies and kill-markers. Weapons: whale-bone harpoons, sharpened orca teeth on chains, pressure-forged tridents, current-channeling spears. Relics: enemy skulls with etched kill-counts, preserved penguin beaks, blood-stained expedition banners. Materials: whale bone, deep-sea coral, pressure-blackened steel, kelp-leather bindings. Aesthetic: brutal, functional, marked by use and kills. No ornamentation for beauty - only kill-tallies and pack symbols."
       },
       "nightshelf": {
         "SPECIES": "Cave-adapted penguins. Builds range from compact tunnel-runners to broader cavern-dwellers. Bone and crystal mark status but placement varies - some favor crowns, others belts, others hidden talismans. Dress ranges from heavy wrappings to minimal stealth-wear.",
         "ARCHITECTURE": "Subterranean networks mixing natural caverns and carved tunnels. Bioluminescent accents and fire-braziers for light. Sacred spaces go deeper and darker. Public areas glow; private areas don't.",
         "TECH": "Captured elemental fire drives everything - braziers, forges, engines. Steampunk aesthetic but visibility varies: lamp-bearers are obvious, shadow-workers hide their gear. Bone integrated as structural material and decoration.",
-        "MAGIC": "Ice and fire in tension. Practical applications over spectacle. Magic users often understated - subtle warmth, quiet frost. Rituals happen in darkness. Effects are felt before seen."
+        "MAGIC": "Ice and fire in tension. Practical applications over spectacle. Magic users often understated - subtle warmth, quiet frost. Rituals happen in darkness. Effects are felt before seen.",
+        "ARTIFACT": "Shadow-forged treasures and deep-earth relics. Weapons: obsidian daggers, fire-core hammers, shadow-steel blades that drink light, chain-whips with ember-heads. Relics: flame-heart crystals, bone-carved ancestor masks, bioluminescent orbs, smoke-captured in glass. Tomes: leather-bound grimoires with glowing ink, stone tablets from the deep, scrolls that only reveal text in darkness. Materials: obsidian, volcanic glass, fire-core crystals, shadow-steel, ancestor bone, cavern fungus leather. Aesthetic: flickering between light and shadow, warm cores with dark exteriors, hidden mechanisms, secrets within secrets."
       },
       "aurora-stack": {
         "SPECIES": "Open-ice penguins. Posture tends tall and proud but varies by role - merchants bustle, mystics stand still, soldiers brace. Crystalline ice integrated into equipment at varying degrees - some carry staves, others wear jewelry, others embed it in armor or tools.",
         "ARCHITECTURE": "Vertical ice spires with open-air galleries designed to catch aurora-light. Elegant and organic-looking but clearly engineered. Public spaces soar; private quarters are modest cells within the ice.",
         "TECH": "Ice-magic fusion powers everything. Crystalline conductors, aurora-charged capacitors. Prefer blunt and crushing weapons to blades. Airship crews dress for wind; wall-builders dress for cold; merchants dress for impression.",
-        "MAGIC": "Pure ice channeling. Adepts glow faintly from within - intensity varies by power level. Magic manifests as crystalline growth, temperature drops, aurora-reflection. Mundane members show no glow but may carry charged equipment."
+        "MAGIC": "Pure ice channeling. Adepts glow faintly from within - intensity varies by power level. Magic manifests as crystalline growth, temperature drops, aurora-reflection. Mundane members show no glow but may carry charged equipment.",
+        "ARTIFACT": "Aurora-touched treasures and ice-crystal relics. Weapons: ice-crystal maces, aurora-glass staves, frost-forged war-hammers, crystalline throwing discs. Relics: preserved aurora-light in crystal prisms, frozen tears of saints, ice-carved genealogy tablets, ceremony bells of pure ice. Tomes: crystal-page books that catch light, aurora-ink manuscripts, frozen memory scrolls, living ice that records speech. Instruments: aurora-tuned chimes, ice-crystal lenses, navigation orbs, weather-sensing devices. Materials: aurora-glass, eternal ice, crystalline conductors, silver-ice alloys, light-catching prisms. Aesthetic: elegant, luminous, prismatic refractions, cold beauty, objects that seem to hold captured starlight."
       },
       "world": {
         "SPECIES": "The Berg itself - supernatural iceberg of impossible scale. Weather is entity, not backdrop.",
         "ARCHITECTURE": "Natural ice formations that seem almost intentional. Crevasses, spires, shelves, grottos. The berg shifts slowly over generations.",
         "TECH": "None. The world is pre-technological, post-magical.",
-        "MAGIC": "Ambient and ancient. The ice remembers. Aurora-light carries power. The cold thinks."
+        "MAGIC": "Ambient and ancient. The ice remembers. Aurora-light carries power. The cold thinks.",
+        "ARTIFACT": "Primordial relics and berg-born treasures. Weapons: ice that never melts, storm-frozen lightning, solidified aurora. Relics: the berg's own bones, ice that predates memory, formations that move on their own, crystals that hum with the berg's heartbeat. Tomes: weather-patterns that tell stories, ice that records time itself, aurora-light that speaks. Materials: eternal ice, berg-heart crystal, frozen time, solidified memory. Aesthetic: ancient beyond culture, primordial, objects that feel older than the world itself, things that were found rather than made."
       }
     },
     "visualIdentityKeysByKind": {
@@ -152,6 +168,11 @@
         "MAGIC"
       ],
       "rules": [
+        "MAGIC"
+      ],
+      "artifact": [
+        "ARTIFACT",
+        "TECH",
         "MAGIC"
       ]
     }

@@ -72,7 +72,9 @@ const styles = {
     backgroundColor: '#1e3a5f',
     borderRadius: '6px',
     cursor: 'pointer',
-    border: '2px solid transparent',
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: 'transparent',
     display: 'flex',
     alignItems: 'center',
     gap: '10px'

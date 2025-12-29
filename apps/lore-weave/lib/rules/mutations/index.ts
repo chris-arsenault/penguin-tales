@@ -25,10 +25,14 @@ import type {
   CreateRelationshipMutation,
   ArchiveRelationshipMutation,
   AdjustRelationshipStrengthMutation,
+  TransferRelationshipMutation,
   ChangeStatusMutation,
   AdjustProminenceMutation,
   ModifyPressureMutation,
+  ForEachRelatedAction,
+  ConditionalAction,
 } from './types';
+import { evaluateCondition } from '../conditions';
 import { hasTag } from '../../utils';
 
 // Re-export types
@@ -97,6 +101,9 @@ export function prepareMutation(
     case 'adjust_relationship_strength':
       return prepareAdjustRelationshipStrength(mutation, ctx, result);
 
+    case 'transfer_relationship':
+      return prepareTransferRelationship(mutation, ctx, result);
+
     // =========================================================================
     // ENTITY MUTATIONS
     // =========================================================================
@@ -122,6 +129,16 @@ export function prepareMutation(
       result.rateLimitUpdated = true;
       result.diagnostic = 'rate limit updated';
       return result;
+
+    // =========================================================================
+    // COMPOUND ACTIONS
+    // =========================================================================
+
+    case 'for_each_related':
+      return prepareForEachRelated(mutation, ctx, result);
+
+    case 'conditional':
+      return prepareConditional(mutation, ctx, result);
 
     default:
       result.applied = false;
@@ -486,5 +503,182 @@ function prepareModifyPressure(
 ): MutationResult {
   result.pressureChanges[mutation.pressureId] = mutation.delta;
   result.diagnostic = `pressure ${mutation.pressureId} ${mutation.delta >= 0 ? '+' : ''}${mutation.delta}`;
+  return result;
+}
+
+// =============================================================================
+// TRANSFER RELATIONSHIP PREPARER
+// =============================================================================
+
+function prepareTransferRelationship(
+  mutation: TransferRelationshipMutation,
+  ctx: RuleContext,
+  result: MutationResult
+): MutationResult {
+  const entity = resolveEntityRef(mutation.entity, ctx);
+  const from = resolveEntityRef(mutation.from, ctx);
+  const to = resolveEntityRef(mutation.to, ctx);
+
+  if (!entity) {
+    result.applied = false;
+    result.diagnostic = `entity ${mutation.entity} not found`;
+    return result;
+  }
+
+  if (!from) {
+    result.applied = false;
+    result.diagnostic = `from entity ${mutation.from} not found`;
+    return result;
+  }
+
+  if (!to) {
+    result.applied = false;
+    result.diagnostic = `to entity ${mutation.to} not found`;
+    return result;
+  }
+
+  // Check condition if present
+  if (mutation.condition) {
+    const conditionMet = evaluateCondition(mutation.condition, ctx);
+    if (!conditionMet) {
+      result.diagnostic = `transfer_relationship condition not met`;
+      return result;
+    }
+  }
+
+  // Archive the old relationship
+  const rels = ctx.graph.getAllRelationships();
+  let foundOld = false;
+  for (const rel of rels) {
+    if (
+      rel.kind === mutation.relationshipKind &&
+      rel.status !== 'historical' &&
+      ((rel.src === entity.id && rel.dst === from.id) ||
+        (rel.src === from.id && rel.dst === entity.id))
+    ) {
+      ctx.graph.archiveRelationship(rel.src, rel.dst, rel.kind);
+      foundOld = true;
+      break;
+    }
+  }
+
+  // Create the new relationship
+  result.relationshipsCreated.push({
+    kind: mutation.relationshipKind,
+    src: entity.id,
+    dst: to.id,
+    strength: 0.8, // Default strength for transferred relationships
+  });
+
+  result.diagnostic = foundOld
+    ? `transferred ${mutation.relationshipKind} from ${from.name} to ${to.name}`
+    : `created ${mutation.relationshipKind} to ${to.name} (no previous relationship found)`;
+  return result;
+}
+
+// =============================================================================
+// COMPOUND ACTION PREPARERS
+// =============================================================================
+
+function prepareForEachRelated(
+  mutation: ForEachRelatedAction,
+  ctx: RuleContext,
+  result: MutationResult
+): MutationResult {
+  const self = ctx.self;
+  if (!self) {
+    result.applied = false;
+    result.diagnostic = 'for_each_related requires $self context';
+    return result;
+  }
+
+  // Find related entities
+  const direction = normalizeDirection(mutation.direction);
+  const relationships = ctx.graph.getAllRelationships().filter((rel) => {
+    if (rel.kind !== mutation.relationship || rel.status === 'historical') return false;
+
+    // Check direction
+    if (direction === 'src' && rel.src !== self.id) return false;
+    if (direction === 'dst' && rel.dst !== self.id) return false;
+    if (direction === 'both' && rel.src !== self.id && rel.dst !== self.id) return false;
+
+    return true;
+  });
+
+  // Get related entity IDs
+  const relatedIds = new Set<string>();
+  for (const rel of relationships) {
+    const relatedId = rel.src === self.id ? rel.dst : rel.src;
+    relatedIds.add(relatedId);
+  }
+
+  // Filter by kind/subtype if specified
+  const relatedEntities: HardState[] = [];
+  for (const id of relatedIds) {
+    const entity = ctx.graph.getEntity(id);
+    if (!entity) continue;
+    if (mutation.targetKind && entity.kind !== mutation.targetKind) continue;
+    if (mutation.targetSubtype && entity.subtype !== mutation.targetSubtype) continue;
+    relatedEntities.push(entity);
+  }
+
+  // Execute actions for each related entity
+  const diagnostics: string[] = [];
+  for (const related of relatedEntities) {
+    // Create a new context with $related bound
+    const nestedCtx: RuleContext = {
+      ...ctx,
+      entities: {
+        ...ctx.entities,
+        related: related,
+      },
+    };
+
+    // Execute each action
+    for (const action of mutation.actions) {
+      const actionResult = prepareMutation(action, nestedCtx);
+      if (actionResult.applied) {
+        // Merge results
+        result.entityModifications.push(...actionResult.entityModifications);
+        result.relationshipsCreated.push(...actionResult.relationshipsCreated);
+        result.relationshipsAdjusted.push(...actionResult.relationshipsAdjusted);
+        for (const [k, v] of Object.entries(actionResult.pressureChanges)) {
+          result.pressureChanges[k] = (result.pressureChanges[k] || 0) + v;
+        }
+        if (actionResult.rateLimitUpdated) result.rateLimitUpdated = true;
+      }
+      diagnostics.push(actionResult.diagnostic);
+    }
+  }
+
+  result.diagnostic = `for_each_related: processed ${relatedEntities.length} entities. ${diagnostics.join('; ')}`;
+  return result;
+}
+
+function prepareConditional(
+  mutation: ConditionalAction,
+  ctx: RuleContext,
+  result: MutationResult
+): MutationResult {
+  const conditionMet = evaluateCondition(mutation.condition, ctx);
+  const actionsToExecute = conditionMet ? mutation.thenActions : mutation.elseActions || [];
+
+  const diagnostics: string[] = [];
+  for (const action of actionsToExecute) {
+    const actionResult = prepareMutation(action, ctx);
+    if (actionResult.applied) {
+      // Merge results
+      result.entityModifications.push(...actionResult.entityModifications);
+      result.relationshipsCreated.push(...actionResult.relationshipsCreated);
+      result.relationshipsAdjusted.push(...actionResult.relationshipsAdjusted);
+      for (const [k, v] of Object.entries(actionResult.pressureChanges)) {
+        result.pressureChanges[k] = (result.pressureChanges[k] || 0) + v;
+      }
+      if (actionResult.rateLimitUpdated) result.rateLimitUpdated = true;
+    }
+    diagnostics.push(actionResult.diagnostic);
+  }
+
+  result.diagnostic = `conditional (${conditionMet ? 'then' : 'else'}): ${diagnostics.join('; ')}`;
   return result;
 }

@@ -210,6 +210,14 @@ export interface CreationRule {
 
   // Count (for batch creation)
   count?: number | CountRange;
+
+  /**
+   * Optional creation chance (0.0 to 1.0).
+   * If specified, this entity is only created with the given probability.
+   * Useful for cross-pollination - e.g., 25% chance to also create an artifact.
+   * If omitted, entity is always created (100% chance).
+   */
+  createChance?: number;
 }
 
 /**

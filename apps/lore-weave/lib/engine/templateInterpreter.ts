@@ -218,30 +218,9 @@ export class TemplateInterpreter {
       return false;
     }
 
-    // Then check if selection returns at least one target
-    const targets = this.executeSelection(template.selection, context);
-    if (targets.length === 0) {
-      return false;
-    }
-
-    // Check required variables can be resolved (using first target as context)
-    if (template.variables) {
-      context.target = targets[0];
-      context.set('$target', targets[0]);
-
-      for (const [name, def] of Object.entries(template.variables)) {
-        if (def.required) {
-          const resolved = this.resolveVariable(def, context);
-          if (!resolved || (Array.isArray(resolved) && resolved.length === 0)) {
-            return false;
-          }
-          // Store resolved variable so subsequent required variables can reference it
-          context.set(name, resolved);
-        }
-      }
-    }
-
-    return true;
+    // Then check if any target can satisfy required variables
+    const targets = this.findTargets(template, graphView);
+    return targets.length > 0;
   }
 
   /**
@@ -293,19 +272,25 @@ export class TemplateInterpreter {
     const failedVariableDiagnoses: VariableDiagnosis[] = [];
     let requiredVariablesPassed = true;
     if (applicabilityPassed && selectionCount > 0 && template.variables) {
-      context.target = targets[0];
-      context.set('$target', targets[0]);
+      const requiredVariables = this.getRequiredVariableEntries(template);
+      if (requiredVariables.length > 0) {
+        const hasValidTarget = targets.some((target) =>
+          this.targetResolvesRequiredVariables(requiredVariables, graphView, target)
+        );
+        if (!hasValidTarget) {
+          requiredVariablesPassed = false;
+          context.target = targets[0];
+          context.set('$target', targets[0]);
 
-      for (const [name, def] of Object.entries(template.variables)) {
-        if (def.required) {
-          const resolved = this.resolveVariable(def, context);
-          if (!resolved || (Array.isArray(resolved) && resolved.length === 0)) {
-            failedVariables.push(name);
-            failedVariableDiagnoses.push(this.diagnoseVariable(name, def, context));
-            requiredVariablesPassed = false;
-          } else {
-            // Store for subsequent variable resolution
-            context.set(name, resolved);
+          for (const [name, def] of requiredVariables) {
+            const resolved = this.resolveVariable(def, context);
+            if (!resolved || (Array.isArray(resolved) && resolved.length === 0)) {
+              failedVariables.push(name);
+              failedVariableDiagnoses.push(this.diagnoseVariable(name, def, context));
+            } else {
+              // Store for subsequent variable resolution
+              context.set(name, resolved);
+            }
           }
         }
       }
@@ -388,7 +373,48 @@ export class TemplateInterpreter {
    */
   findTargets(template: DeclarativeTemplate, graphView: WorldRuntime): HardState[] {
     const context = new ExecutionContext(graphView);
-    return this.executeSelection(template.selection, context);
+    const targets = this.executeSelection(template.selection, context);
+    return this.filterTargetsByRequiredVariables(template, graphView, targets);
+  }
+
+  private getRequiredVariableEntries(
+    template: DeclarativeTemplate
+  ): Array<[string, VariableDefinition]> {
+    if (!template.variables) return [];
+    return Object.entries(template.variables).filter(([, def]) => def.required);
+  }
+
+  private filterTargetsByRequiredVariables(
+    template: DeclarativeTemplate,
+    graphView: WorldRuntime,
+    targets: HardState[]
+  ): HardState[] {
+    const requiredVariables = this.getRequiredVariableEntries(template);
+    if (requiredVariables.length === 0) return targets;
+
+    return targets.filter((target) =>
+      this.targetResolvesRequiredVariables(requiredVariables, graphView, target)
+    );
+  }
+
+  private targetResolvesRequiredVariables(
+    requiredVariables: Array<[string, VariableDefinition]>,
+    graphView: WorldRuntime,
+    target: HardState
+  ): boolean {
+    const context = new ExecutionContext(graphView);
+    context.target = target;
+    context.set('$target', target);
+
+    for (const [name, def] of requiredVariables) {
+      const resolved = this.resolveVariable(def, context);
+      if (!resolved || (Array.isArray(resolved) && resolved.length === 0)) {
+        return false;
+      }
+      context.set(name, resolved);
+    }
+
+    return true;
   }
 
   /**
@@ -526,6 +552,15 @@ export class TemplateInterpreter {
     const placementStrategies: string[] = [];
     const derivedTagsList: Record<string, string | boolean>[] = [];
     const placementDebugList: PlacementDebug[] = [];
+
+    // Check createChance - if specified, roll to see if this entity should be created
+    if (rule.createChance !== undefined && rule.createChance < 1.0) {
+      const roll = Math.random();
+      if (roll > rule.createChance) {
+        // Creation skipped due to chance roll
+        return { entities, placeholders, placementStrategies, derivedTagsList, placementDebugList };
+      }
+    }
 
     // Determine count
     const count = this.resolveCount(rule.count);

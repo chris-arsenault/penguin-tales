@@ -875,4 +875,209 @@ Style: Precise, observant prose. Notice what's out of place. Dialogue should rev
       includeEraContext: false,
     },
   },
+
+  // 11. TREASURE HUNT
+  {
+    id: 'treasure-hunt',
+    name: 'Treasure Hunt',
+    description: 'Quest narratives driven by the pursuit of legendary artifacts, maps, and hidden treasures',
+    tags: ['artifact', 'quest', 'adventure', 'discovery'],
+    format: 'story',
+    plotStructure: {
+      type: 'three-act',
+      instructions: `This is a quest for a legendary object. The artifact itself is a character - its history, power, and mystery drive the narrative.
+
+Opening: The artifact must be established as worth pursuing. Perhaps a rumor, a dying mentor's revelation, a fragment of map, or a vision. The protagonist should have both personal and practical reasons to seek it. Establish what competitors or dangers exist.
+
+The Hunt: Each scene brings the protagonist closer while revealing more about the artifact's nature and history. Clues should be physical - inscriptions, old texts, previous seekers' remains. The artifact's trail should pass through varied locations. Include at least one false lead or trap.
+
+Discovery: Finding the artifact should be a moment of awe and danger. The object should exceed or subvert expectations. There may be a guardian, a test, or a terrible choice. The artifact's power should be demonstrated, not just described.
+
+Aftermath: Possessing the artifact changes everything. Consider: does the protagonist keep it? Destroy it? Pass it on? The ending should honor the quest's difficulty while acknowledging what was sacrificed.
+
+Style: The artifact should be described with reverent precision. Its materials, markings, weight, the way it feels. Locations should feel ancient and layered with history.`,
+    },
+    entityRules: {
+      primarySubjectCategories: ['object', 'character', 'place'],
+      supportingSubjectCategories: ['character', 'place', 'power', 'collective'],
+      roles: [
+        { role: 'treasure', count: { min: 1, max: 1 }, description: 'The artifact being sought - legendary, powerful, desired', selectionCriteria: 'Prefer entities from object category' },
+        { role: 'seeker', count: { min: 1, max: 2 }, description: 'Those who pursue the artifact - driven by need, greed, or duty' },
+        { role: 'guardian', count: { min: 0, max: 1 }, description: 'What protects the artifact - creature, trap, or curse' },
+        { role: 'rival', count: { min: 0, max: 1 }, description: 'Competing seeker with their own claim or need' },
+        { role: 'resting-place', count: { min: 0, max: 1 }, description: 'Where the artifact lies hidden - tomb, vault, or forgotten shrine', selectionCriteria: 'Prefer entities from place category' },
+      ],
+      maxCastSize: 6,
+    },
+    eventRules: {
+      significanceRange: { min: 0.4, max: 1.0 },
+      priorityKinds: ['coalescence', 'state_change', 'entity_lifecycle'],
+      priorityTags: ['discovery', 'quest', 'treasure', 'artifact', 'hidden'],
+      maxEvents: 10,
+      usageInstructions: 'Events mark stages of the hunt - clues discovered, dangers overcome, rivals encountered.',
+    },
+    sceneTemplates: [
+      { id: 'the-legend', name: 'The Legend', purpose: 'Establish the artifact and the quest', requiredElements: ['artifact described', 'reason to seek', 'first clue'], emotionalArc: 'wonder → determination' },
+      { id: 'the-trail', name: 'The Trail', purpose: 'Follow clues and overcome obstacles', requiredElements: ['physical evidence', 'danger or rival', 'progress toward goal'], emotionalArc: 'pursuit → setback → breakthrough' },
+      { id: 'the-discovery', name: 'The Discovery', purpose: 'Find the artifact', requiredElements: ['location revealed', 'artifact encountered', 'test or price'], emotionalArc: 'anticipation → awe → consequence' },
+      { id: 'the-choice', name: 'The Choice', purpose: 'Decide the artifact fate', requiredElements: ['power demonstrated', 'cost acknowledged', 'decision made'], emotionalArc: 'temptation → resolution' },
+    ],
+    pacing: {
+      totalWordCount: { min: 1600, max: 2200 },
+      sceneCount: { min: 4, max: 5 },
+    },
+    proseDirectives: {
+      toneKeywords: ['adventurous', 'mysterious', 'reverent', 'driven', 'atmospheric'],
+      dialogueStyle: 'Mix of excitement and caution. Seekers speak of the artifact with awe. Rivals with hunger.',
+      descriptionStyle: 'Rich detail for the artifact and its resting place. Age and power should be tangible.',
+      pacingNotes: 'Build anticipation toward the discovery. The finding should be a peak moment.',
+      avoid: ['trivializing the artifact', 'easy victories', 'anticlimatic discovery', 'unexplained convenience'],
+    },
+    worldDataFocus: {
+      includeLocations: true,
+      locationUsage: 'Sites along the quest. The final resting place should feel ancient and significant.',
+      includeArtifacts: true,
+      artifactUsage: 'THE CENTRAL FOCUS. The artifact drives everything. Its history, power, and mystery.',
+      includeCulturalPractices: true,
+      culturalUsage: 'Legends and taboos about the artifact. What cultures believe about it.',
+      includeEraContext: true,
+      eraUsage: 'When the artifact was made or lost. The age that created it.',
+    },
+  },
+
+  // 12. HAUNTED RELIC
+  {
+    id: 'haunted-relic',
+    name: 'Haunted Relic',
+    description: 'Horror narratives centered on cursed objects that bring doom to their possessors',
+    tags: ['artifact', 'horror', 'curse', 'supernatural'],
+    format: 'story',
+    plotStructure: {
+      type: 'accumulating',
+      instructions: `This is a horror story where the artifact is the antagonist. The curse unfolds slowly, inevitably.
+
+Acquisition: The object comes into possession in a way that seems fortunate - inheritance, discovery, purchase, gift. There may be subtle warnings the protagonist ignores. The artifact should seem beautiful or valuable at first.
+
+The Signs: Small wrongnesses accumulate. Dreams change. Relationships strain. Physical symptoms appear. The protagonist may not connect these to the artifact at first. When they do, they try rational explanations.
+
+The Truth: Investigation reveals the artifact's history - previous owners and their fates. The curse has rules that become clear through pattern. Perhaps there's a way to break it, but the cost is terrible.
+
+The Reckoning: The curse reaches its peak. The protagonist must make an impossible choice - bear the curse, pass it on, or attempt a dangerous breaking. Whatever the outcome, there should be a sense that the artifact will find new victims.
+
+Style: The artifact should feel wrong in subtle ways - too cold, too heavy, too present. Horror comes from accumulation of small details. The artifact's beauty makes its corruption more terrible.`,
+    },
+    entityRules: {
+      primarySubjectCategories: ['object', 'character'],
+      supportingSubjectCategories: ['character', 'place', 'power'],
+      roles: [
+        { role: 'cursed-artifact', count: { min: 1, max: 1 }, description: 'The object bearing the curse - beautiful and terrible', selectionCriteria: 'Prefer entities from object category with negative status' },
+        { role: 'victim', count: { min: 1, max: 2 }, description: 'Current possessor suffering the curse effects' },
+        { role: 'previous-owner', count: { min: 0, max: 2 }, description: 'Past victims whose fates foreshadow the present' },
+        { role: 'curse-source', count: { min: 0, max: 1 }, description: 'Origin of the curse - wronged spirit, dark magic, or malevolent power', selectionCriteria: 'Prefer entities from power category' },
+      ],
+      maxCastSize: 5,
+    },
+    eventRules: {
+      significanceRange: { min: 0.3, max: 0.9 },
+      priorityKinds: ['state_change', 'relationship_dissolved', 'entity_lifecycle'],
+      priorityTags: ['curse', 'death', 'corruption', 'haunting', 'doom'],
+      maxEvents: 10,
+      usageInstructions: 'Events are manifestations of the curse - deaths, madness, destruction. Each should escalate.',
+    },
+    sceneTemplates: [
+      { id: 'acquisition', name: 'The Acquisition', purpose: 'The artifact is obtained', requiredElements: ['object described', 'seeming fortune', 'subtle warning ignored'], emotionalArc: 'pleasure → unease' },
+      { id: 'manifestation', name: 'The Manifestation', purpose: 'Curse effects begin', requiredElements: ['strange occurrences', 'denial', 'growing dread'], emotionalArc: 'confusion → fear → denial' },
+      { id: 'revelation', name: 'The Revelation', purpose: 'Curse nature understood', requiredElements: ['history uncovered', 'pattern revealed', 'escape seems impossible'], emotionalArc: 'investigation → horror → despair' },
+      { id: 'reckoning', name: 'The Reckoning', purpose: 'Final confrontation with curse', requiredElements: ['impossible choice', 'cost paid', 'curse resolution or continuation'], emotionalArc: 'desperation → sacrifice → aftermath' },
+    ],
+    pacing: {
+      totalWordCount: { min: 1500, max: 2000 },
+      sceneCount: { min: 4, max: 5 },
+    },
+    proseDirectives: {
+      toneKeywords: ['dread', 'creeping', 'wrong', 'inevitable', 'beautiful-terrible'],
+      dialogueStyle: 'Characters speak around the horror. Euphemisms. Denial. The artifact is discussed with nervous deflection.',
+      descriptionStyle: 'Sensory wrongness. The artifact feels, sounds, smells slightly off. Cumulative unease.',
+      pacingNotes: 'Slow build. Small details accumulate. Horror should creep, not jump.',
+      avoid: ['jump scares', 'gore without meaning', 'easy cures', 'heroes who dont suffer'],
+    },
+    worldDataFocus: {
+      includeLocations: false,
+      includeArtifacts: true,
+      artifactUsage: 'THE ANTAGONIST. The artifact has presence, history, and malevolent purpose.',
+      includeCulturalPractices: true,
+      culturalUsage: 'Superstitions and warnings about cursed objects. Ritual protections that fail.',
+      includeEraContext: true,
+      eraUsage: 'When the curse was laid. What wrong created this doom.',
+    },
+  },
+
+  // 13. LOST LEGACY
+  {
+    id: 'lost-legacy',
+    name: 'Lost Legacy',
+    description: 'Inheritance narratives exploring what artifacts mean across generations',
+    tags: ['artifact', 'inheritance', 'family', 'history'],
+    format: 'story',
+    plotStructure: {
+      type: 'parallel',
+      instructions: `This is a story about what objects carry across time. The artifact connects generations, and the narrative moves between past and present.
+
+The Inheritance: Someone receives or discovers an artifact connected to their lineage. It may come with expectations, secrets, or obligations. The present-day protagonist must reckon with what this object means.
+
+The Past: Flashbacks or discovered records reveal how ancestors acquired and used the artifact. Each generation added meaning. The object accumulated purpose, stain, or power. These stories should illuminate the present.
+
+The Present: The protagonist must decide what to do with this legacy. Keep faith with ancestors? Reject their choices? Transform the artifact's meaning? Other descendants or claimants may have different views.
+
+Resolution: The artifact passes on again - to the next generation, to a new purpose, or to destruction. The story should acknowledge both continuity and change.
+
+Style: The artifact should be described differently in each time period, showing how perception changes. Family dynamics matter as much as the object itself.`,
+    },
+    entityRules: {
+      primarySubjectCategories: ['object', 'character'],
+      supportingSubjectCategories: ['character', 'collective', 'concept'],
+      roles: [
+        { role: 'heirloom', count: { min: 1, max: 1 }, description: 'The artifact passed through generations', selectionCriteria: 'Prefer entities from object category' },
+        { role: 'inheritor', count: { min: 1, max: 1 }, description: 'Current generation receiving the legacy' },
+        { role: 'ancestor', count: { min: 1, max: 2 }, description: 'Past family members whose stories illuminate the heirloom' },
+        { role: 'claimant', count: { min: 0, max: 1 }, description: 'Others who believe they have right to the artifact' },
+        { role: 'family-tradition', count: { min: 0, max: 1 }, description: 'The customs or obligations attached to the heirloom', selectionCriteria: 'Prefer entities from concept category' },
+      ],
+      maxCastSize: 6,
+    },
+    eventRules: {
+      significanceRange: { min: 0.4, max: 0.9 },
+      priorityKinds: ['succession', 'entity_lifecycle', 'state_change'],
+      priorityTags: ['inheritance', 'family', 'death', 'legacy', 'tradition'],
+      maxEvents: 12,
+      usageInstructions: 'Events span generations. Deaths that transfer the artifact, moments that changed its meaning.',
+    },
+    sceneTemplates: [
+      { id: 'inheritance', name: 'The Inheritance', purpose: 'Artifact passes to new hands', requiredElements: ['object received', 'weight of expectation', 'questions raised'], emotionalArc: 'grief or surprise → responsibility' },
+      { id: 'ancestors-story', name: 'The Ancestor Story', purpose: 'Past illuminates present', requiredElements: ['historical context', 'how artifact was used', 'what it meant then'], emotionalArc: 'discovery → understanding → complication' },
+      { id: 'present-crisis', name: 'The Present Crisis', purpose: 'Inheritor must choose', requiredElements: ['competing claims or duties', 'what artifact means now', 'personal stake'], emotionalArc: 'conflict → decision → action' },
+      { id: 'passing-on', name: 'The Passing On', purpose: 'Legacy continues or ends', requiredElements: ['artifact fate decided', 'what changes', 'what endures'], emotionalArc: 'resolution → continuity or closure' },
+    ],
+    pacing: {
+      totalWordCount: { min: 1600, max: 2200 },
+      sceneCount: { min: 4, max: 5 },
+    },
+    proseDirectives: {
+      toneKeywords: ['generational', 'layered', 'weighted', 'familial', 'bittersweet'],
+      dialogueStyle: 'Family speaks in echoes. Similar phrases across generations. Expectations unspoken.',
+      descriptionStyle: 'The artifact described differently in each time period. Show how meaning changes.',
+      pacingNotes: 'Balance past and present. Neither should overwhelm. Let time periods illuminate each other.',
+      avoid: ['sentimentality', 'simple answers', 'villainous ancestors without nuance', 'ignoring the artifact'],
+    },
+    worldDataFocus: {
+      includeLocations: true,
+      locationUsage: 'Family lands, ancestral homes. Places where memory lives.',
+      includeArtifacts: true,
+      artifactUsage: 'THE THREAD connecting everything. The artifact is the physical manifestation of family.',
+      includeCulturalPractices: true,
+      culturalUsage: 'Inheritance customs. What families owe their dead.',
+      includeEraContext: true,
+      eraUsage: 'Different eras show different meanings of the same object.',
+    },
+  },
 ];

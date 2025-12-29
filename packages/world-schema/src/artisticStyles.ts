@@ -113,4 +113,26 @@ export const DEFAULT_ARTISTIC_STYLES: ArtisticStyle[] = [
     promptFragment: 'baroque chiaroscuro, dramatic tenebrism, deep shadows against illuminated subjects, Caravaggio style, rich oil pigments, theatrical lighting, Renaissance master painting technique',
     keywords: ['baroque', 'dramatic', 'contrast', 'classical'],
   },
+  // Artifact-focused styles
+  {
+    id: 'manuscript-page',
+    name: 'Illuminated Manuscript',
+    description: 'Medieval illuminated manuscript with gold leaf and intricate borders',
+    promptFragment: 'illuminated manuscript page, medieval codex style, gold leaf details, intricate decorative borders, calligraphic text suggestions, vellum texture, ornamental initial letters, monastic scriptorium quality, rich pigments on parchment',
+    keywords: ['manuscript', 'medieval', 'illuminated', 'artifact'],
+  },
+  {
+    id: 'encyclopedia-plate',
+    name: 'Encyclopedia Illustration',
+    description: 'Scientific encyclopedia plate with detailed technical rendering',
+    promptFragment: 'encyclopedia illustration plate, detailed technical drawing, scientific accuracy, annotated diagram style, naturalist illustration, cross-section views, precise linework, educational illustration, Victorian-era scientific plate aesthetic',
+    keywords: ['encyclopedia', 'scientific', 'technical', 'detailed'],
+  },
+  {
+    id: 'museum-catalog',
+    name: 'Museum Catalog',
+    description: 'High-quality museum photography with neutral background',
+    promptFragment: 'museum artifact photography, neutral gray background, professional studio lighting, archival documentation quality, multiple angle consideration, scale reference implied, pristine preservation, academic catalog standard',
+    keywords: ['museum', 'catalog', 'artifact', 'archival'],
+  },
 ];

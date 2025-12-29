@@ -10,6 +10,7 @@
  */
 
 import type { Direction, Prominence } from '../types';
+import type { Condition } from '../conditions/types';
 
 /**
  * Unified Mutation type.
@@ -24,6 +25,7 @@ export type Mutation =
   | CreateRelationshipMutation
   | ArchiveRelationshipMutation
   | AdjustRelationshipStrengthMutation
+  | TransferRelationshipMutation
 
   // Entity mutations
   | ChangeStatusMutation
@@ -33,7 +35,11 @@ export type Mutation =
   | ModifyPressureMutation
 
   // Rate limit mutations
-  | UpdateRateLimitMutation;
+  | UpdateRateLimitMutation
+
+  // Compound actions (contain nested actions)
+  | ForEachRelatedAction
+  | ConditionalAction;
 
 // =============================================================================
 // TAG MUTATIONS
@@ -120,6 +126,59 @@ export interface AdjustRelationshipStrengthMutation {
   delta: number;
   /** If true, apply adjustment in both directions */
   bidirectional?: boolean;
+}
+
+/**
+ * Transfer a relationship from one entity to another.
+ * Archives the relationship with 'from' and creates a new one with 'to'.
+ */
+export interface TransferRelationshipMutation {
+  type: 'transfer_relationship';
+  /** The entity whose relationship is being transferred (e.g., an artifact) */
+  entity: string;
+  /** Relationship kind to transfer */
+  relationshipKind: string;
+  /** Entity to transfer from */
+  from: string;
+  /** Entity to transfer to */
+  to: string;
+  /** Optional condition for the transfer */
+  condition?: Condition;
+}
+
+// =============================================================================
+// COMPOUND ACTIONS
+// =============================================================================
+
+/**
+ * Iterate over related entities and execute actions for each.
+ * Sets $related to each matching entity in turn.
+ */
+export interface ForEachRelatedAction {
+  type: 'for_each_related';
+  /** Relationship kind to traverse */
+  relationship: string;
+  /** Direction to traverse */
+  direction: Direction;
+  /** Filter to target kind (optional) */
+  targetKind?: string;
+  /** Filter to target subtype (optional) */
+  targetSubtype?: string;
+  /** Actions to execute for each related entity */
+  actions: Mutation[];
+}
+
+/**
+ * Conditionally execute actions based on a condition.
+ */
+export interface ConditionalAction {
+  type: 'conditional';
+  /** Condition to evaluate */
+  condition: Condition;
+  /** Actions to execute if condition is true */
+  thenActions: Mutation[];
+  /** Actions to execute if condition is false (optional) */
+  elseActions?: Mutation[];
 }
 
 // =============================================================================

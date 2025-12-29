@@ -690,5 +690,128 @@
     "style": {
       "color": "#FC6B6B"
     }
+  },
+  {
+    "kind": "artifact",
+    "description": "Artifacts & Relics",
+    "category": "object",
+    "subtypes": [
+      {
+        "id": "weapon",
+        "name": "Weapon"
+      },
+      {
+        "id": "relic",
+        "name": "Relic"
+      },
+      {
+        "id": "tome",
+        "name": "Tome"
+      },
+      {
+        "id": "instrument",
+        "name": "Instrument"
+      }
+    ],
+    "statuses": [
+      {
+        "id": "intact",
+        "name": "Intact",
+        "isTerminal": false,
+        "polarity": "positive"
+      },
+      {
+        "id": "damaged",
+        "name": "Damaged",
+        "isTerminal": false,
+        "polarity": "negative"
+      },
+      {
+        "id": "lost",
+        "name": "Lost",
+        "isTerminal": false,
+        "polarity": "negative"
+      },
+      {
+        "id": "destroyed",
+        "name": "Destroyed",
+        "isTerminal": true,
+        "polarity": "negative"
+      }
+    ],
+    "semanticPlane": {
+      "axes": {
+        "x": {
+          "axisId": "element"
+        },
+        "y": {
+          "axisId": "purpose"
+        },
+        "z": {
+          "axisId": "pragmatism"
+        }
+      },
+      "regions": [
+        {
+          "id": "aurora_artifacts",
+          "label": "Aurora Relics",
+          "color": "#FFD700",
+          "culture": "aurora-stack",
+          "tags": [
+            "trade",
+            "organized",
+            "ice"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 75,
+              "y": 60
+            },
+            "radius": 15
+          }
+        },
+        {
+          "id": "nightshelf_artifacts",
+          "label": "Shadow Relics",
+          "color": "#9370DB",
+          "culture": "nightshelf",
+          "tags": [
+            "mystical",
+            "secretive"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 40,
+              "y": 75
+            },
+            "radius": 15
+          }
+        },
+        {
+          "id": "orca_artifacts",
+          "label": "Orca Trophies",
+          "color": "#2F4F4F",
+          "culture": "orca",
+          "tags": [
+            "hostile",
+            "combat"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 20,
+              "y": 25
+            },
+            "radius": 12
+          }
+        }
+      ]
+    },
+    "defaultStatus": "intact",
+    "style": {
+      "color": "#B8860B"
+    }
   }
 ]

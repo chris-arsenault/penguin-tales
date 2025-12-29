@@ -265,7 +265,7 @@
           "newStatus": "historical"
         },
         {
-          "type": "archive_relationship",
+          "type": "archive_all_relationships",
           "entity": "$instigator",
           "relationshipKind": "participant_in",
           "direction": "dst"
@@ -1097,6 +1097,244 @@
         {
           "pressure": "magical_stability",
           "multiplier": 0.3
+        }
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "id": "claim_artifact",
+    "name": "Claim Artifact",
+    "description": "A faction claims an unowned artifact in territory they control",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "filters": [
+          {
+            "type": "has_relationship",
+            "kind": "controls",
+            "direction": "src"
+          }
+        ]
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "artifact",
+      "filters": [
+        {
+          "type": "lacks_relationship",
+          "kind": "owned_by"
+        },
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "stored_at",
+                "direction": "src",
+                "targetKind": "location",
+                "targetSubtype": "any"
+              },
+              {
+                "via": "controls",
+                "direction": "in",
+                "targetKind": "faction",
+                "targetSubtype": "any",
+                "matchEntity": "$actor"
+              }
+            ]
+          }
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "owned_by",
+          "src": "$target",
+          "dst": "$actor",
+          "strength": 0.8
+        },
+        {
+          "type": "set_tag",
+          "entity": "$target",
+          "tag": "claimed",
+          "value": true
+        }
+      ],
+      "descriptionTemplate": "{actor.name} claimed the artifact {target.name}",
+      "applyProminenceToActor": true
+    },
+    "probability": {
+      "baseSuccessChance": 0.6,
+      "baseWeight": 0.4,
+      "pressureModifiers": [
+        {
+          "pressure": "security",
+          "multiplier": 0.3
+        }
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "id": "gift_artifact",
+    "name": "Gift Artifact",
+    "description": "An artifact is gifted by its owner to their faction",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact",
+        "statusFilter": "intact",
+        "filters": [
+          {
+            "type": "has_relationship",
+            "kind": "owned_by",
+            "direction": "src"
+          }
+        ]
+      },
+      "instigator": {
+        "from": {
+          "relatedTo": "$actor",
+          "relationship": "owned_by",
+          "direction": "src"
+        },
+        "kind": "npc",
+        "statusFilter": "alive"
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "filters": [
+        {
+          "type": "has_relationship",
+          "kind": "member_of",
+          "with": "$instigator",
+          "direction": "dst"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "archive_relationship",
+          "entity": "$actor",
+          "relationshipKind": "owned_by",
+          "with": "$instigator"
+        },
+        {
+          "type": "create_relationship",
+          "kind": "owned_by",
+          "src": "$actor",
+          "dst": "$target",
+          "strength": 0.9
+        },
+        {
+          "type": "set_tag",
+          "entity": "$actor",
+          "tag": "gifted",
+          "value": true
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "harmony",
+          "delta": 3
+        }
+      ],
+      "descriptionTemplate": "{instigator.name} gifted {actor.name} to {target.name}",
+      "applyProminenceToInstigator": true
+    },
+    "probability": {
+      "baseSuccessChance": 0.25,
+      "baseWeight": 0.2,
+      "pressureModifiers": [
+        {
+          "pressure": "harmony",
+          "multiplier": 0.5
+        }
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "id": "steal_artifact",
+    "name": "Steal Artifact",
+    "description": "An outlaw steals an artifact from a faction or location",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "subtypes": ["outlaw", "orca"],
+        "statusFilter": "alive"
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "artifact",
+      "statusFilter": "intact",
+      "filters": [
+        {
+          "type": "lacks_relationship",
+          "kind": "owned_by",
+          "with": "$actor"
+        },
+        {
+          "type": "has_relationship",
+          "kind": "stored_at",
+          "direction": "src"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "archive_all_relationships",
+          "entity": "$target",
+          "relationshipKind": "owned_by"
+        },
+        {
+          "type": "create_relationship",
+          "kind": "owned_by",
+          "src": "$target",
+          "dst": "$actor",
+          "strength": 0.7
+        },
+        {
+          "type": "set_tag",
+          "entity": "$target",
+          "tag": "stolen",
+          "value": true
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": -5
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "harmony",
+          "delta": -3
+        }
+      ],
+      "descriptionTemplate": "{actor.name} stole the artifact {target.name}",
+      "applyProminenceToActor": true
+    },
+    "probability": {
+      "baseSuccessChance": 0.2,
+      "baseWeight": 0.15,
+      "pressureModifiers": [
+        {
+          "pressure": "security",
+          "multiplier": -0.5
         }
       ]
     },

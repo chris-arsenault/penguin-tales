@@ -1151,11 +1151,15 @@
         { "$ref": "#/$defs/RemoveTagMutation" },
         { "$ref": "#/$defs/CreateRelationshipMutation" },
         { "$ref": "#/$defs/ArchiveRelationshipMutation" },
+        { "$ref": "#/$defs/ArchiveAllRelationshipsMutation" },
         { "$ref": "#/$defs/AdjustRelationshipStrengthMutation" },
+        { "$ref": "#/$defs/TransferRelationshipMutation" },
         { "$ref": "#/$defs/ChangeStatusMutation" },
         { "$ref": "#/$defs/AdjustProminenceMutation" },
         { "$ref": "#/$defs/ModifyPressureMutation" },
-        { "$ref": "#/$defs/UpdateRateLimitMutation" }
+        { "$ref": "#/$defs/UpdateRateLimitMutation" },
+        { "$ref": "#/$defs/ForEachRelatedAction" },
+        { "$ref": "#/$defs/ConditionalAction" }
       ]
     },
 
@@ -1200,13 +1204,25 @@
 
     "ArchiveRelationshipMutation": {
       "type": "object",
-      "required": ["type", "entity", "relationshipKind"],
+      "required": ["type", "entity", "relationshipKind", "with"],
       "additionalProperties": false,
       "properties": {
         "type": { "const": "archive_relationship" },
         "entity": { "$ref": "#/$defs/NonEmptyString" },
         "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
         "with": { "$ref": "#/$defs/NonEmptyString" },
+        "direction": { "enum": ["src", "dst", "both"] }
+      }
+    },
+
+    "ArchiveAllRelationshipsMutation": {
+      "type": "object",
+      "required": ["type", "entity", "relationshipKind"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "archive_all_relationships" },
+        "entity": { "$ref": "#/$defs/NonEmptyString" },
+        "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
         "direction": { "enum": ["src", "dst", "both"] }
       }
     },
@@ -1263,6 +1279,46 @@
       "required": ["type"],
       "additionalProperties": false,
       "properties": { "type": { "const": "update_rate_limit" } }
+    },
+
+    "TransferRelationshipMutation": {
+      "type": "object",
+      "required": ["type", "entity", "relationshipKind", "from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "transfer_relationship" },
+        "entity": { "$ref": "#/$defs/NonEmptyString", "description": "Entity whose relationship is being transferred" },
+        "relationshipKind": { "$ref": "#/$defs/NonEmptyString", "description": "Kind of relationship to transfer" },
+        "from": { "$ref": "#/$defs/NonEmptyString", "description": "Entity to transfer from" },
+        "to": { "$ref": "#/$defs/NonEmptyString", "description": "Entity to transfer to" },
+        "condition": { "$ref": "#/$defs/Condition", "description": "Optional condition for the transfer" }
+      }
+    },
+
+    "ForEachRelatedAction": {
+      "type": "object",
+      "required": ["type", "relationship", "direction", "actions"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "for_each_related" },
+        "relationship": { "$ref": "#/$defs/NonEmptyString", "description": "Relationship kind to traverse" },
+        "direction": { "enum": ["src", "dst", "both", "in", "out", "any"], "description": "Direction to traverse" },
+        "targetKind": { "$ref": "#/$defs/NonEmptyString", "description": "Filter to target kind" },
+        "targetSubtype": { "$ref": "#/$defs/NonEmptyString", "description": "Filter to target subtype" },
+        "actions": { "type": "array", "items": { "$ref": "#/$defs/Mutation" }, "description": "Actions to execute for each related entity" }
+      }
+    },
+
+    "ConditionalAction": {
+      "type": "object",
+      "required": ["type", "condition", "thenActions"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "conditional" },
+        "condition": { "$ref": "#/$defs/Condition", "description": "Condition to evaluate" },
+        "thenActions": { "type": "array", "items": { "$ref": "#/$defs/Mutation" }, "description": "Actions if condition is true" },
+        "elseActions": { "type": "array", "items": { "$ref": "#/$defs/Mutation" }, "description": "Actions if condition is false" }
+      }
     },
 
     "ContagionAction": {

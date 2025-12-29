@@ -604,7 +604,8 @@
         "tags": { "type": "object", "additionalProperties": { "type": "boolean" } },
         "placement": { "$ref": "#/$defs/PlacementSpec" },
         "count": { "oneOf": [{ "type": "integer", "minimum": 1 }, { "$ref": "#/$defs/CountRange" }] },
-        "lineage": { "$ref": "#/$defs/LineageSpec" }
+        "lineage": { "$ref": "#/$defs/LineageSpec" },
+        "createChance": { "type": "number", "minimum": 0, "maximum": 1, "description": "Optional creation chance (0.0 to 1.0). If specified, entity is only created with given probability. Useful for cross-pollination." }
       }
     },
 

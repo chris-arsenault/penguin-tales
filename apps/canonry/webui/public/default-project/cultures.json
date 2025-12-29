@@ -35,6 +35,9 @@
       ],
       "faction": [
         "aurora_factions"
+      ],
+      "artifact": [
+        "aurora_artifacts"
       ]
     },
     "naming": {
@@ -150,6 +153,58 @@
               "ar"
             ],
             "preferredEndingBoost": 1.3,
+            "rhythmBias": "neutral"
+          }
+        },
+        {
+          "id": "ancient_tech_prefix",
+          "phonology": {
+            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
+            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+            "syllableTemplates": ["CV", "VC"],
+            "lengthRange": [1, 1],
+            "favoredClusters": [],
+            "forbiddenClusters": [],
+            "favoredClusterBoost": 1
+          },
+          "morphology": {
+            "prefixes": [],
+            "suffixes": [],
+            "structure": ["root"],
+            "structureWeights": [1]
+          },
+          "style": {
+            "capitalization": "",
+            "apostropheRate": 0,
+            "hyphenRate": 0,
+            "preferredEndings": [],
+            "preferredEndingBoost": 1,
+            "rhythmBias": "neutral"
+          }
+        },
+        {
+          "id": "ancient_tech_serial",
+          "phonology": {
+            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
+            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+            "syllableTemplates": ["CV", "CVC", "VC"],
+            "lengthRange": [2, 3],
+            "favoredClusters": [],
+            "forbiddenClusters": [],
+            "favoredClusterBoost": 1
+          },
+          "morphology": {
+            "prefixes": [],
+            "suffixes": [],
+            "structure": ["root"],
+            "structureWeights": [1]
+          },
+          "style": {
+            "capitalization": "",
+            "apostropheRate": 0,
+            "hyphenRate": 0,
+            "preferredEndings": [],
+            "preferredEndingBoost": 1,
             "rhythmBias": "neutral"
           }
         },
@@ -754,6 +809,105 @@
             "Meridian"
           ],
           "source": "llm"
+        },
+        "aurora_artifact_nouns": {
+          "id": "aurora_artifact_nouns",
+          "description": "Artifact-related nouns for Aurora Stack",
+          "entries": [
+            "scepter",
+            "crown",
+            "orb",
+            "staff",
+            "blade",
+            "chalice",
+            "ring",
+            "amulet",
+            "tome",
+            "codex",
+            "crystal",
+            "mirror",
+            "compass",
+            "beacon",
+            "seal",
+            "medallion",
+            "gauntlet",
+            "helm",
+            "mantle",
+            "key"
+          ],
+          "source": "manual"
+        },
+        "aurora_artifact_modifiers": {
+          "id": "aurora_artifact_modifiers",
+          "description": "Modifiers for Aurora artifacts",
+          "entries": [
+            "eternal",
+            "frozen",
+            "radiant",
+            "celestial",
+            "gilded",
+            "ancient",
+            "crystalline",
+            "luminous",
+            "sacred",
+            "pristine",
+            "aurora-forged"
+          ],
+          "source": "manual"
+        },
+        "ancient_relic_epithets": {
+          "id": "ancient_relic_epithets",
+          "description": "Grandiose epithets for ancient alien relics",
+          "entries": [
+            "Apocalypse",
+            "Extinction",
+            "Annihilation",
+            "Oblivion",
+            "Cataclysm",
+            "Devastation",
+            "Terminus",
+            "Genesis",
+            "Omega",
+            "Alpha",
+            "Void",
+            "Stellar",
+            "Nova",
+            "Singularity",
+            "Quantum",
+            "Temporal",
+            "Null",
+            "Zero",
+            "Prime",
+            "Ultima"
+          ],
+          "source": "manual"
+        },
+        "ancient_relic_types": {
+          "id": "ancient_relic_types",
+          "description": "Weapon/device types for ancient alien relics",
+          "entries": [
+            "Cannon",
+            "Array",
+            "Core",
+            "Engine",
+            "Beam",
+            "Matrix",
+            "Pulse",
+            "Drive",
+            "Lance",
+            "Hammer",
+            "Shard",
+            "Sphere",
+            "Prism",
+            "Node",
+            "Conduit",
+            "Nexus",
+            "Crucible",
+            "Furnace",
+            "Spire",
+            "Obelisk"
+          ],
+          "source": "manual"
         }
       },
       "lexemeSpecs": [
@@ -1066,6 +1220,43 @@
                 "slot:aurora_gen_titles",
                 "domain:aurora_domain~cap",
                 "domain:aurora_domain_short~lower^'^slot:aurora_nature~cap"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_artifact",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "slot:aurora_artifact_modifiers",
+                "slot:aurora_artifact_nouns"
+              ],
+              [
+                "slot:aurora_artifact_nouns",
+                "of",
+                "slot:aurora_gen_nouns"
+              ],
+              [
+                "domain:aurora_domain_short^'s",
+                "slot:aurora_artifact_nouns"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "ancient_relic",
+          "start": "name",
+          "capitalization": "",
+          "rules": {
+            "name": [
+              [
+                "domain:ancient_tech_prefix^-^domain:ancient_tech_serial",
+                "(^slot:ancient_relic_epithets",
+                "slot:ancient_relic_types^)"
               ]
             ]
           }
@@ -1388,6 +1579,60 @@
           "entityKinds": [
             "abilities"
           ]
+        },
+        {
+          "id": "aurora_artifacts",
+          "name": "Aurora Artifacts",
+          "strategyGroups": [
+            {
+              "name": "Ancient Relics",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": [
+                  "artifact"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "relic"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "ancient_relic"
+                }
+              ]
+            },
+            {
+              "name": "Artifact Names",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "artifact"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_artifact"
+                }
+              ]
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": [
+            "artifact"
+          ]
         }
       ]
     }
@@ -1424,10 +1669,65 @@
       ],
       "faction": [
         "nightfall_factions"
+      ],
+      "artifact": [
+        "nightshelf_artifacts"
       ]
     },
     "naming": {
       "domains": [
+        {
+          "id": "ancient_tech_prefix",
+          "phonology": {
+            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
+            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+            "syllableTemplates": ["CV", "VC"],
+            "lengthRange": [1, 1],
+            "favoredClusters": [],
+            "forbiddenClusters": [],
+            "favoredClusterBoost": 1
+          },
+          "morphology": {
+            "prefixes": [],
+            "suffixes": [],
+            "structure": ["root"],
+            "structureWeights": [1]
+          },
+          "style": {
+            "capitalization": "",
+            "apostropheRate": 0,
+            "hyphenRate": 0,
+            "preferredEndings": [],
+            "preferredEndingBoost": 1,
+            "rhythmBias": "neutral"
+          }
+        },
+        {
+          "id": "ancient_tech_serial",
+          "phonology": {
+            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
+            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+            "syllableTemplates": ["CV", "CVC", "VC"],
+            "lengthRange": [2, 3],
+            "favoredClusters": [],
+            "forbiddenClusters": [],
+            "favoredClusterBoost": 1
+          },
+          "morphology": {
+            "prefixes": [],
+            "suffixes": [],
+            "structure": ["root"],
+            "structureWeights": [1]
+          },
+          "style": {
+            "capitalization": "",
+            "apostropheRate": 0,
+            "hyphenRate": 0,
+            "preferredEndings": [],
+            "preferredEndingBoost": 1,
+            "rhythmBias": "neutral"
+          }
+        },
         {
           "id": "nightshelf_domain",
           "phonology": {
@@ -1918,6 +2218,79 @@
             "Atonement"
           ],
           "source": "llm"
+        },
+        "nightshelf_artifact_nouns": {
+          "id": "nightshelf_artifact_nouns",
+          "description": "Artifact-related nouns for Nightshelf",
+          "entries": [
+            "mask",
+            "veil",
+            "dagger",
+            "lantern",
+            "grimoire",
+            "skull",
+            "chain",
+            "shroud",
+            "whisper-blade",
+            "shadow-glass",
+            "bone-key",
+            "crypt-seal"
+          ],
+          "source": "manual"
+        },
+        "ancient_relic_epithets": {
+          "id": "ancient_relic_epithets",
+          "description": "Grandiose epithets for ancient alien relics",
+          "entries": [
+            "Apocalypse",
+            "Extinction",
+            "Annihilation",
+            "Oblivion",
+            "Cataclysm",
+            "Devastation",
+            "Terminus",
+            "Genesis",
+            "Omega",
+            "Alpha",
+            "Void",
+            "Stellar",
+            "Nova",
+            "Singularity",
+            "Quantum",
+            "Temporal",
+            "Null",
+            "Zero",
+            "Prime",
+            "Ultima"
+          ],
+          "source": "manual"
+        },
+        "ancient_relic_types": {
+          "id": "ancient_relic_types",
+          "description": "Weapon/device types for ancient alien relics",
+          "entries": [
+            "Cannon",
+            "Array",
+            "Core",
+            "Engine",
+            "Beam",
+            "Matrix",
+            "Pulse",
+            "Drive",
+            "Lance",
+            "Hammer",
+            "Shard",
+            "Sphere",
+            "Prism",
+            "Node",
+            "Conduit",
+            "Nexus",
+            "Crucible",
+            "Furnace",
+            "Spire",
+            "Obelisk"
+          ],
+          "source": "manual"
         }
       },
       "lexemeSpecs": [
@@ -2085,6 +2458,38 @@
               ],
               [
                 "slot:nightshelf_magic_part_c~cap^-^slot:nightshelf_holiday_types~cap"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_artifact",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "slot:nightshelf_shadow_gen^ed",
+                "slot:nightshelf_artifact_nouns"
+              ],
+              [
+                "domain:nightshelf_domain^'s",
+                "slot:nightshelf_artifact_nouns"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "ancient_relic",
+          "start": "name",
+          "capitalization": "",
+          "rules": {
+            "name": [
+              [
+                "domain:ancient_tech_prefix^-^domain:ancient_tech_serial",
+                "(^slot:ancient_relic_epithets",
+                "slot:ancient_relic_types^)"
               ]
             ]
           }
@@ -2313,6 +2718,60 @@
           "entityKinds": [
             "abilities"
           ]
+        },
+        {
+          "id": "nightshelf_artifacts",
+          "name": "Nightshelf Artifacts",
+          "strategyGroups": [
+            {
+              "name": "Ancient Relics",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": [
+                  "artifact"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "relic"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "ancient_relic"
+                }
+              ]
+            },
+            {
+              "name": "Artifact Names",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "artifact"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_artifact"
+                }
+              ]
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": [
+            "artifact"
+          ]
         }
       ]
     }
@@ -2344,10 +2803,65 @@
         "orca_waters"
       ],
       "location": [],
-      "faction": []
+      "faction": [],
+      "artifact": [
+        "orca_artifacts"
+      ]
     },
     "naming": {
       "domains": [
+        {
+          "id": "ancient_tech_prefix",
+          "phonology": {
+            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
+            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+            "syllableTemplates": ["CV", "VC"],
+            "lengthRange": [1, 1],
+            "favoredClusters": [],
+            "forbiddenClusters": [],
+            "favoredClusterBoost": 1
+          },
+          "morphology": {
+            "prefixes": [],
+            "suffixes": [],
+            "structure": ["root"],
+            "structureWeights": [1]
+          },
+          "style": {
+            "capitalization": "",
+            "apostropheRate": 0,
+            "hyphenRate": 0,
+            "preferredEndings": [],
+            "preferredEndingBoost": 1,
+            "rhythmBias": "neutral"
+          }
+        },
+        {
+          "id": "ancient_tech_serial",
+          "phonology": {
+            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
+            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+            "syllableTemplates": ["CV", "CVC", "VC"],
+            "lengthRange": [2, 3],
+            "favoredClusters": [],
+            "forbiddenClusters": [],
+            "favoredClusterBoost": 1
+          },
+          "morphology": {
+            "prefixes": [],
+            "suffixes": [],
+            "structure": ["root"],
+            "structureWeights": [1]
+          },
+          "style": {
+            "capitalization": "",
+            "apostropheRate": 0,
+            "hyphenRate": 0,
+            "preferredEndings": [],
+            "preferredEndingBoost": 1,
+            "rhythmBias": "neutral"
+          }
+        },
         {
           "id": "orca_domain",
           "phonology": {
@@ -2772,6 +3286,78 @@
             "Gorger"
           ],
           "source": "manual"
+        },
+        "orca_artifact_nouns": {
+          "id": "orca_artifact_nouns",
+          "description": "Artifact-related nouns for Orca",
+          "entries": [
+            "fang",
+            "tooth",
+            "bone",
+            "skull",
+            "talon",
+            "spine",
+            "trophy",
+            "war-horn",
+            "blood-stone",
+            "death-mark",
+            "hunters-prize"
+          ],
+          "source": "manual"
+        },
+        "ancient_relic_epithets": {
+          "id": "ancient_relic_epithets",
+          "description": "Grandiose epithets for ancient alien relics",
+          "entries": [
+            "Apocalypse",
+            "Extinction",
+            "Annihilation",
+            "Oblivion",
+            "Cataclysm",
+            "Devastation",
+            "Terminus",
+            "Genesis",
+            "Omega",
+            "Alpha",
+            "Void",
+            "Stellar",
+            "Nova",
+            "Singularity",
+            "Quantum",
+            "Temporal",
+            "Null",
+            "Zero",
+            "Prime",
+            "Ultima"
+          ],
+          "source": "manual"
+        },
+        "ancient_relic_types": {
+          "id": "ancient_relic_types",
+          "description": "Weapon/device types for ancient alien relics",
+          "entries": [
+            "Cannon",
+            "Array",
+            "Core",
+            "Engine",
+            "Beam",
+            "Matrix",
+            "Pulse",
+            "Drive",
+            "Lance",
+            "Hammer",
+            "Shard",
+            "Sphere",
+            "Prism",
+            "Node",
+            "Conduit",
+            "Nexus",
+            "Crucible",
+            "Furnace",
+            "Spire",
+            "Obelisk"
+          ],
+          "source": "manual"
         }
       },
       "lexemeSpecs": [
@@ -2896,6 +3482,41 @@
             ]
           },
           "capitalization": "titleWords"
+        },
+        {
+          "id": "orca_artifact",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:orca_power_words",
+                "slot:orca_artifact_nouns"
+              ],
+              [
+                "slot:orca_superlatives",
+                "slot:orca_artifact_nouns"
+              ],
+              [
+                "domain:orca_domain_short^'s",
+                "slot:orca_artifact_nouns"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "ancient_relic",
+          "start": "name",
+          "capitalization": "",
+          "rules": {
+            "name": [
+              [
+                "domain:ancient_tech_prefix^-^domain:ancient_tech_serial",
+                "(^slot:ancient_relic_epithets",
+                "slot:ancient_relic_types^)"
+              ]
+            ]
+          }
         }
       ],
       "profiles": [
@@ -3000,6 +3621,60 @@
           "isDefault": false,
           "entityKinds": [
             "abilities"
+          ]
+        },
+        {
+          "id": "orca_artifacts",
+          "name": "Orca Artifacts",
+          "strategyGroups": [
+            {
+              "name": "Ancient Relics",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": [
+                  "artifact"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "relic"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "ancient_relic"
+                }
+              ]
+            },
+            {
+              "name": "Artifact Names",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "artifact"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "orca_artifact"
+                }
+              ]
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": [
+            "artifact"
           ]
         }
       ]

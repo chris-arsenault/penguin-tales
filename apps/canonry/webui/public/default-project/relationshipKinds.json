@@ -171,7 +171,8 @@
     "description": "Discovered By",
     "srcKinds": [
       "location",
-      "abilities"
+      "abilities",
+      "artifact"
     ],
     "dstKinds": [
       "npc",
@@ -436,6 +437,86 @@
       "occurrence"
     ],
     "dstKinds": [],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral"
+  },
+  {
+    "kind": "owned_by",
+    "description": "Owned By",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "neutral"
+  },
+  {
+    "kind": "created_by",
+    "description": "Created By",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral"
+  },
+  {
+    "kind": "stored_at",
+    "description": "Stored At",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "medium",
+    "polarity": "neutral"
+  },
+  {
+    "kind": "empowered_by",
+    "description": "Empowered By",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "abilities"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "positive"
+  },
+  {
+    "kind": "central_to",
+    "description": "Central To",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "rules"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "neutral"
+  },
+  {
+    "kind": "catalyst_of",
+    "description": "Catalyst Of",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "occurrence"
+    ],
     "cullable": false,
     "decayRate": "none",
     "polarity": "neutral"
