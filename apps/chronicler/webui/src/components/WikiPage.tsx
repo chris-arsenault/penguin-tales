@@ -8,8 +8,8 @@
  * - Backlinks section
  */
 
-import React, { useMemo, useState, useEffect } from 'react';
-import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, ImageLoader } from '../types/world.ts';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, ImageLoader, PageIndexEntry } from '../types/world.ts';
 import { SeedModal, type ChronicleSeedData } from './ChronicleSeedViewer.tsx';
 
 const colors = {
@@ -312,6 +312,54 @@ const styles = {
     gap: '6px',
     marginTop: '12px',
   },
+  // Entity preview card styles
+  previewCard: {
+    position: 'fixed' as const,
+    zIndex: 1000,
+    width: '280px',
+    backgroundColor: colors.bgSecondary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: '8px',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+    overflow: 'hidden',
+    pointerEvents: 'none' as const,
+  },
+  previewHeader: {
+    padding: '10px 12px',
+    backgroundColor: colors.accent,
+    color: colors.bgPrimary,
+    fontWeight: 600,
+    fontSize: '13px',
+  },
+  previewBody: {
+    padding: '10px 12px',
+  },
+  previewRow: {
+    display: 'flex',
+    padding: '4px 0',
+    borderBottom: `1px solid ${colors.border}`,
+    fontSize: '11px',
+  },
+  previewLabel: {
+    width: '70px',
+    color: colors.textMuted,
+    flexShrink: 0,
+  },
+  previewValue: {
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  previewSummary: {
+    marginTop: '8px',
+    paddingTop: '8px',
+    borderTop: `1px solid ${colors.border}`,
+    fontSize: '12px',
+    lineHeight: 1.5,
+    color: colors.textSecondary,
+  },
+  backlinkItemWrapper: {
+    position: 'relative' as const,
+  },
 };
 
 /**
@@ -564,6 +612,77 @@ function SectionWithImages({
   );
 }
 
+/**
+ * EntityPreviewCard - Hover preview for entity backlinks
+ * Shows the same info as the infobox plus a short summary
+ */
+interface EntityPreviewCardProps {
+  entity: HardState;
+  summary?: string;
+  position: { x: number; y: number };
+}
+
+function EntityPreviewCard({ entity, summary, position }: EntityPreviewCardProps) {
+  // Position the card to the right of cursor, adjusting if it would go off-screen
+  const cardWidth = 280;
+  const cardHeight = 200; // Approximate height
+
+  let left = position.x + 16;
+  let top = position.y - 20;
+
+  // Check if card would go off right edge
+  if (left + cardWidth > window.innerWidth - 20) {
+    left = position.x - cardWidth - 16;
+  }
+
+  // Check if card would go off bottom edge
+  if (top + cardHeight > window.innerHeight - 20) {
+    top = window.innerHeight - cardHeight - 20;
+  }
+
+  // Keep within top boundary
+  if (top < 20) {
+    top = 20;
+  }
+
+  return (
+    <div style={{ ...styles.previewCard, left, top }}>
+      <div style={styles.previewHeader}>{entity.name}</div>
+      <div style={styles.previewBody}>
+        <div style={styles.previewRow}>
+          <div style={styles.previewLabel}>Type</div>
+          <div style={styles.previewValue}>{entity.kind}</div>
+        </div>
+        {entity.subtype && (
+          <div style={styles.previewRow}>
+            <div style={styles.previewLabel}>Subtype</div>
+            <div style={styles.previewValue}>{entity.subtype}</div>
+          </div>
+        )}
+        <div style={styles.previewRow}>
+          <div style={styles.previewLabel}>Status</div>
+          <div style={styles.previewValue}>{entity.status}</div>
+        </div>
+        <div style={styles.previewRow}>
+          <div style={styles.previewLabel}>Prominence</div>
+          <div style={styles.previewValue}>{entity.prominence}</div>
+        </div>
+        {entity.culture && (
+          <div style={{ ...styles.previewRow, borderBottom: 'none' }}>
+            <div style={styles.previewLabel}>Culture</div>
+            <div style={styles.previewValue}>{entity.culture}</div>
+          </div>
+        )}
+        {summary && (
+          <div style={styles.previewSummary}>
+            {summary.length > 150 ? `${summary.slice(0, 150)}...` : summary}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface WikiPageViewProps {
   page: WikiPage;
   pages: WikiPage[];
@@ -584,6 +703,58 @@ export default function WikiPageView({
   onNavigateToEntity,
 }: WikiPageViewProps) {
   const [showSeedModal, setShowSeedModal] = useState(false);
+  const [hoveredBacklink, setHoveredBacklink] = useState<{
+    id: string;
+    position: { x: number; y: number };
+  } | null>(null);
+  const hoverTimeoutRef = useRef<number | null>(null);
+
+  // Handle backlink hover with delay to prevent flicker
+  const handleBacklinkMouseEnter = useCallback((id: string, e: React.MouseEvent) => {
+    console.log('[WikiPage] Mouse enter backlink:', id);
+    // Capture position immediately - React synthetic events are pooled
+    const x = e.clientX;
+    const y = e.clientY;
+
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = window.setTimeout(() => {
+      console.log('[WikiPage] Setting hovered backlink:', id, x, y);
+      setHoveredBacklink({
+        id,
+        position: { x, y },
+      });
+    }, 200); // 200ms delay before showing preview
+  }, []);
+
+  const handleBacklinkMouseLeave = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setHoveredBacklink(null);
+  }, []);
+
+  // Get hovered entity data for preview
+  const hoveredEntity = useMemo(() => {
+    if (!hoveredBacklink) return null;
+    const entity = entityIndex.get(hoveredBacklink.id);
+    console.log('[WikiPage] Hover lookup:', {
+      backlinkId: hoveredBacklink.id,
+      found: !!entity,
+      entityIndexSize: entityIndex.size,
+      position: hoveredBacklink.position,
+    });
+    return entity || null;
+  }, [hoveredBacklink, entityIndex]);
+
+  // Get summary for hovered entity
+  const hoveredSummary = useMemo(() => {
+    if (!hoveredBacklink) return undefined;
+    const page = pages.find(p => p.id === hoveredBacklink.id);
+    return page?.content?.summary;
+  }, [hoveredBacklink, pages]);
 
   // Build seed data for chronicle pages
   const seedData = useMemo((): ChronicleSeedData | null => {
@@ -617,11 +788,13 @@ export default function WikiPageView({
   }, [pages, page.id]);
 
   const backlinks = useMemo(() => {
-    return pages.filter(p =>
+    const result = pages.filter(p =>
       p.id !== page.id &&
       p.type !== 'chronicle' &&
       p.linkedEntities.includes(page.id)
     );
+    console.log('[WikiPage] Backlinks count:', result.length, 'for page:', page.id);
+    return result;
   }, [pages, page.id]);
 
   // Build entity name to ID map for link resolution
@@ -823,6 +996,8 @@ export default function WikiPageView({
                   key={link.id}
                   style={styles.backlinkItem}
                   onClick={() => onNavigate(link.id)}
+                  onMouseEnter={(e) => handleBacklinkMouseEnter(link.id, e)}
+                  onMouseLeave={handleBacklinkMouseLeave}
                 >
                   {link.title}
                 </button>
@@ -833,6 +1008,15 @@ export default function WikiPageView({
                 </div>
               )}
             </div>
+          )}
+
+          {/* Entity Preview Card (hover) */}
+          {hoveredBacklink && hoveredEntity && (
+            <EntityPreviewCard
+              entity={hoveredEntity}
+              summary={hoveredSummary}
+              position={hoveredBacklink.position}
+            />
           )}
 
           {/* Categories */}

@@ -215,11 +215,17 @@ function buildFocus(
  *
  * This is the primary entry point for building generation context.
  * Role assignments define the chronicle's identity, not a single entity.
+ *
+ * @param selections - Chronicle selections from wizard
+ * @param worldData - World simulation data
+ * @param worldContext - World context (name, description, etc.)
+ * @param nameBank - Optional pre-generated names by culture for invented characters
  */
 export function buildChronicleContext(
   selections: ChronicleSelections,
   worldData: WorldData,
-  worldContext: WorldContext
+  worldContext: WorldContext,
+  nameBank?: Record<string, string[]>
 ): ChronicleGenerationContext {
   const entityMap = new Map(worldData.hardState.map((e) => [e.id, e]));
 
@@ -275,6 +281,9 @@ export function buildChronicleContext(
     entities,
     relationships,
     events,
+
+    // Name bank for invented characters
+    nameBank,
   };
 }
 

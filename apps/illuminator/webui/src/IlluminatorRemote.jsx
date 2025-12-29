@@ -1016,6 +1016,7 @@ export default function IlluminatorRemote({
               styleLibrary={styleLibrary}
               styleSelection={styleSelection}
               promptTemplates={promptTemplates}
+              cultures={worldSchema.cultures}
             />
           </div>
         )}

@@ -51,8 +51,8 @@ export interface ChronicleRecord {
   imageRefs?: {
     refs: Array<{
       refId: string;
-      sectionId: string;
       anchorText: string;
+      anchorIndex?: number;
       size: 'small' | 'medium' | 'large' | 'full-width';
       caption?: string;
       type: 'entity_ref' | 'prompt_request';

@@ -514,11 +514,9 @@ export default function EntityBrowser({
   const queueItem = useCallback(
     (entity, type) => {
       const prompt = buildPrompt(entity, type);
-      // For image tasks, pass previousImageId if entity already has an image (for cleanup on regen)
-      const previousImageId = type === 'image' ? entity.enrichment?.image?.imageId : undefined;
       // For description tasks, pass visual config from template
       const visualConfig = type === 'description' && getVisualConfig ? getVisualConfig(entity) : {};
-      onEnqueue([{ entity, type, prompt, previousImageId, ...visualConfig }]);
+      onEnqueue([{ entity, type, prompt, ...visualConfig }]);
     },
     [onEnqueue, buildPrompt, getVisualConfig]
   );
@@ -595,9 +593,7 @@ export default function EntityBrowser({
         prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
         getStatus(entity, 'image') === 'complete'
       ) {
-        // Pass previousImageId for cleanup
-        const previousImageId = entity.enrichment?.image?.imageId;
-        items.push({ entity, type: 'image', prompt: buildPrompt(entity, 'image'), previousImageId });
+        items.push({ entity, type: 'image', prompt: buildPrompt(entity, 'image') });
       }
     }
     if (items.length > 0) {

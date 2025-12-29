@@ -104,7 +104,6 @@ export function generateNarrativeTags(
   for (const change of stateChanges) {
     if (change.field === 'status') {
       const newValue = String(change.newValue);
-      const oldValue = String(change.previousValue);
 
       // Death/ending tags
       if (newValue === 'dead') {
@@ -114,16 +113,6 @@ export function generateNarrativeTags(
       if (newValue === 'historical' || newValue === 'dissolved') {
         tags.add('ended');
         tags.add('concluded');
-      }
-
-      // War tags
-      if (oldValue === 'at_war' && newValue !== 'at_war') {
-        tags.add('peace');
-        tags.add('war_end');
-      }
-      if (newValue === 'at_war') {
-        tags.add('war');
-        tags.add('conflict');
       }
     }
 

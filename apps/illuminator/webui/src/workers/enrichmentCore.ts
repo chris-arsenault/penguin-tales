@@ -1894,8 +1894,6 @@ function parseImageRefsResponse(text: string): ChronicleImageRef[] {
 
   return parsed.imageRefs.map((ref: Record<string, unknown>, index: number) => {
     const refId = `imgref_${Date.now()}_${index}`;
-    // sectionId is vestigial but kept for backwards compatibility
-    const sectionId = typeof ref.sectionId === 'string' ? ref.sectionId : `section-${index}`;
     const anchorText = typeof ref.anchorText === 'string' ? ref.anchorText : '';
     const rawSize = typeof ref.size === 'string' ? ref.size : 'medium';
     const size: ChronicleImageSize = validSizes.includes(rawSize as ChronicleImageSize)
@@ -1912,7 +1910,6 @@ function parseImageRefsResponse(text: string): ChronicleImageRef[] {
         refId,
         type: 'entity_ref',
         entityId,
-        sectionId,
         anchorText,
         size,
         caption,
@@ -1936,7 +1933,6 @@ function parseImageRefsResponse(text: string): ChronicleImageRef[] {
         type: 'prompt_request',
         sceneDescription,
         involvedEntityIds,
-        sectionId,
         anchorText,
         size,
         caption,

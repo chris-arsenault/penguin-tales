@@ -31,7 +31,6 @@ import { getChronicleContent } from './chronicleStorage.ts';
  */
 interface ChronicleImageRef {
   refId: string;
-  sectionId: string;
   anchorText: string;
   /** Character index where anchorText was found (fallback if text changes) */
   anchorIndex?: number;
@@ -399,35 +398,57 @@ function buildChronicleSections(
 }
 
 /**
- * Attach images to their corresponding sections based on sectionId
+ * Find which section contains the anchor text or anchor index
+ */
+function findSectionForAnchor(
+  sections: WikiSection[],
+  anchorText: string,
+  anchorIndex?: number
+): WikiSection | null {
+  // First, try to find by anchorText
+  if (anchorText) {
+    const normalized = anchorText.toLowerCase();
+    for (const section of sections) {
+      if (section.content.toLowerCase().includes(normalized)) {
+        return section;
+      }
+    }
+  }
+
+  // Fall back to anchorIndex if available
+  if (anchorIndex !== undefined) {
+    let cumulativeLength = 0;
+    for (const section of sections) {
+      const sectionEnd = cumulativeLength + section.content.length;
+      if (anchorIndex >= cumulativeLength && anchorIndex < sectionEnd) {
+        return section;
+      }
+      cumulativeLength = sectionEnd + 1; // +1 for section separator
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Attach images to their corresponding sections based on anchorText
  */
 function attachImagesToSections(
   sections: WikiSection[],
   refs: ChronicleImageRef[],
   worldData: WorldState
 ): void {
-  // Create a map from section ID patterns to actual section objects
-  // The LLM generates "section-0", "section-1", etc.
-  // Our sections have "chronicle-section-0", "chronicle-section-1", etc.
-  const sectionMap = new Map<string, WikiSection>();
-  for (const section of sections) {
-    sectionMap.set(section.id, section);
-    // Also map the short form (e.g., "section-0" -> "chronicle-section-0")
-    const shortId = section.id.replace('chronicle-', '');
-    sectionMap.set(shortId, section);
-  }
-
   for (const ref of refs) {
-    // Find the target section
-    const section = sectionMap.get(ref.sectionId);
-    if (!section) {
-      console.warn('[wikiBuilder] Image ref section not found:', ref.sectionId, ref);
-      continue;
-    }
-
     // Skip prompt requests that aren't complete
     if (ref.type === 'prompt_request' && ref.status !== 'complete') {
       console.warn('[wikiBuilder] Skipping incomplete prompt_request:', ref.refId, ref.status);
+      continue;
+    }
+
+    // Find the target section by anchor text or index
+    const section = findSectionForAnchor(sections, ref.anchorText, ref.anchorIndex);
+    if (!section) {
+      console.warn('[wikiBuilder] Could not find section for anchor:', ref.anchorText, ref);
       continue;
     }
 

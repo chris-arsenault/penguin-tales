@@ -24,7 +24,7 @@ export type {
 export { ENTITY_CATEGORIES } from './entityKind.js';
 
 // Relationship types
-export type { RelationshipKindDefinition, Polarity, NarrativeRole } from './relationship.js';
+export type { RelationshipKindDefinition, Polarity } from './relationship.js';
 
 // Culture types
 export type {

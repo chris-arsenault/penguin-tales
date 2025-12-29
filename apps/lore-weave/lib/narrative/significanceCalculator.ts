@@ -89,10 +89,6 @@ export function calculateSignificance(
       if (newValue === 'dead' || newValue === 'historical' || newValue === 'dissolved') {
         score += 0.3;
       }
-      // Wars starting/ending
-      if (newValue === 'at_war' || change.previousValue === 'at_war') {
-        score += 0.2;
-      }
     }
 
     // Prominence changes

@@ -68,6 +68,8 @@ interface WikiNavProps {
   currentPageId: string | null;
   onNavigate: (pageId: string) => void;
   onGoHome: () => void;
+  onRefreshIndex?: () => void;
+  isRefreshing?: boolean;
 }
 
 export default function WikiNav({
@@ -77,6 +79,8 @@ export default function WikiNav({
   currentPageId,
   onNavigate,
   onGoHome,
+  onRefreshIndex,
+  isRefreshing,
 }: WikiNavProps) {
   // Get top categories for quick access
   const topCategories = categories
@@ -264,6 +268,33 @@ export default function WikiNav({
           <span style={styles.badge}>({categories.length})</span>
         </button>
       </div>
+
+      {/* Refresh Index */}
+      {onRefreshIndex && (
+        <div style={styles.section}>
+          <button
+            style={{
+              ...styles.navItem,
+              opacity: isRefreshing ? 0.6 : 1,
+              cursor: isRefreshing ? 'wait' : 'pointer',
+            }}
+            onClick={onRefreshIndex}
+            disabled={isRefreshing}
+            onMouseEnter={(e) => {
+              if (!isRefreshing) {
+                e.currentTarget.style.backgroundColor = colors.hoverBg;
+                e.currentTarget.style.color = colors.accent;
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = colors.textSecondary;
+            }}
+          >
+            {isRefreshing ? 'Refreshing...' : 'Refresh Index'}
+          </button>
+        </div>
+      )}
     </nav>
   );
 }

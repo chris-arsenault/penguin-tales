@@ -94,8 +94,6 @@ export class NarrativeEventBuilder {
         if (change.newValue === 'dead') return 'died';
         if (change.newValue === 'historical') return 'ended';
         if (change.newValue === 'dissolved') return 'dissolved';
-        if (change.newValue === 'at_war') return 'went_to_war';
-        if (change.previousValue === 'at_war') return 'made_peace';
       }
       if (change.field === 'prominence') {
         const oldVal = getProminenceValue(String(change.previousValue));
@@ -121,12 +119,6 @@ export class NarrativeEventBuilder {
         }
         if (change.newValue === 'dissolved') {
           return `${entity.name} dissolves`;
-        }
-        if (change.newValue === 'at_war') {
-          return `${entity.name} goes to war`;
-        }
-        if (change.previousValue === 'at_war' && change.newValue !== 'at_war') {
-          return `${entity.name} makes peace`;
         }
       }
       if (change.field === 'prominence') {
@@ -823,19 +815,18 @@ export class NarrativeEventBuilder {
   }
 
   /**
-   * Build a leadership established event (first leadership on target)
+   * Build a leadership established event (first authority connection on target)
    */
   buildLeadershipEstablishedEvent(
     targetEntity: HardState,
-    leaderEntities: HardState[],
-    relationshipKind: string
+    leaderEntities: HardState[]
   ): NarrativeEvent {
     const leaderNames = leaderEntities.slice(0, 3).map(e => e.name).join(', ');
     const moreCount = leaderEntities.length > 3 ? ` and ${leaderEntities.length - 3} others` : '';
     const singleLeader = leaderEntities.length === 1;
     const headline = singleLeader
-      ? `${leaderEntities[0].name} becomes leader of ${targetEntity.name}`
-      : `${targetEntity.name} gains new leaders`;
+      ? `${leaderEntities[0].name} becomes an authority for ${targetEntity.name}`
+      : `${targetEntity.name} gains new authorities`;
 
     const significance = calculateSignificance(
       'leadership_established',
@@ -857,7 +848,7 @@ export class NarrativeEventBuilder {
       object: singleLeader ? this.buildEntityRef(leaderEntities[0]) : undefined,
       participants: this.buildParticipantRefs([targetEntity, ...leaderEntities]),
       headline,
-      description: `${targetEntity.name} now has leadership (${relationshipKind}) from ${leaderNames}${moreCount}.`,
+      description: `${targetEntity.name} now has authority connections from ${leaderNames}${moreCount}.`,
       stateChanges: [],
       narrativeTags: generateNarrativeTags(
         'leadership_established',
@@ -875,8 +866,7 @@ export class NarrativeEventBuilder {
    */
   buildWarEvent(
     eventKind: 'war_started' | 'war_ended',
-    participants: HardState[],
-    relationshipKind: string
+    participants: HardState[]
   ): NarrativeEvent {
     const names = participants.slice(0, 3).map(e => e.name).join(', ');
     const moreCount = participants.length > 3 ? ` and ${participants.length - 3} others` : '';
@@ -900,10 +890,10 @@ export class NarrativeEventBuilder {
       eventKind,
       significance: Math.min(1.0, significance + participantBonus),
       subject: this.buildEntityRef(participants[0]),
-      action: eventKind === 'war_started' ? `war_started_${relationshipKind}` : `war_ended_${relationshipKind}`,
+      action: eventKind === 'war_started' ? 'war_started' : 'war_ended',
       participants: this.buildParticipantRefs(participants),
       headline,
-      description: `${participants.length} factions are bound by ${relationshipKind} as the war ${eventKind === 'war_started' ? 'begins' : 'concludes'}.`,
+      description: `${participants.length} entities are bound by negative ties as the war ${eventKind === 'war_started' ? 'begins' : 'concludes'}.`,
       stateChanges: [],
       narrativeTags: generateNarrativeTags(
         eventKind,

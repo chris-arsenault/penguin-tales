@@ -581,10 +581,6 @@ export interface NarrativeConfig {
   enabled: boolean;
   /** Minimum significance score to include event (default: 0) */
   minSignificance: number;
-  /** Relationship kinds treated as wars for aggregation */
-  warRelationshipKinds?: string[];
-  /** Relationship kinds treated as leadership for first-leader events */
-  leadershipRelationshipKinds?: string[];
 }
 
 // Tag Taxonomy System

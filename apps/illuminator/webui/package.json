@@ -11,7 +11,9 @@
     "serve": "serve dist -l 3006"
   },
   "dependencies": {
+    "@canonry/world-schema": "file:../../../packages/world-schema",
     "@penguin-tales/shared-components": "file:../../../packages/shared-components",
+    "name-forge": "file:../../name-forge",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

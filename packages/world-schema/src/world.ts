@@ -110,10 +110,10 @@ export type NarrativeEventKind =
   | 'downfall'               // Status changed to negative polarity
   | 'triumph'                // Status changed to positive polarity
   // === Leadership events ===
-  | 'leadership_established' // First leadership relationship for a target
+  | 'leadership_established' // First authority connection for a target
   // === War events ===
-  | 'war_started'            // War relationships formed (multi-entity)
-  | 'war_ended'              // War relationships dissolved (multi-entity)
+  | 'war_started'            // Negative-polarity component formed (multi-entity)
+  | 'war_ended'              // Negative-polarity component dissolved (multi-entity)
   // === Authority events (require isAuthority subtype metadata) ===
   | 'power_vacuum';          // Authority entity ended with no clear successor
 

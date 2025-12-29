@@ -109,6 +109,7 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
 
   // Chronicles loaded from IndexedDB
   const [chronicles, setChronicles] = useState<ChronicleRecord[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const simulationRunId = (worldData as { metadata?: { simulationRunId?: string } }).metadata?.simulationRunId;
 
   // Load chronicles from IndexedDB when simulationRunId changes
@@ -238,6 +239,23 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
     window.location.hash = '#/';
   }, []);
 
+  // Refresh index by reloading chronicles from IndexedDB
+  const handleRefreshIndex = useCallback(async () => {
+    if (!simulationRunId || isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      const loadedChronicles = await getCompletedChroniclesForSimulation(simulationRunId);
+      setChronicles(loadedChronicles);
+      // Clear page cache so pages are rebuilt with new data
+      pageCacheRef.current.clear();
+    } catch (err) {
+      console.error('[WikiExplorer] Failed to refresh chronicles:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [simulationRunId, isRefreshing]);
+
   return (
     <div style={styles.container}>
       {/* Navigation Sidebar */}
@@ -257,6 +275,8 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
           currentPageId={currentPageId}
           onNavigate={handleNavigate}
           onGoHome={handleGoHome}
+          onRefreshIndex={handleRefreshIndex}
+          isRefreshing={isRefreshing}
         />
       </div>
 

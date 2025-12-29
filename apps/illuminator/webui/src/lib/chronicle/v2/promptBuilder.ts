@@ -215,6 +215,27 @@ function buildTemporalSection(temporalContext: ChronicleTemporalContext | undefi
   return lines.join('\n');
 }
 
+/**
+ * Build the name bank section.
+ * Provides culture-appropriate names for invented characters.
+ */
+function buildNameBankSection(nameBank: Record<string, string[]> | undefined): string {
+  if (!nameBank || Object.keys(nameBank).length === 0) {
+    return '';
+  }
+
+  const lines: string[] = ['# Available Names for Invented Characters'];
+  lines.push('If you need to invent minor characters (e.g., to represent factions), use these culture-appropriate names:');
+
+  for (const [cultureId, names] of Object.entries(nameBank)) {
+    if (names.length > 0) {
+      lines.push(`- ${cultureId}: ${names.join(', ')}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
 // =============================================================================
 // Story Format - Structure & Style Building
 // =============================================================================
@@ -376,6 +397,7 @@ function buildStoryPrompt(
   entitySection: string,
   dataSection: string,
   temporalSection: string,
+  nameBankSection: string,
   style: StoryNarrativeStyle
 ): string {
   const pacing = style.pacing;
@@ -396,6 +418,7 @@ function buildStoryPrompt(
     worldSection,
     temporalSection,
     entitySection,
+    nameBankSection,
     dataSection,
     structureSection,
     castSection,
@@ -508,6 +531,7 @@ function buildDocumentPrompt(
   entitySection: string,
   dataSection: string,
   temporalSection: string,
+  nameBankSection: string,
   style: DocumentNarrativeStyle
 ): string {
   const doc = style.documentConfig;
@@ -523,6 +547,7 @@ function buildDocumentPrompt(
     worldSection,
     temporalSection,
     entitySection,
+    nameBankSection,
     dataSection,
     structureSection,
     styleSection,
@@ -562,6 +587,7 @@ export function buildV2Prompt(
   const entitySection = buildEntitySection(selection, primaryEntityIds);
   const dataSection = buildDataSection(selection);
   const temporalSection = buildTemporalSection(context.temporalContext);
+  const nameBankSection = buildNameBankSection(context.nameBank);
 
   if (style.format === 'story') {
     return buildStoryPrompt(
@@ -569,6 +595,7 @@ export function buildV2Prompt(
       entitySection,
       dataSection,
       temporalSection,
+      nameBankSection,
       style as StoryNarrativeStyle
     );
   } else {
@@ -577,6 +604,7 @@ export function buildV2Prompt(
       entitySection,
       dataSection,
       temporalSection,
+      nameBankSection,
       style as DocumentNarrativeStyle
     );
   }

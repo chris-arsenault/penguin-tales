@@ -16,13 +16,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
   QueueItem,
-  EnrichmentType,
+  EnrichmentTaskPayload,
   WorkerTask,
-  WorkerResult,
   EntityEnrichment,
-  EnrichmentResult,
-  SerializableChronicleContext,
-  ChronicleStep,
 } from '../lib/enrichmentTypes';
 import { applyEnrichmentResult } from '../lib/enrichmentTypes';
 import type { WorkerConfig, WorkerOutbound } from '../workers/enrichment.worker';
@@ -58,7 +54,7 @@ export interface UseEnrichmentQueueReturn {
 
   // Actions
   initialize: (config: WorkerConfig) => void;
-  enqueue: (items: Array<{ entity: EnrichedEntity; type: EnrichmentType; prompt: string }>) => void;
+  enqueue: (items: EnqueueItem[]) => void;
   cancel: (itemId: string) => void;
   cancelAll: () => void;
   retry: (itemId: string) => void;
@@ -80,6 +76,13 @@ interface WorkerState {
   // Track pending tasks assigned to this worker
   pendingTaskIds: Set<string>;
 }
+
+type EnqueueItem = Omit<
+  EnrichmentTaskPayload,
+  'id' | 'entityId' | 'entityName' | 'entityKind' | 'entitySubtype' | 'entityCulture' | 'simulationRunId'
+> & {
+  entity: EnrichedEntity;
+};
 
 /**
  * Calculate estimated workload for a worker based on its assigned tasks
@@ -208,38 +211,20 @@ export function useEnrichmentQueue(
       );
 
       // Send to worker with all metadata needed for IndexedDB storage
+      const {
+        status: _status,
+        queuedAt: _queuedAt,
+        startedAt: _startedAt,
+        completedAt: _completedAt,
+        result: _result,
+        error: _error,
+        debug: _debug,
+        estimatedCost: _estimatedCost,
+        ...taskPayload
+      } = nextItem;
       const task: WorkerTask = {
-        id: nextItem.id,
-        entityId: nextItem.entityId,
-        entityName: nextItem.entityName,
-        entityKind: nextItem.entityKind,
-        entitySubtype: nextItem.entitySubtype,
-        entityCulture: nextItem.entityCulture,
+        ...taskPayload,
         projectId: projectIdRef.current || 'unknown',
-        simulationRunId: simulationRunIdRef.current || 'unknown',
-        type: nextItem.type,
-        prompt: nextItem.prompt,
-        chronicleContext: nextItem.chronicleContext,
-        chronicleStep: nextItem.chronicleStep,
-        chronicleId: nextItem.chronicleId,
-        // Chronicle image fields
-        imageRefId: nextItem.imageRefId,
-        sceneDescription: nextItem.sceneDescription,
-        imageType: nextItem.imageType,
-        // Palette expansion fields
-        paletteEntityKind: nextItem.paletteEntityKind,
-        paletteWorldContext: nextItem.paletteWorldContext,
-        paletteSubtypes: nextItem.paletteSubtypes,
-        paletteEras: nextItem.paletteEras,
-        paletteCultureContext: nextItem.paletteCultureContext,
-        // Entity era for trait selection
-        entityEraId: nextItem.entityEraId,
-        // Visual config for thesis/traits generation
-        visualAvoid: nextItem.visualAvoid,
-        visualThesisInstructions: nextItem.visualThesisInstructions,
-        visualThesisFraming: nextItem.visualThesisFraming,
-        visualTraitsInstructions: nextItem.visualTraitsInstructions,
-        visualTraitsFraming: nextItem.visualTraitsFraming,
       };
 
       workerState.worker.postMessage({ type: 'execute', task });
@@ -403,72 +388,29 @@ export function useEnrichmentQueue(
 
   // Enqueue items - distribute to workers based on estimated workload
   const enqueue = useCallback(
-    (items: Array<{
-      entity: EnrichedEntity;
-      type: EnrichmentType;
-      prompt: string;
-      chronicleContext?: SerializableChronicleContext;
-      chronicleStep?: ChronicleStep;
-      chronicleId?: string;
-      // Chronicle image fields
-      imageRefId?: string;
-      sceneDescription?: string;
-      imageType?: 'entity' | 'chronicle';
-      // Palette expansion fields
-      paletteEntityKind?: string;
-      paletteWorldContext?: string;
-      paletteSubtypes?: string[];
-      paletteEras?: Array<{ id: string; name: string; description?: string }>;
-      paletteCultureContext?: Array<{
-        name: string;
-        description?: string;
-        visualIdentity?: Record<string, string>;
-      }>;
-      // Entity era for trait selection
-      entityEraId?: string;
-      // Visual config for thesis/traits generation
-      visualAvoid?: string;
-      visualThesisInstructions?: string;
-      visualThesisFraming?: string;
-      visualTraitsInstructions?: string;
-      visualTraitsFraming?: string;
-    }>) => {
+    (items: EnqueueItem[]) => {
+      const runId = simulationRunIdRef.current;
+      if (!runId) {
+        console.error('[EnrichmentQueue] simulationRunId is required to enqueue tasks.');
+        return;
+      }
+
       const newItems: QueueItem[] = [];
       const currentQueue = queueRef.current;
 
       for (const item of items) {
+        const { entity, ...taskFields } = item;
         const queueItem: QueueItem = {
-          id: `${item.type}_${item.entity.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          entityId: item.entity.id,
-          entityName: item.entity.name,
-          entityKind: item.entity.kind,
-          entitySubtype: item.entity.subtype,
-          entityCulture: item.entity.culture,
-          type: item.type,
-          prompt: item.prompt,
+          id: `${item.type}_${entity.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          entityId: entity.id,
+          entityName: entity.name,
+          entityKind: entity.kind,
+          entitySubtype: entity.subtype,
+          entityCulture: entity.culture,
+          ...taskFields,
+          simulationRunId: runId,
           status: 'queued' as const,
           queuedAt: Date.now(),
-          chronicleContext: item.chronicleContext,
-          chronicleStep: item.chronicleStep,
-          chronicleId: item.chronicleId,
-          // Chronicle image fields
-          imageRefId: item.imageRefId,
-          sceneDescription: item.sceneDescription,
-          imageType: item.imageType,
-          // Palette expansion fields
-          paletteEntityKind: item.paletteEntityKind,
-          paletteWorldContext: item.paletteWorldContext,
-          paletteSubtypes: item.paletteSubtypes,
-          paletteEras: item.paletteEras,
-          paletteCultureContext: item.paletteCultureContext,
-          // Entity era for trait selection
-          entityEraId: item.entityEraId,
-          // Visual config for thesis/traits generation
-          visualAvoid: item.visualAvoid,
-          visualThesisInstructions: item.visualThesisInstructions,
-          visualThesisFraming: item.visualThesisFraming,
-          visualTraitsInstructions: item.visualTraitsInstructions,
-          visualTraitsFraming: item.visualTraitsFraming,
         };
 
         // Find the least busy worker and assign this task

@@ -115,9 +115,9 @@ export interface EntityEnrichment {
 }
 
 /**
- * Queue item - represents a pending enrichment request
+ * Shared task payload fields for queue items and worker tasks.
  */
-export interface QueueItem {
+export interface EnrichmentTaskBase {
   id: string;                 // Unique ID: `${type}_${entityId}`
   entityId: string;
   entityName: string;
@@ -125,18 +125,9 @@ export interface QueueItem {
   entitySubtype?: string;
   entityCulture?: string;
   /** Unique ID for the simulation run - used to associate content with specific world state */
-  simulationRunId?: string;
+  simulationRunId: string;
   type: EnrichmentType;
   prompt: string;
-  status: 'queued' | 'running' | 'complete' | 'error';
-  queuedAt: number;
-  startedAt?: number;
-  completedAt?: number;
-  result?: EnrichmentResult;
-  error?: string;
-  debug?: NetworkDebugInfo;
-  // Cost tracking
-  estimatedCost?: number;
   // For entityChronicle tasks
   chronicleContext?: SerializableChronicleContext;
   chronicleStep?: ChronicleStep;
@@ -162,15 +153,40 @@ export interface QueueItem {
   entityEraId?: string;
   /** Elements to avoid in visual thesis (overused motifs, from project config) */
   visualAvoid?: string;
-  /** Per-kind domain instructions for visual thesis (REQUIRED - e.g., VFX, environment, character) */
+  /** Per-kind domain instructions for visual thesis (required for description tasks) */
   visualThesisInstructions?: string;
   /** Per-kind framing for visual thesis user message */
   visualThesisFraming?: string;
-  /** Per-kind domain instructions for visual traits (REQUIRED) */
+  /** Per-kind domain instructions for visual traits (required for description tasks) */
   visualTraitsInstructions?: string;
   /** Per-kind framing for visual traits user message */
   visualTraitsFraming?: string;
 }
+
+export type EnrichmentTaskPayload =
+  | (EnrichmentTaskBase & {
+      type: 'description';
+      visualThesisInstructions: string;
+      visualTraitsInstructions: string;
+    })
+  | (EnrichmentTaskBase & {
+      type: Exclude<EnrichmentType, 'description'>;
+    });
+
+/**
+ * Queue item - represents a pending enrichment request
+ */
+export type QueueItem = EnrichmentTaskPayload & {
+  status: 'queued' | 'running' | 'complete' | 'error';
+  queuedAt: number;
+  startedAt?: number;
+  completedAt?: number;
+  result?: EnrichmentResult;
+  error?: string;
+  debug?: NetworkDebugInfo;
+  // Cost tracking
+  estimatedCost?: number;
+};
 
 /**
  * Serializable chronicle context (for entityChronicle tasks)
@@ -277,54 +293,9 @@ export type ChronicleStep =
  * Worker task - what we send to the worker (single task)
  * Includes metadata needed for worker to persist directly to IndexedDB
  */
-export interface WorkerTask {
-  id: string;
-  entityId: string;
-  entityName: string;
-  entityKind: string;
-  entitySubtype?: string;
-  entityCulture?: string;
+export type WorkerTask = EnrichmentTaskPayload & {
   projectId: string;
-  /** Unique ID for the simulation run - used to associate content with specific world state */
-  simulationRunId: string;
-  type: EnrichmentType;
-  prompt: string;
-  // For entityChronicle tasks only
-  chronicleContext?: SerializableChronicleContext;
-  // Which step to run (for entityChronicle tasks)
-  chronicleStep?: ChronicleStep;
-  // Chronicle ID (for continuing existing chronicle, or for chronicle images)
-  chronicleId?: string;
-  // For chronicle image tasks
-  imageRefId?: string;
-  sceneDescription?: string;
-  imageType?: 'entity' | 'chronicle';
-  // For palette expansion tasks
-  paletteEntityKind?: string;
-  paletteWorldContext?: string;
-  /** Available subtypes for this entity kind (for subtype-differentiated categories) */
-  paletteSubtypes?: string[];
-  /** Available eras for era-specific categories (one category per era per kind) */
-  paletteEras?: Array<{ id: string; name: string; description?: string }>;
-  /** Culture visual identities for grounding palette in world lore */
-  paletteCultureContext?: Array<{
-    name: string;
-    description?: string;
-    visualIdentity?: Record<string, string>;
-  }>;
-  /** Era ID this entity was created during (for trait selection) */
-  entityEraId?: string;
-  /** Elements to avoid in visual thesis (overused motifs, from project config) */
-  visualAvoid?: string;
-  /** Per-kind domain instructions for visual thesis (REQUIRED - e.g., VFX, environment, character) */
-  visualThesisInstructions?: string;
-  /** Per-kind framing for visual thesis user message */
-  visualThesisFraming?: string;
-  /** Per-kind domain instructions for visual traits (REQUIRED) */
-  visualTraitsInstructions?: string;
-  /** Per-kind framing for visual traits user message */
-  visualTraitsFraming?: string;
-}
+};
 
 /**
  * Worker result - what the worker returns

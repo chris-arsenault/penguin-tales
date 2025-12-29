@@ -318,6 +318,9 @@ export interface ChronicleGenerationContext {
 
   // Selected events
   events: NarrativeEventContext[];
+
+  // Name bank for invented characters (culture ID -> array of names)
+  nameBank?: Record<string, string[]>;
 }
 
 // =============================================================================
@@ -341,8 +344,6 @@ export type ChronicleImageSize = 'small' | 'medium' | 'large' | 'full-width';
 interface BaseChronicleImageRef {
   /** Unique ID for this image reference */
   refId: string;
-  /** Section ID where image should appear */
-  sectionId: string;
   /** Text phrase to anchor image near (for paragraph-level positioning) */
   anchorText: string;
   /** Character index where anchorText was found (fallback if text changes) */

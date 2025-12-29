@@ -10,6 +10,7 @@ import ChronicleReviewPanel from './ChronicleReviewPanel';
 import EventsPanel from './EventsPanel';
 import { ChronicleWizard } from './ChronicleWizard';
 import { buildChronicleContext } from '../lib/chronicleContextBuilder';
+import { generateNameBank, extractCultureIds } from '../lib/chronicle/nameBank';
 import { useChronicleGeneration, deriveStatus } from '../hooks/useChronicleGeneration';
 import { buildChronicleImagePrompt } from '../lib/promptTemplates';
 import { resolveStyleSelection } from './StyleSelector';
@@ -205,6 +206,7 @@ export default function ChroniclePanel({
   styleLibrary,
   styleSelection,
   promptTemplates,
+  cultures,
 }) {
   // Load persisted state from localStorage
   const [activeType, setActiveType] = useState(() => {
@@ -239,6 +241,9 @@ export default function ChroniclePanel({
   const [showWizard, setShowWizard] = useState(false);
   // Seed for restarting with previous settings
   const [wizardSeed, setWizardSeed] = useState(null);
+
+  // Name bank for invented characters (culture ID -> array of names)
+  const [nameBank, setNameBank] = useState({});
 
   // Style library loading state (derived from prop)
   const stylesLoading = !styleLibrary;
@@ -421,6 +426,34 @@ export default function ChroniclePanel({
     }
   }, [selectedItemId, chronicleItems, selectedItem]);
 
+  // Generate name bank when selected chronicle's entities change
+  useEffect(() => {
+    if (!selectedItem?.roleAssignments || !worldData?.hardState || !worldData?.schema?.cultures) {
+      return;
+    }
+
+    // Get entity IDs from role assignments
+    const entityIds = selectedItem.roleAssignments.map(r => r.entityId);
+    const selectedEntities = worldData.hardState.filter(e => entityIds.includes(e.id));
+    const cultureIds = extractCultureIds(selectedEntities);
+
+    if (cultureIds.length === 0) {
+      setNameBank({});
+      return;
+    }
+
+    // Generate names for each culture
+    generateNameBank(worldData.schema.cultures, cultureIds)
+      .then(bank => {
+        console.log('[Chronicle] Generated name bank:', bank);
+        setNameBank(bank);
+      })
+      .catch(e => {
+        console.warn('[Chronicle] Failed to generate name bank:', e);
+        setNameBank({});
+      });
+  }, [selectedItem?.roleAssignments, worldData?.hardState, worldData?.schema?.cultures]);
+
   // Build generation context for selected item
   const generationContext = useMemo(() => {
     if (!selectedItem || !worldData) return null;
@@ -443,14 +476,15 @@ export default function ChroniclePanel({
             entrypointId: selectedItem.entrypointId,
           },
           worldData,
-          wc
+          wc,
+          nameBank
         );
       }
     } catch (e) {
       console.error('Failed to build generation context:', e);
     }
     return null;
-  }, [selectedItem, worldData, worldContext]);
+  }, [selectedItem, worldData, worldContext, nameBank]);
 
   // Handle accept chronicle - saves to IndexedDB (no entity enrichment copy needed)
   const handleAcceptChronicle = useCallback(async () => {
