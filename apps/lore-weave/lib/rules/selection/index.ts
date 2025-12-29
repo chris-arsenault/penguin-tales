@@ -351,7 +351,7 @@ export function selectEntities(
   const kinds = rule.kinds && rule.kinds.length > 0 ? rule.kinds : (rule.kind ? [rule.kind] : []);
   const kindLabel = kinds.length > 0 ? kinds.join('|') : 'any';
 
-  // Determine if we need to include historical entities based on status filters
+  // Include historical entities if the rule explicitly asks for them
   const needsHistorical = rule.statusFilter === 'historical' || rule.statuses?.includes('historical');
 
   const getCandidatesByKind = (): HardState[] => {
@@ -487,6 +487,9 @@ export function selectVariableEntities(
   const graphView = ctx.graph;
   let entities: HardState[];
 
+  // Include historical entities if the rule explicitly asks for them
+  const needsHistorical = select.statusFilter === 'historical' || select.statuses?.includes('historical');
+
   if (select.from && select.from !== 'graph') {
     const relatedTo = ctx.resolver.resolveEntity(select.from.relatedTo);
     if (!relatedTo) {
@@ -502,13 +505,13 @@ export function selectVariableEntities(
     pushTrace(trace, `via ${select.from.relationship} from ${relatedTo.name || relatedTo.id}`, entities.length);
   } else {
     if (select.kinds && select.kinds.length > 0) {
-      entities = graphView.getEntities().filter((e) => select.kinds!.includes(e.kind));
+      entities = graphView.getEntities({ includeHistorical: needsHistorical }).filter((e) => select.kinds!.includes(e.kind));
       pushTrace(trace, `${select.kinds.join('|')} entities`, entities.length);
     } else if (select.kind) {
-      entities = graphView.findEntities({ kind: select.kind });
+      entities = graphView.findEntities({ kind: select.kind, includeHistorical: needsHistorical });
       pushTrace(trace, `${select.kind} entities`, entities.length);
     } else {
-      entities = graphView.getEntities();
+      entities = graphView.getEntities({ includeHistorical: needsHistorical });
       pushTrace(trace, 'all entities', entities.length);
     }
   }
