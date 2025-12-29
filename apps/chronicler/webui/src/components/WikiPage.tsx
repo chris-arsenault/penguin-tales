@@ -316,7 +316,7 @@ const styles = {
   previewCard: {
     position: 'fixed' as const,
     zIndex: 1000,
-    width: '280px',
+    width: '260px',
     backgroundColor: colors.bgSecondary,
     border: `1px solid ${colors.border}`,
     borderRadius: '8px',
@@ -325,40 +325,67 @@ const styles = {
     pointerEvents: 'none' as const,
   },
   previewHeader: {
+    display: 'flex',
+    gap: '10px',
     padding: '10px 12px',
     backgroundColor: colors.accent,
     color: colors.bgPrimary,
+  },
+  previewThumbnail: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '4px',
+    objectFit: 'cover' as const,
+    flexShrink: 0,
+  },
+  previewThumbnailPlaceholder: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '4px',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '18px',
+    flexShrink: 0,
+  },
+  previewTitle: {
     fontWeight: 600,
-    fontSize: '13px',
+    fontSize: '14px',
+    lineHeight: 1.3,
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
   },
   previewBody: {
     padding: '10px 12px',
   },
-  previewRow: {
+  previewBadges: {
     display: 'flex',
-    padding: '4px 0',
-    borderBottom: `1px solid ${colors.border}`,
-    fontSize: '11px',
+    flexWrap: 'wrap' as const,
+    gap: '4px',
+    marginBottom: '8px',
   },
-  previewLabel: {
-    width: '70px',
-    color: colors.textMuted,
-    flexShrink: 0,
-  },
-  previewValue: {
+  previewBadge: {
+    display: 'inline-block',
+    padding: '2px 6px',
+    fontSize: '10px',
+    borderRadius: '3px',
+    backgroundColor: colors.bgTertiary,
     color: colors.textSecondary,
-    flex: 1,
+  },
+  previewBadgeKind: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    color: colors.accentLight,
+  },
+  previewBadgeStatus: {
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    color: colors.textMuted,
   },
   previewSummary: {
-    marginTop: '8px',
-    paddingTop: '8px',
-    borderTop: `1px solid ${colors.border}`,
     fontSize: '12px',
     lineHeight: 1.5,
     color: colors.textSecondary,
-  },
-  backlinkItemWrapper: {
-    position: 'relative' as const,
   },
 };
 
@@ -506,63 +533,47 @@ function SectionWithImages({
   }
 
   const content = section.content;
+  const contentLower = content.toLowerCase();
 
-  // Separate float images (small/medium) from block images (large/full-width)
-  const floatImages: WikiSectionImage[] = [];
-  const blockImages: Array<{ image: WikiSectionImage; position: number }> = [];
+  // Find anchor position for ALL images and sort by position
+  const positionedImages: Array<{ image: WikiSectionImage; position: number }> = [];
 
   for (const img of images) {
-    if (isFloatImage(img.size)) {
-      floatImages.push(img);
-    } else {
-      // Find anchor position for block images to insert at paragraph boundaries
-      const anchorLower = img.anchorText.toLowerCase();
-      const contentLower = content.toLowerCase();
-      let position = contentLower.indexOf(anchorLower);
-      // Use anchorIndex as fallback if text not found (e.g., after edits)
-      if (position < 0 && img.anchorIndex !== undefined) {
-        position = img.anchorIndex;
-      }
-      blockImages.push({ image: img, position: position >= 0 ? position : content.length });
+    const anchorLower = img.anchorText?.toLowerCase() || '';
+    let position = anchorLower ? contentLower.indexOf(anchorLower) : -1;
+    // Use anchorIndex as fallback if text not found
+    if (position < 0 && img.anchorIndex !== undefined && img.anchorIndex < content.length) {
+      position = img.anchorIndex;
     }
+    // If still not found, use end of content
+    if (position < 0) {
+      position = content.length;
+    }
+    positionedImages.push({ image: img, position });
   }
 
-  // Sort block images by position
-  blockImages.sort((a, b) => a.position - b.position);
+  // Sort by position
+  positionedImages.sort((a, b) => a.position - b.position);
 
-  // If we have block images, we need to split content at paragraph boundaries
-  // Otherwise, render all text as one block with float images at the start
-  if (blockImages.length === 0) {
-    // Simple case: only float images - put them first, then all text
-    return (
-      <div style={styles.sectionWithImages}>
-        {floatImages.map((img, i) => (
-          <ChronicleImage key={`float-${img.refId}-${i}`} image={img} imageData={imageData} imageLoader={imageLoader} />
-        ))}
-        <div style={styles.paragraph}>
-          {renderContent(content)}
-        </div>
-        <div style={styles.clearfix} />
-      </div>
-    );
-  }
-
-  // Complex case: mix of float and block images
-  // Split content at paragraph boundaries where block images should be inserted
-  const fragments: Array<{ type: 'text'; content: string } | { type: 'block-image'; image: WikiSectionImage }> = [];
+  // Build fragments: split content at paragraph boundaries after each image's anchor
+  const fragments: Array<
+    | { type: 'text'; content: string }
+    | { type: 'image'; image: WikiSectionImage }
+  > = [];
   let lastIndex = 0;
 
-  for (const { image, position } of blockImages) {
+  for (const { image, position } of positionedImages) {
     // Find paragraph boundary after the anchor
-    const anchorEnd = position + image.anchorText.length;
+    const anchorEnd = position + (image.anchorText?.length || 0);
     const paragraphEnd = content.indexOf('\n\n', anchorEnd);
     const insertPoint = paragraphEnd >= 0 ? paragraphEnd : content.length;
 
+    // Add text before this image
     if (insertPoint > lastIndex) {
       fragments.push({ type: 'text', content: content.slice(lastIndex, insertPoint) });
     }
-    fragments.push({ type: 'block-image', image });
-    lastIndex = paragraphEnd >= 0 ? paragraphEnd + 2 : content.length;
+    fragments.push({ type: 'image', image });
+    lastIndex = paragraphEnd >= 0 ? paragraphEnd + 2 : insertPoint;
   }
 
   // Add remaining content
@@ -570,35 +581,31 @@ function SectionWithImages({
     fragments.push({ type: 'text', content: content.slice(lastIndex) });
   }
 
-  // Render: float images first (they'll float right), then fragments
-  // The first text fragment will flow around the floats
-  let floatsRendered = false;
-
   return (
     <div style={styles.sectionWithImages}>
       {fragments.map((fragment, i) => {
-        if (fragment.type === 'block-image') {
-          return (
-            <React.Fragment key={`block-${fragment.image.refId}-${i}`}>
-              <div style={styles.clearfix} />
-              <ChronicleImage image={fragment.image} imageData={imageData} imageLoader={imageLoader} />
-            </React.Fragment>
-          );
-        } else {
-          // For the first text fragment, prepend float images
-          if (!floatsRendered && floatImages.length > 0) {
-            floatsRendered = true;
+        if (fragment.type === 'image') {
+          const isFloat = isFloatImage(fragment.image.size);
+          if (isFloat) {
+            // Float images don't need clearfix, they float naturally
             return (
-              <React.Fragment key={`text-${i}`}>
-                {floatImages.map((img, j) => (
-                  <ChronicleImage key={`float-${img.refId}-${j}`} image={img} imageData={imageData} imageLoader={imageLoader} />
-                ))}
-                <div style={styles.paragraph}>
-                  {renderContent(fragment.content)}
-                </div>
+              <ChronicleImage
+                key={`img-${fragment.image.refId}-${i}`}
+                image={fragment.image}
+                imageData={imageData}
+                imageLoader={imageLoader}
+              />
+            );
+          } else {
+            // Block images need clearfix before them
+            return (
+              <React.Fragment key={`img-${fragment.image.refId}-${i}`}>
+                <div style={styles.clearfix} />
+                <ChronicleImage image={fragment.image} imageData={imageData} imageLoader={imageLoader} />
               </React.Fragment>
             );
           }
+        } else {
           return (
             <div key={`text-${i}`} style={styles.paragraph}>
               {renderContent(fragment.content)}
@@ -613,19 +620,20 @@ function SectionWithImages({
 }
 
 /**
- * EntityPreviewCard - Hover preview for entity backlinks
- * Shows the same info as the infobox plus a short summary
+ * EntityPreviewCard - Hover preview for entity links
+ * Shows thumbnail, badges for metadata, and short summary
  */
 interface EntityPreviewCardProps {
   entity: HardState;
   summary?: string;
   position: { x: number; y: number };
+  imageUrl?: string | null;
 }
 
-function EntityPreviewCard({ entity, summary, position }: EntityPreviewCardProps) {
+function EntityPreviewCard({ entity, summary, position, imageUrl }: EntityPreviewCardProps) {
   // Position the card to the right of cursor, adjusting if it would go off-screen
-  const cardWidth = 280;
-  const cardHeight = 200; // Approximate height
+  const cardWidth = 260;
+  const cardHeight = 180;
 
   let left = position.x + 16;
   let top = position.y - 20;
@@ -645,37 +653,38 @@ function EntityPreviewCard({ entity, summary, position }: EntityPreviewCardProps
     top = 20;
   }
 
+  // Get first letter for placeholder
+  const initial = entity.name.charAt(0).toUpperCase();
+
   return (
     <div style={{ ...styles.previewCard, left, top }}>
-      <div style={styles.previewHeader}>{entity.name}</div>
+      <div style={styles.previewHeader}>
+        {imageUrl ? (
+          <img src={imageUrl} alt="" style={styles.previewThumbnail} />
+        ) : (
+          <div style={styles.previewThumbnailPlaceholder}>{initial}</div>
+        )}
+        <div style={styles.previewTitle}>{entity.name}</div>
+      </div>
       <div style={styles.previewBody}>
-        <div style={styles.previewRow}>
-          <div style={styles.previewLabel}>Type</div>
-          <div style={styles.previewValue}>{entity.kind}</div>
+        <div style={styles.previewBadges}>
+          <span style={{ ...styles.previewBadge, ...styles.previewBadgeKind }}>
+            {entity.kind}
+          </span>
+          {entity.subtype && (
+            <span style={styles.previewBadge}>{entity.subtype}</span>
+          )}
+          <span style={{ ...styles.previewBadge, ...styles.previewBadgeStatus }}>
+            {entity.status}
+          </span>
+          <span style={styles.previewBadge}>{entity.prominence}</span>
+          {entity.culture && (
+            <span style={styles.previewBadge}>{entity.culture}</span>
+          )}
         </div>
-        {entity.subtype && (
-          <div style={styles.previewRow}>
-            <div style={styles.previewLabel}>Subtype</div>
-            <div style={styles.previewValue}>{entity.subtype}</div>
-          </div>
-        )}
-        <div style={styles.previewRow}>
-          <div style={styles.previewLabel}>Status</div>
-          <div style={styles.previewValue}>{entity.status}</div>
-        </div>
-        <div style={styles.previewRow}>
-          <div style={styles.previewLabel}>Prominence</div>
-          <div style={styles.previewValue}>{entity.prominence}</div>
-        </div>
-        {entity.culture && (
-          <div style={{ ...styles.previewRow, borderBottom: 'none' }}>
-            <div style={styles.previewLabel}>Culture</div>
-            <div style={styles.previewValue}>{entity.culture}</div>
-          </div>
-        )}
         {summary && (
           <div style={styles.previewSummary}>
-            {summary.length > 150 ? `${summary.slice(0, 150)}...` : summary}
+            {summary.length > 250 ? `${summary.slice(0, 250)}...` : summary}
           </div>
         )}
       </div>
@@ -709,9 +718,8 @@ export default function WikiPageView({
   } | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
 
-  // Handle backlink hover with delay to prevent flicker
-  const handleBacklinkMouseEnter = useCallback((id: string, e: React.MouseEvent) => {
-    console.log('[WikiPage] Mouse enter backlink:', id);
+  // Handle entity link hover with delay to prevent flicker
+  const handleEntityHoverEnter = useCallback((id: string, e: React.MouseEvent) => {
     // Capture position immediately - React synthetic events are pooled
     const x = e.clientX;
     const y = e.clientY;
@@ -720,7 +728,6 @@ export default function WikiPageView({
       clearTimeout(hoverTimeoutRef.current);
     }
     hoverTimeoutRef.current = window.setTimeout(() => {
-      console.log('[WikiPage] Setting hovered backlink:', id, x, y);
       setHoveredBacklink({
         id,
         position: { x, y },
@@ -728,7 +735,7 @@ export default function WikiPageView({
     }, 200); // 200ms delay before showing preview
   }, []);
 
-  const handleBacklinkMouseLeave = useCallback(() => {
+  const handleEntityHoverLeave = useCallback(() => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
@@ -736,17 +743,16 @@ export default function WikiPageView({
     setHoveredBacklink(null);
   }, []);
 
+  // Clear hover when clicking to navigate
+  const handleEntityClick = useCallback((entityId: string) => {
+    handleEntityHoverLeave();
+    onNavigateToEntity(entityId);
+  }, [handleEntityHoverLeave, onNavigateToEntity]);
+
   // Get hovered entity data for preview
   const hoveredEntity = useMemo(() => {
     if (!hoveredBacklink) return null;
-    const entity = entityIndex.get(hoveredBacklink.id);
-    console.log('[WikiPage] Hover lookup:', {
-      backlinkId: hoveredBacklink.id,
-      found: !!entity,
-      entityIndexSize: entityIndex.size,
-      position: hoveredBacklink.position,
-    });
-    return entity || null;
+    return entityIndex.get(hoveredBacklink.id) || null;
   }, [hoveredBacklink, entityIndex]);
 
   // Get summary for hovered entity
@@ -755,6 +761,49 @@ export default function WikiPageView({
     const page = pages.find(p => p.id === hoveredBacklink.id);
     return page?.content?.summary;
   }, [hoveredBacklink, pages]);
+
+  // Load image for hovered entity
+  const [hoveredImageUrl, setHoveredImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!hoveredBacklink) {
+      setHoveredImageUrl(null);
+      return;
+    }
+
+    // Find the image entry for this entity
+    const imageEntry = imageData?.results?.find(r => r.entityId === hoveredBacklink.id);
+    if (!imageEntry) {
+      setHoveredImageUrl(null);
+      return;
+    }
+
+    // If we have an imageLoader, use it to get the URL
+    if (imageLoader) {
+      let cancelled = false;
+      imageLoader(imageEntry.imageId).then(url => {
+        if (!cancelled) {
+          setHoveredImageUrl(url);
+        }
+      }).catch(() => {
+        if (!cancelled) {
+          setHoveredImageUrl(null);
+        }
+      });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // Fallback to localPath if no imageLoader
+    if (imageEntry.localPath) {
+      const path = imageEntry.localPath;
+      const webPath = path.startsWith('blob:') || path.startsWith('data:')
+        ? path
+        : path.replace('output/images/', 'images/');
+      setHoveredImageUrl(webPath);
+    }
+  }, [hoveredBacklink?.id, imageLoader, imageData]);
 
   // Build seed data for chronicle pages
   const seedData = useMemo((): ChronicleSeedData | null => {
@@ -788,13 +837,11 @@ export default function WikiPageView({
   }, [pages, page.id]);
 
   const backlinks = useMemo(() => {
-    const result = pages.filter(p =>
+    return pages.filter(p =>
       p.id !== page.id &&
       p.type !== 'chronicle' &&
       p.linkedEntities.includes(page.id)
     );
-    console.log('[WikiPage] Backlinks count:', result.length, 'for page:', page.id);
-    return result;
   }, [pages, page.id]);
 
   // Build entity name to ID map for link resolution
@@ -855,7 +902,7 @@ export default function WikiPageView({
     return parts;
   };
 
-  // Render content with links
+  // Render content with links (with hover preview)
   const renderContent = (text: string) => {
     const parts = parseContent(text);
     return parts.map((part, i) => {
@@ -866,7 +913,9 @@ export default function WikiPageView({
         <span
           key={i}
           style={styles.entityLink}
-          onClick={() => onNavigateToEntity(part.entityId)}
+          onClick={() => handleEntityClick(part.entityId)}
+          onMouseEnter={(e) => handleEntityHoverEnter(part.entityId, e)}
+          onMouseLeave={handleEntityHoverLeave}
         >
           {part.name}
         </span>
@@ -996,8 +1045,6 @@ export default function WikiPageView({
                   key={link.id}
                   style={styles.backlinkItem}
                   onClick={() => onNavigate(link.id)}
-                  onMouseEnter={(e) => handleBacklinkMouseEnter(link.id, e)}
-                  onMouseLeave={handleBacklinkMouseLeave}
                 >
                   {link.title}
                 </button>
@@ -1008,15 +1055,6 @@ export default function WikiPageView({
                 </div>
               )}
             </div>
-          )}
-
-          {/* Entity Preview Card (hover) */}
-          {hoveredBacklink && hoveredEntity && (
-            <EntityPreviewCard
-              entity={hoveredEntity}
-              summary={hoveredSummary}
-              position={hoveredBacklink.position}
-            />
           )}
 
           {/* Categories */}
@@ -1080,6 +1118,16 @@ export default function WikiPageView({
           onClose={() => setShowSeedModal(false)}
           seed={seedData}
           title="Generation Context"
+        />
+      )}
+
+      {/* Entity Preview Card (hover) */}
+      {hoveredBacklink && hoveredEntity && (
+        <EntityPreviewCard
+          entity={hoveredEntity}
+          summary={hoveredSummary}
+          position={hoveredBacklink.position}
+          imageUrl={hoveredImageUrl}
         />
       )}
     </div>

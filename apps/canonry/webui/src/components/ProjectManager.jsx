@@ -16,6 +16,8 @@ export default function ProjectManager({
   onDuplicateProject,
   onExportProject,
   onImportProject,
+  onReloadFromDefaults,
+  defaultProjectId,
   onGoHome,
   validationResult,
   onNavigateToValidation,
@@ -173,6 +175,23 @@ export default function ProjectManager({
                         className="project-item-actions"
                         onClick={(e) => e.stopPropagation()}
                       >
+                        {project.id === defaultProjectId && onReloadFromDefaults && (
+                          <button
+                            className="btn-xs"
+                            onClick={async () => {
+                              if (confirm('Reload project from defaults? This will overwrite your configuration changes but preserve world data.')) {
+                                try {
+                                  await onReloadFromDefaults();
+                                  setShowDropdown(false);
+                                } catch (err) {
+                                  alert('Failed to reload: ' + err.message);
+                                }
+                              }
+                            }}
+                          >
+                            Reload Defaults
+                          </button>
+                        )}
                         <button
                           className="btn-xs"
                           onClick={() => onDuplicateProject(project.id)}

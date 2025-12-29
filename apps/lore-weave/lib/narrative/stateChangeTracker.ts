@@ -284,12 +284,14 @@ export class StateChangeTracker {
     const events: NarrativeEvent[] = [];
     const endedEntityIds = this.collectEndedEntityIds();
     const coalescenceChanges = this.detectCoalescenceChanges();
-    const coalescenceMemberIds = new Set<string>();
-    for (const memberIds of coalescenceChanges.values()) {
-      memberIds.forEach(id => coalescenceMemberIds.add(id));
+    const coalescenceParticipantIds = new Set<string>();
+    for (const [containerId, memberIds] of coalescenceChanges) {
+      coalescenceParticipantIds.add(containerId);
+      memberIds.forEach(id => coalescenceParticipantIds.add(id));
     }
-    const suppressedCoalescenceMembers = new Set<string>(
-      Array.from(coalescenceMemberIds).filter(id => endedEntityIds.has(id))
+    // Coalescence can trigger large relationship cleanup; suppress those dissolutions.
+    const suppressedCoalescenceEntities = new Set<string>(
+      Array.from(coalescenceParticipantIds).filter(id => !endedEntityIds.has(id))
     );
 
     // 1. Generate state change events (including downfall/triumph based on status polarity)
@@ -306,7 +308,7 @@ export class StateChangeTracker {
     events.push(...this.generateDissolutionEvents(
       endedEntityIds,
       warResults.suppressedRelationshipKeys,
-      suppressedCoalescenceMembers
+      suppressedCoalescenceEntities
     ));
 
     // 5. Generate rivalry and alliance events (new negative/positive relationships)

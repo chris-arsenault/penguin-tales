@@ -241,6 +241,7 @@ export default function EventsPanel({ worldData, entityMap }) {
   const [expandedEvents, setExpandedEvents] = useState(new Set());
 
   const events = worldData?.narrativeHistory || [];
+  const simulationRunId = worldData?.metadata?.simulationRunId;
 
   // Get unique values for filters
   const { uniqueKinds, uniqueEras, uniqueTags } = useMemo(() => {
@@ -289,6 +290,21 @@ export default function EventsPanel({ worldData, entityMap }) {
       }
       return next;
     });
+  };
+
+  const handleExportEvents = () => {
+    if (events.length === 0) return;
+    const json = JSON.stringify(events, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const safeRunId = simulationRunId ? simulationRunId.replace(/[^a-zA-Z0-9_-]+/g, '_') : 'all';
+    anchor.href = url;
+    anchor.download = `narrative-events-${safeRunId}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
   };
 
   if (events.length === 0) {
@@ -341,8 +357,26 @@ export default function EventsPanel({ worldData, entityMap }) {
           <div style={{ fontSize: '14px', fontWeight: 500 }}>
             {filteredEvents.length} of {events.length} events
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Sorted by significance
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Sorted by significance
+            </div>
+            <button
+              onClick={handleExportEvents}
+              disabled={events.length === 0}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '4px',
+                cursor: events.length === 0 ? 'not-allowed' : 'pointer',
+                color: 'var(--text-secondary)',
+                opacity: events.length === 0 ? 0.6 : 1,
+              }}
+            >
+              Export JSON
+            </button>
           </div>
         </div>
 

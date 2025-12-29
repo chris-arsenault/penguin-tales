@@ -106,6 +106,10 @@ export interface UseChronicleGenerationReturn {
 // Context Serialization
 // ============================================================================
 
+/**
+ * Serialize ChronicleGenerationContext for worker transport.
+ * IMPORTANT: When adding fields to ChronicleGenerationContext, add them here too.
+ */
 function serializeContext(
   context: ChronicleGenerationContext,
   narrativeStyle: NarrativeStyle
@@ -178,6 +182,9 @@ function serializeContext(
     })),
 
     narrativeStyle,
+
+    // Name bank for invented characters
+    nameBank: context.nameBank,
   };
   return serialized;
 }

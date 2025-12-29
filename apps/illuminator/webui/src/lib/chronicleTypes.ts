@@ -319,7 +319,14 @@ export interface ChronicleGenerationContext {
   // Selected events
   events: NarrativeEventContext[];
 
-  // Name bank for invented characters (culture ID -> array of names)
+  /**
+   * Name bank for invented characters (culture ID -> array of names).
+   *
+   * SERIALIZATION NOTE: This field must also be added to:
+   * - SerializableChronicleContext in enrichmentTypes.ts
+   * - serializeContext() in useChronicleGeneration.ts
+   * - deserializeChronicleContext() in enrichmentCore.ts
+   */
   nameBank?: Record<string, string[]>;
 }
 

@@ -1059,7 +1059,8 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
 // ============================================================================
 
 /**
- * Convert serializable chronicle context to full generation context
+ * Convert serializable chronicle context to full generation context.
+ * IMPORTANT: When adding fields to ChronicleGenerationContext, add them here too.
  */
 function deserializeChronicleContext(ctx: SerializableChronicleContext): ChronicleGenerationContext {
   // Convert entities to EntityContext format
@@ -1117,6 +1118,7 @@ function deserializeChronicleContext(ctx: SerializableChronicleContext): Chronic
       objectName: e.objectName,
       narrativeTags: e.narrativeTags,
     })),
+    nameBank: ctx.nameBank,
   };
 }
 

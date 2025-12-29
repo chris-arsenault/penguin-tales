@@ -76,6 +76,37 @@
             "random"
           ]
         }
+      },
+      {
+        "entityRef": "$companion",
+        "kind": "npc",
+        "subtype": "hero",
+        "status": "alive",
+        "prominence": "forgotten",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A lesser hero who emerged alongside a champion in {colonyName}",
+          "replacements": {
+            "colonyName": "$target.name"
+          }
+        },
+        "tags": {
+          "companion": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "culture",
+            "id": "$target.culture"
+          },
+          "steps": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
       }
     ],
     "relationships": [
@@ -84,6 +115,12 @@
         "src": "$hero",
         "dst": "$target",
         "strength": 0.8
+      },
+      {
+        "kind": "allied_with",
+        "src": "$companion",
+        "dst": "$hero",
+        "strength": 0.5
       },
       {
         "kind": "member_of",
@@ -246,6 +283,31 @@
             "preferPeriphery": false
           }
         }
+      },
+      {
+        "entityRef": "$aide",
+        "kind": "npc",
+        "subtype": "mayor",
+        "status": "alive",
+        "prominence": "forgotten",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A minor official serving the leadership in {colonyName}",
+          "replacements": {
+            "colonyName": "$colony.name"
+          }
+        },
+        "tags": {
+          "bureaucrat": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "sparse",
+            "preferPeriphery": false
+          }
+        }
       }
     ],
     "relationships": [
@@ -254,6 +316,12 @@
         "src": "$successor",
         "dst": "$target",
         "strength": 1
+      },
+      {
+        "kind": "allied_with",
+        "src": "$aide",
+        "dst": "$successor",
+        "strength": 0.4
       },
       {
         "kind": "leader_of",
@@ -421,6 +489,42 @@
             "random"
           ]
         }
+      },
+      {
+        "entityRef": "$orca2",
+        "kind": "npc",
+        "subtype": "orca",
+        "status": "alive",
+        "prominence": "forgotten",
+        "culture": {
+          "fixed": "orca"
+        },
+        "description": {
+          "template": "A raider hunting alongside their packmate near {colonyName}",
+          "replacements": {
+            "colonyName": "$target.name"
+          }
+        },
+        "tags": {
+          "orca": true,
+          "raider": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$target",
+            "stickToRegion": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "steps": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
       }
     ],
     "relationships": [
@@ -433,6 +537,12 @@
           "type": "entity_exists",
           "entity": "$parentOrca"
         }
+      },
+      {
+        "kind": "allied_with",
+        "src": "$orca2",
+        "dst": "$orca1",
+        "strength": 0.5
       },
       {
         "kind": "occupies",
@@ -648,6 +758,62 @@
             "random"
           ]
         }
+      },
+      {
+        "entityRef": "$recruit1",
+        "kind": "npc",
+        "subtype": "outlaw",
+        "status": "alive",
+        "prominence": "marginal",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": "A dissident who joined the splinter faction",
+        "tags": {
+          "criminal": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$target"
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "steps": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
+      },
+      {
+        "entityRef": "$recruit2",
+        "kind": "npc",
+        "subtype": "outlaw",
+        "status": "alive",
+        "prominence": "forgotten",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": "A recruit drawn to the splinter faction",
+        "tags": {
+          "criminal": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$target"
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "steps": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
       }
     ],
     "relationships": [
@@ -656,6 +822,18 @@
         "src": "$splinter",
         "dst": "$target",
         "strength": 1
+      },
+      {
+        "kind": "member_of",
+        "src": "$recruit1",
+        "dst": "$splinter",
+        "strength": 0.5
+      },
+      {
+        "kind": "member_of",
+        "src": "$recruit2",
+        "dst": "$splinter",
+        "strength": 0.4
       },
       {
         "kind": "at_war_with",
@@ -881,6 +1059,78 @@
             "random"
           ]
         }
+      },
+      {
+        "entityRef": "$trader1",
+        "kind": "npc",
+        "subtype": "merchant",
+        "status": "alive",
+        "prominence": "forgotten",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A trader working for the guild in {colonyName}",
+          "replacements": {
+            "colonyName": "$target.name"
+          }
+        },
+        "tags": {
+          "trade": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$target",
+            "stickToRegion": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true,
+            "preferSparse": true
+          },
+          "steps": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
+      },
+      {
+        "entityRef": "$trader2",
+        "kind": "npc",
+        "subtype": "merchant",
+        "status": "alive",
+        "prominence": "forgotten",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A merchant employed by the guild in {colonyName}",
+          "replacements": {
+            "colonyName": "$target.name"
+          }
+        },
+        "tags": {
+          "trade": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$target",
+            "stickToRegion": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true,
+            "preferSparse": true
+          },
+          "steps": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
       }
     ],
     "relationships": [
@@ -914,6 +1164,18 @@
         "dst": "$target",
         "strength": 0.7,
         "bidirectional": true
+      },
+      {
+        "kind": "member_of",
+        "src": "$trader1",
+        "dst": "$guild",
+        "strength": 0.4
+      },
+      {
+        "kind": "member_of",
+        "src": "$trader2",
+        "dst": "$guild",
+        "strength": 0.4
       }
     ],
     "stateUpdates": [],
@@ -1069,6 +1331,76 @@
             "random"
           ]
         }
+      },
+      {
+        "entityRef": "$acolyte1",
+        "kind": "npc",
+        "subtype": "outlaw",
+        "status": "alive",
+        "prominence": "forgotten",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "An outcast drawn to the mysteries near {locationName}",
+          "replacements": {
+            "locationName": "$target.name"
+          }
+        },
+        "tags": {
+          "mystical": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$target",
+            "stickToRegion": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "steps": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
+      },
+      {
+        "entityRef": "$acolyte2",
+        "kind": "npc",
+        "subtype": "outlaw",
+        "status": "alive",
+        "prominence": "forgotten",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A devotee serving the cult near {locationName}",
+          "replacements": {
+            "locationName": "$target.name"
+          }
+        },
+        "tags": {
+          "mystical": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$target",
+            "stickToRegion": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "steps": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
       }
     ],
     "relationships": [
@@ -1077,6 +1409,18 @@
         "src": "$cult",
         "dst": "$target",
         "strength": 1
+      },
+      {
+        "kind": "member_of",
+        "src": "$acolyte1",
+        "dst": "$cult",
+        "strength": 0.5
+      },
+      {
+        "kind": "member_of",
+        "src": "$acolyte2",
+        "dst": "$cult",
+        "strength": 0.4
       },
       {
         "kind": "member_of",
@@ -1348,6 +1692,68 @@
             "parentColony": "$target.name"
           }
         }
+      },
+      {
+        "entityRef": "$founder",
+        "kind": "npc",
+        "subtype": "mayor",
+        "status": "alive",
+        "prominence": "marginal",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": "The founder who led settlers to establish the new colony",
+        "tags": {
+          "founder": true,
+          "leader": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$colony",
+            "stickToRegion": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "steps": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
+      },
+      {
+        "entityRef": "$settler",
+        "kind": "npc",
+        "subtype": "merchant",
+        "status": "alive",
+        "prominence": "forgotten",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": "A pioneer trader who helped establish the new colony",
+        "tags": {
+          "settler": true,
+          "trade": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$colony",
+            "stickToRegion": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "steps": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
       }
     ],
     "relationships": [
@@ -1383,6 +1789,18 @@
         "src": "$council",
         "dst": "$colony",
         "strength": 0.8
+      },
+      {
+        "kind": "leader_of",
+        "src": "$founder",
+        "dst": "$council",
+        "strength": 0.6
+      },
+      {
+        "kind": "resident_of",
+        "src": "$settler",
+        "dst": "$colony",
+        "strength": 0.4
       }
     ],
     "stateUpdates": [],

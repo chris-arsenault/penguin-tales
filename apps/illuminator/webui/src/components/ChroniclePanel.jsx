@@ -206,7 +206,6 @@ export default function ChroniclePanel({
   styleLibrary,
   styleSelection,
   promptTemplates,
-  cultures,
 }) {
   // Load persisted state from localStorage
   const [activeType, setActiveType] = useState(() => {
@@ -692,8 +691,23 @@ export default function ChroniclePanel({
       tone: worldContext?.tone || '',
     };
 
+    // Generate name bank for invented characters
+    // Must be done here (not in useEffect) because wizard creates new chronicles
+    const entityIds = wizardConfig.roleAssignments.map(r => r.entityId);
+    const selectedEntities = worldData.hardState?.filter(e => entityIds.includes(e.id)) || [];
+    const cultureIds = extractCultureIds(selectedEntities);
+    let wizardNameBank = {};
+    if (cultureIds.length > 0 && worldData.schema?.cultures) {
+      try {
+        wizardNameBank = await generateNameBank(worldData.schema.cultures, cultureIds);
+        console.log('[Chronicle Wizard] Generated name bank:', wizardNameBank);
+      } catch (e) {
+        console.warn('[Chronicle Wizard] Failed to generate name bank:', e);
+      }
+    }
+
     // Build the chronicle generation context (chronicle-first)
-    const context = buildChronicleContext(selections, worldData, wc);
+    const context = buildChronicleContext(selections, worldData, wc, wizardNameBank);
 
     // Derive chronicle metadata from role assignments
     const title = deriveTitleFromRoles(wizardConfig.roleAssignments);

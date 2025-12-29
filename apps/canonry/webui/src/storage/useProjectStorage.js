@@ -15,6 +15,11 @@ import { loadLastProjectId, saveLastProjectId } from './uiState.js';
 import { loadWorldStore, saveWorldStore } from './worldStore.js';
 
 /**
+ * Default project ID - used to identify the default project for reload functionality
+ */
+export const DEFAULT_PROJECT_ID = 'project_1765083188592';
+
+/**
  * Project file names for individual domain files
  */
 const PROJECT_FILES = [
@@ -515,6 +520,69 @@ export function useProjectStorage() {
     [refreshList]
   );
 
+  // Reload current project from default files (merge overwrite)
+  // Only works for the default project
+  const reloadProjectFromDefaults = useCallback(
+    async () => {
+      if (!currentProject) return null;
+      if (currentProject.id !== DEFAULT_PROJECT_ID) {
+        throw new Error('Can only reload the default project from defaults');
+      }
+
+      try {
+        setLoading(true);
+
+        // Fetch fresh default project files
+        const defaultData = await fetchDefaultProject();
+        if (!defaultData?.project) {
+          throw new Error('Failed to load default project files');
+        }
+
+        // Merge: use fresh data but preserve the current project's ID and timestamps
+        const reloaded = {
+          ...defaultData.project,
+          id: currentProject.id,
+          createdAt: currentProject.createdAt,
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Save the merged project to IndexedDB
+        await saveProject(reloaded);
+
+        // Reload illuminatorConfig to worldStore if present
+        if (defaultData.illuminatorConfig) {
+          const worldStoreData = {
+            slots: {},
+            activeSlotIndex: 0,
+          };
+          if (defaultData.illuminatorConfig.worldContext) {
+            worldStoreData.worldContext = defaultData.illuminatorConfig.worldContext;
+          }
+          if (defaultData.illuminatorConfig.promptTemplates) {
+            worldStoreData.promptTemplates = defaultData.illuminatorConfig.promptTemplates;
+          }
+          if (defaultData.illuminatorConfig.enrichmentConfig) {
+            worldStoreData.enrichmentConfig = defaultData.illuminatorConfig.enrichmentConfig;
+          }
+          if (defaultData.illuminatorConfig.styleSelection) {
+            worldStoreData.styleSelection = defaultData.illuminatorConfig.styleSelection;
+          }
+          await saveWorldStore(currentProject.id, worldStoreData);
+        }
+
+        await refreshList();
+        setCurrentProject(reloaded);
+        return reloaded;
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentProject, refreshList]
+  );
+
   return {
     // State
     projects,
@@ -530,6 +598,10 @@ export function useProjectStorage() {
     duplicateProject,
     exportProject,
     importProject,
+    reloadProjectFromDefaults,
     refreshList,
+
+    // Constants
+    DEFAULT_PROJECT_ID,
   };
 }

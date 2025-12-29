@@ -389,45 +389,49 @@ function buildChronicleSections(
     });
   }
 
-  // Attach images to sections if imageRefs provided
+  console.log('[wikiBuilder] buildChronicleSections:', {
+    contentLength: content.length,
+    sectionCount: sections.length,
+    sectionHeadings: sections.map(s => s.heading),
+    sectionLengths: sections.map(s => s.content.length),
+    imageRefsCount: imageRefs?.refs?.length ?? 0,
+  });
+
+  // Attach images to sections by anchor text
   if (imageRefs?.refs && worldData) {
     attachImagesToSections(sections, imageRefs.refs, worldData);
   }
+
+  console.log('[wikiBuilder] After image attachment:', {
+    sectionsWithImages: sections.filter(s => s.images && s.images.length > 0).length,
+    imagesPerSection: sections.map(s => ({ heading: s.heading, imageCount: s.images?.length ?? 0 })),
+  });
 
   return { sections };
 }
 
 /**
- * Find which section contains the anchor text or anchor index
+ * Find which section contains the anchor text
  */
 function findSectionForAnchor(
   sections: WikiSection[],
-  anchorText: string,
-  anchorIndex?: number
+  anchorText: string
 ): WikiSection | null {
-  // First, try to find by anchorText
-  if (anchorText) {
-    const normalized = anchorText.toLowerCase();
-    for (const section of sections) {
-      if (section.content.toLowerCase().includes(normalized)) {
-        return section;
-      }
+  if (!anchorText || sections.length === 0) {
+    return sections.length > 0 ? sections[0] : null;
+  }
+
+  // Direct search: find which section contains the anchor text
+  const anchorLower = anchorText.toLowerCase();
+  for (const section of sections) {
+    if (section.content.toLowerCase().includes(anchorLower)) {
+      return section;
     }
   }
 
-  // Fall back to anchorIndex if available
-  if (anchorIndex !== undefined) {
-    let cumulativeLength = 0;
-    for (const section of sections) {
-      const sectionEnd = cumulativeLength + section.content.length;
-      if (anchorIndex >= cumulativeLength && anchorIndex < sectionEnd) {
-        return section;
-      }
-      cumulativeLength = sectionEnd + 1; // +1 for section separator
-    }
-  }
-
-  return null;
+  // Not found - return first section as fallback
+  console.warn('[wikiBuilder] Anchor text not found in any section, using first section:', anchorText);
+  return sections[0];
 }
 
 /**
@@ -438,6 +442,20 @@ function attachImagesToSections(
   refs: ChronicleImageRef[],
   worldData: WorldState
 ): void {
+  console.log('[wikiBuilder] attachImagesToSections called with:', {
+    sectionCount: sections.length,
+    refCount: refs.length,
+    refs: refs.map(r => ({
+      refId: r.refId,
+      type: r.type,
+      status: r.status,
+      anchorText: r.anchorText?.slice(0, 50),
+      anchorIndex: r.anchorIndex,
+      size: r.size,
+      hasGeneratedImageId: !!r.generatedImageId,
+    })),
+  });
+
   for (const ref of refs) {
     // Skip prompt requests that aren't complete
     if (ref.type === 'prompt_request' && ref.status !== 'complete') {
@@ -445,8 +463,8 @@ function attachImagesToSections(
       continue;
     }
 
-    // Find the target section by anchor text or index
-    const section = findSectionForAnchor(sections, ref.anchorText, ref.anchorIndex);
+    // Find the target section by anchor text
+    const section = findSectionForAnchor(sections, ref.anchorText);
     if (!section) {
       console.warn('[wikiBuilder] Could not find section for anchor:', ref.anchorText, ref);
       continue;
@@ -469,7 +487,14 @@ function attachImagesToSections(
 
     if (!imageId) continue;
 
-    console.log('[wikiBuilder] Attaching image:', ref.refId, ref.type, imageId, ref.caption);
+    console.log('[wikiBuilder] Attaching image:', {
+      refId: ref.refId,
+      type: ref.type,
+      imageId,
+      anchorText: ref.anchorText?.slice(0, 50),
+      toSection: section.heading,
+      sectionContentPreview: section.content.slice(0, 100),
+    });
 
     // Initialize images array if needed
     if (!section.images) {

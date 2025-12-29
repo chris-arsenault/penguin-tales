@@ -190,7 +190,12 @@ export type QueueItem = EnrichmentTaskPayload & {
 
 /**
  * Serializable chronicle context (for entityChronicle tasks)
- * Maps are converted to Record objects for serialization
+ * Maps are converted to Record objects for serialization.
+ *
+ * IMPORTANT: This must mirror ChronicleGenerationContext from chronicleTypes.ts.
+ * When adding fields to ChronicleGenerationContext, also add them here and update:
+ * - serializeContext() in useChronicleGeneration.ts
+ * - deserializeChronicleContext() in enrichmentCore.ts
  */
 export interface SerializableChronicleContext {
   // World context
@@ -276,6 +281,9 @@ export interface SerializableChronicleContext {
 
   // Narrative style for chronicle generation
   narrativeStyle: NarrativeStyle;
+
+  // Name bank for invented characters (culture ID -> array of names)
+  nameBank?: Record<string, string[]>;
 }
 
 /**

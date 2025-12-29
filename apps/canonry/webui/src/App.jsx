@@ -354,6 +354,8 @@ export default function App() {
     duplicateProject,
     exportProject,
     importProject,
+    reloadProjectFromDefaults,
+    DEFAULT_PROJECT_ID,
   } = useProjectStorage();
 
   const handleIlluminatorWorldDataChange = useCallback(async (enrichedWorld) => {
@@ -1380,6 +1382,8 @@ export default function App() {
         onDuplicateProject={duplicateProject}
         onExportProject={exportProject}
         onImportProject={importProject}
+        onReloadFromDefaults={reloadProjectFromDefaults}
+        defaultProjectId={DEFAULT_PROJECT_ID}
         onGoHome={handleGoHome}
         validationResult={validationResult}
         onNavigateToValidation={handleNavigateToValidation}

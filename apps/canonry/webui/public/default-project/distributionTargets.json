@@ -185,24 +185,24 @@
       "comment": "Per-subtype entity targets for homeostatic population control. Total ~150 entities.",
       "npc": {
         "hero": {
-          "target": 8,
-          "comment": "Heroes that emerge during conflict"
+          "target": 12,
+          "comment": "Heroes and companions that emerge during conflict"
         },
         "merchant": {
-          "target": 3,
-          "comment": "Trade network NPCs"
+          "target": 8,
+          "comment": "Trade network NPCs and guild workers"
         },
         "mayor": {
-          "target": 3,
-          "comment": "Colony leaders (1 per colony + succession)"
+          "target": 6,
+          "comment": "Colony leaders, founders, and aides"
         },
         "orca": {
-          "target": 4,
-          "comment": "External threat NPCs"
+          "target": 8,
+          "comment": "External threat NPCs (hunt in pairs)"
         },
         "outlaw": {
-          "target": 4,
-          "comment": "Criminal faction members"
+          "target": 10,
+          "comment": "Criminal faction members, splinter recruits, cult acolytes"
         }
       },
       "location": {
