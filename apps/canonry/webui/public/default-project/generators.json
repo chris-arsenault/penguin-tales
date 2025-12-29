@@ -4,12 +4,6 @@
     "name": "Hero Emergence",
     "applicability": [
       {
-        "type": "entity_count",
-        "kind": "npc",
-        "subtype": "hero",
-        "max": 20
-      },
-      {
         "type": "or",
         "conditions": [
           {
@@ -4637,7 +4631,7 @@
           "pickStrategy": "first",
           "kind": "location"
         },
-        "required": true
+        "required": false
       },
       "$championFaction": {
         "select": {

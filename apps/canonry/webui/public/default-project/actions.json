@@ -897,38 +897,149 @@
     "enabled": true
   },
   {
-    "id": "kill_orca",
-    "name": "Kill Orca",
-    "description": "Heros kill Orcas",
+    "id": "wound_orca",
+    "name": "Wound Orca",
+    "description": "Heroes wound healthy orcas in combat",
     "actor": {
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "subtypes": [
-          "hero"
-        ],
+        "subtypes": ["hero"],
         "statusFilter": "alive"
       }
     },
     "targeting": {
       "strategy": "by_kind",
       "kind": "npc",
+      "subtypes": ["orca"],
+      "statusFilter": "alive",
       "filters": [
         {
           "type": "exclude",
-          "entities": [
-            "$actor"
-          ]
+          "entities": ["$actor"]
+        },
+        {
+          "type": "lacks_tag",
+          "tag": "wounded"
+        },
+        {
+          "type": "lacks_tag",
+          "tag": "maimed"
+        }
+      ]
+    },
+    "outcome": {
+      "descriptionTemplate": "wounded {target.name}",
+      "mutations": [
+        {
+          "type": "set_tag",
+          "entity": "$target",
+          "tag": "wounded",
+          "value": true
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": 0.5
+        }
+      ],
+      "applyProminenceToActor": true
+    },
+    "probability": {
+      "baseSuccessChance": 0.6,
+      "baseWeight": 0.8,
+      "pressureModifiers": []
+    },
+    "enabled": true
+  },
+  {
+    "id": "maim_orca",
+    "name": "Maim Orca",
+    "description": "Heroes maim wounded orcas in combat",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "subtypes": ["hero"],
+        "statusFilter": "alive"
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "npc",
+      "subtypes": ["orca"],
+      "statusFilter": "alive",
+      "filters": [
+        {
+          "type": "exclude",
+          "entities": ["$actor"]
         },
         {
           "type": "has_tag",
-          "tag": "orca"
+          "tag": "wounded"
+        },
+        {
+          "type": "lacks_tag",
+          "tag": "maimed"
+        }
+      ]
+    },
+    "outcome": {
+      "descriptionTemplate": "maimed {target.name}",
+      "mutations": [
+        {
+          "type": "remove_tag",
+          "entity": "$target",
+          "tag": "wounded"
+        },
+        {
+          "type": "set_tag",
+          "entity": "$target",
+          "tag": "maimed",
+          "value": true
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": 0.5
         }
       ],
-      "subtypes": [
-        "orca"
-      ],
-      "statusFilter": "alive"
+      "applyProminenceToActor": true
+    },
+    "probability": {
+      "baseSuccessChance": 0.5,
+      "baseWeight": 0.7,
+      "pressureModifiers": []
+    },
+    "enabled": true
+  },
+  {
+    "id": "kill_orca",
+    "name": "Kill Orca",
+    "description": "Heroes finish off maimed orcas",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "subtypes": ["hero"],
+        "statusFilter": "alive"
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "npc",
+      "subtypes": ["orca"],
+      "statusFilter": "alive",
+      "filters": [
+        {
+          "type": "exclude",
+          "entities": ["$actor"]
+        },
+        {
+          "type": "has_tag",
+          "tag": "maimed"
+        }
+      ]
     },
     "outcome": {
       "descriptionTemplate": "killed {target.name}",
