@@ -23,6 +23,10 @@ export interface WorkerHandle {
   type: 'shared' | 'dedicated';
 }
 
+type GlobalSharedPool = typeof globalThis & {
+  __illuminatorSharedWorkerPool?: WorkerHandle[];
+};
+
 /**
  * Check if SharedWorker is supported
  */
@@ -30,55 +34,51 @@ export function isSharedWorkerSupported(): boolean {
   return typeof SharedWorker !== 'undefined';
 }
 
-/**
- * Create a worker handle that abstracts SharedWorker vs regular Worker
- */
-export function createWorker(config: WorkerConfig): WorkerHandle {
-  // Try SharedWorker first
-  if (isSharedWorkerSupported()) {
-    try {
-      const sharedWorker = new SharedWorker(
-        new URL('../workers/enrichment.shared-worker.ts', import.meta.url),
-        { type: 'module', name: 'illuminator-enrichment' }
-      );
-
-      const handle: WorkerHandle = {
-        type: 'shared',
-        onmessage: null,
-        onerror: null,
-
-        postMessage(message: unknown) {
-          sharedWorker.port.postMessage(message);
-        },
-
-        terminate() {
-          // SharedWorkers can't be terminated from client - they close when all ports disconnect
-          sharedWorker.port.close();
-        },
-      };
-
-      // Wire up event handlers through port
-      sharedWorker.port.onmessage = (event: MessageEvent<WorkerOutbound>) => {
-        handle.onmessage?.(event);
-      };
-
-      sharedWorker.onerror = (event: ErrorEvent) => {
-        handle.onerror?.(event);
-      };
-
-      sharedWorker.port.start();
-
-      // Send init config
-      handle.postMessage({ type: 'init', config });
-
-      console.log('[WorkerFactory] Created SharedWorker');
-      return handle;
-    } catch (err) {
-      console.warn('[WorkerFactory] SharedWorker failed, falling back to dedicated Worker:', err);
-    }
+function getSharedWorkerPool(): WorkerHandle[] {
+  const globalScope = globalThis as GlobalSharedPool;
+  if (!globalScope.__illuminatorSharedWorkerPool) {
+    globalScope.__illuminatorSharedWorkerPool = [];
   }
+  return globalScope.__illuminatorSharedWorkerPool;
+}
 
-  // Fallback to regular Worker
+function createSharedWorkerHandle(): WorkerHandle {
+  const sharedWorker = new SharedWorker(
+    new URL('../workers/enrichment.shared-worker.ts', import.meta.url),
+    { type: 'module', name: 'illuminator-enrichment' }
+  );
+
+  const handle: WorkerHandle = {
+    type: 'shared',
+    onmessage: null,
+    onerror: null,
+
+    postMessage(message: unknown) {
+      sharedWorker.port.postMessage(message);
+    },
+
+    terminate() {
+      // SharedWorkers can't be terminated from client - they close when all ports disconnect
+      sharedWorker.port.close();
+    },
+  };
+
+  // Wire up event handlers through port
+  sharedWorker.port.onmessage = (event: MessageEvent<WorkerOutbound>) => {
+    handle.onmessage?.(event);
+  };
+
+  sharedWorker.onerror = (event: ErrorEvent) => {
+    handle.onerror?.(event);
+  };
+
+  sharedWorker.port.start();
+
+  console.log('[WorkerFactory] Created SharedWorker port');
+  return handle;
+}
+
+function createDedicatedWorkerHandle(): WorkerHandle {
   const worker = new Worker(
     new URL('../workers/enrichment.worker.ts', import.meta.url),
     { type: 'module' }
@@ -106,10 +106,28 @@ export function createWorker(config: WorkerConfig): WorkerHandle {
     handle.onerror?.(event);
   };
 
-  // Send init config
-  handle.postMessage({ type: 'init', config });
-
   console.log('[WorkerFactory] Created dedicated Worker (SharedWorker not available)');
+  return handle;
+}
+
+/**
+ * Create a worker handle that abstracts SharedWorker vs regular Worker
+ */
+export function createWorker(config: WorkerConfig): WorkerHandle {
+  // Try SharedWorker first
+  if (isSharedWorkerSupported()) {
+    try {
+      const handle = createSharedWorkerHandle();
+      handle.postMessage({ type: 'init', config });
+      return handle;
+    } catch (err) {
+      console.warn('[WorkerFactory] SharedWorker failed, falling back to dedicated Worker:', err);
+    }
+  }
+
+  // Fallback to regular Worker
+  const handle = createDedicatedWorkerHandle();
+  handle.postMessage({ type: 'init', config });
   return handle;
 }
 
@@ -120,10 +138,33 @@ export function createWorker(config: WorkerConfig): WorkerHandle {
  * For dedicated workers, each handle is a separate worker.
  */
 export function createWorkerPool(config: WorkerConfig, count: number): WorkerHandle[] {
-  const handles: WorkerHandle[] = [];
+  if (isSharedWorkerSupported()) {
+    const pool = getSharedWorkerPool();
+    const handles: WorkerHandle[] = [];
 
+    for (let i = 0; i < count; i++) {
+      if (pool[i]) {
+        console.log('[WorkerFactory] Reusing SharedWorker port');
+        handles.push(pool[i]);
+      } else {
+        const handle = createSharedWorkerHandle();
+        pool[i] = handle;
+        handles.push(handle);
+      }
+    }
+
+    for (const handle of handles) {
+      handle.postMessage({ type: 'init', config });
+    }
+
+    return handles;
+  }
+
+  const handles: WorkerHandle[] = [];
   for (let i = 0; i < count; i++) {
-    handles.push(createWorker(config));
+    const handle = createDedicatedWorkerHandle();
+    handle.postMessage({ type: 'init', config });
+    handles.push(handle);
   }
 
   return handles;

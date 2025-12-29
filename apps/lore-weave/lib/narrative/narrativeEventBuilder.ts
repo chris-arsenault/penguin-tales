@@ -77,7 +77,7 @@ export class NarrativeEventBuilder {
     const hasStatusChange = stateChanges.some(c => c.field === 'status');
     const isDeath = stateChanges.some(c =>
       c.field === 'status' &&
-      (c.newValue === 'dead' || c.newValue === 'historical' || c.newValue === 'dissolved')
+      (c.newValue === 'historical' || c.newValue === 'dissolved')
     );
 
     if (isDeath) return 'entity_lifecycle';
@@ -91,8 +91,7 @@ export class NarrativeEventBuilder {
   private inferAction(stateChanges: NarrativeStateChange[]): string {
     for (const change of stateChanges) {
       if (change.field === 'status') {
-        if (change.newValue === 'dead') return 'died';
-        if (change.newValue === 'historical') return 'ended';
+        if (change.newValue === 'historical') return 'passed';
         if (change.newValue === 'dissolved') return 'dissolved';
       }
       if (change.field === 'prominence') {
@@ -111,10 +110,11 @@ export class NarrativeEventBuilder {
   private generateHeadline(entity: HardState, stateChanges: NarrativeStateChange[]): string {
     for (const change of stateChanges) {
       if (change.field === 'status') {
-        if (change.newValue === 'dead') {
-          return `${entity.name} dies`;
-        }
         if (change.newValue === 'historical') {
+          // Use appropriate verb based on entity kind
+          if (entity.kind === 'npc') {
+            return `${entity.name} passes`;
+          }
           return `${entity.name} comes to an end`;
         }
         if (change.newValue === 'dissolved') {

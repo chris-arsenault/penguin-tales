@@ -23,6 +23,7 @@ import {
 } from './enrichmentCore';
 import type { LLMClient } from '../lib/llmClient';
 import type { ImageClient } from '../lib/imageClient';
+import { saveEnrichmentResult } from '../lib/enrichmentStorage';
 
 // SharedWorker context
 const ctx = self as unknown as SharedWorkerGlobalScope;
@@ -41,6 +42,36 @@ const activeTasks = new Map<string, { port: MessagePort; aborted: boolean }>();
 // Track all connected ports
 const connectedPorts = new Set<MessagePort>();
 
+function safePostMessage(port: MessagePort, message: WorkerOutbound): void {
+  try {
+    port.postMessage(message);
+  } catch (err) {
+    connectedPorts.delete(port);
+  }
+}
+
+async function persistResult(task: WorkerTask, result?: EnrichmentResult): Promise<void> {
+  if (!result) return;
+  if (!task.projectId || !task.simulationRunId) return;
+
+  try {
+    await saveEnrichmentResult({
+      projectId: task.projectId,
+      simulationRunId: task.simulationRunId,
+      entityId: task.entityId,
+      entityName: task.entityName,
+      entityKind: task.entityKind,
+      type: task.type,
+      result,
+      imageType: task.imageType,
+      chronicleId: task.chronicleId,
+      imageRefId: task.imageRefId,
+    });
+  } catch (err) {
+    console.warn('[SharedWorker] Failed to persist enrichment result:', err);
+  }
+}
+
 // ============================================================================
 // Task Execution
 // ============================================================================
@@ -49,7 +80,7 @@ async function executeTask(task: WorkerTask, port: MessagePort): Promise<void> {
   const taskState = activeTasks.get(task.id);
   const checkAborted = () => taskState?.aborted ?? false;
 
-  port.postMessage({ type: 'started', taskId: task.id });
+  safePostMessage(port, { type: 'started', taskId: task.id });
 
   try {
     let result;
@@ -65,7 +96,7 @@ async function executeTask(task: WorkerTask, port: MessagePort): Promise<void> {
     }
 
     if (!result.success) {
-      port.postMessage({
+      safePostMessage(port, {
         type: 'error',
         taskId: task.id,
         error: result.error || 'Unknown error',
@@ -74,7 +105,9 @@ async function executeTask(task: WorkerTask, port: MessagePort): Promise<void> {
       return;
     }
 
-    port.postMessage({
+    await persistResult(task, result.result);
+
+    safePostMessage(port, {
       type: 'complete',
       result: {
         id: task.id,
@@ -86,7 +119,7 @@ async function executeTask(task: WorkerTask, port: MessagePort): Promise<void> {
       },
     });
   } catch (error) {
-    port.postMessage({
+    safePostMessage(port, {
       type: 'error',
       taskId: task.id,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -114,13 +147,13 @@ ctx.onconnect = (event: MessageEvent) => {
         const clients = createClients(config);
         llmClient = clients.llmClient;
         imageClient = clients.imageClient;
-        port.postMessage({ type: 'ready' });
+        safePostMessage(port, { type: 'ready' });
         break;
       }
 
       case 'execute': {
         if (!config) {
-          port.postMessage({
+          safePostMessage(port, {
             type: 'error',
             taskId: message.task.id,
             error: 'Worker not initialized - call init first',
@@ -138,7 +171,7 @@ ctx.onconnect = (event: MessageEvent) => {
           const taskState = activeTasks.get(message.taskId);
           if (taskState) {
             taskState.aborted = true;
-            port.postMessage({
+            safePostMessage(port, {
               type: 'error',
               taskId: message.taskId,
               error: 'Task aborted by user',

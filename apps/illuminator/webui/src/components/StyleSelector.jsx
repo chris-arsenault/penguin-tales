@@ -17,6 +17,70 @@ const CULTURE_DEFAULT_ID = 'culture-default';
 const RANDOM_ID = 'random';
 const NONE_ID = 'none';
 
+/**
+ * Category display names for grouping compositions
+ */
+const CATEGORY_LABELS = {
+  character: 'Character',
+  collective: 'Collective',
+  place: 'Place',
+  object: 'Object',
+  concept: 'Concept',
+  power: 'Power',
+  era: 'Era',
+  event: 'Event',
+};
+
+/**
+ * Order for displaying category groups
+ */
+const CATEGORY_ORDER = ['character', 'collective', 'place', 'object', 'concept', 'power', 'era', 'event'];
+
+/**
+ * Group composition styles by targetCategory
+ * Returns an array of { category, label, styles } objects in display order
+ */
+function groupCompositionsByCategory(styles) {
+  const grouped = new Map();
+  const uncategorized = [];
+
+  for (const style of styles) {
+    const category = style.targetCategory;
+    if (category && CATEGORY_LABELS[category]) {
+      if (!grouped.has(category)) {
+        grouped.set(category, []);
+      }
+      grouped.get(category).push(style);
+    } else {
+      uncategorized.push(style);
+    }
+  }
+
+  // Build result in category order
+  const result = [];
+  for (const category of CATEGORY_ORDER) {
+    const categoryStyles = grouped.get(category);
+    if (categoryStyles && categoryStyles.length > 0) {
+      result.push({
+        category,
+        label: CATEGORY_LABELS[category],
+        styles: categoryStyles,
+      });
+    }
+  }
+
+  // Add uncategorized at the end if any
+  if (uncategorized.length > 0) {
+    result.push({
+      category: 'other',
+      label: 'Other',
+      styles: uncategorized,
+    });
+  }
+
+  return result;
+}
+
 export default function StyleSelector({
   styleLibrary,
   selectedArtisticStyleId,
@@ -32,7 +96,7 @@ export default function StyleSelector({
   const compositionStyles = styleLibrary?.compositionStyles || [];
   const colorPalettes = styleLibrary?.colorPalettes || [];
 
-  // Filter composition styles based on entity kind
+  // Filter composition styles based on entity kind (legacy suitableForKinds)
   const filteredCompositionStyles = useMemo(() => {
     if (!entityKind) {
       return compositionStyles;
@@ -41,6 +105,11 @@ export default function StyleSelector({
       (s) => !s.suitableForKinds || s.suitableForKinds.length === 0 || s.suitableForKinds.includes(entityKind)
     );
   }, [compositionStyles, entityKind]);
+
+  // Group compositions by targetCategory for organized display
+  const groupedCompositions = useMemo(() => {
+    return groupCompositionsByCategory(filteredCompositionStyles);
+  }, [filteredCompositionStyles]);
 
   const selectedArtistic = artisticStyles.find((s) => s.id === selectedArtisticStyleId);
   const selectedComposition = compositionStyles.find((s) => s.id === selectedCompositionStyleId);
@@ -82,10 +151,14 @@ export default function StyleSelector({
         >
           <option value={RANDOM_ID}>Random</option>
           <option value={CULTURE_DEFAULT_ID}>Culture Default</option>
-          {filteredCompositionStyles.map((style) => (
-            <option key={style.id} value={style.id}>
-              {style.name}
-            </option>
+          {groupedCompositions.map((group) => (
+            <optgroup key={group.category} label={group.label}>
+              {group.styles.map((style) => (
+                <option key={style.id} value={style.id}>
+                  {style.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
 
@@ -173,10 +246,14 @@ export default function StyleSelector({
         >
           <option value={RANDOM_ID}>Random</option>
           <option value={CULTURE_DEFAULT_ID}>Culture Default</option>
-          {filteredCompositionStyles.map((style) => (
-            <option key={style.id} value={style.id}>
-              {style.name}
-            </option>
+          {groupedCompositions.map((group) => (
+            <optgroup key={group.category} label={group.label}>
+              {group.styles.map((style) => (
+                <option key={style.id} value={style.id}>
+                  {style.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         {selectedComposition && (

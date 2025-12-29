@@ -341,8 +341,8 @@
         "polarity": "neutral"
       },
       {
-        "id": "dead",
-        "name": "Dead",
+        "id": "historical",
+        "name": "Historical",
         "isTerminal": true,
         "polarity": "negative"
       },

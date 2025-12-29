@@ -39,6 +39,8 @@ import {
 import { buildEntityIndex, buildRelationshipIndex, resolveEraInfo } from './lib/worldData';
 import { resolveStyleSelection } from './components/StyleSelector';
 import { exportImagePrompts, downloadImagePromptExport } from './lib/workerStorage';
+import { getEnrichmentResults } from './lib/enrichmentStorage';
+import { applyEnrichmentResult } from './lib/enrichmentTypes';
 
 // Expose diagnostic functions on window for console access (for Module Federation)
 if (typeof window !== 'undefined') {
@@ -121,6 +123,60 @@ const needsConfigSync = (config) => {
     Boolean(config.textModal) ||
     Boolean(config.chronicleModal)
   );
+};
+
+const shouldApplyPersistedResult = (enrichment, type, result) => {
+  if (!result?.generatedAt) return true;
+  if (type === 'description') {
+    return (enrichment?.description?.generatedAt || 0) <= result.generatedAt;
+  }
+  if (type === 'image') {
+    return (enrichment?.image?.generatedAt || 0) <= result.generatedAt;
+  }
+  if (type === 'entityChronicle') {
+    return (enrichment?.entityChronicle?.generatedAt || 0) <= result.generatedAt;
+  }
+  return true;
+};
+
+const mergePersistedResults = (entities, records) => {
+  if (!records.length || !entities.length) return entities;
+
+  const recordsByEntity = new Map();
+  for (const record of records) {
+    if (record.type === 'paletteExpansion') continue;
+    if (record.type === 'image' && record.imageType === 'chronicle') continue;
+    if (!recordsByEntity.has(record.entityId)) {
+      recordsByEntity.set(record.entityId, []);
+    }
+    recordsByEntity.get(record.entityId).push(record);
+  }
+
+  if (recordsByEntity.size === 0) return entities;
+
+  let didChange = false;
+  const next = entities.map((entity) => {
+    const entityRecords = recordsByEntity.get(entity.id);
+    if (!entityRecords) return entity;
+
+    let nextEnrichment = entity.enrichment;
+    for (const record of entityRecords) {
+      if (!shouldApplyPersistedResult(nextEnrichment, record.type, record.result)) continue;
+      nextEnrichment = applyEnrichmentResult(
+        { enrichment: nextEnrichment },
+        record.type,
+        record.result
+      );
+    }
+
+    if (nextEnrichment !== entity.enrichment) {
+      didChange = true;
+      return { ...entity, enrichment: nextEnrichment };
+    }
+    return entity;
+  });
+
+  return didChange ? next : entities;
 };
 
 // Default world context
@@ -454,6 +510,7 @@ export default function IlluminatorRemote({
 
   // Entities with enrichment state
   const [entities, setEntities] = useState([]);
+  const persistedEnrichmentRef = useRef({ projectId: null, simulationRunId: null });
 
   // Initialize entities from worldData
   // NOTE: We do NOT carry over enrichment from previous state based on ID matching.
@@ -534,6 +591,43 @@ export default function IlluminatorRemote({
 
   // Extract simulationRunId from worldData for content association
   const simulationRunId = worldData?.metadata?.simulationRunId;
+
+  // Load persisted enrichment results for the active simulation
+  useEffect(() => {
+    if (!projectId || !simulationRunId || !worldData?.hardState?.length) return;
+    if (
+      persistedEnrichmentRef.current.projectId === projectId &&
+      persistedEnrichmentRef.current.simulationRunId === simulationRunId
+    ) {
+      return;
+    }
+
+    persistedEnrichmentRef.current = { projectId, simulationRunId };
+    let cancelled = false;
+
+    getEnrichmentResults(projectId, simulationRunId)
+      .then((records) => {
+        if (cancelled || !records.length) return;
+
+        setEntities((prev) => {
+          const worldEntities = worldData?.hardState || prev;
+          const worldIds = new Set(worldEntities.map((entity) => entity.id));
+          const prevMatchesWorld =
+            prev.length === worldEntities.length &&
+            prev.every((entity) => worldIds.has(entity.id));
+          const baseEntities = prevMatchesWorld ? prev : worldEntities;
+
+          return mergePersistedResults(baseEntities, records);
+        });
+      })
+      .catch((err) => {
+        console.warn('[Illuminator] Failed to load persisted enrichments:', err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, simulationRunId, worldData]);
 
   // Queue management
   const {
@@ -737,8 +831,20 @@ export default function IlluminatorRemote({
           }
         }
 
+        // Get visual identity for this entity's culture, filtered by entity kind's keys
+        // This informs the visual thesis and traits generation
+        const cultureVisualIdentity = templates.cultureVisualIdentities?.[entity.culture] || {};
+        const allowedVisualKeys = templates.visualIdentityKeysByKind?.[entity.kind] || [];
+        const filteredVisualIdentity = {};
+        for (const key of allowedVisualKeys) {
+          if (cultureVisualIdentity[key]) {
+            filteredVisualIdentity[key] = cultureVisualIdentity[key];
+          }
+        }
+
         const descriptiveInfo = {
           descriptiveIdentity: Object.keys(filteredDescriptiveIdentity).length > 0 ? filteredDescriptiveIdentity : undefined,
+          visualIdentity: Object.keys(filteredVisualIdentity).length > 0 ? filteredVisualIdentity : undefined,
         };
 
         return buildDescriptionPrompt(template, context, descriptiveInfo);

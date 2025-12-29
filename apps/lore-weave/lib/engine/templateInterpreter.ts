@@ -609,7 +609,10 @@ export class TemplateInterpreter {
       const derivedTags = placementResult.derivedTags || {};
       const mergedTags = { ...(rule.tags || {}), ...derivedTags };
 
-      const entity: Partial<HardState> = {
+      // Build naming context from rule spec
+      const namingContext = this.buildNamingContext(rule.namingContext, context);
+
+      const entity: Partial<HardState> & { namingContext?: Record<string, string> } = {
         kind: rule.kind,
         subtype,
         status: rule.status,
@@ -617,7 +620,8 @@ export class TemplateInterpreter {
         culture,
         description,
         tags: mergedTags,
-        coordinates: placementResult.coordinates
+        coordinates: placementResult.coordinates,
+        namingContext
       };
 
       entities.push(entity);
@@ -728,6 +732,42 @@ export class TemplateInterpreter {
       result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
     }
     return result;
+  }
+
+  /**
+   * Build naming context for name generation.
+   * Resolves entity refs to their names for use in context: slots.
+   * Also automatically includes $selected and $target if available.
+   */
+  private buildNamingContext(
+    spec: Record<string, string> | undefined,
+    context: ExecutionContext
+  ): Record<string, string> | undefined {
+    const result: Record<string, string> = {};
+
+    // Auto-include common refs if they exist
+    const autoRefs = ['$selected', '$target'];
+    for (const ref of autoRefs) {
+      const entity = context.resolveEntity(ref);
+      if (entity?.name) {
+        // Strip $ prefix for context key: $selected -> selected
+        const key = ref.startsWith('$') ? ref.slice(1) : ref;
+        result[key] = entity.name;
+      }
+    }
+
+    // Add explicit context from spec
+    if (spec) {
+      for (const [key, ref] of Object.entries(spec)) {
+        const entity = context.resolveEntity(ref);
+        if (entity?.name) {
+          result[key] = entity.name;
+        }
+      }
+    }
+
+    // Return undefined if empty to avoid unnecessary object
+    return Object.keys(result).length > 0 ? result : undefined;
   }
 
   /**

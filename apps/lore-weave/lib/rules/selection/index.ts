@@ -351,14 +351,17 @@ export function selectEntities(
   const kinds = rule.kinds && rule.kinds.length > 0 ? rule.kinds : (rule.kind ? [rule.kind] : []);
   const kindLabel = kinds.length > 0 ? kinds.join('|') : 'any';
 
+  // Determine if we need to include historical entities based on status filters
+  const needsHistorical = rule.statusFilter === 'historical' || rule.statuses?.includes('historical');
+
   const getCandidatesByKind = (): HardState[] => {
     if (kinds.length === 0 || kinds.includes('any')) {
-      return graphView.getEntities();
+      return graphView.getEntities({ includeHistorical: needsHistorical });
     }
     if (kinds.length === 1 && rule.kind && (!rule.kinds || rule.kinds.length === 0)) {
-      return graphView.findEntities({ kind: rule.kind });
+      return graphView.findEntities({ kind: rule.kind, includeHistorical: needsHistorical });
     }
-    return graphView.getEntities().filter((e) => kinds.includes(e.kind));
+    return graphView.getEntities({ includeHistorical: needsHistorical }).filter((e) => kinds.includes(e.kind));
   };
 
   switch (rule.strategy) {

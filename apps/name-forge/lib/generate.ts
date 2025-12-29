@@ -512,6 +512,30 @@ function expandGrammar(
 }
 
 /**
+ * Check if a production uses context: references that aren't available.
+ */
+function productionNeedsMissingContext(
+  production: string[],
+  userContext: Record<string, string>
+): boolean {
+  for (const token of production) {
+    // Check direct context: reference
+    if (token.includes("context:")) {
+      // Extract context key (handle modifiers like ~poss)
+      const match = token.match(/context:([a-zA-Z_]+)/);
+      if (match) {
+        const key = match[1];
+        const value = userContext[key];
+        if (value === undefined || value === null || value === "") {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Recursively expand a grammar symbol.
  */
 function expandSymbol(
@@ -531,8 +555,17 @@ function expandSymbol(
     return resolveToken(symbol, rules, ctx, expansionCtx, depth);
   }
 
-  // Pick random production
-  const production = pickRandom(ctx.rng, productions);
+  // Filter out productions that need context values we don't have
+  const viableProductions = productions.filter(
+    (p) => !productionNeedsMissingContext(p, expansionCtx.userContext)
+  );
+
+  // Use viable productions if any, otherwise fall back to all (will produce empty tokens)
+  const candidateProductions =
+    viableProductions.length > 0 ? viableProductions : productions;
+
+  // Pick random production from candidates
+  const production = pickRandom(ctx.rng, candidateProductions);
 
   // Expand each token in the production
   const parts = production.map((token) => {
@@ -837,7 +870,12 @@ function resolveSimpleToken(
   else if (pattern.startsWith("context:")) {
     const key = pattern.substring(8);
     const value = expansionCtx.userContext[key];
-    result = value !== undefined && value !== null ? String(value) : "";
+    if (value !== undefined && value !== null && value !== "") {
+      result = String(value);
+    } else {
+      // Context key missing - return empty and skip derivation/capitalization
+      return "";
+    }
   }
   // Return literal as-is
   else {

@@ -36,9 +36,15 @@ export interface StyleInfo {
 export interface DescriptiveInfo {
   /**
    * Descriptive identity entries from culture, filtered by entity kind's descriptiveIdentityKeys.
-   * e.g., { "CUSTOMS": "elaborate greeting rituals", "SPEECH": "formal, archaic dialect" }
+   * e.g., { "VALUES": "harmony, patience", "SPEECH": "formal, archaic dialect" }
    */
   descriptiveIdentity?: Record<string, string>;
+  /**
+   * Visual identity entries from culture, filtered by entity kind's visualIdentityKeys.
+   * e.g., { "SPECIES": "penguins with aurora-bright eyes", "ARCHITECTURE": "crystal spires" }
+   * Used to inform visual thesis and traits generation.
+   */
+  visualIdentity?: Record<string, string>;
 }
 
 /**
@@ -205,15 +211,15 @@ Consider their age in the world ({{entityAge}}) - ancient entities carry history
 
 Don't invent major relationships not implied by the data - the relationships provided are canonical.`,
 
-  outputFormat: `Return JSON only with keys summary, description, aliases, visualThesis, visualTraits.
+  outputFormat: `Return JSON only with keys: summary, description, aliases.
 
 summary: 1-2 sentences, compressed and faithful to the description.
 description: 2-4 sentences, vivid and specific.
 aliases: array of alternate names or titles (can be empty).
-visualThesis: ONE sentence - the dominant visual signal (must pass silhouette test).
-visualTraits: array of 2-4 traits that support and reinforce the thesis.
 
-Summary and description must not contradict; the summary should not add new facts.`,
+Summary and description must not contradict; the summary should not add new facts.
+
+Note: Visual thesis and traits are generated separately using the CULTURAL VISUAL IDENTITY context.`,
 };
 
 // Minimal code fallbacks - project config should provide actual values
@@ -344,39 +350,46 @@ function buildDescriptiveIdentitySection(descriptiveIdentity: Record<string, str
 }
 
 /**
+ * Build the visual identity section from culture's visualIdentity
+ * This informs the visual thesis and traits generation in the 3-step chain.
+ */
+function buildVisualIdentitySection(visualIdentity: Record<string, string> | undefined, culture: string): string {
+  if (!visualIdentity || Object.keys(visualIdentity).length === 0) {
+    return '';
+  }
+
+  const lines = Object.entries(visualIdentity).map(([key, value]) => `- ${key}: ${value}`);
+  return `CULTURAL VISUAL IDENTITY (${culture}):\n${lines.join('\n')}`;
+}
+
+/**
  * Build a description prompt from template + context
+ *
+ * Note: This prompt is used by the 3-step description chain in enrichmentCore.ts:
+ * 1. Narrative step: generates summary, description, aliases
+ * 2. Thesis step: generates visual thesis from description + visual identity
+ * 3. Traits step: generates visual traits from thesis + description
+ *
+ * The visual identity section is included here so it's available for extraction
+ * by the thesis/traits steps.
  */
 export function buildDescriptionPrompt(
   template: DescriptionTemplate,
   context: PromptContext,
   descriptiveInfo?: DescriptiveInfo
 ): string {
-  const requiredOutput = `OUTPUT FORMAT (required):
-Return JSON only with keys summary, description, aliases, visualThesis, visualTraits.
-
-summary: 1-2 sentences, compressed and faithful to the description.
-description: 2-4 sentences, vivid and specific.
-aliases: array of alternate names or titles (can be empty).
-visualThesis: ONE sentence - the dominant visual signal (must pass silhouette test).
-visualTraits: array of 2-4 traits that support and reinforce the thesis.
-
-Summary and description must not contradict; the summary should not add new facts.`;
-
   if (template.fullTemplate) {
-    return [
-      expandTemplate(template.fullTemplate, context),
-      '',
-      requiredOutput,
-    ]
-      .filter(Boolean)
-      .join('\n')
-      .trim();
+    return expandTemplate(template.fullTemplate, context).trim();
   }
 
   const e = context.entity.entity;
   const tagsSection = formatTags(e.tags);
   const descriptiveIdentitySection = buildDescriptiveIdentitySection(
     descriptiveInfo?.descriptiveIdentity,
+    e.culture
+  );
+  const visualIdentitySection = buildVisualIdentitySection(
+    descriptiveInfo?.visualIdentity,
     e.culture
   );
 
@@ -395,6 +408,7 @@ Summary and description must not contradict; the summary should not add new fact
     '',
     tagsSection,
     descriptiveIdentitySection,
+    visualIdentitySection,
     '',
     'RELATIONSHIPS:',
     formatRelationships(context.entity.relationships),
@@ -417,8 +431,6 @@ Summary and description must not contradict; the summary should not add new fact
     '',
     'FORMAT:',
     expandTemplate(template.outputFormat, context),
-    '',
-    requiredOutput,
   ];
 
   return parts.filter(Boolean).join('\n').replace(/\n{3,}/g, '\n\n').trim();
@@ -672,18 +684,6 @@ export function buildChronicleImagePrompt(
   ];
 
   return parts.filter(Boolean).join('\n').replace(/\n{3,}/g, '\n\n').trim();
-}
-
-/**
- * Build the visual identity section from culture's visualIdentity
- */
-function buildVisualIdentitySection(visualIdentity: Record<string, string> | undefined, culture: string): string {
-  if (!visualIdentity || Object.keys(visualIdentity).length === 0) {
-    return '';
-  }
-
-  const lines = Object.entries(visualIdentity).map(([key, value]) => `- ${key}: ${value}`);
-  return `VISUAL IDENTITY (${culture}):\n${lines.join('\n')}`;
 }
 
 /**

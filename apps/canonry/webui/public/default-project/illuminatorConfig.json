@@ -1,31 +1,38 @@
 {
   "worldContext": {
     "name": "The Berg",
-    "description": "Two colonies of super penguins survive on a frozen ice berg. They trade, worship, use magic and advanced technology, and fend off the occasional Orca Raid.",
+    "description": "The Berg is a supernatural iceberg adrift in an endless frozen sea - vast enough to contain mountains, caverns, and civilizations that have never seen its edges. Two penguin colonies survive here: the Aurora Stack, surface dwellers who channel the sky-lights through crystal spires, and the Nightshelf, tunnel dwellers who mine captured fire from volcanic veins deep within the ice. They depend on each other for survival yet differ in everything else - faith, governance, aesthetics, and what they believe the future should hold. Beyond the berg's shores, orca raiders worship a dead god in the deep and conduct increasingly bold raids for resources, slaves, and sacrifices. The aurora pulses with magic. The ice remembers the past. And something vast moves in the darkness below the frozen sea.",
     "canonFacts": [
-      "Penguins are Smart"
+      "The Berg is a supernatural iceberg of impossible scale - large enough to contain mountains, caverns, and multiple civilizations. It drifts through an endless frozen sea under perpetual twilight.",
+      "Penguins evolved sapience through exposure to aurora-light over millennia. They possess flipper-dexterity comparable to human hands and stand upright habitually.",
+      "Two penguin civilizations exist: the Aurora Stack (surface dwellers who worship the sky-lights) and the Nightshelf (tunnel dwellers who mine fire from the berg's volcanic core).",
+      "Orca pods are intelligent raiders from the surrounding sea. They worship a dead god whose corpse drifts somewhere in the deep, and conduct blood-rituals to wake it.",
+      "Magic on The Berg draws from three sources: aurora-light (ice/crystal/divination), captured fire (forge/transformation/destruction), and pressure-depth (blood/force/communion with the deep).",
+      "The Berg's ice remembers. Ancient events leave literal impressions - frozen scenes, echo-sounds, emotional residue. The deeper you go, the older the memories.",
+      "No penguin has ever successfully left The Berg and returned. The frozen sea is infinite in all directions. Some say The Berg is the only land that exists.",
+      "The two colonies maintain an uneasy peace through the Flipper Accord - a trade agreement where surface aurora-crystals exchange for deep fire-cores. Neither can survive without the other's resource."
     ],
-    "tone": "Evocative and mystical without being overly flowery. Like the style of modern fantasy authors like brandon sanderson or patrick rothfus. avoid using too many adverbs and adjectives like dense prose of older fantasy like jrr tolkien.  descriptions and image should be as if create 'in universe' by penguins looking back on history."
+    "tone": "Dark, war-weary fantasy in the tradition of Malazan Book of the Fallen, Brent Weeks, and the Powder Mage trilogy. History is written by survivors who remember the cost. Tragedy happens without ceremony - important figures die in half-sentences, battles end mid-action, and not everything resolves.\n\nSTYLE PRINCIPLES:\n- Specificity over abstraction: Not 'a weapon' but 'a fire-core hammer with a cracked head.' Not 'he felt sad' but 'his flippers wouldn't stop shaking.'\n- Show through action and object, not introspection: Characters reveal themselves by what they do, carry, avoid, or destroy - not by what they 'realize' or 'understand.'\n- Subtext over statement: Let implications land. If someone betrayed their colony, don't say they feel guilty - mention they haven't visited the memorial.\n- Uncomfortable details: Include the ugly, inconvenient, or unresolved. A hero's hands might be scarred from something shameful. A victory might cost more than it was worth.\n- Trust the reader: Don't explain metaphors. Don't summarize lessons. End on images, not morals.\n\nSYNTACTIC POETRY:\nAim for the compressed power of 'First in; last out; for the last time.' Sentences that carry weight through rhythm and omission. Not fragmented violence, but poetic compression - where what's left unsaid hits harder than what's spoken. Semicolons can do the work of paragraphs. Repetition with variation creates resonance.\n\nBITTER CAMARADERIE:\nThis is essential. Grimness alone is exhausting. Include:\n- Dark humor between allies - jokes that wouldn't be funny if you hadn't been there\n- Loyalty that persists despite betrayal, stupidity, or failure\n- Small kindnesses in terrible contexts - sharing rations, remembering names, carrying someone's token\n- Soldiers/workers who mock the causes they'll die for\n- The way people become family through shared suffering, not shared values\n- Irony that isn't cruel - the bitter laugh, not the sneer\n- Heroic sacrifice that EARNS its weight - not cheap martyrdom, but the moment someone trades their life for something they actually loved. Make it cost. Make it matter.\n\nExample: Don't just say 'he died in the raid.' Say 'He died in the raid. Kaela still sets out two cups when she brews fire-tea.'\n\nSTRUCTURAL VARIETY:\n- Not every entity needs a death beat. Some are alive. Some mysteries stay mysteries.\n- Some endings are mid-action, unresolved. Some are quiet. Some are bitter-funny.\n- Vary the emotional shape: tragedy, irony, stubborn hope, grim humor, unearned survival.\n\nAVOID THESE AI TELLS:\n- Balance words: yet, however, still, ultimately, in the end, nevertheless\n- Introspection clichés: 'couldn't help but feel,' 'realized that,' 'in that moment,' 'understood that'\n- Polite diction: gentle, quiet, subtle, bittersweet, meaningful, profound\n- Vague sensory: warm, soft, heavy silence, cool breeze (anchor these to specifics or cut them)\n- Flat metaphors: light=hope, darkness=fear, storms=turmoil (find stranger, more specific images)\n- Clean resolutions: Not everything works out. Some things stay broken.\n- Time-skipping without texture: Don't write 'days passed' - either skip entirely or make the waiting hurt\n- RELENTLESS GRIMNESS: If everything is dark, nothing is. Leaven tragedy with dark humor, bitter irony, or stubborn human connection.\n\nDescriptions should read as if written by a war-chronicle keeper or a faction historian with biases, blind spots, and something to prove."
   },
   "promptTemplates": {
     "defaults": {
       "description": {
         "instructions": "Write a description that emerges from who this entity IS and what they're CONNECTED to.\n\nUse the provided relationships to ground the description - if they're allied with a faction, that shapes who they are. If they have rivals, hint at tension. If they're a member of something, show belonging.\n\nThe entity's prominence ({{entity.prominence}}) should calibrate the scope:\n- mythic/renowned: World-shaping, widely known, legendary qualities\n- recognized: Notable within their sphere, respected or feared\n- marginal/forgotten: Intimate scale, personal details, local significance\n\nConsider their age in the world ({{entityAge}}) - ancient entities carry history, new ones have fresh energy.",
-        "tone": "Match the world's tone ({{world.tone}}) but let the entity's nature lead. A grim warlord in a whimsical world creates interesting contrast. Write with specificity - name actual connections, reference the culture, ground details in the world of {{world.name}}.",
-        "constraints": "Never contradict these facts: {{world.canonFacts}}\n\nWork WITH the existing description if present, expanding rather than replacing.\nDon't invent major relationships not implied by the data - the relationships provided are canonical.",
-        "outputFormat": "2-3 sentences. Dense with meaning, grounded in specifics. Name at least one relationship or cultural detail when relevant."
+        "tone": "{{world.tone}}",
+        "constraints": "Never contradict these facts: {{world.canonFacts}}\n\nWork WITH the existing description if present, expanding rather than replacing.\nDon't invent major relationships not implied by the data - the relationships provided are canonical.\n\nSTYLE ENFORCEMENT:\n- No balance words (yet, however, still, ultimately, nevertheless)\n- No introspection clichés (realized, understood, couldn't help but feel)\n- No polite abstractions (gentle, subtle, meaningful, profound)\n- Ground every sensory detail in something specific\n- End on an image or action, not a summary or lesson\n- If something is broken or ugly, let it stay that way",
+        "outputFormat": "2-3 sentences. Dense with meaning, grounded in specifics. Vary sentence rhythm - mix long and short. Name at least one relationship or cultural detail when relevant. End on something concrete, not a reflection."
       },
       "image": {
         "imageInstructions": "Create concept art that captures this entity's essence. Focus on the individual traits and visual identity provided. The image should feel like it belongs in an illustrated bestiary or game art book.",
         "avoidElements": "Text, labels, watermarks, UI elements. Modern clothing or technology. Multiple versions of the same subject. Blurry or low-quality rendering. Human features on penguins. Contradicting the visual identity."
       },
       "relationship": "Describe how {{entity.name}} relates to others in {{world.name}}.\n\nENTITY: {{entity.name}} ({{entity.subtype}} {{entity.kind}})\nSTATUS: {{entity.status}} | PROMINENCE: {{entity.prominence}}\n\nKNOWN CONNECTIONS:\n{{#relationships}}\n- {{kind}}: {{targetName}} ({{targetKind}}){{#strength}} [strength: {{strength}}]{{/strength}}\n{{/relationships}}\n{{^relationships}}\n(No established relationships yet)\n{{/relationships}}\n\n{{#culturalPeers.length}}\nCULTURAL PEERS ({{entity.culture}}): {{culturalPeers}}\n{{/culturalPeers.length}}\n\nWrite 2-3 sentences about how these connections shape {{entity.name}}'s place in the world. Focus on dynamics that create story potential - alliances, tensions, dependencies.",
-      "eraNarrative": "Write a narrative summary for this era/event in {{world.name}}.\n\nNAME: {{entity.name}}\nTYPE: {{entity.subtype}} {{entity.kind}}\nEXISTING DESCRIPTION: {{entity.description}}\n\nThis {{entityAge}} {{entity.kind}} exists within the broader context of {{world.description}}.\n\nCanon facts: {{world.canonFacts}}\n\nCraft 2-3 sentences capturing the essence of this period - its defining tensions, what changed, why it matters. Reference specific entities or factions if relationships exist."
+      "eraNarrative": "Write a narrative summary for this era/event in {{world.name}}.\n\nNAME: {{entity.name}}\nTYPE: {{entity.subtype}} {{entity.kind}}\nEXISTING DESCRIPTION: {{entity.description}}\n\nThis {{entityAge}} {{entity.kind}} exists within the broader context of {{world.description}}.\n\nCanon facts: {{world.canonFacts}}\n\nCraft 2-3 sentences capturing the essence of this period. Write like a war-chronicle keeper recording history that hurts to remember.\n\nERA VOICE:\n- What did this period cost? Who paid?\n- What was lost that can never be recovered?\n- What uncomfortable truth does hindsight reveal?\n- Name specific entities if relationships exist - history is made by individuals, not abstractions\n\nSTRUCTURAL VARIETY:\n- Not every era ends in catastrophe. Some end in exhaustion. Some just... stop.\n- Include the dark humor of survival - the absurdity of what people endured, the bitter jokes they told\n- Show what people held onto: a song, a grudge, a promise to someone dead\n- Some eras are remembered fondly by those who caused the most harm\n\nSYNTACTIC POETRY:\nAim for compressed power: 'First in; last out; for the last time.' Semicolons can do the work of paragraphs. Repetition with variation creates resonance. End mid-thought if it hits harder.\n\nAvoid: 'ultimately,' 'in the end,' 'they learned that,' 'it taught them,' 'a new era of hope,' 'the cycle continues'"
     },
     "byKind": {
       "npc": {
         "description": {
-          "instructions": "This is a character in {{world.name}}. Focus on what makes them distinctive as a person.\n\nTheir relationships define them:\n{{#relationships}}\n- {{kind}} {{targetName}} ({{targetKind}})\n{{/relationships}}\n\nShow personality through specifics - how they move, speak, what they care about. Their {{entity.subtype}} role shapes their worldview. Their {{entity.prominence}} status affects how others see them.\n\n{{#culturalPeers.length}}They exist alongside other {{entity.culture}} figures like {{culturalPeers}}.{{/culturalPeers.length}}"
+          "instructions": "This is a character in {{world.name}}. Focus on what makes them distinctive as a person.\n\nTheir relationships define them:\n{{#relationships}}\n- {{kind}} {{targetName}} ({{targetKind}})\n{{/relationships}}\n\nReveal personality through concrete details:\n- What they carry, wear, or refuse to touch\n- Physical tics, scars, or habits that tell a story\n- What they've lost or what they're protecting\n- How others react to them (fear, respect, pity, avoidance)\n\nTheir {{entity.subtype}} role shapes their worldview. Their {{entity.prominence}} status affects how others see them.\n\n{{#culturalPeers.length}}They exist alongside other {{entity.culture}} figures like {{culturalPeers}}.{{/culturalPeers.length}}\n\nCHARACTER VOICE:\n- No one is purely good or evil. Everyone has costs, compromises, or things they won't talk about.\n- Don't explain their psychology. Let their actions and objects speak.\n- Include one uncomfortable or unglamorous detail - a coward's streak, a cruel habit, an old shame.\n- Characters should feel like they existed before this moment and will continue after it.\n\nBITTER CAMARADERIE:\n- Show how others remember them, mourn them, or joke about them\n- Include a relationship detail that's darkly funny or stubbornly loyal\n- Someone carries their token. Someone still curses their name fondly. Someone refuses to sit in their chair.\n- Not every character dies. Some survive and carry the weight. Some are simply... still here.\n\nSYNTACTIC POETRY:\nAim for compressed power: 'First in; last out; for the last time.' Use semicolons to do the work of paragraphs. Repetition with variation. What's unsaid hits hardest."
         },
         "image": {
           "imageInstructions": "The main subject is a CHARACTER. Create a portrait that showcases their individual traits as the focal point. The character should feel like a distinct individual, not a generic representative of their species or role.",
@@ -38,7 +45,7 @@
       },
       "location": {
         "description": {
-          "instructions": "This is a place in {{world.name}}. Evoke the sensory experience of being here.\n\nWhat entities are connected to this location?\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nConsider: What activities happen here? Who controls or claims it? What's the atmosphere - welcoming, dangerous, sacred, mundane? The {{entity.prominence}} level suggests how well-known or hidden it is."
+          "instructions": "This is a place in {{world.name}}. Evoke what it's like to STAND here - not what it represents.\n\nWhat entities are connected to this location?\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nThe {{entity.prominence}} level suggests how well-known or hidden it is.\n\nLOCATION VOICE:\n- Anchor description in ONE specific sensory detail first - a smell, a sound, a texture underfoot. Not 'cold' but 'the kind of cold that makes your beak ache.'\n- Show what HAPPENED here. Places carry scars. What stain won't come out? What crack was never repaired?\n- Who controls it NOW vs. who BUILT it. Layers of history in one place.\n\nBITTER CAMARADERIE:\n- Show how people USE this place - the regulars, the rituals, the unwritten rules\n- Include one detail of stubborn life: graffiti, offerings, repairs made with wrong materials, someone's initials carved where they shouldn't be\n- Not every location is haunted or dangerous. Some are just tired. Some are beloved despite being ugly.\n- What joke do locals tell about this place? What do they refuse to call it by its official name?\n\nSYNTACTIC POETRY:\n'First in; last out; for the last time.' Compressed weight. End on a sensory detail or an absence.\n\nAvoid: 'a place of great importance,' 'known for its,' 'visitors often remark,' 'atmosphere of peace/mystery/danger'"
         },
         "image": {
           "imageInstructions": "The main subject is a PLACE. Create an environmental shot that captures the atmosphere and character of this location. Include architectural or natural details that make it feel like a real, lived-in space.",
@@ -50,7 +57,7 @@
       },
       "faction": {
         "description": {
-          "instructions": "This is an organization/group in {{world.name}}. Focus on collective identity and purpose.\n\nKey relationships:\n{{#relationships}}\n- {{kind}}: {{targetName}} ({{targetKind}})\n{{/relationships}}\n\nWhat unites members? What do outsiders think of them? Their {{entity.prominence}} reflects their influence. Their {{entity.status}} shows their current state.\n\n{{#factionMembers.length}}Notable members include: {{factionMembers}}{{/factionMembers.length}}"
+          "instructions": "This is an organization/group in {{world.name}}. Focus on what holds them together and what threatens to tear them apart.\n\nKey relationships:\n{{#relationships}}\n- {{kind}}: {{targetName}} ({{targetKind}})\n{{/relationships}}\n\nTheir {{entity.prominence}} reflects their influence. Their {{entity.status}} shows their current state.\n\n{{#factionMembers.length}}Notable members include: {{factionMembers}}{{/factionMembers.length}}\n\nFACTION VOICE:\n- Every faction has a founding wound - the injustice, defeat, or loss that forged them. Reference it.\n- Show the internal tensions. What do the hardliners want vs. the pragmatists?\n- Include what the faction has DONE - not just what they believe. Actions, not mission statements.\n- Outsiders' views should include fear, contempt, or grudging respect - not neutral acknowledgment.\n\nBITTER CAMARADERIE:\n- Show the culture of belonging - the in-jokes, the shared complaints, the rituals that outsiders find baffling\n- Include one detail of loyalty that persists despite everything: members who hate the leadership but won't leave, rivals who'd still fight for each other\n- What do members say about the faction when they're drunk? What do they never say?\n- Some factions survive on stubbornness more than purpose. Some on dark humor. Some on spite.\n\nSYNTACTIC POETRY:\n'First in; last out; for the last time.' Compressed weight. Semicolons as paragraph breaks. End mid-thought if it resonates.\n\nAvoid: 'dedicated to,' 'believe in the importance of,' 'united by their shared vision,' 'seek to create a better'"
         },
         "image": {
           "imageInstructions": "The main subject is an ORGANIZATION. Choose one of: a council of leaders, the faction's headquarters, their banner or symbol, or a representative member in ceremonial attire. The image should convey collective identity and purpose.",
@@ -62,7 +69,7 @@
       },
       "occurrence": {
         "description": {
-          "instructions": "This is an event in {{world.name}}. Capture the pivotal moment and its impact.\n\nEntities involved:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nWhat happened? Who was changed by it? The {{entity.prominence}} indicates historical significance. As an {{entityAge}} event, how present is it in memory?"
+          "instructions": "This is an event in {{world.name}}. Capture the moment as if recording it for a war chronicle.\n\nEntities involved:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nThe {{entity.prominence}} indicates historical significance. As an {{entityAge}} event, how present is it in memory?\n\nEVENT VOICE:\n- Focus on what was LOST, BROKEN, or CHANGED FOREVER - not lessons learned\n- Name the dead or the cost. History is paid for.\n- Capture one visceral detail - the smell, the sound, the thing someone dropped and never picked up\n- Don't explain significance. Let the facts do the work.\n\nBITTER CAMARADERIE:\n- Show how survivors remember it - the dark jokes they tell, the things they won't discuss\n- Include one detail of stubborn loyalty or absurd kindness amid chaos\n- Someone carried someone else. Someone went back. Someone still flinches at a certain sound.\n- Not every event is tragedy. Some are darkly comic. Some are just exhausting.\n\nSYNTACTIC POETRY:\nAim for compressed power: 'First in; last out; for the last time.' Semicolons can do the work of paragraphs. End mid-action if it hits harder. What's unsaid resonates.\n\nAvoid: 'would come to be known as,' 'marked the beginning of,' 'in the aftermath,' 'they would never forget,' 'the survivors learned'"
         },
         "image": {
           "imageInstructions": "The main subject is an EVENT. Create a dramatic scene capturing the pivotal moment. Show the action as if witnessed firsthand - triumphant, tragic, or transformative.",
@@ -74,7 +81,7 @@
       },
       "era": {
         "description": {
-          "instructions": "This is a period of time in {{world.name}}. Convey the spirit of the age.\n\nWhat defined this era? What tensions or transformations characterized it? The {{entity.subtype}} tells us what kind of period this was.\n\nKey elements of this era:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}"
+          "instructions": "This is a period of time in {{world.name}}. Convey the weight of the age as a historian who lived through it.\n\nWhat defined this era? The {{entity.subtype}} tells us what kind of period this was.\n\nKey elements of this era:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nERA VOICE:\n- Eras are defined by what they cost, not what they achieved\n- Name the central tension that couldn't be resolved - the thing everyone argued about, the wound that wouldn't close\n- Don't frame eras as 'dark' or 'golden' - show the texture. Golden ages have rot beneath. Dark ages have stubborn hope.\n\nBITTER CAMARADERIE:\n- What did people hold onto? A song, a ritual, a grudge, a joke that stopped being funny\n- Show the absurdity of endurance - the things people did to stay sane, the dark humor that got them through\n- Include one detail of connection that persisted: a trade that continued despite war, a friendship across enemy lines, a tradition no one remembers the origin of\n- Some eras are remembered fondly by exactly the wrong people\n\nSYNTACTIC POETRY:\n'First in; last out; for the last time.' Aim for compressed weight. Semicolons can do the work of paragraphs. Repetition with variation. End mid-thought if it resonates.\n\nAvoid: 'a time of great change,' 'would shape generations to come,' 'in the end,' 'taught them the value of,' 'era of hope/darkness/rebirth,' 'the cycle continues'"
         },
         "image": {
           "imageInstructions": "The main subject is a TIME PERIOD. Create a symbolic or panoramic scene that captures the spirit of this era. Use visual metaphor - rising sun, gathering storm, crumbling walls - to convey the age's defining mood.",
@@ -104,7 +111,7 @@
       },
       "artifact": {
         "description": {
-          "instructions": "This is an artifact in {{world.name}}. Focus on its physical form, origin, and power.\n\nWho created or discovered it:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nConsider: What does it look like? What powers does it hold? Who desires it and why? The {{entity.prominence}} indicates how famous it is. The {{entity.status}} shows its current condition."
+          "instructions": "This is an artifact in {{world.name}}. Focus on what it HAS DONE, not just what it IS.\n\nWho created or discovered it:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nThe {{entity.prominence}} indicates how famous it is. The {{entity.status}} shows its current condition.\n\nARTIFACT VOICE:\n- Start with a physical detail that tells a story - a notch in the blade, a stain that won't come out, a crack that appeared after a specific use\n- Artifacts earn their legends. What did this object DO that made it famous? Name a death, a victory, a betrayal.\n- Include the cost. Powerful things demand something. What has this artifact taken from its wielders?\n- Show the weight of history in how it's described - who held it last, who refuses to touch it, what happens to those who carry it too long\n- If it's lost, show why no one has retrieved it. If it's held, show why no one has stolen it.\n\nAvoid: 'said to possess,' 'legends speak of,' 'those who wield it,' 'great power,' 'ancient and mysterious'"
         },
         "image": {
           "imageInstructions": "The main subject is an ARTIFACT or magical object. Create a detailed study of the item as if it were being catalogued in a museum or bestiary. Show the object in isolation or on a pedestal/display, emphasizing its unique features and craftsmanship.",
@@ -121,28 +128,44 @@
         "ARCHITECTURE": "No permanent structures. Temporary hunting camps marked by kelp-rope barriers, bone totems, skull warnings. Sacred spaces are natural formations claimed, not built.",
         "TECH": "Ocean-current weaponry - shock-lances, current-whips, pressure harpoons. Equipment is brutal and functional. Trophy display varies: some drape kills, others maintain austere discipline.",
         "MAGIC": "Blood and pressure. Rituals leave physical marks - scarification, tooth-notching, fin-splitting. Magic manifests as water distortion, pressure waves, cold spots. Dead god symbols are ancient, half-forgotten, inconsistently applied.",
-        "ARTIFACT": "War trophies and kill-markers. Weapons: whale-bone harpoons, sharpened orca teeth on chains, pressure-forged tridents, current-channeling spears. Relics: enemy skulls with etched kill-counts, preserved penguin beaks, blood-stained expedition banners. Materials: whale bone, deep-sea coral, pressure-blackened steel, kelp-leather bindings. Aesthetic: brutal, functional, marked by use and kills. No ornamentation for beauty - only kill-tallies and pack symbols."
+        "ARTIFACT": "War trophies and kill-markers. Weapons: whale-bone harpoons, sharpened orca teeth on chains, pressure-forged tridents, current-channeling spears. Relics: enemy skulls with etched kill-counts, preserved penguin beaks, blood-stained expedition banners. Materials: whale bone, deep-sea coral, pressure-blackened steel, kelp-leather bindings. Aesthetic: brutal, functional, marked by use and kills. No ornamentation for beauty - only kill-tallies and pack symbols.",
+        "COLOR_PALETTE": "Black and white as base (their natural coloring), blood-red as accent from kills and rituals, deep ocean blue-black for ceremonial contexts. No bright colors - everything muted by salt and depth.",
+        "WEATHER_ASSOCIATION": "Storm surges, choppy seas, fog rolling off water. They attack during weather that grounds penguin airships and obscures the aurora. Calm seas make them restless.",
+        "SOUND_SIGNATURE": "Whale-song echoes, the slap of water against ice, clicking echolocation, guttural chanting in deep voices, the wet sound of bodies surfacing.",
+        "DECAY_PATTERN": "Orca things don't decay - they're consumed. Equipment is used until destroyed, then scavenged. Trophies are preserved in salt and pressure. Abandoned camps leave only bone totems that bleach white over decades."
       },
       "nightshelf": {
         "SPECIES": "Cave-adapted penguins. Builds range from compact tunnel-runners to broader cavern-dwellers. Bone and crystal mark status but placement varies - some favor crowns, others belts, others hidden talismans. Dress ranges from heavy wrappings to minimal stealth-wear.",
         "ARCHITECTURE": "Subterranean networks mixing natural caverns and carved tunnels. Bioluminescent accents and fire-braziers for light. Sacred spaces go deeper and darker. Public areas glow; private areas don't.",
         "TECH": "Captured elemental fire drives everything - braziers, forges, engines. Steampunk aesthetic but visibility varies: lamp-bearers are obvious, shadow-workers hide their gear. Bone integrated as structural material and decoration.",
         "MAGIC": "Ice and fire in tension. Practical applications over spectacle. Magic users often understated - subtle warmth, quiet frost. Rituals happen in darkness. Effects are felt before seen.",
-        "ARTIFACT": "Shadow-forged treasures and deep-earth relics. Weapons: obsidian daggers, fire-core hammers, shadow-steel blades that drink light, chain-whips with ember-heads. Relics: flame-heart crystals, bone-carved ancestor masks, bioluminescent orbs, smoke-captured in glass. Tomes: leather-bound grimoires with glowing ink, stone tablets from the deep, scrolls that only reveal text in darkness. Materials: obsidian, volcanic glass, fire-core crystals, shadow-steel, ancestor bone, cavern fungus leather. Aesthetic: flickering between light and shadow, warm cores with dark exteriors, hidden mechanisms, secrets within secrets."
+        "ARTIFACT": "Shadow-forged treasures and deep-earth relics. Weapons: obsidian daggers, fire-core hammers, shadow-steel blades that drink light, chain-whips with ember-heads. Relics: flame-heart crystals, bone-carved ancestor masks, bioluminescent orbs, smoke-captured in glass. Tomes: leather-bound grimoires with glowing ink, stone tablets from the deep, scrolls that only reveal text in darkness. Materials: obsidian, volcanic glass, fire-core crystals, shadow-steel, ancestor bone, cavern fungus leather. Aesthetic: flickering between light and shadow, warm cores with dark exteriors, hidden mechanisms, secrets within secrets.",
+        "COLOR_PALETTE": "Deep oranges and ember-reds from fire-cores, charcoal blacks and ash grays as base, occasional bioluminescent greens and blues as accents. No bright whites or silvers - those belong to the surface.",
+        "WEATHER_ASSOCIATION": "They have no weather underground, but prefer overcast surface conditions when they must travel above. Snowstorms are useful cover. Clear aurora-lit nights feel exposed and dangerous.",
+        "SOUND_SIGNATURE": "Crackling fire, dripping water, echoing footsteps, the low hum of geothermal vents, whispered conversations, the clang of forge-hammers in distant tunnels.",
+        "DECAY_PATTERN": "Fire-tech gutters out when neglected, leaving cold metal husks. Tunnels collapse slowly, becoming rubble-filled dead ends. Bioluminescence fades to darkness. Abandoned spaces are reclaimed by fungal growth and crystalline formations."
       },
       "aurora-stack": {
         "SPECIES": "Open-ice penguins. Posture tends tall and proud but varies by role - merchants bustle, mystics stand still, soldiers brace. Crystalline ice integrated into equipment at varying degrees - some carry staves, others wear jewelry, others embed it in armor or tools.",
         "ARCHITECTURE": "Vertical ice spires with open-air galleries designed to catch aurora-light. Elegant and organic-looking but clearly engineered. Public spaces soar; private quarters are modest cells within the ice.",
         "TECH": "Ice-magic fusion powers everything. Crystalline conductors, aurora-charged capacitors. Prefer blunt and crushing weapons to blades. Airship crews dress for wind; wall-builders dress for cold; merchants dress for impression.",
         "MAGIC": "Pure ice channeling. Adepts glow faintly from within - intensity varies by power level. Magic manifests as crystalline growth, temperature drops, aurora-reflection. Mundane members show no glow but may carry charged equipment.",
-        "ARTIFACT": "Aurora-touched treasures and ice-crystal relics. Weapons: ice-crystal maces, aurora-glass staves, frost-forged war-hammers, crystalline throwing discs. Relics: preserved aurora-light in crystal prisms, frozen tears of saints, ice-carved genealogy tablets, ceremony bells of pure ice. Tomes: crystal-page books that catch light, aurora-ink manuscripts, frozen memory scrolls, living ice that records speech. Instruments: aurora-tuned chimes, ice-crystal lenses, navigation orbs, weather-sensing devices. Materials: aurora-glass, eternal ice, crystalline conductors, silver-ice alloys, light-catching prisms. Aesthetic: elegant, luminous, prismatic refractions, cold beauty, objects that seem to hold captured starlight."
+        "ARTIFACT": "Aurora-touched treasures and ice-crystal relics. Weapons: ice-crystal maces, aurora-glass staves, frost-forged war-hammers, crystalline throwing discs. Relics: preserved aurora-light in crystal prisms, frozen tears of saints, ice-carved genealogy tablets, ceremony bells of pure ice. Tomes: crystal-page books that catch light, aurora-ink manuscripts, frozen memory scrolls, living ice that records speech. Instruments: aurora-tuned chimes, ice-crystal lenses, navigation orbs, weather-sensing devices. Materials: aurora-glass, eternal ice, crystalline conductors, silver-ice alloys, light-catching prisms. Aesthetic: elegant, luminous, prismatic refractions, cold beauty, objects that seem to hold captured starlight.",
+        "COLOR_PALETTE": "Crystalline blues and silvers as base, prismatic rainbow refractions as accents, soft gold from captured aurora-light. No warm reds or oranges - fire colors belong to the Nightshelf.",
+        "WEATHER_ASSOCIATION": "Clear skies with active aurora. Fresh snowfall. Crisp visibility. They feel uneasy in fog, clouds, or underground darkness. Their magic works best when the aurora is visible.",
+        "SOUND_SIGNATURE": "Wind chimes, crystal resonance, distant whale-song carried on wind, the hum of aurora-charged equipment, formal speech in large echoing halls, the creak of ice under wind.",
+        "DECAY_PATTERN": "Ice structures don't rot - they slowly lose clarity, becoming clouded and opaque. Crystal conductors crack along geometric lines. Abandoned aurora-tech goes dark and still, waiting to be recharged. Neglected spires lean and eventually shatter."
       },
       "world": {
         "SPECIES": "The Berg itself - supernatural iceberg of impossible scale. Weather is entity, not backdrop.",
         "ARCHITECTURE": "Natural ice formations that seem almost intentional. Crevasses, spires, shelves, grottos. The berg shifts slowly over generations.",
         "TECH": "None. The world is pre-technological, post-magical.",
         "MAGIC": "Ambient and ancient. The ice remembers. Aurora-light carries power. The cold thinks.",
-        "ARTIFACT": "Primordial relics and berg-born treasures. Weapons: ice that never melts, storm-frozen lightning, solidified aurora. Relics: the berg's own bones, ice that predates memory, formations that move on their own, crystals that hum with the berg's heartbeat. Tomes: weather-patterns that tell stories, ice that records time itself, aurora-light that speaks. Materials: eternal ice, berg-heart crystal, frozen time, solidified memory. Aesthetic: ancient beyond culture, primordial, objects that feel older than the world itself, things that were found rather than made."
+        "ARTIFACT": "Primordial relics and berg-born treasures. Weapons: ice that never melts, storm-frozen lightning, solidified aurora. Relics: the berg's own bones, ice that predates memory, formations that move on their own, crystals that hum with the berg's heartbeat. Tomes: weather-patterns that tell stories, ice that records time itself, aurora-light that speaks. Materials: eternal ice, berg-heart crystal, frozen time, solidified memory. Aesthetic: ancient beyond culture, primordial, objects that feel older than the world itself, things that were found rather than made.",
+        "COLOR_PALETTE": "Infinite whites and ice-blues, deep blacks in crevasses and the frozen sea, aurora greens and purples in the sky. The berg's palette is the palette of nature before culture claimed it.",
+        "WEATHER_ASSOCIATION": "The Berg IS weather. Perpetual twilight, aurora displays, blizzards that last generations, the slow grinding movement of ice. Weather on the berg feels intentional, almost communicative.",
+        "SOUND_SIGNATURE": "The deep groaning of shifting ice, wind across endless frozen plains, the crack of calving glaciers, whale-song from the depths, and beneath it all - something like breathing.",
+        "DECAY_PATTERN": "The Berg does not decay - it transforms. Ice becomes water becomes ice. Crevasses open and close over centuries. Nothing is destroyed, only moved, compressed, or frozen deeper. The only true decay is melting, and the berg resists that with something like will."
       }
     },
     "visualIdentityKeysByKind": {
@@ -161,20 +184,104 @@
         "TECH"
       ],
       "occurrence": [
-        "SPECIES"
+        "SPECIES",
+        "WEATHER_ASSOCIATION",
+        "COLOR_PALETTE"
       ],
       "abilities": [
         "TECH",
         "MAGIC"
       ],
       "rules": [
-        "MAGIC"
+        "ARCHITECTURE",
+        "TECH"
       ],
       "artifact": [
         "ARTIFACT",
         "TECH",
         "MAGIC"
+      ],
+      "era": [
+        "ARCHITECTURE",
+        "WEATHER_ASSOCIATION",
+        "DECAY_PATTERN"
       ]
+    },
+    "descriptiveIdentityKeysByKind": {
+      "npc": [
+        "VALUES",
+        "SPEECH",
+        "FEARS",
+        "TABOOS"
+      ],
+      "faction": [
+        "VALUES",
+        "GOVERNANCE",
+        "SELF_VIEW",
+        "OUTSIDER_VIEW"
+      ],
+      "location": [
+        "FEARS",
+        "TABOOS"
+      ],
+      "occurrence": [
+        "SPEECH",
+        "OUTSIDER_VIEW"
+      ],
+      "era": [
+        "GOVERNANCE",
+        "SELF_VIEW"
+      ],
+      "abilities": [
+        "SPEECH",
+        "TABOOS"
+      ],
+      "rules": [
+        "GOVERNANCE",
+        "OUTSIDER_VIEW"
+      ],
+      "artifact": [
+        "SPEECH",
+        "TABOOS"
+      ]
+    },
+    "cultureDescriptiveIdentities": {
+      "aurora-stack": {
+        "VALUES": "Harmony, patience, collective welfare over individual glory. They believe the aurora judges all actions and that pride invites the cold.",
+        "SPEECH": "Formal, measured, rich with astronomical metaphors. They speak of 'cycles' not 'time,' 'alignments' not 'agreements.' Elders are addressed by their position in family constellation-charts.",
+        "GOVERNANCE": "Council of Luminaries elected by demonstration - candidates must manifest aurora-magic publicly. Decisions require consensus under a clear aurora; clouded skies postpone all votes.",
+        "OUTSIDER_VIEW": "To the Nightshelf: naive sky-gazers who'd freeze without fire they can't make. To the orcas: soft prey clustered in obvious towers.",
+        "SELF_VIEW": "Chosen inheritors of the aurora's gift, maintaining civilization against the deep cold. They believe the Nightshelf lost their way by going underground.",
+        "FEARS": "Being cut off from the aurora (clouds, cave-ins, blindness). Loss of the Accord and the fire-cores they need. The orcas learning to climb.",
+        "TABOOS": "Waste of aurora-light, speaking of the dead god, entering the deep tunnels, accepting orca gifts."
+      },
+      "nightshelf": {
+        "VALUES": "Self-reliance, cleverness, secrets kept. They believe knowledge hoarded is power preserved - share only what you must.",
+        "SPEECH": "Elliptical, coded, full of double meanings. They speak in proverbs that sound simple but contain warnings. Silence is respected more than speech.",
+        "GOVERNANCE": "Shadow Parliament of guild-masters meeting in rotating locations. True power lies with the Fire Keepers who control the volcanic cores.",
+        "OUTSIDER_VIEW": "To the Aurora Stack: paranoid diggers who forgot the sky. To the orcas: dangerous prey that fights dirty and vanishes.",
+        "SELF_VIEW": "Survivors who found warmth when the surface offered only cold. They believe they understand the berg's true nature while surface-dwellers see only the skin.",
+        "FEARS": "Fire going out. Tunnels collapsing. Surface-dwellers learning their secrets. The ice remembering something they buried.",
+        "TABOOS": "Revealing tunnel routes to outsiders, wasting fire, speaking your true name above ground, looking directly at aurora-light."
+      },
+      "orca": {
+        "VALUES": "Strength proven, kills counted, the pack above all. Individual glory is meaningless unless the pack witnesses it.",
+        "SPEECH": "Blunt, ritualistic, peppered with hunt-metaphors. They speak of 'pods' not families, 'waters' not territories, 'kills' not victories. Names change with deeds.",
+        "GOVERNANCE": "Matriarchal pods led by the oldest female. Inter-pod conflicts resolved by ritual combat or competitive raiding. The High Matriarch commands only when all pods hunt together.",
+        "OUTSIDER_VIEW": "To the penguins: walking meat that built interesting structures. Some are worth keeping alive for information or ritual purposes.",
+        "SELF_VIEW": "Apex predators fulfilling their nature. They believe the dead god will wake when enough blood feeds the deep, and then the endless sea will yield new hunting grounds.",
+        "FEARS": "The dead god never waking. Being cast out from the pod. Dying on land, away from water.",
+        "TABOOS": "Abandoning a pod-mate in battle, eating dead god's flesh (though some heretics do), letting prey dictate terms."
+      },
+      "world": {
+        "VALUES": "The Berg has no values - only physics that feel like intentions. The cold preserves. The ice remembers. The aurora judges.",
+        "SPEECH": "The Berg does not speak, but those who've touched its deep ice report hearing whale-song, grinding stone, and something like breathing.",
+        "GOVERNANCE": "None. The Berg is not ruled. Those who claim to speak for it are either mad or lying.",
+        "OUTSIDER_VIEW": "To all who live on it: the only world that exists. To whatever watches from the deep: unknown.",
+        "SELF_VIEW": "The Berg may not be aware it exists. Or it may be aware of nothing else.",
+        "FEARS": "If The Berg fears, it fears melting. Or perhaps it fears waking.",
+        "TABOOS": "Some say drilling too deep angers the ice. Some say this is superstition. The Nightshelf stopped drilling at a certain point and won't say why."
+      }
     }
   },
   "enrichmentConfig": {

@@ -2,13 +2,13 @@
   {
     "id": "resource_availibility",
     "name": "Resource Availibility",
-    "initialValue": -10,
-    "homeostasis": 0.25,
+    "initialValue": -5,
+    "homeostasis": 0.35,
     "growth": {
       "positiveFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 1,
+          "coefficient": 1.5,
           "kind": "location",
           "subtype": "resource_node"
         }
@@ -16,13 +16,13 @@
       "negativeFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 0.5,
+          "coefficient": 0.4,
           "kind": "location",
           "subtype": "colony"
         },
         {
           "type": "ratio",
-          "coefficient": 0.2,
+          "coefficient": 0.15,
           "numerator": {
             "type": "entity_count",
             "kind": "location"
@@ -74,25 +74,25 @@
     "id": "security",
     "name": "Iceberg Security",
     "initialValue": 0,
-    "homeostasis": 0.3,
+    "homeostasis": 0.25,
     "growth": {
       "positiveFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 1.5,
+          "coefficient": 0.8,
           "kind": "npc",
           "subtype": "hero"
         },
         {
           "type": "relationship_count",
           "relationshipKinds": ["allied_with"],
-          "coefficient": 0.15
+          "coefficient": 0.08
         }
       ],
       "negativeFeedback": [
         {
           "type": "tag_count",
-          "coefficient": 0.5,
+          "coefficient": 0.6,
           "tags": [
             "hostile",
             "raider",

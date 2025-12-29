@@ -549,6 +549,7 @@ export class WorldRuntime implements Graph {
     const partial = settingsOrPartial as Partial<HardState>;
     const resolvedSource = (settingsOrPartial as CreateEntitySettings).source ?? source;
     const resolvedPlacementStrategy = (settingsOrPartial as CreateEntitySettings).placementStrategy ?? placementStrategy;
+    const namingContext = (settingsOrPartial as CreateEntitySettings).namingContext;
 
     const coords = partial.coordinates;
     if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number' || typeof coords.z !== 'number') {
@@ -600,7 +601,8 @@ export class WorldRuntime implements Graph {
         partial.subtype,
         partial.prominence,
         tagArray,
-        partial.culture
+        partial.culture,
+        namingContext
       );
     }
 

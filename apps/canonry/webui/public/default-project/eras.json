@@ -36,6 +36,7 @@
       "artifact_degradation": 0.5,
       "artifact_destruction": 0.3,
       "artifact_legendary_status": 0.8,
+      "artifact_prominence_maintenance": 1,
       "artifact_corruption_spread": 0.3,
       "belief_contagion": 0.8,
       "thermal_diffusion": 1,
@@ -64,7 +65,11 @@
       "occurrence_resolution": 1,
       "post_war_recovery": 1,
       "war_tie_cleanup": 1,
-      "ability_fade": 1
+      "ability_fade": 1,
+      "hero_mayor_prominence": 1,
+      "faction_prominence": 1,
+      "cultural_event_prominence": 1,
+      "memorial_preservation": 1
     },
     "entryEffects": {
       "mutations": [
@@ -113,7 +118,7 @@
     "description": "Resource scarcity leads to inter-colony conflicts",
     "templateWeights": {
       "colony_founding": 0.2,
-      "krill_bloom_migration": 0.8,
+      "krill_bloom_migration": 1.2,
       "hero_emergence": 1.2,
       "orca_raider_arrival": 0,
       "faction_splinter": 1.3,
@@ -126,12 +131,12 @@
       "legend_crystallization": 1.2,
       "wild_magic_discover": 0.8,
       "thermal_colony_decline": 0.6,
-      "thermal_colony_recovery": 0.6,
+      "thermal_colony_recovery": 0.8,
       "thermal_migration": 0.5,
       "ice_memory_thaw": 0.4,
       "economic_colony_decline": 0.6,
-      "economic_colony_recovery": 0.6,
-      "location_discovery": 0.6,
+      "economic_colony_recovery": 0.9,
+      "location_discovery": 1.0,
       "cult_formation": 0.6,
       "succession": 0.8,
       "war_apocalypse_resolution": 1,
@@ -144,6 +149,7 @@
       "artifact_degradation": 1.5,
       "artifact_destruction": 1.2,
       "artifact_legendary_status": 1.5,
+      "artifact_prominence_maintenance": 1,
       "artifact_corruption_spread": 1.0,
       "belief_contagion": 2,
       "cultural_drift": 1.5,
@@ -173,7 +179,11 @@
       "occurrence_resolution": 1,
       "post_war_recovery": 1,
       "war_tie_cleanup": 1,
-      "ability_fade": 1
+      "ability_fade": 1,
+      "hero_mayor_prominence": 1.5,
+      "faction_prominence": 1.5,
+      "cultural_event_prominence": 0.5,
+      "memorial_preservation": 1
     },
     "entryConditions": [],
     "entryEffects": {
@@ -258,6 +268,7 @@
       "artifact_degradation": 0.8,
       "artifact_destruction": 0.5,
       "artifact_legendary_status": 1.2,
+      "artifact_prominence_maintenance": 1,
       "artifact_corruption_spread": 0.5,
       "resource_diffusion": 1.2,
       "magic_school_formation": 2,
@@ -287,7 +298,11 @@
       "occurrence_resolution": 1,
       "post_war_recovery": 1,
       "war_tie_cleanup": 1,
-      "ability_fade": 1
+      "ability_fade": 1,
+      "hero_mayor_prominence": 1,
+      "faction_prominence": 1,
+      "cultural_event_prominence": 1.5,
+      "memorial_preservation": 1
     },
     "entryConditions": [],
     "entryEffects": {
@@ -333,12 +348,14 @@
     "description": "External threats unite the colonies against common enemies",
     "templateWeights": {
       "krill_bloom_migration": 0.4,
-      "hero_emergence": 1.6,
-      "orca_raider_arrival": 1,
+      "hero_emergence": 1.8,
+      "orca_raider_arrival": 1.0,
+      "orca_war_ritual": 1.5,
+      "orca_organized_offensive": 1.5,
       "great_festival": 0.3,
       "ideology_emergence": 0.8,
       "tech_breakthrough": 1.2,
-      "war_outbreak": 1.8,
+      "war_outbreak": 1.6,
       "legend_crystallization": 1.6,
       "crisis_legislation": 2,
       "wild_magic_discover": 0.6,
@@ -352,7 +369,7 @@
       "location_discovery": 0.6,
       "cult_formation": 0.6,
       "succession": 0.8,
-      "war_apocalypse_resolution": 1,
+      "war_apocalypse_resolution": 1.0,
       "artifact_crafting": 1.8,
       "artifact_discovery": 0.4
     },
@@ -362,6 +379,7 @@
       "artifact_degradation": 1.2,
       "artifact_destruction": 1.0,
       "artifact_legendary_status": 1.8,
+      "artifact_prominence_maintenance": 1,
       "artifact_corruption_spread": 0.8,
       "thermal_diffusion": 1.8,
       "belief_contagion": 1.2,
@@ -391,7 +409,11 @@
       "occurrence_resolution": 1,
       "post_war_recovery": 1,
       "war_tie_cleanup": 1,
-      "ability_fade": 1
+      "ability_fade": 1,
+      "hero_mayor_prominence": 2,
+      "faction_prominence": 1,
+      "cultural_event_prominence": 1.5,
+      "memorial_preservation": 1.5
     },
     "entryConditions": [],
     "entryEffects": {
@@ -399,7 +421,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "security",
-          "delta": -10
+          "delta": -40
         },
         {
           "type": "modify_pressure",
@@ -409,7 +431,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "harmony",
-          "delta": 10
+          "delta": 15
         }
       ]
     },
@@ -422,7 +444,7 @@
       {
         "type": "pressure",
         "pressureId": "security",
-        "min": -25
+        "min": 0
       }
     ],
     "exitEffects": {
@@ -430,7 +452,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "security",
-          "delta": 15
+          "delta": 10
         },
         {
           "type": "modify_pressure",
@@ -485,6 +507,7 @@
       "artifact_degradation": 0.6,
       "artifact_destruction": 0.4,
       "artifact_legendary_status": 1.5,
+      "artifact_prominence_maintenance": 1,
       "artifact_corruption_spread": 0.4,
       "resource_diffusion": 2,
       "alliance_formation": 1.5,
@@ -513,7 +536,11 @@
       "occurrence_resolution": 1,
       "post_war_recovery": 1,
       "war_tie_cleanup": 1,
-      "ability_fade": 1
+      "ability_fade": 1,
+      "hero_mayor_prominence": 1.5,
+      "faction_prominence": 1,
+      "cultural_event_prominence": 1.5,
+      "memorial_preservation": 2
     },
     "entryConditions": []
   }

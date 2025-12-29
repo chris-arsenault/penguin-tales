@@ -225,50 +225,6 @@ function extractFirstJsonObject(text: string): string | null {
   return null;
 }
 
-function parseDescriptionPayload(text: string): {
-  summary: string;
-  description: string;
-  aliases: string[];
-  visualThesis: string;
-  visualTraits: string[];
-} {
-  const cleaned = stripLeadingWrapper(text);
-  const candidate = extractFirstJsonObject(cleaned) || cleaned;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(candidate);
-  } catch (err) {
-    throw new Error('Failed to parse description JSON');
-  }
-
-  if (!parsed || typeof parsed !== 'object') {
-    throw new Error('Description payload must be a JSON object');
-  }
-
-  const obj = parsed as Record<string, unknown>;
-  const summary = typeof obj.summary === 'string' ? obj.summary.trim() : '';
-  const description = typeof obj.description === 'string' ? obj.description.trim() : '';
-  const visualThesis = typeof obj.visualThesis === 'string' ? obj.visualThesis.trim() : '';
-  const aliases = Array.isArray(obj.aliases)
-    ? obj.aliases
-      .filter((alias): alias is string => typeof alias === 'string')
-      .map((alias) => alias.trim())
-      .filter(Boolean)
-    : [];
-  const visualTraits = Array.isArray(obj.visualTraits)
-    ? obj.visualTraits
-      .filter((trait): trait is string => typeof trait === 'string')
-      .map((trait) => trait.trim())
-      .filter(Boolean)
-    : [];
-
-  if (!summary || !description) {
-    throw new Error('Description payload requires summary and description');
-  }
-
-  return { summary, description, aliases, visualThesis, visualTraits };
-}
-
 async function markChronicleFailure(
   chronicleId: string,
   step: ChronicleStep,
@@ -318,7 +274,7 @@ export function buildNarrativePrompt(): string {
 
 READING THE DATA:
 - Prominence indicates fame scope: "legendary" = world-shaping, "locally known" = personal-scale stories
-- Status indicates current state: "active" = alive/operating, "dead/historical" = past tense appropriate
+- Status indicates current state: "active" = alive/operating, "historical" = no longer active (past tense appropriate)
 - Relationships marked [strong] are defining connections; [moderate] are significant; [weak] are flavor
 - Tags like "leader: true" indicate core identity traits - these should inform characterization
 - Cultural Peers are other entities of same culture - use for grounding references
@@ -846,16 +802,18 @@ export async function executeTextTask(
   console.log('[Worker] Description chain step 2: Visual Thesis');
 
   // Build slimmed down visual context - remove noise that doesn't inform silhouette
-  // Extract only: entity basics, world, era (skip tags, relationships, tone, constraints)
+  // Extract: entity basics, world, era, and CULTURAL VISUAL IDENTITY (for visual thesis/traits)
   const worldMatch = entityContext.match(/WORLD:\s*(.+?)(?:\n\n|\nENTITY:)/s);
   const eraMatch = entityContext.match(/ERA:\s*(.+?)(?:\n---|$)/s);
+  const visualIdentityMatch = entityContext.match(/CULTURAL VISUAL IDENTITY[^:]*:\n((?:- [A-Z_]+: .+\n?)+)/);
   const worldContext = worldMatch ? worldMatch[1].trim() : '';
   const eraContext = eraMatch ? eraMatch[1].trim() : '';
+  const visualIdentityContext = visualIdentityMatch ? visualIdentityMatch[0].trim() : '';
 
   const visualContext = `Entity: ${task.entityName} (${task.entityKind})
 Culture: ${task.entityCulture || 'unaffiliated'}
 World: ${worldContext}
-Era: ${eraContext}`;
+Era: ${eraContext}${visualIdentityContext ? `\n\n${visualIdentityContext}` : ''}`;
 
   // Validate instructions are provided (from defaults or per-kind override)
   if (!task.visualThesisInstructions) {

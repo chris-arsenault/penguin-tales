@@ -167,6 +167,7 @@ export interface CreateEntitySettings {
   temporal?: { startTick: number; endTick: number | null };
   source?: string;  // Optional - for debugging (e.g., template ID, system ID)
   placementStrategy?: string;  // Optional - for debugging (e.g., 'near_entity', 'in_culture_region')
+  namingContext?: Record<string, string>;  // Optional - context for name generation (e.g., { instigator: "King Gorban" })
 }
 
 // Graph data representation (world state + mutations)

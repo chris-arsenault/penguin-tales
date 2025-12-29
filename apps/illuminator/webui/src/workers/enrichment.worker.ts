@@ -30,6 +30,7 @@ import {
 } from './enrichmentCore';
 import type { LLMClient } from '../lib/llmClient';
 import type { ImageClient } from '../lib/imageClient';
+import { saveEnrichmentResult } from '../lib/enrichmentStorage';
 
 // Worker context
 const ctx: Worker = self as unknown as Worker;
@@ -50,6 +51,28 @@ let isAborted = false;
 
 function emit(message: WorkerOutbound): void {
   ctx.postMessage(message);
+}
+
+async function persistResult(task: WorkerTask, result?: EnrichmentResult): Promise<void> {
+  if (!result) return;
+  if (!task.projectId || !task.simulationRunId) return;
+
+  try {
+    await saveEnrichmentResult({
+      projectId: task.projectId,
+      simulationRunId: task.simulationRunId,
+      entityId: task.entityId,
+      entityName: task.entityName,
+      entityKind: task.entityKind,
+      type: task.type,
+      result,
+      imageType: task.imageType,
+      chronicleId: task.chronicleId,
+      imageRefId: task.imageRefId,
+    });
+  } catch (err) {
+    console.warn('[Worker] Failed to persist enrichment result:', err);
+  }
 }
 
 // ============================================================================
@@ -140,6 +163,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerInbound>) => {
       const result = await executeTask(message.task);
 
       if (result.success) {
+        await persistResult(message.task, result.result);
         emit({ type: 'complete', result });
       } else {
         emit({

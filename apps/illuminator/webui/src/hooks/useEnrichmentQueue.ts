@@ -22,7 +22,7 @@ import type {
 } from '../lib/enrichmentTypes';
 import { applyEnrichmentResult } from '../lib/enrichmentTypes';
 import type { WorkerConfig, WorkerOutbound } from '../workers/enrichment.worker';
-import { createWorker, type WorkerHandle } from '../lib/workerFactory';
+import { createWorkerPool, type WorkerHandle } from '../lib/workerFactory';
 
 export interface EnrichedEntity {
   id: string;
@@ -340,7 +340,9 @@ export function useEnrichmentQueue(
   useEffect(() => {
     return () => {
       for (const workerState of workersRef.current) {
-        workerState.worker.terminate();
+        if (workerState.worker.type === 'dedicated') {
+          workerState.worker.terminate();
+        }
       }
       workersRef.current = [];
     };
@@ -351,7 +353,9 @@ export function useEnrichmentQueue(
     (config: WorkerConfig) => {
       // Terminate existing workers
       for (const workerState of workersRef.current) {
-        workerState.worker.terminate();
+        if (workerState.worker.type === 'dedicated') {
+          workerState.worker.terminate();
+        }
       }
       workersRef.current = [];
       taskWorkerMapRef.current.clear();
@@ -361,8 +365,9 @@ export function useEnrichmentQueue(
       setIsWorkerReady(false);
 
       // Create new workers using factory (SharedWorker with fallback)
-      for (let i = 0; i < numWorkersRef.current; i++) {
-        const worker = createWorker(config);
+      const workers = createWorkerPool(config, numWorkersRef.current);
+      for (let i = 0; i < workers.length; i++) {
+        const worker = workers[i];
 
         const workerState: WorkerState = {
           worker,

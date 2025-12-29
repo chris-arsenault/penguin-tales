@@ -168,7 +168,7 @@
             "operator": "<=",
             "threshold": 2
           },
-          "probability": 0.55,
+          "probability": 0.35,
           "action": {
             "type": "adjust_prominence",
             "direction": "down",
@@ -269,7 +269,7 @@
         {
           "type": "change_status",
           "entity": "$self",
-          "newStatus": "dead"
+          "newStatus": "historical"
         },
         {
           "type": "for_each_related",
@@ -415,7 +415,7 @@
         {
           "type": "change_status",
           "entity": "$self",
-          "newStatus": "dead"
+          "newStatus": "historical"
         },
         {
           "type": "for_each_related",
@@ -477,7 +477,7 @@
         {
           "type": "change_status",
           "entity": "$self",
-          "newStatus": "dead"
+          "newStatus": "historical"
         },
         {
           "type": "for_each_related",
@@ -723,7 +723,7 @@
     "config": {
       "id": "power_vacuum_detector",
       "name": "Leadership Crisis",
-      "description": "Detects factions with dead leaders and marks them in crisis",
+      "description": "Detects factions with historical (deceased) leaders and marks them in crisis",
       "conditions": [
         {
           "type": "or",
@@ -733,7 +733,7 @@
               "relationshipKind": "leader_of",
               "direction": "dst",
               "targetKind": "npc",
-              "targetStatus": "dead"
+              "targetStatus": "historical"
             },
             {
               "type": "relationship_count",
@@ -788,7 +788,7 @@
     "config": {
       "id": "legend_ripe_detector",
       "name": "Legend Formation",
-      "description": "Detects dead heroes and influential NPCs ready to become legends",
+      "description": "Detects historical heroes and influential NPCs ready to become legends",
       "conditions": [
         {
           "type": "time_elapsed",
@@ -807,6 +807,16 @@
           "tag": "cultural",
           "value": true,
           "entity": "$self"
+        },
+        {
+          "type": "adjust_prominence",
+          "direction": "up",
+          "entity": "$self"
+        },
+        {
+          "type": "adjust_prominence",
+          "direction": "up",
+          "entity": "$self"
         }
       ],
       "clusterMode": "individual",
@@ -814,7 +824,11 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "statusFilter": "dead",
+        "statusFilter": "historical",
+        "subtypes": [
+          "hero",
+          "mayor"
+        ],
         "filters": [
           {
             "type": "lacks_tag",
@@ -1802,11 +1816,11 @@
           "type": "relationship_count",
           "relationshipKind": "owned_by",
           "direction": "src",
-          "min": 2
+          "min": 1
         },
         {
           "type": "time_elapsed",
-          "minTicks": 30
+          "minTicks": 20
         }
       ],
       "actions": [
@@ -1820,10 +1834,15 @@
           "type": "adjust_prominence",
           "direction": "up",
           "entity": "$self"
+        },
+        {
+          "type": "adjust_prominence",
+          "direction": "up",
+          "entity": "$self"
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.4,
+      "throttleChance": 0.5,
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
@@ -1832,6 +1851,193 @@
           {
             "type": "lacks_tag",
             "tag": "legendary"
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "artifact_prominence_maintenance",
+      "name": "Artifact Notability",
+      "description": "Artifacts are inherently notable objects that resist being forgotten",
+      "conditions": [
+        {
+          "type": "prominence",
+          "max": "marginal"
+        }
+      ],
+      "actions": [
+        {
+          "type": "adjust_prominence",
+          "direction": "up",
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.6,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "hero_mayor_prominence",
+      "name": "Hero & Mayor Renown",
+      "description": "Heroes and mayors are notable figures that gain prominence through their deeds and leadership",
+      "conditions": [
+        {
+          "type": "or",
+          "conditions": [
+            {
+              "type": "relationship_count",
+              "relationshipKind": "leader_of",
+              "direction": "src",
+              "min": 1
+            },
+            {
+              "type": "relationship_count",
+              "relationshipKind": "member_of",
+              "direction": "src",
+              "min": 1
+            },
+            {
+              "type": "relationship_count",
+              "relationshipKind": "owned_by",
+              "direction": "dst",
+              "min": 1
+            }
+          ]
+        },
+        {
+          "type": "time_elapsed",
+          "minTicks": 15
+        }
+      ],
+      "actions": [
+        {
+          "type": "adjust_prominence",
+          "direction": "up",
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.4,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "statusFilter": "alive",
+        "subtypes": [
+          "hero",
+          "mayor"
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "faction_prominence",
+      "name": "Political Influence",
+      "description": "Organized political factions and influential groups gain prominence over time",
+      "conditions": [
+        {
+          "type": "time_elapsed",
+          "minTicks": 20
+        }
+      ],
+      "actions": [
+        {
+          "type": "adjust_prominence",
+          "direction": "up",
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.45,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "filters": [
+          {
+            "type": "has_any_tag",
+            "tags": ["political", "organized", "influential"]
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "cultural_event_prominence",
+      "name": "Cultural Memory",
+      "description": "Cultural events like festivals and ceremonies are remembered by the community",
+      "conditions": [
+        {
+          "type": "time_elapsed",
+          "minTicks": 10
+        }
+      ],
+      "actions": [
+        {
+          "type": "adjust_prominence",
+          "direction": "up",
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "occurrence",
+        "filters": [
+          {
+            "type": "has_any_tag",
+            "tags": ["cultural", "orca_ritual", "war_ceremony"]
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "memorial_preservation",
+      "name": "Memorial Preservation",
+      "description": "Memorials and cultural traditions resist being forgotten",
+      "conditions": [
+        {
+          "type": "prominence",
+          "max": "recognized"
+        }
+      ],
+      "actions": [
+        {
+          "type": "adjust_prominence",
+          "direction": "up",
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "rules",
+        "subtypes": ["memorial"],
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "cultural"
           }
         ]
       }

@@ -1975,12 +1975,12 @@ export class WorldEngine {
       }
     }
     
-    // Mark dead NPCs
+    // Mark historical NPCs (those who have passed)
     const npcs = findEntities(this.graph, { kind: 'npc', status: 'alive' });
     npcs.forEach(npc => {
       const age = this.graph.tick - npc.createdAt;
       if (age > 80 && Math.random() > 0.7) {
-        this.graph.updateEntity(npc.id, { status: 'dead' });
+        this.graph.updateEntity(npc.id, { status: 'historical' });
       }
     });
   }

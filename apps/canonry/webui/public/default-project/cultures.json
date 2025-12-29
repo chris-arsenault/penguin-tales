@@ -855,6 +855,172 @@
           ],
           "source": "manual"
         },
+        "aurora_merchant_ranks": {
+          "id": "aurora_merchant_ranks",
+          "description": "Trade-specific honorifics and ranks for merchant NPCs",
+          "entries": [
+            "Factor",
+            "Assessor",
+            "Comptroller",
+            "Bursar",
+            "Steward",
+            "Purser",
+            "Tallyman",
+            "Weighmaster",
+            "Vault-Keeper",
+            "Ledger-Warden",
+            "Coin-Counter",
+            "Trade-Arbiter",
+            "Gilt-Hand",
+            "Scale-Master",
+            "Tithe-Keeper"
+          ],
+          "source": "manual"
+        },
+        "aurora_hero_deeds": {
+          "id": "aurora_hero_deeds",
+          "description": "Legendary deed-names and epithets for heroic NPCs",
+          "entries": [
+            "Fissure-Sealer",
+            "Tide-Turner",
+            "Storm-Caller",
+            "Ice-Breaker",
+            "Dawn-Bringer",
+            "Frost-Bane",
+            "Glow-Walker",
+            "Deep-Diver",
+            "Crest-Defender",
+            "Shelf-Guardian",
+            "Rime-Singer",
+            "Light-Bearer",
+            "Berg-Shaper",
+            "Void-Banisher",
+            "Abyss-Watcher"
+          ],
+          "source": "manual"
+        },
+        "aurora_hero_epithets": {
+          "id": "aurora_hero_epithets",
+          "description": "Grandiose epithets preceding hero names",
+          "entries": [
+            "the Undaunted",
+            "the Radiant",
+            "the Unyielding",
+            "the Frostborn",
+            "the Eternal",
+            "the Shimmering",
+            "the Resolute",
+            "the Icebound",
+            "the Gilded",
+            "the Ascendant",
+            "Ever-Vigilant",
+            "Star-Touched",
+            "Twice-Blessed",
+            "the Unbroken",
+            "the Luminous"
+          ],
+          "source": "manual"
+        },
+        "aurora_lineage_markers": {
+          "id": "aurora_lineage_markers",
+          "description": "Family and bloodline markers for noble NPCs",
+          "entries": [
+            "of the First Shelf",
+            "Dawn-born",
+            "Crest-line",
+            "of the Gilded Rookery",
+            "Sun-blessed",
+            "of the High Tier",
+            "Frost-heir",
+            "of the Founding Huddle",
+            "Light-descended",
+            "of the Beacon Watch",
+            "Ice-crowned",
+            "of the Summit Line",
+            "Aurora-touched",
+            "of the Elder Floe",
+            "Star-kindred"
+          ],
+          "source": "manual"
+        },
+        "aurora_outlaw_nicknames": {
+          "id": "aurora_outlaw_nicknames",
+          "description": "Notorious nicknames for criminal and outlaw NPCs",
+          "entries": [
+            "the Slick",
+            "Cold-Flip",
+            "Shadebeak",
+            "the Untracked",
+            "Slush-Runner",
+            "Frostbite",
+            "the Faceless",
+            "Ice-Slicer",
+            "Blackfin",
+            "the Silent",
+            "Drift-Ghost",
+            "Powder-Walker",
+            "the Eel",
+            "Crevasse",
+            "the Unseen"
+          ],
+          "source": "manual"
+        },
+        "aurora_noble_titles": {
+          "id": "aurora_noble_titles",
+          "description": "Formal titles for mayors and political leaders",
+          "entries": [
+            "High-Beak",
+            "Arch-Warden",
+            "Premier",
+            "Summit-Lord",
+            "Tier-Master",
+            "Grand Auditor",
+            "Crest-Speaker",
+            "Beacon-Keeper",
+            "Frost-Chancellor",
+            "Light-Regent",
+            "Chief Arbiter",
+            "Stack-Sovereign",
+            "Prime Assessor",
+            "Elder-Voice",
+            "Shelf-Protector"
+          ],
+          "source": "manual"
+        },
+        "aurora_war_epithets": {
+          "id": "aurora_war_epithets",
+          "description": "Names for wars and major conflicts",
+          "entries": [
+            "Schism",
+            "Fracture",
+            "Sundering",
+            "Reckoning",
+            "Breach",
+            "Collapse",
+            "Upheaval",
+            "Severance",
+            "Divide",
+            "Clash"
+          ],
+          "source": "manual"
+        },
+        "aurora_disaster_types": {
+          "id": "aurora_disaster_types",
+          "description": "Types of natural or magical disasters",
+          "entries": [
+            "Calving",
+            "Collapse",
+            "Fracture",
+            "Thaw",
+            "Storm",
+            "Void-Breach",
+            "Fissure",
+            "Avalanche",
+            "Flux",
+            "Darkening"
+          ],
+          "source": "manual"
+        },
         "ancient_relic_epithets": {
           "id": "ancient_relic_epithets",
           "description": "Grandiose epithets for ancient alien relics",
@@ -1225,6 +1391,179 @@
           }
         },
         {
+          "id": "aurora_merchant_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_merchant_ranks",
+                "domain:aurora_domain~cap",
+                "domain:aurora_domain_short~lower^'^slot:aurora_gen_nouns~cap"
+              ],
+              [
+                "domain:aurora_domain~cap",
+                "domain:aurora_domain_short~lower^'^slot:aurora_gen_trade~cap"
+              ],
+              [
+                "slot:aurora_merchant_ranks",
+                "domain:aurora_domain~cap"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_hero_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "domain:aurora_domain~cap",
+                "slot:aurora_hero_epithets"
+              ],
+              [
+                "domain:aurora_domain~cap",
+                "the",
+                "slot:aurora_hero_deeds"
+              ],
+              [
+                "slot:aurora_hero_deeds",
+                "domain:aurora_domain~cap"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_hero_legendary",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "domain:aurora_domain~cap",
+                "slot:aurora_hero_epithets^,",
+                "slot:aurora_hero_deeds"
+              ],
+              [
+                "slot:aurora_gen_titles",
+                "domain:aurora_domain~cap",
+                "the",
+                "slot:aurora_hero_deeds"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_outlaw_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "domain:aurora_domain_short~cap",
+                "slot:aurora_outlaw_nicknames"
+              ],
+              [
+                "slot:aurora_outlaw_nicknames~cap",
+                "domain:aurora_domain_short~cap"
+              ],
+              [
+                "domain:aurora_domain_short~cap^-^domain:aurora_domain_short~cap"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_noble_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_noble_titles",
+                "domain:aurora_domain~cap",
+                "slot:aurora_lineage_markers"
+              ],
+              [
+                "slot:aurora_noble_titles",
+                "domain:aurora_domain~cap",
+                "domain:aurora_domain_short~lower^'^slot:aurora_nature~cap"
+              ],
+              [
+                "slot:aurora_noble_titles",
+                "domain:aurora_domain~cap"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_war_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "context:selected~poss",
+                "slot:aurora_war_epithets"
+              ],
+              [
+                "The",
+                "slot:aurora_war_epithets",
+                "of",
+                "context:target"
+              ],
+              [
+                "context:selected^-^context:target",
+                "slot:aurora_war_epithets"
+              ],
+              [
+                "The",
+                "slot:aurora_gen_nouns",
+                "slot:aurora_war_epithets"
+              ],
+              [
+                "The",
+                "slot:aurora_war_epithets",
+                "of",
+                "slot:aurora_nature"
+              ],
+              [
+                "slot:aurora_nature^-^slot:aurora_nature",
+                "slot:aurora_war_epithets"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_disaster_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "context:target",
+                "slot:aurora_disaster_types"
+              ],
+              [
+                "context:selected~poss",
+                "slot:aurora_disaster_types"
+              ],
+              [
+                "The",
+                "slot:aurora_nature",
+                "slot:aurora_disaster_types"
+              ],
+              [
+                "The",
+                "slot:aurora_disaster_types",
+                "of",
+                "slot:aurora_nature"
+              ],
+              [
+                "domain:aurora_domain_short^'s",
+                "slot:aurora_disaster_types"
+              ]
+            ]
+          }
+        },
+        {
           "id": "aurora_artifact",
           "start": "name",
           "capitalization": "titleWords",
@@ -1306,86 +1645,138 @@
         },
         {
           "id": "aurora_npcs",
-          "name": "Aurora Default",
+          "name": "Aurora NPCs",
           "strategyGroups": [
+            {
+              "name": "Legendary Heroes",
+              "priority": 75,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": ["mythic"],
+                "subtypes": ["hero"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.7, "grammarId": "aurora_hero_legendary" },
+                { "type": "grammar", "weight": 0.3, "grammarId": "aurora_hero_npc" }
+              ]
+            },
+            {
+              "name": "Heroes",
+              "priority": 70,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["hero"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.6, "grammarId": "aurora_hero_npc" },
+                { "type": "grammar", "weight": 0.4, "grammarId": "aurora_hero_legendary" }
+              ]
+            },
+            {
+              "name": "Mayors and Leaders",
+              "priority": 68,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["mayor"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "aurora_noble_npc" }
+              ]
+            },
+            {
+              "name": "Merchants",
+              "priority": 65,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["merchant"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.7, "grammarId": "aurora_merchant_npc" },
+                { "type": "grammar", "weight": 0.3, "grammarId": "aurora_npc" }
+              ]
+            },
+            {
+              "name": "Outlaws and Criminals",
+              "priority": 65,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["outlaw", "criminal"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.8, "grammarId": "aurora_outlaw_npc" },
+                { "type": "grammar", "weight": 0.2, "grammarId": "aurora_npc" }
+              ]
+            },
             {
               "name": "Elite NPCs",
               "priority": 60,
               "conditions": {
-                "entityKinds": [
-                  "npc"
-                ],
-                "prominence": [
-                  "mythic",
-                  "renowned"
-                ],
+                "entityKinds": ["npc"],
+                "prominence": ["mythic", "renowned"],
                 "subtypes": [],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                {
-                  "type": "grammar",
-                  "weight": 1,
-                  "grammarId": "aurora_elite_npc"
-                }
-              ]
-            },
-            {
-              "name": "NPC Names",
-              "priority": 0,
-              "conditions": {
-                "entityKinds": [
-                  "npc"
-                ],
-                "prominence": [],
-                "subtypes": [],
-                "subtypeMatchAll": false,
-                "tags": [],
-                "tagMatchAll": false
-              },
-              "strategies": [
-                {
-                  "type": "grammar",
-                  "weight": 0.8,
-                  "grammarId": "aurora_npc"
-                },
-                {
-                  "type": "grammar",
-                  "weight": 0.2,
-                  "grammarId": "aurora_elite_npc"
-                }
+                { "type": "grammar", "weight": 0.6, "grammarId": "aurora_elite_npc" },
+                { "type": "grammar", "weight": 0.4, "grammarId": "aurora_noble_npc" }
               ]
             },
             {
               "name": "NPC Regions (Families)",
               "priority": 50,
               "conditions": {
-                "entityKinds": [
-                  "npc"
-                ],
+                "entityKinds": ["npc"],
                 "prominence": [],
-                "subtypes": [
-                  "region"
-                ],
+                "subtypes": ["region"],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                {
-                  "type": "grammar",
-                  "weight": 1,
-                  "grammarId": "aurora_family_names"
-                }
+                { "type": "grammar", "weight": 1, "grammarId": "aurora_family_names" }
+              ]
+            },
+            {
+              "name": "Default NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.7, "grammarId": "aurora_npc" },
+                { "type": "grammar", "weight": 0.2, "grammarId": "aurora_elite_npc" },
+                { "type": "grammar", "weight": 0.1, "grammarId": "aurora_merchant_npc" }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": [
-            "npc"
-          ]
+          "entityKinds": ["npc"]
         },
         {
           "id": "aurora_factions",
@@ -1633,6 +2024,75 @@
           "entityKinds": [
             "artifact"
           ]
+        },
+        {
+          "id": "aurora_occurrences",
+          "name": "Aurora Occurrences",
+          "strategyGroups": [
+            {
+              "name": "Wars and Conflicts",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["occurrence"],
+                "prominence": [],
+                "subtypes": ["war", "conflict"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "aurora_war_name" }
+              ]
+            },
+            {
+              "name": "Disasters",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["occurrence"],
+                "prominence": [],
+                "subtypes": ["disaster"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "aurora_disaster_name" }
+              ]
+            },
+            {
+              "name": "Celebrations and Memorials",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["occurrence"],
+                "prominence": [],
+                "subtypes": ["celebration", "memorial", "social"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "aurora_holidays" }
+              ]
+            },
+            {
+              "name": "Succession Crises",
+              "priority": 55,
+              "conditions": {
+                "entityKinds": ["occurrence"],
+                "prominence": [],
+                "subtypes": ["succession_crisis"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.6, "grammarId": "aurora_war_name" },
+                { "type": "grammar", "weight": 0.4, "grammarId": "aurora_law" }
+              ]
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": ["occurrence"]
         }
       ]
     }
@@ -1732,21 +2192,16 @@
           "id": "nightshelf_domain",
           "phonology": {
             "consonants": [
-              "b",
+              "v",
+              "s",
               "c",
-              "d",
-              "f",
-              "g",
-              "l",
               "m",
               "n",
-              "p",
+              "l",
               "r",
-              "s",
               "t",
-              "v",
-              "ph",
-              "th"
+              "x",
+              "qu"
             ],
             "vowels": [
               "a",
@@ -1755,109 +2210,87 @@
               "o",
               "u",
               "ae",
-              "au",
-              "oe",
-              "ia",
-              "io"
+              "iu",
+              "ia"
             ],
             "syllableTemplates": [
               "CV",
               "CVC",
-              "VCV"
+              "VC"
             ],
             "lengthRange": [
               2,
               3
             ],
             "favoredClusters": [
-              "br",
-              "cr",
-              "dr",
-              "gr",
-              "pr",
-              "tr",
-              "pl",
-              "cl",
-              "li",
-              "ri"
+              "ct",
+              "nt",
+              "lv",
+              "rv",
+              "nc",
+              "rm",
+              "st"
             ],
             "forbiddenClusters": [
-              "aa",
-              "ee",
-              "ii",
-              "oo",
-              "uu",
-              "aeae",
-              "oeoe",
-              "ioio",
-              "iaia",
-              "oeae",
-              "aeoe",
-              "ioae",
-              "aeio",
-              "oeio",
-              "iooe",
-              "auio",
-              "ioau",
-              "auoe",
-              "oeoa",
-              "oeia",
-              "iaoe",
-              "vv",
-              "kk",
-              "zz",
-              "phph",
-              "thth"
+              "xx",
+              "ququ",
+              "cc",
+              "xc",
+              "cx",
+              "xs",
+              "sx",
+              "tt"
             ],
             "favoredClusterBoost": 1.5,
             "consonantWeights": [
-              1,
-              1,
-              1,
-              1,
-              1,
               1.5,
-              1.2,
-              1.2,
-              1,
-              1.6,
               1.4,
               1.3,
               1.1,
+              1.2,
+              1.3,
+              1.2,
+              1.3,
               0.7,
-              0.7
+              0.6
             ],
             "vowelWeights": [
               1.3,
+              1.4,
+              1.5,
+              1.2,
               1.1,
-              1.1,
-              1.3,
-              1,
+              1.0,
               0.9,
-              0.9,
-              0.8,
-              0.8,
               0.8
             ],
             "templateWeights": [
               1.4,
-              1.2,
-              0.6
+              1.3,
+              0.7
             ]
           },
           "morphology": {
             "prefixes": [
-              "Aur",
-              "Neo",
-              "Theo"
+              "Umbr",
+              "Noct",
+              "Tene",
+              "Silv",
+              "Caeli",
+              "Sanct",
+              "Luc"
             ],
             "suffixes": [
               "us",
+              "ius",
               "is",
               "a",
               "ae",
+              "ia",
+              "inus",
+              "anus",
               "um",
-              "ia"
+              "ium"
             ],
             "structure": [
               "root-suffix",
@@ -1865,9 +2298,9 @@
               "root"
             ],
             "structureWeights": [
-              0.45,
-              0.25,
-              0.3
+              0.55,
+              0.30,
+              0.15
             ]
           },
           "style": {
@@ -1876,11 +2309,13 @@
             "hyphenRate": 0,
             "preferredEndings": [
               "us",
+              "ius",
               "is",
               "ia",
-              "ae"
+              "ae",
+              "inus"
             ],
-            "preferredEndingBoost": 1.5,
+            "preferredEndingBoost": 1.8,
             "rhythmBias": "flowing"
           }
         }
@@ -1894,6 +2329,172 @@
             "Fissure-Walker",
             "Night-Warden",
             "Veil-Keeper"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_latin_titles": {
+          "id": "nightshelf_latin_titles",
+          "description": "Latin-style titles for Nightshelf nobility and officials",
+          "entries": [
+            "Dominus",
+            "Domina",
+            "Magister",
+            "Praefectus",
+            "Custos",
+            "Arbiter",
+            "Augur",
+            "Vigil",
+            "Praetor",
+            "Consul",
+            "Lector",
+            "Scriba",
+            "Umbra-Princeps",
+            "Nox-Dominus",
+            "Vox Silentii"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_whisper_roots": {
+          "id": "nightshelf_whisper_roots",
+          "description": "Core Latin-ish shadow and mystery word roots",
+          "entries": [
+            "umbra",
+            "nox",
+            "tenebr",
+            "vesper",
+            "crypt",
+            "oss",
+            "morb",
+            "fusc",
+            "vel",
+            "obscur",
+            "nebul",
+            "phantasm",
+            "spect",
+            "larv",
+            "livor"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_criminal_epithets": {
+          "id": "nightshelf_criminal_epithets",
+          "description": "Epithets for criminal and outlaw NPCs",
+          "entries": [
+            "the Unseen",
+            "Void-touched",
+            "the Silent",
+            "Shadow-sworn",
+            "the Nameless",
+            "Fissure-born",
+            "the Faceless",
+            "Glow-drinker",
+            "the Hollow",
+            "Veil-piercer",
+            "the Forgotten",
+            "Night-walker",
+            "the Erased",
+            "Crypt-keeper",
+            "the Phantom"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_hero_epithets": {
+          "id": "nightshelf_hero_epithets",
+          "description": "Heroic epithets for legendary Nightshelf NPCs",
+          "entries": [
+            "Lux in Tenebris",
+            "the Undimmed",
+            "Glow-bringer",
+            "Fissure-sealer",
+            "the Steadfast",
+            "Shadow-bane",
+            "the Illuminated",
+            "Veil-render",
+            "the Watchful",
+            "Night-defier",
+            "the Unbroken",
+            "Depth-walker",
+            "the Resolute",
+            "Void-banisher",
+            "the Luminous"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_noble_titles": {
+          "id": "nightshelf_noble_titles",
+          "description": "Formal titles for Nightshelf mayors and leaders",
+          "entries": [
+            "Archon",
+            "Umbra-Rex",
+            "Noctarch",
+            "Veil-Sovereign",
+            "Glow-Warden",
+            "Fissure-Lord",
+            "Shadow-Consul",
+            "Depth-Master",
+            "Night-Regent",
+            "Crypt-Chancellor",
+            "Tenebra-Premier",
+            "Vesper-King",
+            "Void-Arbiter",
+            "Obscura-Chief",
+            "Phantasm-Speaker"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_merchant_ranks": {
+          "id": "nightshelf_merchant_ranks",
+          "description": "Trade titles for Nightshelf merchants",
+          "entries": [
+            "Mercator",
+            "Negotiator",
+            "Factor Umbrae",
+            "Glow-Trader",
+            "Fissure-Dealer",
+            "Shadow-Broker",
+            "Void-Merchant",
+            "Depth-Purveyor",
+            "Crypt-Vendor",
+            "Veil-Factor",
+            "Night-Assessor",
+            "Obscura-Dealer",
+            "Whisper-Trader",
+            "Penumbra-Factor",
+            "Twilight-Broker"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_war_names": {
+          "id": "nightshelf_war_names",
+          "description": "War and conflict names for Nightshelf",
+          "entries": [
+            "Obscurum",
+            "Tenebrae",
+            "Silentium",
+            "Interregnum",
+            "Schisma",
+            "Nox Aeterna",
+            "Umbra Fracta",
+            "Bellum Veli",
+            "Conflictus",
+            "Dissidium"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_disaster_types": {
+          "id": "nightshelf_disaster_types",
+          "description": "Disaster types for Nightshelf",
+          "entries": [
+            "Collapsum",
+            "Ruptio",
+            "Extinctio",
+            "Eruptio",
+            "Fluxus",
+            "Voragine",
+            "Calamitas",
+            "Ruina",
+            "Hiatus",
+            "Vorago"
           ],
           "source": "manual"
         },
@@ -2368,6 +2969,134 @@
           }
         },
         {
+          "id": "nightshelf_merchant_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:nightshelf_merchant_ranks",
+                "domain:nightshelf_domain"
+              ],
+              [
+                "domain:nightshelf_domain",
+                "slot:nightshelf_latin_titles"
+              ],
+              [
+                "slot:nightshelf_merchant_ranks",
+                "domain:nightshelf_domain^-^slot:nightshelf_whisper_roots"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_hero_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "domain:nightshelf_domain",
+                "slot:nightshelf_hero_epithets"
+              ],
+              [
+                "slot:nightshelf_hero_epithets^,",
+                "domain:nightshelf_domain"
+              ],
+              [
+                "domain:nightshelf_domain",
+                "slot:nightshelf_latin_titles"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_hero_legendary",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:nightshelf_latin_titles",
+                "domain:nightshelf_domain",
+                "slot:nightshelf_hero_epithets"
+              ],
+              [
+                "domain:nightshelf_domain",
+                "slot:nightshelf_hero_epithets^,",
+                "slot:nightshelf_latin_titles"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_outlaw_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "domain:nightshelf_domain",
+                "slot:nightshelf_criminal_epithets"
+              ],
+              [
+                "slot:nightshelf_criminal_epithets~cap",
+                "domain:nightshelf_domain"
+              ],
+              [
+                "domain:nightshelf_domain^-^domain:nightshelf_domain"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_noble_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:nightshelf_noble_titles",
+                "domain:nightshelf_domain"
+              ],
+              [
+                "slot:nightshelf_latin_titles",
+                "domain:nightshelf_domain",
+                "slot:nightshelf_whisper_roots~cap"
+              ],
+              [
+                "slot:nightshelf_noble_titles",
+                "domain:nightshelf_domain^-^slot:nightshelf_shadow_gen"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_war_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              ["slot:nightshelf_war_names", "context:selected~gen"],
+              ["context:selected~poss", "slot:nightshelf_war_names"],
+              ["slot:nightshelf_war_names", "context:target~gen"],
+              ["The", "slot:nightshelf_whisper_roots", "slot:nightshelf_war_names"],
+              ["slot:nightshelf_war_names", "slot:nightshelf_whisper_roots"],
+              ["slot:nightshelf_shadow_gen^-^slot:nightshelf_shadow_gen", "slot:nightshelf_war_names"]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_disaster_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              ["slot:nightshelf_disaster_types", "context:target~gen"],
+              ["context:selected~poss", "slot:nightshelf_disaster_types"],
+              ["slot:nightshelf_disaster_types", "context:selected~gen"],
+              ["The", "slot:nightshelf_shadow_gen", "slot:nightshelf_disaster_types"],
+              ["slot:nightshelf_disaster_types", "slot:nightshelf_whisper_roots"],
+              ["domain:nightshelf_domain^'s", "slot:nightshelf_disaster_types"]
+            ]
+          }
+        },
+        {
           "id": "nightshelf_magic",
           "start": "name",
           "capitalization": "titleWords",
@@ -2517,15 +3246,108 @@
         },
         {
           "id": "nightshelf_npcs",
-          "name": "Nightshelf Default",
+          "name": "Nightshelf NPCs",
           "strategyGroups": [
             {
-              "name": "NPC Names",
+              "name": "Legendary Heroes",
+              "priority": 75,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": ["mythic"],
+                "subtypes": ["hero"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.7, "grammarId": "nightshelf_hero_legendary" },
+                { "type": "grammar", "weight": 0.3, "grammarId": "nightshelf_hero_npc" }
+              ]
+            },
+            {
+              "name": "Heroes",
+              "priority": 70,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["hero"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.6, "grammarId": "nightshelf_hero_npc" },
+                { "type": "grammar", "weight": 0.4, "grammarId": "nightshelf_hero_legendary" }
+              ]
+            },
+            {
+              "name": "Mayors and Leaders",
+              "priority": 68,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["mayor"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_noble_npc" }
+              ]
+            },
+            {
+              "name": "Merchants",
+              "priority": 65,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["merchant"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.7, "grammarId": "nightshelf_merchant_npc" },
+                { "type": "grammar", "weight": 0.3, "grammarId": "nightshelf_npc" }
+              ]
+            },
+            {
+              "name": "Outlaws and Criminals",
+              "priority": 65,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["outlaw", "criminal"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.8, "grammarId": "nightshelf_outlaw_npc" },
+                { "type": "grammar", "weight": 0.2, "grammarId": "nightshelf_npc" }
+              ]
+            },
+            {
+              "name": "Elite NPCs",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": ["mythic", "renowned"],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.6, "grammarId": "nightshelf_elite_npc" },
+                { "type": "grammar", "weight": 0.4, "grammarId": "nightshelf_noble_npc" }
+              ]
+            },
+            {
+              "name": "Default NPC Names",
               "priority": 0,
               "conditions": {
-                "entityKinds": [
-                  "npc"
-                ],
+                "entityKinds": ["npc"],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
@@ -2533,23 +3355,14 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                {
-                  "type": "grammar",
-                  "weight": 0.8,
-                  "grammarId": "nightshelf_npc"
-                },
-                {
-                  "type": "grammar",
-                  "weight": 0.2,
-                  "grammarId": "nightshelf_elite_npc"
-                }
+                { "type": "grammar", "weight": 0.6, "grammarId": "nightshelf_npc" },
+                { "type": "grammar", "weight": 0.25, "grammarId": "nightshelf_elite_npc" },
+                { "type": "grammar", "weight": 0.15, "grammarId": "nightshelf_merchant_npc" }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": [
-            "npc"
-          ]
+          "entityKinds": ["npc"]
         },
         {
           "id": "nightshelf_locations",
@@ -2772,6 +3585,75 @@
           "entityKinds": [
             "artifact"
           ]
+        },
+        {
+          "id": "nightshelf_occurrences",
+          "name": "Nightshelf Occurrences",
+          "strategyGroups": [
+            {
+              "name": "Wars and Conflicts",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["occurrence"],
+                "prominence": [],
+                "subtypes": ["war", "conflict"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_war_name" }
+              ]
+            },
+            {
+              "name": "Disasters",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["occurrence"],
+                "prominence": [],
+                "subtypes": ["disaster"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_disaster_name" }
+              ]
+            },
+            {
+              "name": "Celebrations and Memorials",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["occurrence"],
+                "prominence": [],
+                "subtypes": ["celebration", "memorial", "social"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_holidays" }
+              ]
+            },
+            {
+              "name": "Succession Crises",
+              "priority": 55,
+              "conditions": {
+                "entityKinds": ["occurrence"],
+                "prominence": [],
+                "subtypes": ["succession_crisis"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.6, "grammarId": "nightshelf_war_name" },
+                { "type": "grammar", "weight": 0.4, "grammarId": "nightshelf_magic" }
+              ]
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": ["occurrence"]
         }
       ]
     }
@@ -3287,6 +4169,106 @@
           ],
           "source": "manual"
         },
+        "orca_warrior_ranks": {
+          "id": "orca_warrior_ranks",
+          "description": "Warrior ranks and titles for Orca heroes",
+          "entries": [
+            "Fang",
+            "Maw",
+            "Claw",
+            "Tide-Hunter",
+            "Blood-Wake",
+            "Storm-Breaker",
+            "Deep-Striker",
+            "Prey-Caller",
+            "Gore-Master",
+            "Wave-Crusher",
+            "Fin-Render",
+            "Abyss-Lord",
+            "Kill-Count",
+            "Surge-Captain",
+            "Rend-Chief"
+          ],
+          "source": "manual"
+        },
+        "orca_kill_titles": {
+          "id": "orca_kill_titles",
+          "description": "Kill-count and hunt-based titles for legendary orcas",
+          "entries": [
+            "Hundred-Kill",
+            "Seal-Bane",
+            "Pod-Breaker",
+            "Fin-Collector",
+            "Whale-Render",
+            "Ice-Crusher",
+            "Berg-Splitter",
+            "Tide-Devourer",
+            "Deep-Terror",
+            "Storm-Born",
+            "Blood-Drinker",
+            "Bone-Keeper",
+            "Fleet-Wrecker",
+            "Shore-Scourge",
+            "Wave-Tyrant"
+          ],
+          "source": "manual"
+        },
+        "orca_bloodnames": {
+          "id": "orca_bloodnames",
+          "description": "Fearsome bloodnames for outlaw and criminal orcas",
+          "entries": [
+            "Red-Maw",
+            "Death-Fin",
+            "Void-Eye",
+            "Scar-Flank",
+            "Gore-Tooth",
+            "Black-Wake",
+            "Rogue-Surge",
+            "Pod-Breaker",
+            "Drift-Ghost",
+            "Silent-Strike",
+            "Cold-Blood",
+            "Night-Hunter",
+            "Rend-Tail",
+            "Storm-Exile",
+            "Deep-Lurker"
+          ],
+          "source": "manual"
+        },
+        "orca_war_epithets": {
+          "id": "orca_war_epithets",
+          "description": "War and conflict names for Orca",
+          "entries": [
+            "Bloodtide",
+            "Gorewake",
+            "Rendstorm",
+            "Crushfall",
+            "Mawstrike",
+            "Fangwar",
+            "Devourfall",
+            "Ravageflux",
+            "Surgeclash",
+            "Tidesunder"
+          ],
+          "source": "manual"
+        },
+        "orca_disaster_epithets": {
+          "id": "orca_disaster_epithets",
+          "description": "Disaster names for Orca culture",
+          "entries": [
+            "Depthquake",
+            "Stormwrack",
+            "Tidecollapse",
+            "Voidbreach",
+            "Abyssfall",
+            "Surgefury",
+            "Rendstorm",
+            "Wavecatastrophe",
+            "Deeprupture",
+            "Currentdeath"
+          ],
+          "source": "manual"
+        },
         "orca_artifact_nouns": {
           "id": "orca_artifact_nouns",
           "description": "Artifact-related nouns for Orca",
@@ -3484,6 +4466,96 @@
           "capitalization": "titleWords"
         },
         {
+          "id": "orca_hero_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:orca_warrior_ranks",
+                "domain:orca_domain^-^slot:orca_combat_actions^ak"
+              ],
+              [
+                "domain:orca_domain",
+                "slot:orca_kill_titles"
+              ],
+              [
+                "slot:orca_kill_titles",
+                "domain:orca_domain"
+              ]
+            ]
+          },
+          "capitalization": "titleWords"
+        },
+        {
+          "id": "orca_hero_legendary",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:orca_warrior_ranks",
+                "domain:orca_domain",
+                "slot:orca_kill_titles"
+              ],
+              [
+                "slot:orca_superlatives",
+                "slot:orca_warrior_ranks",
+                "domain:orca_domain"
+              ]
+            ]
+          },
+          "capitalization": "titleWords"
+        },
+        {
+          "id": "orca_outlaw_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:orca_bloodnames",
+                "domain:orca_domain_short"
+              ],
+              [
+                "domain:orca_domain_short^-^slot:orca_bloodnames"
+              ],
+              [
+                "domain:orca_domain_short",
+                "slot:orca_bloodnames"
+              ]
+            ]
+          },
+          "capitalization": "titleWords"
+        },
+        {
+          "id": "orca_war_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              ["context:selected~poss", "slot:orca_war_epithets"],
+              ["The", "slot:orca_war_epithets", "of", "context:target"],
+              ["context:selected^-^context:target", "slot:orca_war_epithets"],
+              ["The", "slot:orca_power_words^-^slot:orca_war_epithets"],
+              ["slot:orca_war_epithets", "of", "slot:orca_region_names"],
+              ["slot:orca_power_words^-^slot:orca_power_words", "slot:orca_war_epithets"]
+            ]
+          }
+        },
+        {
+          "id": "orca_disaster_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              ["context:target~poss", "slot:orca_disaster_epithets"],
+              ["The", "slot:orca_disaster_epithets", "of", "context:selected"],
+              ["context:selected^-^slot:orca_disaster_epithets"],
+              ["The", "slot:orca_region_names", "slot:orca_disaster_epithets"],
+              ["slot:orca_disaster_epithets", "of", "slot:orca_region_names"],
+              ["domain:orca_domain_short^'s", "slot:orca_disaster_epithets"]
+            ]
+          }
+        },
+        {
           "id": "orca_artifact",
           "start": "name",
           "capitalization": "titleWords",
@@ -3541,37 +4613,130 @@
         },
         {
           "id": "orca_npc_names",
-          "name": "Orca Default",
+          "name": "Orca NPCs",
           "strategyGroups": [
             {
-              "name": "NPC Names",
-              "priority": 0,
+              "name": "Legendary Heroes",
+              "priority": 75,
               "conditions": {
-                "entityKinds": [
-                  "npc"
-                ],
-                "prominence": [],
-                "subtypes": [
-                  "region",
-                  "orca"
-                ],
+                "entityKinds": ["npc"],
+                "prominence": ["mythic"],
+                "subtypes": ["hero"],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                {
-                  "type": "grammar",
-                  "weight": 1,
-                  "grammarId": "orca_npc"
-                }
+                { "type": "grammar", "weight": 0.7, "grammarId": "orca_hero_legendary" },
+                { "type": "grammar", "weight": 0.3, "grammarId": "orca_hero_npc" }
+              ]
+            },
+            {
+              "name": "Heroes",
+              "priority": 70,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["hero"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.6, "grammarId": "orca_hero_npc" },
+                { "type": "grammar", "weight": 0.4, "grammarId": "orca_hero_legendary" }
+              ]
+            },
+            {
+              "name": "Outlaws and Criminals",
+              "priority": 65,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["outlaw", "criminal"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.8, "grammarId": "orca_outlaw_npc" },
+                { "type": "grammar", "weight": 0.2, "grammarId": "orca_npc" }
+              ]
+            },
+            {
+              "name": "Elite NPCs",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": ["mythic", "renowned"],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.5, "grammarId": "orca_hero_npc" },
+                { "type": "grammar", "weight": 0.5, "grammarId": "orca_npc" }
+              ]
+            },
+            {
+              "name": "Default NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 0.6, "grammarId": "orca_npc" },
+                { "type": "grammar", "weight": 0.3, "grammarId": "orca_hero_npc" },
+                { "type": "phonotactic", "weight": 0.1, "domainId": "orca_domain" }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": [
-            "npc"
-          ]
+          "entityKinds": ["npc"]
+        },
+        {
+          "id": "orca_occurrences",
+          "name": "Orca Occurrences",
+          "strategyGroups": [
+            {
+              "name": "Wars and Conflicts",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["occurrence"],
+                "prominence": [],
+                "subtypes": ["war", "conflict"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "orca_war_name" }
+              ]
+            },
+            {
+              "name": "Disasters",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["occurrence"],
+                "prominence": [],
+                "subtypes": ["disaster"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "orca_disaster_name" }
+              ]
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": ["occurrence"]
         },
         {
           "id": "orca_combat_techs",
@@ -3743,9 +4908,113 @@
           }
         }
       ],
-      "lexemeLists": {},
+      "lexemeLists": {
+        "world_generic_titles": {
+          "id": "world_generic_titles",
+          "description": "Generic honorific titles",
+          "entries": [
+            "Elder",
+            "Master",
+            "Chief",
+            "Guardian",
+            "Keeper",
+            "Warden",
+            "Sage",
+            "Speaker",
+            "Herald",
+            "Arbiter"
+          ],
+          "source": "manual"
+        },
+        "world_generic_epithets": {
+          "id": "world_generic_epithets",
+          "description": "Generic epithets for notable figures",
+          "entries": [
+            "the Great",
+            "the Wise",
+            "the Bold",
+            "the Swift",
+            "the Silent",
+            "the Steadfast",
+            "the Unbroken",
+            "the Eternal",
+            "the First",
+            "the Last"
+          ],
+          "source": "manual"
+        },
+        "world_war_types": {
+          "id": "world_war_types",
+          "description": "Generic war and conflict types",
+          "entries": [
+            "Conflict",
+            "War",
+            "Struggle",
+            "Strife",
+            "Uprising",
+            "Rebellion",
+            "Schism",
+            "Crisis",
+            "Clash",
+            "Reckoning"
+          ],
+          "source": "manual"
+        },
+        "world_disaster_types": {
+          "id": "world_disaster_types",
+          "description": "Generic disaster types",
+          "entries": [
+            "Catastrophe",
+            "Collapse",
+            "Destruction",
+            "Calamity",
+            "Ruin",
+            "Fall",
+            "Breaking",
+            "Sundering",
+            "Devastation",
+            "Cataclysm"
+          ],
+          "source": "manual"
+        }
+      },
       "lexemeSpecs": [],
-      "grammars": [],
+      "grammars": [
+        {
+          "id": "world_generic_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["domain:world_domain"],
+              ["slot:world_generic_titles", "domain:world_domain"],
+              ["domain:world_domain", "slot:world_generic_epithets"]
+            ]
+          },
+          "capitalization": "titleWords"
+        },
+        {
+          "id": "world_generic_war",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              ["The", "domain:world_domain", "slot:world_war_types"],
+              ["slot:world_war_types", "of", "domain:world_domain"]
+            ]
+          }
+        },
+        {
+          "id": "world_generic_disaster",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              ["The", "domain:world_domain", "slot:world_disaster_types"],
+              ["slot:world_disaster_types", "of", "domain:world_domain"]
+            ]
+          }
+        }
+      ],
       "profiles": [
         {
           "id": "world_profile_default",
@@ -3757,8 +5026,13 @@
               "strategies": [
                 {
                   "type": "phonotactic",
-                  "weight": 1,
+                  "weight": 0.7,
                   "domainId": "world_domain"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.3,
+                  "grammarId": "world_generic_npc"
                 }
               ]
             }

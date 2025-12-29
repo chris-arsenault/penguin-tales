@@ -105,12 +105,12 @@ export function generateNarrativeTags(
     if (change.field === 'status') {
       const newValue = String(change.newValue);
 
-      // Death/ending tags
-      if (newValue === 'dead') {
-        tags.add('death');
-        tags.add('mortality');
+      // Ending/passing tags
+      if (newValue === 'historical') {
+        tags.add('passing');
+        tags.add('legacy');
       }
-      if (newValue === 'historical' || newValue === 'dissolved') {
+      if (newValue === 'dissolved') {
         tags.add('ended');
         tags.add('concluded');
       }

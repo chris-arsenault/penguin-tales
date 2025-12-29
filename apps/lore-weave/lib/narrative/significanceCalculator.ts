@@ -85,8 +85,8 @@ export function calculateSignificance(
   for (const change of stateChanges) {
     if (change.field === 'status') {
       const newValue = String(change.newValue);
-      // Deaths and endings are more significant
-      if (newValue === 'dead' || newValue === 'historical' || newValue === 'dissolved') {
+      // Endings are more significant
+      if (newValue === 'historical' || newValue === 'dissolved') {
         score += 0.3;
       }
     }

@@ -118,9 +118,9 @@
           "inherit": "$target"
         },
         "description": {
-          "template": "A weapon forged for {heroName}, symbol of their emergence as a champion",
+          "template": "A weapon forged for a hero of {colonyName}, symbol of their emergence as a champion",
           "replacements": {
-            "heroName": "$hero.name"
+            "colonyName": "$target.name"
           }
         },
         "tags": {
@@ -767,6 +767,225 @@
         }
       ]
     }
+  },
+  {
+    "id": "orca_war_ritual",
+    "name": "Orca War Ritual",
+    "applicability": [
+      {
+        "type": "era_match",
+        "eras": ["invasion"]
+      },
+      {
+        "type": "entity_count",
+        "kind": "npc",
+        "subtype": "orca",
+        "min": 2
+      },
+      {
+        "type": "entity_count",
+        "kind": "occurrence",
+        "subtype": "ceremony",
+        "max": 1
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "npc",
+      "subtypes": ["orca"],
+      "statusFilter": "alive",
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$ritual",
+        "kind": "occurrence",
+        "subtype": "ceremony",
+        "status": "ongoing",
+        "prominence": "recognized",
+        "culture": {
+          "fixed": "orca"
+        },
+        "description": "A dark ritual conducted by the orca war-bands, calling upon ancient powers to strengthen their assault",
+        "tags": {
+          "orca_ritual": true,
+          "dark_magic": true,
+          "war_ceremony": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "sparse"
+          },
+          "steps": ["sparse", "random"]
+        }
+      },
+      {
+        "entityRef": "$battlePower",
+        "kind": "abilities",
+        "subtype": "combat",
+        "status": "active",
+        "prominence": "marginal",
+        "culture": {
+          "fixed": "orca"
+        },
+        "description": "Savage combat technique empowered by the war ritual",
+        "tags": {
+          "orca_power": true,
+          "ritual_granted": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "sparse"
+          },
+          "steps": ["sparse", "random"]
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "practitioner_of",
+        "src": "$target",
+        "dst": "$battlePower",
+        "strength": 0.9
+      },
+      {
+        "kind": "catalyst_of",
+        "src": "$ritual",
+        "dst": "$battlePower",
+        "strength": 0.8
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "modify_pressure",
+        "pressureId": "security",
+        "delta": -25
+      }
+    ],
+    "variables": {},
+    "enabled": true
+  },
+  {
+    "id": "orca_organized_offensive",
+    "name": "Orca Organized Offensive",
+    "applicability": [
+      {
+        "type": "era_match",
+        "eras": ["invasion"]
+      },
+      {
+        "type": "entity_count",
+        "kind": "npc",
+        "subtype": "orca",
+        "min": 3
+      },
+      {
+        "type": "entity_count",
+        "kind": "occurrence",
+        "subtype": "war",
+        "max": 2
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "subtypes": ["colony"],
+      "pickStrategy": "random",
+      "filters": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "occupies",
+                "direction": "any",
+                "targetKind": "npc",
+                "targetSubtype": "orca"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "creation": [
+      {
+        "entityRef": "$offensive",
+        "kind": "occurrence",
+        "subtype": "war",
+        "status": "ongoing",
+        "prominence": "renowned",
+        "culture": {
+          "fixed": "orca"
+        },
+        "description": {
+          "template": "A coordinated orca assault on {colonyName}, bringing together multiple war-bands in devastating formation",
+          "replacements": {
+            "colonyName": "$target.name"
+          }
+        },
+        "tags": {
+          "orca_offensive": true,
+          "coordinated_attack": true,
+          "siege": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$target"
+          },
+          "steps": ["anchor_region", "sparse", "random"]
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "occurred_at",
+        "src": "$offensive",
+        "dst": "$target",
+        "strength": 1.0
+      },
+      {
+        "kind": "instigated_by",
+        "src": "$offensive",
+        "dst": "$warLeader",
+        "strength": 0.9,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$warLeader"
+        }
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "modify_pressure",
+        "pressureId": "security",
+        "delta": -30
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "harmony",
+        "delta": 10
+      }
+    ],
+    "variables": {
+      "$warLeader": {
+        "select": {
+          "from": "graph",
+          "kind": "npc",
+          "subtypes": ["orca"],
+          "statusFilter": "alive",
+          "pickStrategy": "random",
+          "filters": [
+            {
+              "type": "has_tag",
+              "tag": "war_leader"
+            }
+          ]
+        }
+      }
+    },
+    "enabled": true
   },
   {
     "id": "faction_splinter",
@@ -2215,6 +2434,12 @@
         "src": "$settler",
         "dst": "$colony",
         "strength": 0.4
+      },
+      {
+        "kind": "resident_of",
+        "src": "$founder",
+        "dst": "$colony",
+        "strength": 0.8
       }
     ],
     "stateUpdates": [],
@@ -3227,7 +3452,7 @@
       "subtypes": [
         "hero"
       ],
-      "statusFilter": "dead",
+      "statusFilter": "historical",
       "pickStrategy": "random"
     },
     "creation": [

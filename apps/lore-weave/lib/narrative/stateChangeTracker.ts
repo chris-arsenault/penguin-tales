@@ -411,7 +411,7 @@ export class StateChangeTracker {
     for (const [entityId, changes] of this.pendingChanges) {
       const becameHistorical = changes.some(c =>
         c.field === 'status' &&
-        (c.newValue === 'historical' || c.newValue === 'dissolved' || c.newValue === 'dead')
+        (c.newValue === 'historical' || c.newValue === 'dissolved')
       );
       if (becameHistorical) {
         ended.add(entityId);
@@ -818,7 +818,7 @@ export class StateChangeTracker {
     for (const [entityId, changes] of this.pendingChanges) {
       const becameHistorical = changes.some(c =>
         c.field === 'status' &&
-        (c.newValue === 'historical' || c.newValue === 'dissolved' || c.newValue === 'dead')
+        (c.newValue === 'historical' || c.newValue === 'dissolved')
       );
 
       if (!becameHistorical) continue;

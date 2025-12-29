@@ -936,7 +936,7 @@
         {
           "type": "change_status",
           "entity": "$target",
-          "newStatus": "dead"
+          "newStatus": "historical"
         },
         {
           "type": "modify_pressure",
