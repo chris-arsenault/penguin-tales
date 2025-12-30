@@ -1,8 +1,8 @@
 import type { WorkerTask } from '../../lib/enrichmentTypes';
-import { estimateTextCost, estimateImageCost, calculateActualTextCost, calculateActualImageCost } from '../../lib/costEstimation';
+import { estimateImageCost, calculateActualImageCost } from '../../lib/costEstimation';
 import { saveImage, generateImageId } from '../../lib/workerStorage';
-import { saveCostRecord, generateCostId } from '../../lib/costStorage';
-import { calcTokenBudget } from '../../lib/llmBudget';
+import { saveCostRecordWithDefaults } from '../../lib/costStorage';
+import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
 import type { TaskHandler } from './taskTypes';
 import type { LLMClient } from '../../lib/llmClient';
@@ -41,39 +41,27 @@ async function formatImagePromptWithClaude(
     .replace(/\{\{modelName\}\}/g, imageModel)
     .replace(/\{\{prompt\}\}/g, originalPrompt);
 
-  const estimate = estimateTextCost(formattingPrompt, 'description', callConfig.model);
-  const { totalMaxTokens, thinkingBudget } = calcTokenBudget(callConfig, 1024);
-
   try {
-    const result = await llmClient.complete({
+    const formattingCall = await runTextCall({
+      llmClient,
+      callType: 'image.promptFormatting',
+      callConfig,
       systemPrompt: 'You are a prompt engineer specializing in image generation. Respond only with the reformatted prompt, no explanations or preamble.',
       prompt: formattingPrompt,
-      model: callConfig.model,
-      maxTokens: totalMaxTokens,
       temperature: 0.3,
-      thinkingBudget,
     });
+    const result = formattingCall.result;
 
     if (result.text && !result.error) {
       console.log('[Worker] Formatted image prompt with Claude');
 
-      let actualCost = estimate.estimatedCost;
-      let inputTokens = estimate.inputTokens;
-      let outputTokens = estimate.outputTokens;
-
-      if (result.usage) {
-        inputTokens = result.usage.inputTokens;
-        outputTokens = result.usage.outputTokens;
-        actualCost = calculateActualTextCost(inputTokens, outputTokens, callConfig.model);
-      }
-
       return {
         prompt: result.text.trim(),
         cost: {
-          estimated: estimate.estimatedCost,
-          actual: actualCost,
-          inputTokens,
-          outputTokens,
+          estimated: formattingCall.estimate.estimatedCost,
+          actual: formattingCall.usage.actualCost,
+          inputTokens: formattingCall.usage.inputTokens,
+          outputTokens: formattingCall.usage.outputTokens,
         },
       };
     }
@@ -106,9 +94,7 @@ export const imageTask = {
 
     // Save imagePrompt cost record if Claude was used
     if (formatResult.cost) {
-      await saveCostRecord({
-        id: generateCostId(),
-        timestamp: Date.now(),
+      await saveCostRecordWithDefaults({
         projectId: task.projectId,
         simulationRunId: task.simulationRunId,
         entityId: task.entityId,
@@ -170,9 +156,7 @@ export const imageTask = {
     });
 
     // Save cost record independently
-    await saveCostRecord({
-      id: generateCostId(),
-      timestamp: Date.now(),
+    await saveCostRecordWithDefaults({
       projectId: task.projectId,
       simulationRunId: task.simulationRunId,
       entityId: task.entityId,

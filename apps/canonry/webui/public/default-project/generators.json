@@ -150,11 +150,7 @@
         "kind": "owned_by",
         "src": "$heroWeapon",
         "dst": "$hero",
-        "strength": 0.9,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$heroWeapon"
-        }
+        "strength": 0.9
       },
       {
         "kind": "member_of",
@@ -633,11 +629,7 @@
         "kind": "owned_by",
         "src": "$warLeaderWeapon",
         "dst": "$orca1",
-        "strength": 0.9,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$warLeaderWeapon"
-        }
+        "strength": 0.9
       },
       {
         "kind": "occupies",
@@ -1200,21 +1192,13 @@
         "kind": "owned_by",
         "src": "$contestedRelic",
         "dst": "$splinter",
-        "strength": 0.8,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$contestedRelic"
-        }
+        "strength": 0.8
       },
       {
         "kind": "catalyst_of",
         "src": "$contestedRelic",
         "dst": "$splinter",
-        "strength": 0.9,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$contestedRelic"
-        }
+        "strength": 0.9
       },
       {
         "kind": "member_of",
@@ -1594,11 +1578,7 @@
         "kind": "owned_by",
         "src": "$guildSeal",
         "dst": "$guild",
-        "strength": 0.9,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$guildSeal"
-        }
+        "strength": 0.9
       },
       {
         "kind": "related_to",
@@ -1966,11 +1946,7 @@
         "kind": "owned_by",
         "src": "$sacredRelic",
         "dst": "$cult",
-        "strength": 0.9,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$sacredRelic"
-        }
+        "strength": 0.9
       },
       {
         "kind": "member_of",
@@ -2544,21 +2520,13 @@
         "kind": "discovered_by",
         "src": "$ancientRelic",
         "dst": "$target",
-        "strength": 0.9,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$ancientRelic"
-        }
+        "strength": 0.9
       },
       {
         "kind": "stored_at",
         "src": "$ancientRelic",
         "dst": "$location",
-        "strength": 0.8,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$ancientRelic"
-        }
+        "strength": 0.8
       },
       {
         "kind": "explorer_of",
@@ -2992,21 +2960,13 @@
         "kind": "catalyst_of",
         "src": "$warWeapon",
         "dst": "$war",
-        "strength": 0.9,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$warWeapon"
-        }
+        "strength": 0.9
       },
       {
         "kind": "owned_by",
         "src": "$warWeapon",
         "dst": "$target",
-        "strength": 0.7,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$warWeapon"
-        }
+        "strength": 0.7
       },
       {
         "kind": "participant_in",
@@ -3526,21 +3486,13 @@
         "kind": "created_by",
         "src": "$legendaryWeapon",
         "dst": "$target",
-        "strength": 1,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$legendaryWeapon"
-        }
+        "strength": 1
       },
       {
         "kind": "central_to",
         "src": "$legendaryWeapon",
         "dst": "$memorial",
-        "strength": 0.9,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$legendaryWeapon"
-        }
+        "strength": 0.9
       },
       {
         "kind": "originated_in",
@@ -5202,11 +5154,7 @@
         "kind": "stored_at",
         "src": "$ancientTome",
         "dst": "$memory",
-        "strength": 0.9,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$ancientTome"
-        }
+        "strength": 0.9
       },
       {
         "kind": "manifests_at",

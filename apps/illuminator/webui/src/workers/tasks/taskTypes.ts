@@ -16,8 +16,5 @@ export interface TaskHandler<TTask extends WorkerTask = WorkerTask> {
 }
 
 export type TaskHandlerMap = {
-  description: TaskHandler<WorkerTask & { type: 'description' }>;
-  image: TaskHandler<WorkerTask & { type: 'image' }>;
-  entityChronicle: TaskHandler<WorkerTask & { type: 'entityChronicle' }>;
-  paletteExpansion: TaskHandler<WorkerTask & { type: 'paletteExpansion' }>;
+  [K in WorkerTask['type']]: TaskHandler<Extract<WorkerTask, { type: K }>>;
 };

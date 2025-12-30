@@ -614,7 +614,7 @@ export default function ChroniclePanel({
 
   const wizardEvents = useMemo(() => {
     if (!worldData?.narrativeHistory) return [];
-    return worldData.narrativeHistory.map((e) => ({
+    const events = worldData.narrativeHistory.map((e) => ({
       id: e.id,
       tick: e.tick,
       era: e.era,
@@ -629,6 +629,8 @@ export default function ChroniclePanel({
       stateChanges: e.stateChanges,
       narrativeTags: e.narrativeTags,
     }));
+
+    return events;
   }, [worldData]);
 
   // Build era temporal info from era entities and history events

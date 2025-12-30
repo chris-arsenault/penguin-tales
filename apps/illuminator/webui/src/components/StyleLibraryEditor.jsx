@@ -10,14 +10,6 @@
  */
 
 import { useState, useCallback } from 'react';
-import { ENTITY_CATEGORIES } from '@canonry/world-schema';
-
-// Category options (derived from ENTITY_CATEGORIES)
-const CATEGORY_OPTIONS = Object.entries(ENTITY_CATEGORIES).map(([id, info]) => ({
-  id,
-  name: info.name,
-  description: info.description,
-}));
 
 /**
  * Generate a unique ID for a new style
@@ -189,12 +181,19 @@ function StyleEditModal({ style, type, onSave, onCancel }) {
  */
 function NarrativeStyleCard({ style, onEdit, onDelete }) {
   const isDocument = style.format === 'document';
-  const docConfig = style.documentConfig;
 
-  // Extract a short preview of narrative instructions for display
-  const narrativePreview = style.narrativeInstructions
-    ? style.narrativeInstructions.slice(0, 80) + (style.narrativeInstructions.length > 80 ? '...' : '')
-    : null;
+  // Extract a short preview of instructions for display
+  const instructionsPreview = isDocument
+    ? (style.documentInstructions?.slice(0, 80) + (style.documentInstructions?.length > 80 ? '...' : ''))
+    : (style.narrativeInstructions?.slice(0, 80) + (style.narrativeInstructions?.length > 80 ? '...' : ''));
+
+  // Get word count from appropriate location
+  const wordCountMin = isDocument
+    ? (style.pacing?.wordCount?.min || 300)
+    : (style.pacing?.totalWordCount?.min || 1000);
+  const wordCountMax = isDocument
+    ? (style.pacing?.wordCount?.max || 800)
+    : (style.pacing?.totalWordCount?.max || 2000);
 
   return (
     <div className="illuminator-style-card">
@@ -231,7 +230,7 @@ function NarrativeStyleCard({ style, onEdit, onDelete }) {
             borderRadius: '4px',
           }}
         >
-          {isDocument ? (docConfig?.documentType || 'document') : 'story'}
+          {isDocument ? 'document' : 'story'}
         </span>
         {/* Word count badge */}
         <span
@@ -242,25 +241,23 @@ function NarrativeStyleCard({ style, onEdit, onDelete }) {
             borderRadius: '4px',
           }}
         >
-          {isDocument
-            ? `${docConfig?.wordCount?.min || 300}-${docConfig?.wordCount?.max || 800} words`
-            : `${style.pacing?.totalWordCount?.min || 1000}-${style.pacing?.totalWordCount?.max || 2000} words`}
+          {wordCountMin}-{wordCountMax} words
         </span>
-        {/* Scenes/sections badge */}
-        <span
-          style={{
-            fontSize: '10px',
-            padding: '2px 6px',
-            background: 'var(--bg-tertiary)',
-            borderRadius: '4px',
-          }}
-        >
-          {isDocument
-            ? `${docConfig?.sections?.length || 0} sections`
-            : `${style.pacing?.sceneCount?.min || 3}-${style.pacing?.sceneCount?.max || 5} scenes`}
-        </span>
-        {/* Roles badge for story styles */}
-        {!isDocument && style.roles?.length > 0 && (
+        {/* Scenes badge for story styles */}
+        {!isDocument && (
+          <span
+            style={{
+              fontSize: '10px',
+              padding: '2px 6px',
+              background: 'var(--bg-tertiary)',
+              borderRadius: '4px',
+            }}
+          >
+            {style.pacing?.sceneCount?.min || 3}-{style.pacing?.sceneCount?.max || 5} scenes
+          </span>
+        )}
+        {/* Roles badge */}
+        {style.roles?.length > 0 && (
           <span
             style={{
               fontSize: '10px',
@@ -273,16 +270,10 @@ function NarrativeStyleCard({ style, onEdit, onDelete }) {
           </span>
         )}
       </div>
-      {/* Narrative preview for story styles */}
-      {!isDocument && narrativePreview && (
+      {/* Instructions preview */}
+      {instructionsPreview && (
         <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-          {narrativePreview}
-        </div>
-      )}
-      {/* Tone keywords for document styles */}
-      {isDocument && docConfig?.toneKeywords?.length > 0 && (
-        <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
-          <strong>Tone:</strong> {docConfig.toneKeywords.slice(0, 3).join(', ')}
+          {instructionsPreview}
         </div>
       )}
       {style.tags?.length > 0 && (
@@ -300,8 +291,6 @@ function NarrativeStyleCard({ style, onEdit, onDelete }) {
  * Modal for viewing/editing a document-format narrative style (read-only for now)
  */
 function DocumentStyleViewModal({ style, onCancel }) {
-  const docConfig = style.documentConfig || {};
-
   return (
     <div className="illuminator-modal-overlay" onClick={onCancel}>
       <div
@@ -321,95 +310,42 @@ function DocumentStyleViewModal({ style, onCancel }) {
             <div>{style.description || '(none)'}</div>
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Document Type</div>
-            <div style={{ fontWeight: 500 }}>{docConfig.documentType || '(not specified)'}</div>
-          </div>
-
-          {docConfig.voice && (
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Voice</div>
-              <div>{docConfig.voice}</div>
-            </div>
-          )}
-
           {/* Word count */}
           <div style={{ marginBottom: '16px' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Word Count</div>
-            <div>{docConfig.wordCount?.min || 300} - {docConfig.wordCount?.max || 800} words</div>
+            <div>{style.pacing?.wordCount?.min || 300} - {style.pacing?.wordCount?.max || 800} words</div>
           </div>
 
-          {/* Subject categories */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-            {style.entityRules?.primarySubjectCategories?.length > 0 && (
-              <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Primary Subject Categories</div>
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {style.entityRules.primarySubjectCategories.map((cat) => {
-                    const info = ENTITY_CATEGORIES[cat];
-                    return (
-                      <span
-                        key={cat}
-                        style={{
-                          padding: '2px 8px',
-                          background: '#10b981',
-                          color: 'white',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                        }}
-                      >
-                        {info?.name || cat}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {style.entityRules?.supportingSubjectCategories?.length > 0 && (
-              <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Supporting Subject Categories</div>
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {style.entityRules.supportingSubjectCategories.map((cat) => {
-                    const info = ENTITY_CATEGORIES[cat];
-                    return (
-                      <span
-                        key={cat}
-                        style={{
-                          padding: '2px 8px',
-                          background: 'var(--bg-tertiary)',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                        }}
-                      >
-                        {info?.name || cat}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Content instructions */}
-          {docConfig.contentInstructions && (
+          {/* Document instructions */}
+          {style.documentInstructions && (
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Content Instructions</div>
-              <div style={{ fontSize: '13px', background: 'var(--bg-tertiary)', padding: '12px', borderRadius: '6px', whiteSpace: 'pre-wrap' }}>
-                {docConfig.contentInstructions}
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Document Instructions</div>
+              <div style={{ fontSize: '13px', background: 'var(--bg-tertiary)', padding: '12px', borderRadius: '6px', whiteSpace: 'pre-wrap', maxHeight: '300px', overflow: 'auto' }}>
+                {style.documentInstructions}
               </div>
             </div>
           )}
 
-          {/* Sections */}
-          {docConfig.sections?.length > 0 && (
+          {/* Event instructions */}
+          {style.eventInstructions && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Event Instructions</div>
+              <div style={{ fontSize: '13px', background: 'var(--bg-tertiary)', padding: '12px', borderRadius: '6px', whiteSpace: 'pre-wrap' }}>
+                {style.eventInstructions}
+              </div>
+            </div>
+          )}
+
+          {/* Roles */}
+          {style.roles?.length > 0 && (
             <div style={{ marginBottom: '16px' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                Sections ({docConfig.sections.length})
+                Roles ({style.roles.length})
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {docConfig.sections.map((section, i) => (
+                {style.roles.map((role, i) => (
                   <div
-                    key={section.id || i}
+                    key={role.role || i}
                     style={{
                       padding: '12px',
                       background: 'var(--bg-tertiary)',
@@ -418,48 +354,17 @@ function DocumentStyleViewModal({ style, onCancel }) {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <div style={{ fontWeight: 500 }}>{section.name}</div>
+                      <div style={{ fontWeight: 500 }}>{role.role}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        ~{section.wordCountTarget || 100} words
-                        {section.optional && ' (optional)'}
+                        {role.count?.min || 0}-{role.count?.max || 1}
                       </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{section.purpose}</div>
-                    {section.contentGuidance && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontStyle: 'italic' }}>
-                        {section.contentGuidance}
-                      </div>
+                    {role.description && (
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{role.description}</div>
                     )}
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* Tone & style */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-            {docConfig.toneKeywords?.length > 0 && (
-              <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Tone</div>
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {docConfig.toneKeywords.map((kw) => (
-                    <span key={kw} className="illuminator-style-keyword">{kw}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {docConfig.include?.length > 0 && (
-              <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Include</div>
-                <div style={{ fontSize: '12px' }}>{docConfig.include.join(', ')}</div>
-              </div>
-            )}
-          </div>
-
-          {docConfig.avoid?.length > 0 && (
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Avoid</div>
-              <div style={{ fontSize: '12px' }}>{docConfig.avoid.join(', ')}</div>
             </div>
           )}
 

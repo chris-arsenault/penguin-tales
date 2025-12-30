@@ -416,6 +416,7 @@ export function useEnrichmentQueue(
           entitySubtype: entity.subtype,
           entityCulture: entity.culture,
           entityLockedSummary: entity.lockedSummary,
+          entityLockedSummaryText: entity.lockedSummary && entity.summary ? entity.summary : undefined,
           ...taskFields,
           simulationRunId: runId,
           status: 'queued' as const,

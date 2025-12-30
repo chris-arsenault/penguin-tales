@@ -13,10 +13,10 @@ import {
   type TraitPalette,
   type PaletteItem,
 } from './traitRegistry';
-import { saveCostRecord, generateCostId } from './costStorage';
-import { estimateTextCost, calculateActualTextCost } from './costEstimation';
+import { saveCostRecordWithDefaults } from './costStorage';
+import { runTextCall } from './llmTextCall';
+import { parseJsonObject } from './jsonParsing';
 import { getCallConfig } from './llmModelSettings';
-import { calcTokenBudget } from './llmBudget';
 
 // ============================================================================
 // Types
@@ -162,52 +162,8 @@ Prefer:
 // Response Parsing
 // ============================================================================
 
-function extractFirstJsonObject(text: string): string | null {
-  let inString = false;
-  let escaped = false;
-  let depth = 0;
-  let start = -1;
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-
-    if (inString) {
-      if (escaped) {
-        escaped = false;
-      } else if (char === '\\') {
-        escaped = true;
-      } else if (char === '"') {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (char === '"') {
-      inString = true;
-      continue;
-    }
-
-    if (char === '{') {
-      if (depth === 0) start = i;
-      depth++;
-    } else if (char === '}') {
-      depth--;
-      if (depth === 0 && start !== -1) {
-        return text.slice(start, i + 1);
-      }
-    }
-  }
-
-  return null;
-}
-
 function parseExpansionResponse(text: string): ExpansionResponse {
-  const jsonStr = extractFirstJsonObject(text);
-  if (!jsonStr) {
-    throw new Error('No JSON object found in expansion response');
-  }
-
-  const parsed = JSON.parse(jsonStr);
+  const parsed = parseJsonObject<Record<string, unknown>>(text, 'palette expansion response');
 
   // Validate structure
   const result: ExpansionResponse = {
@@ -284,18 +240,15 @@ export async function expandPalette(
     historicalTraits
   );
 
-  const estimate = estimateTextCost(prompt, 'description', model);
-  const { totalMaxTokens, thinkingBudget } = calcTokenBudget(callConfig, 4096);
-
-  // Call LLM
-  const result = await llmClient.complete({
+  const expansionCall = await runTextCall({
+    llmClient,
+    callType: 'palette.expansion',
+    callConfig,
     systemPrompt: EXPANSION_SYSTEM_PROMPT,
     prompt,
-    model,
-    maxTokens: totalMaxTokens,
     temperature: 0.9,
-    thinkingBudget,
   });
+  const result = expansionCall.result;
 
   if (result.error || !result.text) {
     return {
@@ -323,23 +276,15 @@ export async function expandPalette(
   });
 
   // Calculate costs
-  const inputTokens = result.usage?.inputTokens || estimate.inputTokens;
-  const outputTokens = result.usage?.outputTokens || estimate.outputTokens;
-  const actualCost = result.usage
-    ? calculateActualTextCost(inputTokens, outputTokens, model)
-    : estimate.estimatedCost;
-
   const cost = {
-    estimated: estimate.estimatedCost,
-    actual: actualCost,
-    inputTokens,
-    outputTokens,
+    estimated: expansionCall.estimate.estimatedCost,
+    actual: expansionCall.usage.actualCost,
+    inputTokens: expansionCall.usage.inputTokens,
+    outputTokens: expansionCall.usage.outputTokens,
   };
 
   // Save cost record
-  await saveCostRecord({
-    id: generateCostId(),
-    timestamp: Date.now(),
+  await saveCostRecordWithDefaults({
     projectId,
     simulationRunId: request.simulationRunId,
     type: 'paletteExpansion',

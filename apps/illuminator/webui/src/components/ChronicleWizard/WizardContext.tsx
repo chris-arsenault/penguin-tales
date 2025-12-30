@@ -80,6 +80,8 @@ export interface WizardState {
   candidateRelationships: RelationshipContext[];
   selectedEventIds: Set<string>;
   selectedRelationshipIds: Set<string>;
+  /** Manual override for focal era (null = auto-detect) */
+  focalEraOverride: string | null;
 
   // Validation
   isValid: boolean;
@@ -102,6 +104,7 @@ type WizardAction =
   | { type: 'DESELECT_ALL_EVENTS' }
   | { type: 'SELECT_ALL_RELATIONSHIPS'; relationshipIds: string[] }
   | { type: 'DESELECT_ALL_RELATIONSHIPS' }
+  | { type: 'SET_FOCAL_ERA_OVERRIDE'; eraId: string | null }
   | { type: 'RESET' }
   | { type: 'INIT_FROM_SEED'; seed: ChronicleSeed; style: NarrativeStyle; entryPoint: EntityContext; candidates: EntityContext[]; relationships: RelationshipContext[]; events: NarrativeEventContext[] };
 
@@ -122,6 +125,7 @@ const initialState: WizardState = {
   candidateRelationships: [],
   selectedEventIds: new Set(),
   selectedRelationshipIds: new Set(),
+  focalEraOverride: null,
   isValid: false,
   validationErrors: [],
 };
@@ -255,6 +259,9 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     case 'DESELECT_ALL_RELATIONSHIPS':
       return { ...state, selectedRelationshipIds: new Set() };
 
+    case 'SET_FOCAL_ERA_OVERRIDE':
+      return { ...state, focalEraOverride: action.eraId };
+
     case 'RESET':
       return initialState;
 
@@ -320,10 +327,16 @@ interface WizardContextValue {
 
   // Temporal context
   temporalContext: ChronicleTemporalContext | null;
+  /** The era detected from event distribution (before any override) */
+  detectedFocalEra: EraTemporalInfo | null;
   eras: EraTemporalInfo[];
+  /** Set manual override for focal era (null to clear and use auto-detection) */
+  setFocalEraOverride: (eraId: string | null) => void;
 
   // Step 4 actions
   autoFillEvents: (preferFocalEra?: boolean) => void;
+  /** Auto-select all relevant events and relationships (used when skipping step 4) */
+  autoFillEventsAndRelationships: () => void;
   toggleEvent: (eventId: string) => void;
   toggleRelationship: (relationshipId: string) => void;
   selectAllEvents: (eventIds: string[]) => void;
@@ -366,7 +379,25 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
     [entityKinds]
   );
 
-  // Compute temporal context from selected events
+  // Compute ALL relevant events (unlimited) for focal era computation
+  // This includes all events involving assigned entities, not just top 20
+  const allRelevantEvents = useMemo(() => {
+    const events = getRelevantEvents(
+      state.roleAssignments,
+      state.candidateEvents,
+      state.narrativeStyle?.eventRules,
+      { skipLimit: true }
+    );
+    return events;
+  }, [state.roleAssignments, state.candidateEvents, state.narrativeStyle?.eventRules]);
+
+  // Compute detected focal era from ALL relevant events (not just top 20)
+  const detectedFocalEra = useMemo<EraTemporalInfo | null>(() => {
+    if (eras.length === 0) return null;
+    return computeFocalEra(allRelevantEvents, eras) || null;
+  }, [eras, allRelevantEvents]);
+
+  // Compute temporal context from selected events, using override if set
   const temporalContext = useMemo<ChronicleTemporalContext | null>(() => {
     if (eras.length === 0) return null;
 
@@ -375,8 +406,21 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
       e => state.selectedEventIds.has(e.id)
     );
 
-    return computeTemporalContext(selectedEvents, eras, state.entryPoint || undefined);
-  }, [eras, state.candidateEvents, state.selectedEventIds, state.entryPoint]);
+    const baseContext = computeTemporalContext(selectedEvents, eras, state.entryPoint || undefined);
+
+    // Apply override if set
+    if (state.focalEraOverride) {
+      const overrideEra = eras.find(e => e.id === state.focalEraOverride);
+      if (overrideEra) {
+        return {
+          ...baseContext,
+          focalEra: overrideEra,
+        };
+      }
+    }
+
+    return baseContext;
+  }, [eras, state.candidateEvents, state.selectedEventIds, state.entryPoint, state.focalEraOverride]);
 
   // Navigation
   const nextStep = useCallback(() => {
@@ -467,6 +511,11 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
     );
   }, [state.entryPoint, state.candidates, state.candidateRelationships, state.roleAssignments, kindToCategory]);
 
+  // Compute effective focal era (respecting override)
+  const effectiveFocalEraId = useMemo(() => {
+    return state.focalEraOverride || detectedFocalEra?.id || eras[0]?.id || '';
+  }, [state.focalEraOverride, detectedFocalEra, eras]);
+
   // Compute event metrics for selection
   const computeEventMetricsForSelection = useCallback(() => {
     if (!state.entryPoint || eras.length === 0) {
@@ -476,19 +525,15 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
     // Get assigned entity IDs
     const assignedEntityIds = new Set(state.roleAssignments.map(a => a.entityId));
 
-    // Compute focal era from current candidate events
-    const focalEra = computeFocalEra(state.candidateEvents, eras);
-    const focalEraId = focalEra?.id || eras[0]?.id || '';
-
     return computeAllEventMetrics(
       state.candidateEvents,
       state.entryPoint.id,
       state.entryPoint.createdAt,
-      focalEraId,
+      effectiveFocalEraId,
       eras,
       assignedEntityIds
     );
-  }, [state.entryPoint, state.candidateEvents, state.roleAssignments, eras]);
+  }, [state.entryPoint, state.candidateEvents, state.roleAssignments, eras, effectiveFocalEraId]);
 
   // Auto-fill events based on temporal alignment
   const autoFillEvents = useCallback((preferFocalEra: boolean = true) => {
@@ -510,6 +555,30 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
 
     dispatch({ type: 'SELECT_ALL_EVENTS', eventIds: suggestedEventIds });
   }, [computeEventMetricsForSelection, state.roleAssignments, state.candidateEvents, state.narrativeStyle]);
+
+  // Auto-fill all events and relationships (used when skipping step 4 with defaults)
+  const autoFillEventsAndRelationships = useCallback(() => {
+    // Get all relevant relationships
+    const relevantRelationships = getRelevantRelationships(
+      state.roleAssignments,
+      state.candidateRelationships
+    );
+    const relationshipIds = relevantRelationships.map(
+      r => `${r.src}:${r.dst}:${r.kind}`
+    );
+
+    // Get all relevant events
+    const relevantEvents = getRelevantEvents(
+      state.roleAssignments,
+      state.candidateEvents,
+      state.narrativeStyle?.eventRules
+    );
+    const eventIds = relevantEvents.map(e => e.id);
+
+    // Select all
+    dispatch({ type: 'SELECT_ALL_RELATIONSHIPS', relationshipIds });
+    dispatch({ type: 'SELECT_ALL_EVENTS', eventIds });
+  }, [state.roleAssignments, state.candidateRelationships, state.candidateEvents, state.narrativeStyle]);
 
   // Step 3: Auto-fill roles
   const autoFillRoles = useCallback((metricsMap?: Map<string, EntitySelectionMetrics>) => {
@@ -565,6 +634,11 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
     dispatch({ type: 'DESELECT_ALL_RELATIONSHIPS' });
   }, []);
 
+  // Focal era override
+  const setFocalEraOverride = useCallback((eraId: string | null) => {
+    dispatch({ type: 'SET_FOCAL_ERA_OVERRIDE', eraId });
+  }, []);
+
   // Reset
   const reset = useCallback(() => {
     dispatch({ type: 'RESET' });
@@ -616,8 +690,11 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
     computeMetrics,
     computeEventMetricsForSelection,
     temporalContext,
+    detectedFocalEra,
     eras,
+    setFocalEraOverride,
     autoFillEvents,
+    autoFillEventsAndRelationships,
     toggleEvent,
     toggleRelationship,
     selectAllEvents,
@@ -642,8 +719,11 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
     computeMetrics,
     computeEventMetricsForSelection,
     temporalContext,
+    detectedFocalEra,
     eras,
+    setFocalEraOverride,
     autoFillEvents,
+    autoFillEventsAndRelationships,
     toggleEvent,
     toggleRelationship,
     selectAllEvents,

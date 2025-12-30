@@ -98,7 +98,7 @@ function InnerWizard({
   events,
   initialSeed,
 }: InnerWizardProps) {
-  const { state, nextStep, prevStep, reset, goToStep, initFromSeed, temporalContext } = useWizard();
+  const { state, nextStep, prevStep, reset, goToStep, initFromSeed, temporalContext, autoFillEventsAndRelationships } = useWizard();
 
   // Initialize from seed when opening with one
   useEffect(() => {
@@ -181,15 +181,16 @@ function InnerWizard({
   const handleNext = useCallback(() => {
     if (state.step === 2 && state.acceptDefaults && state.roleAssignments.length > 0) {
       // Skip step 3 (roles) and step 4 (events) when accepting defaults
-      // Auto-select all events and relationships
+      autoFillEventsAndRelationships();
       goToStep(5);
     } else if (state.step === 3 && state.acceptDefaults) {
       // Skip step 4 when accepting defaults
+      autoFillEventsAndRelationships();
       goToStep(5);
     } else {
       nextStep();
     }
-  }, [state.step, state.acceptDefaults, state.roleAssignments.length, nextStep, goToStep]);
+  }, [state.step, state.acceptDefaults, state.roleAssignments.length, nextStep, goToStep, autoFillEventsAndRelationships]);
 
   if (!isOpen) return null;
 

@@ -5,7 +5,7 @@
  * Enrichment data is stored on entities and persisted to IndexedDB.
  */
 
-import type { ChronicleFormat, ChronicleGenerationContext, ChronicleImageRefs } from './chronicleTypes';
+import type { ChronicleFormat, ChronicleGenerationContext, ChronicleImageRefs, EraTemporalInfo } from './chronicleTypes';
 
 export type EnrichmentType = 'description' | 'image' | 'entityChronicle' | 'paletteExpansion';
 
@@ -152,8 +152,14 @@ export interface EnrichmentTaskBase {
   }>;
   /** Era ID this entity was created during (for trait selection) */
   entityEraId?: string;
+  /** Focal era for this entity (era the entity was created in) - for description timeline */
+  entityFocalEra?: EraTemporalInfo;
+  /** All eras in the world (for description timeline context) */
+  entityAllEras?: EraTemporalInfo[];
   /** If true, entity summary is user-defined and should not be overwritten by enrichment */
   entityLockedSummary?: boolean;
+  /** Canonical summary text (only set when lockedSummary=true) - used as input to description generation */
+  entityLockedSummaryText?: string;
   /** Elements to avoid in visual thesis (overused motifs, from project config) */
   visualAvoid?: string;
   /** Per-kind domain instructions for visual thesis (required for description tasks) */

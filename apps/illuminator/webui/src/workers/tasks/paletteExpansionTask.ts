@@ -1,21 +1,23 @@
 import type { WorkerTask } from '../../lib/enrichmentTypes';
-import { estimateTextCost, calculateActualTextCost } from '../../lib/costEstimation';
-import { saveCostRecord, generateCostId, type CostType } from '../../lib/costStorage';
+import { saveCostRecordWithDefaults, type CostType } from '../../lib/costStorage';
 import { updatePaletteItems } from '../../lib/traitRegistry';
-import { calcTokenBudget } from '../../lib/llmBudget';
+import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
+import { parseJsonObject } from './textParsing';
 import type { TaskHandler } from './taskTypes';
 
-const PALETTE_EXPANSION_SYSTEM_PROMPT = `You curate visual trait palettes for worldbuilding. Each category gets assigned to entities to ensure visual diversity.
+const PALETTE_EXPANSION_SYSTEM_PROMPT = `You curate visual trait palettes for worldbuilding. Your prompt contains:
 
-THUMBNAIL TEST:
-Each category must be visible at 128px or in black silhouette.
-Color/hue differences alone are insufficient. Semantic differences are insufficient.
-Ask: "Would an artist draw these differently?"
+WORLD DATA:
+- World: Setting and tone
+- Cultures: Visual traditions
+- Subtypes: Allowed variations (use ONLY these exact values)
+- Eras: Time periods
 
-MUNDANE MATTERS:
-The most memorable visuals have simple, drawable distinctions: a missing finger, a pronounced limp, sun-weathered skin, a distinctive hat.
-Ground categories in what survives stylization.`;
+TASK DATA:
+- Output: Subtype categories (6-10) + era categories (one per era)
+
+Silhouette test: visible at 128px, an artist would draw it differently.`;
 
 interface CultureContext {
   name: string;
@@ -134,19 +136,10 @@ interface PaletteExpansionResponse {
 }
 
 function parsePaletteExpansionResponse(text: string): PaletteExpansionResponse {
-  // Extract JSON from response
-  let jsonStr = text.trim();
-
-  // Try to find JSON object if wrapped in other text
-  const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    jsonStr = jsonMatch[0];
-  }
-
-  const parsed = JSON.parse(jsonStr);
+  const parsed = parseJsonObject<Record<string, unknown>>(text, 'palette expansion');
 
   // Handle both old format (newCategories) and new format (categories)
-  const rawCategories = parsed.categories || parsed.newCategories || [];
+  const rawCategories = (parsed.categories ?? parsed.newCategories) || [];
 
   return {
     categories: Array.isArray(rawCategories)
@@ -202,16 +195,14 @@ export const paletteExpansionTask = {
       task.paletteCultureContext
     );
 
-    const estimate = estimateTextCost(prompt, 'description', callConfig.model);
-    const { totalMaxTokens, thinkingBudget } = calcTokenBudget(callConfig, 4096);
-
-    const result = await llmClient.complete({
+    const expansionCall = await runTextCall({
+      llmClient,
+      callType: 'palette.expansion',
+      callConfig,
       systemPrompt: PALETTE_EXPANSION_SYSTEM_PROMPT,
       prompt,
-      model: callConfig.model,
-      maxTokens: totalMaxTokens,
-      thinkingBudget,
     });
+    const result = expansionCall.result;
     const debug = result.debug;
 
     if (isAborted()) {
@@ -240,21 +231,17 @@ export const paletteExpansionTask = {
     });
 
     // Calculate costs
-    const inputTokens = result.usage?.inputTokens || estimate.inputTokens;
-    const outputTokens = result.usage?.outputTokens || estimate.outputTokens;
-    const actualCost = result.usage
-      ? calculateActualTextCost(inputTokens, outputTokens, callConfig.model)
-      : estimate.estimatedCost;
+    const inputTokens = expansionCall.usage.inputTokens;
+    const outputTokens = expansionCall.usage.outputTokens;
+    const actualCost = expansionCall.usage.actualCost;
 
     // Save cost record
-    await saveCostRecord({
-      id: generateCostId(),
-      timestamp: Date.now(),
+    await saveCostRecordWithDefaults({
       projectId: task.projectId,
       simulationRunId: task.simulationRunId,
       type: 'paletteExpansion' as CostType,
       model: callConfig.model,
-      estimatedCost: estimate.estimatedCost,
+      estimatedCost: expansionCall.estimate.estimatedCost,
       actualCost,
       inputTokens,
       outputTokens,
@@ -265,7 +252,7 @@ export const paletteExpansionTask = {
       result: {
         generatedAt: Date.now(),
         model: callConfig.model,
-        estimatedCost: estimate.estimatedCost,
+        estimatedCost: expansionCall.estimate.estimatedCost,
         actualCost,
         inputTokens,
         outputTokens,

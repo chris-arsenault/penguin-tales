@@ -553,6 +553,85 @@ export default function IlluminatorRemote({
     () => resolveEraInfo(worldData?.metadata, entities),
     [worldData?.metadata, entities]
   );
+
+  // Build era temporal info for description prompts (same format as chronicle wizard)
+  const eraTemporalInfo = useMemo(() => {
+    if (!entities || !worldData?.history) return [];
+
+    // Get era entities
+    const eraEntities = entities.filter((e) => e.kind === 'era');
+    if (eraEntities.length === 0) return [];
+
+    // Sort by createdAt to determine order
+    const sortedEras = [...eraEntities].sort((a, b) => a.createdAt - b.createdAt);
+
+    // Build tick ranges from history events
+    // Note: event.era contains the era NAME (e.g. 'expansion'), not the era ID
+    const eraTickRangesByName = new Map();
+    for (const event of worldData.history) {
+      const eraName = event.era;
+      if (!eraName) continue;
+      const range = eraTickRangesByName.get(eraName) || { min: Infinity, max: -Infinity };
+      range.min = Math.min(range.min, event.tick);
+      range.max = Math.max(range.max, event.tick);
+      eraTickRangesByName.set(eraName, range);
+    }
+
+    // Helper to find range by era name (case-insensitive, handles "The X" prefix)
+    const findRangeForEra = (era) => {
+      // Try exact name match
+      if (eraTickRangesByName.has(era.name)) {
+        return eraTickRangesByName.get(era.name);
+      }
+      // Try without "The " prefix
+      const nameWithoutThe = era.name.replace(/^The\s+/i, '');
+      if (eraTickRangesByName.has(nameWithoutThe)) {
+        return eraTickRangesByName.get(nameWithoutThe);
+      }
+      // Try lowercase match
+      const lowerName = era.name.toLowerCase();
+      for (const [key, range] of eraTickRangesByName) {
+        if (key.toLowerCase() === lowerName || key.toLowerCase() === nameWithoutThe.toLowerCase()) {
+          return range;
+        }
+      }
+      return null;
+    };
+
+    const result = sortedEras.map((era, index) => {
+      const range = findRangeForEra(era) || { min: era.createdAt, max: era.createdAt };
+      return {
+        id: era.id,
+        name: era.name,
+        summary: era.summary || '',
+        order: index,
+        startTick: range.min,
+        endTick: range.max + 1, // exclusive
+        duration: range.max - range.min + 1,
+      };
+    });
+
+    console.log('[IlluminatorRemote] eraTemporalInfo built:', {
+      eraCount: result.length,
+      historyEventCount: worldData.history.length,
+      eraNameKeysInHistory: Array.from(eraTickRangesByName.keys()),
+      eraRanges: result.map(e => ({ id: e.id, name: e.name, start: e.startTick, end: e.endTick })),
+    });
+
+    return result;
+  }, [entities, worldData]);
+
+  // Find the focal era for an entity based on its creation tick
+  const findFocalEra = useCallback((createdAt) => {
+    if (!eraTemporalInfo.length) return undefined;
+    // Find era that contains this tick
+    const focalEra = eraTemporalInfo.find(
+      (era) => createdAt >= era.startTick && createdAt < era.endTick
+    );
+    // Fall back to last era if entity was created after all era ranges
+    return focalEra || eraTemporalInfo[eraTemporalInfo.length - 1];
+  }, [eraTemporalInfo]);
+
   const prominentByCulture = useMemo(() => {
     const map = new Map();
     for (const entity of entities) {
@@ -778,12 +857,18 @@ export default function IlluminatorRemote({
       );
       const entityEraId = eraRel?.dst;
 
+      // Get focal era and all eras for description timeline
+      const entityFocalEra = findFocalEra(entity.createdAt || 0);
+      const entityAllEras = eraTemporalInfo.length > 0 ? eraTemporalInfo : undefined;
+
       return {
         ...visualConfig,
         entityEraId,
+        entityFocalEra,
+        entityAllEras,
       };
     },
-    [entityGuidance, relationshipsByEntity]
+    [entityGuidance, relationshipsByEntity, findFocalEra, eraTemporalInfo]
   );
 
   // Build prompt for entity using EntityGuidance and CultureIdentities directly

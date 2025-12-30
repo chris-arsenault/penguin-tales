@@ -20,11 +20,7 @@ import {
   updateChronicleFailure,
   getChronicle,
 } from '../../lib/chronicleStorage';
-import {
-  estimateTextCost,
-  calculateActualTextCost,
-} from '../../lib/costEstimation';
-import { saveCostRecord, generateCostId, type CostType } from '../../lib/costStorage';
+import { saveCostRecordWithDefaults, type CostType } from '../../lib/costStorage';
 import {
   selectEntitiesV2,
   buildV2Prompt,
@@ -37,9 +33,9 @@ import type {
   StoryNarrativeStyle,
   DocumentNarrativeStyle,
 } from '@canonry/world-schema';
-import { calcTokenBudget } from '../../lib/llmBudget';
+import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
-import { stripLeadingWrapper, extractFirstJsonObject } from './textParsing';
+import { stripLeadingWrapper, parseJsonObject } from './textParsing';
 import type { TaskHandler, TaskContext } from './taskTypes';
 import type { TaskResult } from '../types';
 
@@ -152,21 +148,19 @@ async function executeV2GenerationStep(
   // Build single-shot prompt
   const prompt = buildV2Prompt(chronicleContext, narrativeStyle, selection);
   const styleMaxTokens = getMaxTokensFromStyle(narrativeStyle);
-  const { totalMaxTokens, thinkingBudget } = calcTokenBudget(callConfig, styleMaxTokens);
   const systemPrompt = getV2SystemPrompt(narrativeStyle);
-  const estimate = estimateTextCost(prompt, 'description', callConfig.model);
-
-  console.log(`[Worker] V2 prompt length: ${prompt.length} chars, maxTokens: ${totalMaxTokens}`);
-
-  // Single LLM call
-  const result = await llmClient.complete({
+  const generationCall = await runTextCall({
+    llmClient,
+    callType: 'chronicle.generation',
+    callConfig,
     systemPrompt,
     prompt,
-    model: callConfig.model,
-    maxTokens: totalMaxTokens,
     temperature: 0.7,
-    thinkingBudget,
+    autoMaxTokens: styleMaxTokens,
   });
+  const result = generationCall.result;
+
+  console.log(`[Worker] V2 prompt length: ${prompt.length} chars, maxTokens: ${generationCall.budget.totalMaxTokens}`);
 
   if (isAborted()) {
     return { success: false, error: 'Task aborted', debug: result.debug };
@@ -185,12 +179,10 @@ async function executeV2GenerationStep(
 
   // Calculate cost
   const cost = {
-    estimated: estimate.estimatedCost,
-    actual: result.usage
-      ? calculateActualTextCost(result.usage.inputTokens, result.usage.outputTokens, callConfig.model)
-      : estimate.estimatedCost,
-    inputTokens: result.usage?.inputTokens || estimate.inputTokens,
-    outputTokens: result.usage?.outputTokens || estimate.outputTokens,
+    estimated: generationCall.estimate.estimatedCost,
+    actual: generationCall.usage.actualCost,
+    inputTokens: generationCall.usage.inputTokens,
+    outputTokens: generationCall.usage.outputTokens,
   };
 
   // Save chronicle directly to assembled state (single-shot generation)
@@ -229,9 +221,7 @@ async function executeV2GenerationStep(
   }
 
   // Record cost
-  await saveCostRecord({
-    id: generateCostId(),
-    timestamp: Date.now(),
+  await saveCostRecordWithDefaults({
     projectId: task.projectId,
     simulationRunId: task.simulationRunId,
     entityId: task.entityId,
@@ -310,17 +300,15 @@ ${chronicleRecord.assembledContent}
 2. Maintain entity names, facts, and relationships accurately
 3. Return ONLY the revised chronicle text, no explanations`;
 
-  const editEstimate = estimateTextCost(editPrompt, 'description', callConfig.model);
-  const { totalMaxTokens, thinkingBudget } = calcTokenBudget(callConfig, 4096);
-
-  const editResult = await llmClient.complete({
+  const editCall = await runTextCall({
+    llmClient,
+    callType: 'chronicle.edit',
+    callConfig,
     systemPrompt: 'You are a narrative editor. Revise the chronicle to address the validation feedback while maintaining quality and consistency.',
     prompt: editPrompt,
-    model: callConfig.model,
-    maxTokens: totalMaxTokens,
     temperature: 0.3,
-    thinkingBudget,
   });
+  const editResult = editCall.result;
   const debug = editResult.debug;
 
   if (isAborted()) {
@@ -331,23 +319,18 @@ ${chronicleRecord.assembledContent}
     return failEdit(`Edit failed: ${editResult.error || 'Empty response'}`, debug);
   }
 
-  const actualCost = editResult.usage
-    ? calculateActualTextCost(editResult.usage.inputTokens, editResult.usage.outputTokens, callConfig.model)
-    : editEstimate.estimatedCost;
   const editCost = {
-    estimated: editEstimate.estimatedCost,
-    actual: actualCost,
-    inputTokens: editResult.usage?.inputTokens || editEstimate.inputTokens,
-    outputTokens: editResult.usage?.outputTokens || editEstimate.outputTokens,
+    estimated: editCall.estimate.estimatedCost,
+    actual: editCall.usage.actualCost,
+    inputTokens: editCall.usage.inputTokens,
+    outputTokens: editCall.usage.outputTokens,
   };
 
   const cleanedContent = stripLeadingWrapper(editResult.text);
 
   await updateChronicleEdit(chronicleId, cleanedContent, editCost);
 
-  await saveCostRecord({
-    id: generateCostId(),
-    timestamp: Date.now(),
+  await saveCostRecordWithDefaults({
     projectId: task.projectId,
     simulationRunId: task.simulationRunId,
     entityId: task.entityId,
@@ -497,28 +480,21 @@ Output ONLY the JSON, no other text.`);
  * Parse V2 validation response into CohesionReport format
  */
 function parseV2ValidationResponse(text: string): CohesionReport {
-  const cleaned = stripLeadingWrapper(text);
-  const jsonStr = extractFirstJsonObject(cleaned);
-
-  if (!jsonStr) {
-    throw new Error('No JSON object found in V2 validation response');
-  }
-
-  const parsed = JSON.parse(jsonStr);
+  const parsed = parseJsonObject<Record<string, unknown>>(text, 'V2 validation response');
 
   // Map V2 checks to V1 cohesion report format
-  const checks = parsed.checks || {};
+  const checks = (parsed.checks as Record<string, unknown>) || {};
   return {
-    overallScore: parsed.overallScore || 0,
+    overallScore: (parsed.overallScore as number) || 0,
     checks: {
-      plotStructure: checks.narrativeCoherence || { pass: true, notes: 'N/A for V2' },
-      entityConsistency: checks.entityUsage || { pass: true, notes: 'N/A for V2' },
+      plotStructure: (checks.narrativeCoherence as Record<string, unknown>) || { pass: true, notes: 'N/A for V2' },
+      entityConsistency: (checks.entityUsage as Record<string, unknown>) || { pass: true, notes: 'N/A for V2' },
       sectionGoals: [], // V2 doesn't have sections
-      resolution: checks.styleAdherence || { pass: true, notes: 'N/A for V2' },
-      factualAccuracy: checks.factualConsistency || { pass: true, notes: 'N/A for V2' },
-      themeExpression: checks.wordCount || { pass: true, notes: 'N/A for V2' },
+      resolution: (checks.styleAdherence as Record<string, unknown>) || { pass: true, notes: 'N/A for V2' },
+      factualAccuracy: (checks.factualConsistency as Record<string, unknown>) || { pass: true, notes: 'N/A for V2' },
+      themeExpression: (checks.wordCount as Record<string, unknown>) || { pass: true, notes: 'N/A for V2' },
     },
-    issues: (parsed.issues || []).map((issue: { severity?: string; checkType?: string; description?: string; suggestion?: string }) => ({
+    issues: (Array.isArray(parsed.issues) ? parsed.issues : []).map((issue: { severity?: string; checkType?: string; description?: string; suggestion?: string }) => ({
       severity: issue.severity || 'minor',
       checkType: issue.checkType || 'unknown',
       description: issue.description || '',
@@ -562,17 +538,15 @@ async function executeValidateStep(
   const validationPrompt = buildV2ValidationPrompt(chronicleRecord.assembledContent, chronicleContext, narrativeStyle);
   const systemPrompt = 'You are a narrative quality evaluator. Analyze the chronicle and provide a structured assessment.';
 
-  const validationEstimate = estimateTextCost(validationPrompt, 'description', callConfig.model);
-  const { totalMaxTokens, thinkingBudget } = calcTokenBudget(callConfig, 4096);
-
-  const validationResult = await llmClient.complete({
+  const validationCall = await runTextCall({
+    llmClient,
+    callType: 'chronicle.validation',
+    callConfig,
     systemPrompt,
     prompt: validationPrompt,
-    model: callConfig.model,
-    maxTokens: totalMaxTokens,
     temperature: 0.3,
-    thinkingBudget,
   });
+  const validationResult = validationCall.result;
   const debug = validationResult.debug;
 
   if (isAborted()) {
@@ -580,12 +554,10 @@ async function executeValidateStep(
   }
 
   const validationCost = {
-    estimated: validationEstimate.estimatedCost,
-    actual: validationResult.usage
-      ? calculateActualTextCost(validationResult.usage.inputTokens, validationResult.usage.outputTokens, callConfig.model)
-      : validationEstimate.estimatedCost,
-    inputTokens: validationResult.usage?.inputTokens || validationEstimate.inputTokens,
-    outputTokens: validationResult.usage?.outputTokens || validationEstimate.outputTokens,
+    estimated: validationCall.estimate.estimatedCost,
+    actual: validationCall.usage.actualCost,
+    inputTokens: validationCall.usage.inputTokens,
+    outputTokens: validationCall.usage.outputTokens,
   };
 
   if (validationResult.error || !validationResult.text) {
@@ -605,9 +577,7 @@ async function executeValidateStep(
   console.log('[Worker] Validation complete');
 
   // Save cost record independently
-  await saveCostRecord({
-    id: generateCostId(),
-    timestamp: Date.now(),
+  await saveCostRecordWithDefaults({
     projectId: task.projectId,
     simulationRunId: task.simulationRunId,
     entityId: task.entityId,
@@ -801,27 +771,16 @@ ${chunksDisplay}`;
  * Parse the LLM response for image refs into structured ChronicleImageRef array
  */
 function parseImageRefsResponse(text: string): ChronicleImageRef[] {
-  const cleaned = stripLeadingWrapper(text);
-  const jsonStr = extractFirstJsonObject(cleaned);
+  const parsed = parseJsonObject<Record<string, unknown>>(text, 'image refs response');
+  const rawRefs = parsed.imageRefs;
 
-  if (!jsonStr) {
-    throw new Error('No JSON object found in image refs response');
-  }
-
-  let parsed: { imageRefs?: unknown[] };
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch (e) {
-    throw new Error(`Failed to parse image refs JSON: ${e instanceof Error ? e.message : 'Unknown error'}`);
-  }
-
-  if (!parsed.imageRefs || !Array.isArray(parsed.imageRefs)) {
+  if (!rawRefs || !Array.isArray(rawRefs)) {
     throw new Error('imageRefs array not found in response');
   }
 
   const validSizes: ChronicleImageSize[] = ['small', 'medium', 'large', 'full-width'];
 
-  return parsed.imageRefs.map((ref: Record<string, unknown>, index: number) => {
+  return rawRefs.map((ref: Record<string, unknown>, index: number) => {
     const refId = `imgref_${Date.now()}_${index}`;
     const anchorText = typeof ref.anchorText === 'string' ? ref.anchorText : '';
     const rawSize = typeof ref.size === 'string' ? ref.size : 'medium';
@@ -890,17 +849,15 @@ async function executeSummaryStep(
   const callConfig = getCallConfig(config, 'chronicle.summary');
   const chronicleId = chronicleRecord.chronicleId;
   const summaryPrompt = buildSummaryPrompt(chronicleRecord.assembledContent);
-  const summaryEstimate = estimateTextCost(summaryPrompt, 'description', callConfig.model);
-  const { totalMaxTokens, thinkingBudget } = calcTokenBudget(callConfig, 512);
-
-  const summaryResult = await llmClient.complete({
+  const summaryCall = await runTextCall({
+    llmClient,
+    callType: 'chronicle.summary',
+    callConfig,
     systemPrompt: 'You are a careful editor who writes concise, faithful summaries. Always respond with valid JSON.',
     prompt: summaryPrompt,
-    model: callConfig.model,
-    maxTokens: totalMaxTokens,
     temperature: 0.3,
-    thinkingBudget,
   });
+  const summaryResult = summaryCall.result;
   const debug = summaryResult.debug;
 
   if (isAborted()) {
@@ -916,12 +873,9 @@ async function executeSummaryStep(
   let summaryText: string;
 
   try {
-    const cleaned = stripLeadingWrapper(summaryResult.text).trim();
-    // Use extractFirstJsonObject for robust JSON extraction
-    const jsonStr = extractFirstJsonObject(cleaned) || cleaned;
-    const parsed = JSON.parse(jsonStr);
-    title = parsed.title?.trim();
-    summaryText = parsed.summary?.trim();
+    const parsed = parseJsonObject<Record<string, unknown>>(summaryResult.text, 'summary response');
+    title = typeof parsed.title === 'string' ? parsed.title.trim() : undefined;
+    summaryText = typeof parsed.summary === 'string' ? parsed.summary.trim() : '';
     if (!summaryText) {
       return { success: false, error: 'Summary response missing summary field', debug };
     }
@@ -934,19 +888,15 @@ async function executeSummaryStep(
   }
 
   const summaryCost = {
-    estimated: summaryEstimate.estimatedCost,
-    actual: summaryResult.usage
-      ? calculateActualTextCost(summaryResult.usage.inputTokens, summaryResult.usage.outputTokens, callConfig.model)
-      : summaryEstimate.estimatedCost,
-    inputTokens: summaryResult.usage?.inputTokens || summaryEstimate.inputTokens,
-    outputTokens: summaryResult.usage?.outputTokens || summaryEstimate.outputTokens,
+    estimated: summaryCall.estimate.estimatedCost,
+    actual: summaryCall.usage.actualCost,
+    inputTokens: summaryCall.usage.inputTokens,
+    outputTokens: summaryCall.usage.outputTokens,
   };
 
   await updateChronicleSummary(chronicleId, summaryText, summaryCost, callConfig.model, title);
 
-  await saveCostRecord({
-    id: generateCostId(),
-    timestamp: Date.now(),
+  await saveCostRecordWithDefaults({
     projectId: task.projectId,
     simulationRunId: task.simulationRunId,
     entityId: task.entityId,
@@ -994,17 +944,15 @@ async function executeImageRefsStep(
   const chronicleId = chronicleRecord.chronicleId;
   const chronicleContext = task.chronicleContext!;
   const imageRefsPrompt = buildImageRefsPrompt(chronicleRecord.assembledContent, chronicleContext);
-  const imageRefsEstimate = estimateTextCost(imageRefsPrompt, 'description', callConfig.model);
-  const { totalMaxTokens, thinkingBudget } = calcTokenBudget(callConfig, 2048);
-
-  const imageRefsResult = await llmClient.complete({
+  const imageRefsCall = await runTextCall({
+    llmClient,
+    callType: 'chronicle.imageRefs',
+    callConfig,
     systemPrompt: 'You are planning draft image placements for a chronicle.',
     prompt: imageRefsPrompt,
-    model: callConfig.model,
-    maxTokens: totalMaxTokens,
     temperature: 0.4,
-    thinkingBudget,
   });
+  const imageRefsResult = imageRefsCall.result;
   const debug = imageRefsResult.debug;
 
   if (isAborted()) {
@@ -1052,19 +1000,15 @@ async function executeImageRefsStep(
   };
 
   const imageRefsCost = {
-    estimated: imageRefsEstimate.estimatedCost,
-    actual: imageRefsResult.usage
-      ? calculateActualTextCost(imageRefsResult.usage.inputTokens, imageRefsResult.usage.outputTokens, callConfig.model)
-      : imageRefsEstimate.estimatedCost,
-    inputTokens: imageRefsResult.usage?.inputTokens || imageRefsEstimate.inputTokens,
-    outputTokens: imageRefsResult.usage?.outputTokens || imageRefsEstimate.outputTokens,
+    estimated: imageRefsCall.estimate.estimatedCost,
+    actual: imageRefsCall.usage.actualCost,
+    inputTokens: imageRefsCall.usage.inputTokens,
+    outputTokens: imageRefsCall.usage.outputTokens,
   };
 
   await updateChronicleImageRefs(chronicleId, imageRefs, imageRefsCost, callConfig.model);
 
-  await saveCostRecord({
-    id: generateCostId(),
-    timestamp: Date.now(),
+  await saveCostRecordWithDefaults({
     projectId: task.projectId,
     simulationRunId: task.simulationRunId,
     entityId: task.entityId,

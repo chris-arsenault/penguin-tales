@@ -1,28 +1,82 @@
 import type { WorkerTask, DescriptionChainDebug } from '../../lib/enrichmentTypes';
-import { estimateTextCost, calculateActualTextCost } from '../../lib/costEstimation';
-import { saveCostRecord, generateCostId, type CostType } from '../../lib/costStorage';
+import type { EraTemporalInfo } from '../../lib/chronicleTypes';
+import { saveCostRecordWithDefaults, type CostType } from '../../lib/costStorage';
 import {
   getTraitGuidance,
   registerUsedTraits,
   incrementPaletteUsage,
   type TraitGuidance,
 } from '../../lib/traitRegistry';
-import { calcTokenBudget } from '../../lib/llmBudget';
+import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
-import { stripLeadingWrapper, extractFirstJsonObject } from './textParsing';
+import { parseJsonObject } from './textParsing';
 import type { TaskHandler } from './taskTypes';
 
+// ============================================================================
+// Era Timeline Helpers (same format as chronicle prompts)
+// ============================================================================
+
 /**
- * Helper to parse a single JSON field from LLM response
+ * Add "the" article to an era name, handling names that already start with "The".
  */
-function parseJsonField<T>(text: string, fieldName: string): T {
-  const cleaned = stripLeadingWrapper(text);
-  const candidate = extractFirstJsonObject(cleaned) || cleaned;
-  const parsed = JSON.parse(candidate);
-  if (!parsed || typeof parsed !== 'object') {
-    throw new Error(`Expected JSON object with ${fieldName}`);
+function withArticle(name: string): string {
+  if (name.startsWith('The ')) {
+    return 'the ' + name.slice(4);
   }
-  return parsed as T;
+  return 'the ' + name;
+}
+
+/**
+ * Build a natural language world timeline.
+ * E.g., "The world passed through the Dawn Age, then the Age of Expansion. It now exists in the Clever Ice Age."
+ */
+function buildWorldTimeline(eras: EraTemporalInfo[], focalEraId: string): string {
+  const sorted = [...eras].sort((a, b) => a.order - b.order);
+  const focalIndex = sorted.findIndex(e => e.id === focalEraId);
+
+  if (focalIndex === -1) return '';
+
+  const past = sorted.slice(0, focalIndex);
+  const current = sorted[focalIndex];
+  const future = sorted.slice(focalIndex + 1);
+
+  const parts: string[] = [];
+
+  if (past.length > 0) {
+    const pastNames = past.map(e => withArticle(e.name)).join(', then ');
+    parts.push(`The world passed through ${pastNames}.`);
+  }
+
+  parts.push(`It now exists in ${withArticle(current.name)}.`);
+
+  if (future.length > 0) {
+    const futureNames = future.map(e => withArticle(e.name)).join(', then ');
+    parts.push(`${futureNames} ${future.length === 1 ? 'lies' : 'lie'} ahead.`);
+  }
+
+  return parts.join(' ');
+}
+
+/**
+ * Build the historical context section for description prompts.
+ * Includes focal era name, summary, and world timeline.
+ */
+function buildHistoricalContext(focalEra: EraTemporalInfo | undefined, allEras: EraTemporalInfo[] | undefined): string {
+  if (!focalEra || !allEras || allEras.length === 0) return '';
+
+  const lines: string[] = ['HISTORICAL CONTEXT:'];
+
+  // Focal era name and summary
+  lines.push(`Era: ${focalEra.name}`);
+  if (focalEra.summary) {
+    lines.push(focalEra.summary);
+  }
+
+  // World timeline (natural language)
+  lines.push('');
+  lines.push(buildWorldTimeline(allEras, focalEra.id));
+
+  return lines.join('\n');
 }
 
 // ============================================================================
@@ -31,39 +85,42 @@ function parseJsonField<T>(text: string, fieldName: string): T {
 
 /**
  * Step 1: Narrative prompt - rich description, summary, aliases
- * This is the creative writing step - prioritize personality, relationships, legacy
+ *
+ * @param lockedSummary - If provided, this is a canonical summary to expand (not generate)
  */
-function buildNarrativePrompt(): string {
-  return `You are a creative writer helping to build rich, consistent world lore.
+function buildNarrativePrompt(lockedSummary?: string): string {
+  if (lockedSummary) {
+    // Mode: Expand canonical summary into description
+    return `You expand canonical lore into rich descriptions. Your prompt contains:
 
-READING THE DATA:
-- Prominence indicates fame scope: "legendary" = world-shaping, "locally known" = personal-scale stories
-- Status indicates current state: "active" = alive/operating, "historical" = no longer active (past tense appropriate)
-- Relationships marked [strong] are defining connections; [moderate] are significant; [weak] are flavor
-- Tags like "leader: true" indicate core identity traits - these should inform characterization
-- Cultural Peers are other entities of same culture - use for grounding references
-- Era indicates the time period most associated with this entity
+CANONICAL SUMMARY (do not contradict):
+"${lockedSummary}"
 
-Use [strong] relationships as anchors for the narrative. [weak] relationships are color, not plot.
+WORLD DATA:
+- Historical Context: Era and world timeline
+- Entity: Core identity (kind, status, prominence, culture)
+- Relationships: Connections with strength markers
+- Cultural Identity: How this culture thinks, speaks, acts
 
-WRITING FOCUS:
-- Personality: How do they think, speak, carry themselves?
-- Relationships: What ONE [strong] connection most shaped who they are?
-- Legacy: How are they remembered? What mark did they leave?
-- Specificity: Name actual places, people, events from their world
+TASK DATA:
+- Output: JSON with description, aliases
 
-IMPORTANT: Do NOT write a tour of relationships. The description should be ABOUT the entity, not a catalog. Reference ONE relationship that truly defines them.
+Expand and enrich. Don't paraphrase the summary.`;
+  }
 
-Bad: "She oversees the treasury of Place X, discovered the caverns of Place Y, and manages trade at Place Z."
-Good: "Pisa carried herself with the measured deliberation of someone who had learned to read currents beneath ice. She rose to prominence under High-Beak Auditor Selka's tutelage, absorbing the auditor's obsession with precise accounting but tempering it with genuine concern for survival."
+  // Standard mode: Generate both summary and description
+  return `You are a creative writer building world lore. Your prompt contains:
 
-OUTPUT FORMAT:
-Return JSON with keys: summary, description, aliases
-- description: 3-5 sentences, rich with personality and world-grounding
-- summary: 1-2 sentences, compressed and faithful to description
-- aliases: array of alternate names or titles (can be empty)
+WORLD DATA:
+- Historical Context: Era and world timeline
+- Entity: Core identity (kind, status, prominence, culture)
+- Relationships: Connections with strength markers
+- Cultural Identity: How this culture thinks, speaks, acts
 
-Be vivid and specific. Let the entity's nature lead.`;
+TASK DATA:
+- Output: JSON with summary, description, aliases
+
+Write personality over plot. One [strong] relationship anchors the narrative.`;
 }
 
 /**
@@ -76,29 +133,19 @@ function buildVisualThesisPrompt(
   kindInstructions: string,
   visualAvoid?: string
 ): string {
-  // Common rules at top
-  let prompt = `RULES (non-negotiable):
-- ONE sentence only - no compound sentences
-- Describe WHAT you see, not WHY it exists
-- No: "as if", "as though", "suggesting", "seeming"
-- Shape only - no colors, textures, or surface details`;
+  let prompt = `You distill descriptions into dominant visual signals. Your prompt contains:
 
-  // Add project-specific avoid list
+- Visual Context: Entity basics and culture
+- Description: Source material
+- Per-Kind Guidance: What to emphasize
+
+Output ONE sentence. Shape only - no color, texture, or suggestive language ("as if", "suggesting").`;
+
   if (visualAvoid) {
-    prompt += `
-
-AVOID: ${visualAvoid}`;
+    prompt += `\n\nAVOID: ${visualAvoid}`;
   }
 
-  // Per-kind instructions (REQUIRED)
-  prompt += `
-
-${kindInstructions}`;
-
-  // Common output format - plain text
-  prompt += `
-
-OUTPUT: One sentence describing the dominant visual feature. No JSON, no preamble.`;
+  prompt += `\n\n${kindInstructions}`;
 
   return prompt;
 }
@@ -115,36 +162,27 @@ function buildVisualTraitsPrompt(
   guidance?: TraitGuidance,
   subtype?: string
 ): string {
-  // Per-kind instructions (REQUIRED)
-  let prompt = kindInstructions;
+  let prompt = `You expand visual theses with supporting details. Your prompt contains:
 
-  // Add subtype context if available
+- Thesis: Primary visual signal (don't repeat)
+- Visual Context: Entity basics and culture
+- Description: Source for additional features
+- Palette Guidance: Required directions (if provided)
+
+Output 2-4 traits, one per line. Each 3-8 words, adding something NEW.`;
+
+  prompt += `\n\n${kindInstructions}`;
+
   if (subtype) {
-    prompt += `\n\nSUBTYPE: ${subtype} (let this inform the visual style)`;
+    prompt += `\n\nSUBTYPE: ${subtype}`;
   }
 
-  // Add palette guidance if available - REQUIRED directions, not optional
   if (guidance && guidance.assignedCategories.length > 0) {
-    prompt += `
-
-REQUIRED DIRECTIONS (you MUST address at least one):
-${guidance.assignedCategories.map(p => `
-### ${p.category}
-${p.description}
-Examples: ${p.examples.join(', ')}`).join('\n')}
-
-At least one of your traits MUST explore one of these assigned directions. The other traits can go beyond them if the description suggests something more distinctive.`;
+    prompt += `\n\nREQUIRED DIRECTIONS (address at least one):`;
+    for (const p of guidance.assignedCategories) {
+      prompt += `\n- ${p.category}: ${p.description} (e.g., ${p.examples.slice(0, 2).join(', ')})`;
+    }
   }
-
-  // Common output format - one trait per line
-  prompt += `
-
-RULES:
-- 2-4 traits only, each 3-8 words
-- Each trait adds something NEW to the visual identity
-${guidance && guidance.assignedCategories.length > 0 ? '- At least ONE trait must address an assigned direction above' : ''}
-
-OUTPUT: 2-4 traits, one per line. No numbering, no JSON, no preamble.`;
 
   return prompt;
 }
@@ -172,22 +210,33 @@ export const descriptionTask = {
     console.log('[Worker] Description chain step 1: Narrative');
 
     const narrativeConfig = getCallConfig(config, 'description.narrative');
-    const { totalMaxTokens: narrativeMaxTokens, thinkingBudget: narrativeThinking } = calcTokenBudget(narrativeConfig, 1024);
 
     // Strip output format instructions from task.prompt - each step has its own format
-    const entityContext = task.prompt
+    const baseEntityContext = task.prompt
       .replace(/OUTPUT FORMAT.*$/s, '')
       .replace(/FORMAT:\s*\n.*$/s, '')
       .trim();
 
-    const narrativeResult = await llmClient.complete({
-      systemPrompt: buildNarrativePrompt(),
+    // Build historical context (era timeline) if era info is available
+    const historicalContext = buildHistoricalContext(task.entityFocalEra, task.entityAllEras);
+
+    // Combine historical context with entity context
+    const entityContext = historicalContext
+      ? `${historicalContext}\n\n---\n\n${baseEntityContext}`
+      : baseEntityContext;
+
+    // Use locked summary as input if provided (for seed entities, eras)
+    const lockedSummary = task.entityLockedSummaryText;
+
+    const narrativeCall = await runTextCall({
+      llmClient,
+      callType: 'description.narrative',
+      callConfig: narrativeConfig,
+      systemPrompt: buildNarrativePrompt(lockedSummary),
       prompt: entityContext,
-      model: narrativeConfig.model,
-      maxTokens: narrativeMaxTokens,
       temperature: 0.7,
-      thinkingBudget: narrativeThinking,
     });
+    const narrativeResult = narrativeCall.result;
     chainDebug.narrative = narrativeResult.debug;
 
     if (isAborted()) {
@@ -201,16 +250,33 @@ export const descriptionTask = {
     // Parse narrative response
     let narrativePayload: { summary: string; description: string; aliases: string[] };
     try {
-      const parsed = parseJsonField<Record<string, unknown>>(narrativeResult.text, 'summary/description');
-      narrativePayload = {
-        summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
-        description: typeof parsed.description === 'string' ? parsed.description.trim() : '',
-        aliases: Array.isArray(parsed.aliases)
-          ? parsed.aliases.filter((a): a is string => typeof a === 'string').map(a => a.trim()).filter(Boolean)
-          : [],
-      };
-      if (!narrativePayload.summary || !narrativePayload.description) {
-        throw new Error('Missing summary or description');
+      const parsed = parseJsonObject<Record<string, unknown>>(narrativeResult.text, 'description');
+      const description = typeof parsed.description === 'string' ? parsed.description.trim() : '';
+      const aliases = Array.isArray(parsed.aliases)
+        ? parsed.aliases.filter((a): a is string => typeof a === 'string').map(a => a.trim()).filter(Boolean)
+        : [];
+
+      if (lockedSummary) {
+        // Locked summary mode: use canonical summary, only description from LLM
+        if (!description) {
+          throw new Error('Missing description');
+        }
+        narrativePayload = {
+          summary: lockedSummary,
+          description,
+          aliases,
+        };
+      } else {
+        // Standard mode: parse both summary and description from LLM
+        const summary = typeof parsed.summary === 'string' ? parsed.summary.trim() : '';
+        if (!summary || !description) {
+          throw new Error('Missing summary or description');
+        }
+        narrativePayload = {
+          summary,
+          description,
+          aliases,
+        };
       }
     } catch (err) {
       return {
@@ -220,12 +286,9 @@ export const descriptionTask = {
       };
     }
 
-    // Accumulate costs
-    if (narrativeResult.usage) {
-      totalInputTokens += narrativeResult.usage.inputTokens;
-      totalOutputTokens += narrativeResult.usage.outputTokens;
-      totalActualCost += calculateActualTextCost(narrativeResult.usage.inputTokens, narrativeResult.usage.outputTokens, narrativeConfig.model);
-    }
+    totalInputTokens += narrativeCall.usage.inputTokens;
+    totalOutputTokens += narrativeCall.usage.outputTokens;
+    totalActualCost += narrativeCall.usage.actualCost;
 
     // ============================================================================
     // Step 2: Visual Thesis (given description)
@@ -233,7 +296,6 @@ export const descriptionTask = {
     console.log('[Worker] Description chain step 2: Visual Thesis');
 
     const thesisConfig = getCallConfig(config, 'description.visualThesis');
-    const { totalMaxTokens: thesisMaxTokens, thinkingBudget: thesisThinking } = calcTokenBudget(thesisConfig, 256);
 
     // Build slimmed down visual context - remove noise that doesn't inform silhouette
     // Extract: entity basics and CULTURAL VISUAL IDENTITY (for visual thesis/traits)
@@ -264,14 +326,15 @@ Generate the visual thesis.`;
     // Build system prompt with per-kind instructions
     const thesisSystemPrompt = buildVisualThesisPrompt(task.visualThesisInstructions, task.visualAvoid);
 
-    const thesisResult = await llmClient.complete({
+    const thesisCall = await runTextCall({
+      llmClient,
+      callType: 'description.visualThesis',
+      callConfig: thesisConfig,
       systemPrompt: thesisSystemPrompt,
       prompt: thesisPrompt,
-      model: thesisConfig.model,
-      maxTokens: thesisMaxTokens,
       temperature: 0.7,
-      thinkingBudget: thesisThinking,
     });
+    const thesisResult = thesisCall.result;
     chainDebug.thesis = thesisResult.debug;
 
     if (isAborted()) {
@@ -292,12 +355,9 @@ Generate the visual thesis.`;
       };
     }
 
-    // Accumulate costs
-    if (thesisResult.usage) {
-      totalInputTokens += thesisResult.usage.inputTokens;
-      totalOutputTokens += thesisResult.usage.outputTokens;
-      totalActualCost += calculateActualTextCost(thesisResult.usage.inputTokens, thesisResult.usage.outputTokens, thesisConfig.model);
-    }
+    totalInputTokens += thesisCall.usage.inputTokens;
+    totalOutputTokens += thesisCall.usage.outputTokens;
+    totalActualCost += thesisCall.usage.actualCost;
 
     // ============================================================================
     // Step 3: Visual Traits (given thesis + palette guidance)
@@ -305,7 +365,6 @@ Generate the visual thesis.`;
     console.log('[Worker] Description chain step 3: Visual Traits');
 
     const traitsConfig = getCallConfig(config, 'description.visualTraits');
-    const { totalMaxTokens: traitsMaxTokens, thinkingBudget: traitsThinking } = calcTokenBudget(traitsConfig, 512);
 
     // Fetch trait guidance for diversity (run-scoped avoidance, project-scoped palette)
     // Pass subtype and era to filter categories relevant to this entity
@@ -348,14 +407,15 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
     // Build system prompt with per-kind instructions (include subtype for context)
     const traitsSystemPrompt = buildVisualTraitsPrompt(task.visualTraitsInstructions, traitGuidance, task.entitySubtype);
 
-    const traitsResult = await llmClient.complete({
+    const traitsCall = await runTextCall({
+      llmClient,
+      callType: 'description.visualTraits',
+      callConfig: traitsConfig,
       systemPrompt: traitsSystemPrompt,
       prompt: traitsPrompt,
-      model: traitsConfig.model,
-      maxTokens: traitsMaxTokens,
       temperature: 0.7,
-      thinkingBudget: traitsThinking,
     });
+    const traitsResult = traitsCall.result;
     chainDebug.traits = traitsResult.debug;
 
     if (isAborted()) {
@@ -372,12 +432,9 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
     .map(line => line.replace(/^[-*\u2022]\s*/, '').trim())  // Strip bullet markers
     .filter(line => line.length > 0);  // Filter empty lines
 
-    // Accumulate costs
-    if (traitsResult.usage) {
-      totalInputTokens += traitsResult.usage.inputTokens;
-      totalOutputTokens += traitsResult.usage.outputTokens;
-      totalActualCost += calculateActualTextCost(traitsResult.usage.inputTokens, traitsResult.usage.outputTokens, traitsConfig.model);
-    }
+    totalInputTokens += traitsCall.usage.inputTokens;
+    totalOutputTokens += traitsCall.usage.outputTokens;
+    totalActualCost += traitsCall.usage.actualCost;
 
     // ============================================================================
     // Register traits and save cost record
@@ -402,13 +459,14 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
       console.warn('[Worker] Failed to register traits:', err);
     }
 
-    // Calculate estimated cost (for comparison) - use narrative model as base
-    const estimate = estimateTextCost(task.prompt, 'description', narrativeConfig.model);
+    const estimatedTotals = {
+      estimatedCost: narrativeCall.estimate.estimatedCost + thesisCall.estimate.estimatedCost + traitsCall.estimate.estimatedCost,
+      inputTokens: narrativeCall.estimate.inputTokens + thesisCall.estimate.inputTokens + traitsCall.estimate.inputTokens,
+      outputTokens: narrativeCall.estimate.outputTokens + thesisCall.estimate.outputTokens + traitsCall.estimate.outputTokens,
+    };
 
     // Save cost record with combined totals (use narrative model as primary for record)
-    await saveCostRecord({
-      id: generateCostId(),
-      timestamp: Date.now(),
+    await saveCostRecordWithDefaults({
       projectId: task.projectId,
       simulationRunId: task.simulationRunId,
       entityId: task.entityId,
@@ -416,7 +474,7 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
       entityKind: task.entityKind,
       type: 'description' as CostType,
       model: narrativeConfig.model,
-      estimatedCost: estimate.estimatedCost,
+      estimatedCost: estimatedTotals.estimatedCost,
       actualCost: totalActualCost,
       inputTokens: totalInputTokens,
       outputTokens: totalOutputTokens,
@@ -434,7 +492,7 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
         visualTraits,
         generatedAt: Date.now(),
         model: narrativeConfig.model,  // Primary model for display
-        estimatedCost: estimate.estimatedCost,
+        estimatedCost: estimatedTotals.estimatedCost,
         actualCost: totalActualCost,
         inputTokens: totalInputTokens,
         outputTokens: totalOutputTokens,

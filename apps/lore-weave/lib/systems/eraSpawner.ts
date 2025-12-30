@@ -1,6 +1,5 @@
 import { SimulationSystem, SystemResult, Era } from '../engine/types';
 import { HardState } from '../core/worldTypes';
-import { slugifyName, generateEntityIdFromName } from '../utils';
 import {
   FRAMEWORK_ENTITY_KINDS,
   FRAMEWORK_STATUS,
@@ -40,7 +39,8 @@ export function createEraEntity(
   previousEra?: HardState,
   id?: string
 ): { entity: HardState; relationship?: any } {
-  const resolvedId = id ?? slugifyName(configEra.name);
+  // Use config ID as entity ID - this must match the era field in history events
+  const resolvedId = id ?? configEra.id;
   const eraEntity: HardState = {
     id: resolvedId,
     kind: FRAMEWORK_ENTITY_KINDS.ERA,
@@ -128,17 +128,12 @@ export function createEraSpawnerSystem(config: EraSpawnerConfig): SimulationSyst
 
       // LAZY SPAWNING: Only create the FIRST era at init
       const firstEraConfig = configEras[0];
-      const firstEraId = generateEntityIdFromName(
-        firstEraConfig.name,
-        candidate => graphView.hasEntity(candidate),
-        (message, context) => graphView.log('warn', message, context)
-      );
       const { entity: firstEra } = createEraEntity(
         firstEraConfig,
         graphView.tick,
         FRAMEWORK_STATUS.CURRENT,
         undefined,
-        firstEraId
+        firstEraConfig.id  // Use config ID directly
       );
 
       // Add era entity to graph

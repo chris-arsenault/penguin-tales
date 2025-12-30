@@ -44,6 +44,11 @@ export interface CostRecord {
   outputTokens: number;
 }
 
+export type CostRecordInput = Omit<CostRecord, 'id' | 'timestamp'> & {
+  id?: string;
+  timestamp?: number;
+};
+
 export interface CostSummary {
   totalEstimated: number;
   totalActual: number;
@@ -116,6 +121,28 @@ export function generateCostId(): string {
 }
 
 /**
+ * Create a cost record with default id and timestamp.
+ */
+export function createCostRecord(input: CostRecordInput): CostRecord {
+  return {
+    id: input.id ?? generateCostId(),
+    timestamp: input.timestamp ?? Date.now(),
+    projectId: input.projectId,
+    simulationRunId: input.simulationRunId,
+    entityId: input.entityId,
+    entityName: input.entityName,
+    entityKind: input.entityKind,
+    chronicleId: input.chronicleId,
+    type: input.type,
+    model: input.model,
+    estimatedCost: input.estimatedCost,
+    actualCost: input.actualCost,
+    inputTokens: input.inputTokens,
+    outputTokens: input.outputTokens,
+  };
+}
+
+/**
  * Save a cost record
  */
 export async function saveCostRecord(record: CostRecord): Promise<void> {
@@ -127,6 +154,13 @@ export async function saveCostRecord(record: CostRecord): Promise<void> {
     tx.onerror = () => reject(tx.error || new Error('Failed to save cost record'));
     tx.objectStore(COST_STORE_NAME).put(record);
   });
+}
+
+/**
+ * Save a cost record with default id/timestamp if not provided.
+ */
+export async function saveCostRecordWithDefaults(input: CostRecordInput): Promise<void> {
+  return saveCostRecord(createCostRecord(input));
 }
 
 /**

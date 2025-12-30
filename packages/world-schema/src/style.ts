@@ -31,19 +31,11 @@ export type {
   PacingConfig,
   NarrativeFormat,
   StoryNarrativeStyle,
-  // Document style support types
-  EntitySelectionRules,
-  EventSelectionRules,
-  BaseNarrativeStyle,
 } from './narrativeStyles.js';
 export { DEFAULT_NARRATIVE_STYLES } from './narrativeStyles.js';
 
 // Document Styles (in-universe documents)
-export type {
-  DocumentSection,
-  DocumentConfig,
-  DocumentNarrativeStyle,
-} from './documentStyles.js';
+export type { DocumentNarrativeStyle } from './documentStyles.js';
 export { DEFAULT_DOCUMENT_STYLES } from './documentStyles.js';
 
 // =============================================================================

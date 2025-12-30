@@ -26,6 +26,9 @@ export default function EventResolutionStep() {
     deselectAllRelationships,
     computeEventMetricsForSelection,
     temporalContext,
+    detectedFocalEra,
+    eras,
+    setFocalEraOverride,
     autoFillEvents,
   } = useWizard();
 
@@ -153,38 +156,36 @@ export default function EventResolutionStep() {
             <span style={{ fontWeight: 500 }}>
               Temporal Focus:
             </span>
-            <span style={{
-              padding: '2px 8px',
-              background: 'var(--accent-color)',
-              color: 'white',
-              borderRadius: '4px',
-              fontSize: '11px',
-            }}>
-              {temporalContext.focalEra.name}
-            </span>
-            <span style={{ color: 'var(--text-muted)' }}>
-              {temporalContext.temporalDescription}
-            </span>
-            {temporalContext.isMultiEra && (
-              <span style={{
-                padding: '2px 6px',
-                background: 'rgba(245, 158, 11, 0.2)',
-                color: 'var(--warning)',
-                borderRadius: '4px',
-                fontSize: '10px',
-              }}>
-                Multi-era
-              </span>
+            <select
+              value={state.focalEraOverride || temporalContext.focalEra.id}
+              onChange={(e) => {
+                const selectedId = e.target.value;
+                // If selecting the detected era, clear override
+                if (detectedFocalEra && selectedId === detectedFocalEra.id) {
+                  setFocalEraOverride(null);
+                } else {
+                  setFocalEraOverride(selectedId);
+                }
+              }}
+              className="illuminator-select"
+              style={{ padding: '2px 8px', fontSize: '11px', minWidth: '140px' }}
+            >
+              {eras.map(era => (
+                <option key={era.id} value={era.id}>
+                  {era.name}{detectedFocalEra?.id === era.id ? ' (detected)' : ''}
+                </option>
+              ))}
+            </select>
+            {state.focalEraOverride && (
+              <button
+                onClick={() => setFocalEraOverride(null)}
+                className="illuminator-btn"
+                style={{ padding: '2px 6px', fontSize: '10px' }}
+                title="Reset to detected era"
+              >
+                Reset
+              </button>
             )}
-            <span style={{
-              padding: '2px 6px',
-              background: 'var(--bg-secondary)',
-              borderRadius: '4px',
-              fontSize: '10px',
-              color: 'var(--text-muted)',
-            }}>
-              {temporalContext.temporalScope}
-            </span>
           </div>
         )}
       </div>

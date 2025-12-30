@@ -59,20 +59,16 @@ export type {
   ArtisticStyle,
   CompositionStyle,
   ColorPalette,
-  BaseNarrativeStyle,
   StoryNarrativeStyle,
   DocumentNarrativeStyle,
   NarrativeStyle,
   NarrativeFormat,
   RoleDefinition,
-  EntitySelectionRules,
-  EventSelectionRules,
   PacingConfig,
-  DocumentSection,
-  DocumentConfig,
   StyleLibrary,
   StyleSelection,
 } from './style.js';
+
 
 export {
   DEFAULT_ARTISTIC_STYLES,

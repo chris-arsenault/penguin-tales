@@ -19,6 +19,8 @@
  * - Typical image generation uses ~300 input tokens, ~6500 output tokens
  */
 
+import { LLM_CALL_METADATA, type LLMCallType } from './llmCallTypes';
+
 // Rate per million tokens
 export interface TextModelRates {
   inputPerMillion: number;
@@ -112,6 +114,8 @@ const EXPECTED_OUTPUT_TOKENS: Record<string, number> = {
   description: 300, // ~230 words
 };
 
+const DEFAULT_CALL_OUTPUT_TOKENS = 300;
+
 /**
  * Estimate tokens from text (word count based)
  */
@@ -131,6 +135,39 @@ export function estimateTextCost(
   const rates = TEXT_MODEL_RATES[model] || TEXT_MODEL_RATES['claude-sonnet-4-20250514'];
   const inputTokens = estimateTokens(prompt);
   const outputTokens = EXPECTED_OUTPUT_TOKENS[type] || 300;
+
+  const inputCost = (inputTokens / 1_000_000) * rates.inputPerMillion;
+  const outputCost = (outputTokens / 1_000_000) * rates.outputPerMillion;
+
+  return {
+    inputTokens,
+    outputTokens,
+    estimatedCost: inputCost + outputCost,
+  };
+}
+
+function resolveOutputTokensForCall(callType: LLMCallType, override?: number): number {
+  if (override && override > 0) {
+    return override;
+  }
+
+  const defaultMaxTokens = LLM_CALL_METADATA[callType]?.defaults.maxTokens ?? 0;
+  if (defaultMaxTokens > 0) {
+    return defaultMaxTokens;
+  }
+
+  return DEFAULT_CALL_OUTPUT_TOKENS;
+}
+
+export function estimateTextCostForCall(
+  prompt: string,
+  callType: LLMCallType,
+  model: string,
+  outputTokensOverride?: number
+): { inputTokens: number; outputTokens: number; estimatedCost: number } {
+  const rates = TEXT_MODEL_RATES[model] || TEXT_MODEL_RATES['claude-sonnet-4-20250514'];
+  const inputTokens = estimateTokens(prompt);
+  const outputTokens = resolveOutputTokensForCall(callType, outputTokensOverride);
 
   const inputCost = (inputTokens / 1_000_000) * rates.inputPerMillion;
   const outputCost = (outputTokens / 1_000_000) * rates.outputPerMillion;

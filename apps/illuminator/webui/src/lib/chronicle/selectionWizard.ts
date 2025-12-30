@@ -16,8 +16,6 @@ import type {
 } from '../chronicleTypes';
 import type {
   NarrativeStyle,
-  EntitySelectionRules,
-  EventSelectionRules,
   RoleDefinition,
   EntityCategory,
   EntityKindDefinition,
@@ -296,6 +294,22 @@ export function findEraForTick(tick: number, eras: EraTemporalInfo[]): EraTempor
 }
 
 /**
+ * Find era for an event - by direct ID match or tick-based fallback.
+ */
+export function findEraForEvent(
+  event: { tick: number; era?: string },
+  eras: EraTemporalInfo[]
+): EraTemporalInfo | undefined {
+  // Direct ID match (preferred - event.era should match era.id)
+  if (event.era) {
+    const byId = eras.find(e => e.id === event.era);
+    if (byId) return byId;
+  }
+  // Fall back to tick-based matching
+  return findEraForTick(event.tick, eras);
+}
+
+/**
  * Compute the focal era from a set of events.
  * Returns the era that contains the most events.
  */
@@ -310,7 +324,7 @@ export function computeFocalEra(
   // Count events per era
   const eraCounts = new Map<string, number>();
   for (const event of events) {
-    const era = findEraForTick(event.tick, eras);
+    const era = findEraForEvent(event, eras);
     if (era) {
       eraCounts.set(era.id, (eraCounts.get(era.id) || 0) + 1);
     }
@@ -359,10 +373,10 @@ export function computeTemporalContext(
 
   const chronicleTickRange: [number, number] = [minTick, maxTick];
 
-  // Find touched eras
+  // Find touched eras (using tick-first, then name-based fallback)
   const touchedEraIds = new Set<string>();
   for (const event of events) {
-    const era = findEraForTick(event.tick, eras);
+    const era = findEraForEvent(event, eras);
     if (era) touchedEraIds.add(era.id);
   }
 
@@ -460,7 +474,8 @@ export function computeEventMetrics(
   eras: EraTemporalInfo[],
   assignedEntityIds: Set<string>
 ): EventSelectionMetrics {
-  const eventEra = findEraForTick(event.tick, eras);
+  // Use tick-first, then name-based fallback
+  const eventEra = findEraForEvent(event, eras);
   const eraId = eventEra?.id || event.era;
   const eraName = eventEra?.name || event.era;
 
@@ -587,10 +602,11 @@ export function suggestEventSelection(
 /**
  * Filter candidates by style's entity rules.
  * Excludes 'era' entities by default since they are not cast members.
+ * @deprecated Entity selection rules removed - this now just filters eras
  */
 export function filterCandidatesByStyleRules(
   candidates: EntityContext[],
-  _rules: EntitySelectionRules
+  _rules?: unknown
 ): EntityContext[] {
   return candidates.filter((entity) => {
     // Exclude era entities - they are time periods, not cast members
@@ -604,33 +620,25 @@ export function filterCandidatesByStyleRules(
 // =============================================================================
 
 /**
- * Check if an entity's kind matches the style's primary subject categories.
- * @param entity The entity to check
- * @param rules The entity selection rules from the narrative style
- * @param kindToCategory Optional mapping from entity kinds to categories. If not provided, matching always returns false.
+ * @deprecated Entity selection rules removed - always returns false
  */
 export function matchesPrimarySubjectKinds(
-  entity: EntityContext,
-  rules: EntitySelectionRules,
-  kindToCategory?: Map<string, EntityCategory>
+  _entity: EntityContext,
+  _rules?: unknown,
+  _kindToCategory?: Map<string, EntityCategory>
 ): boolean {
-  if (!kindToCategory) return false;
-  return kindMatchesCategories(entity.kind, rules.primarySubjectCategories, kindToCategory);
+  return false;
 }
 
 /**
- * Check if an entity's kind matches the style's supporting subject categories.
- * @param entity The entity to check
- * @param rules The entity selection rules from the narrative style
- * @param kindToCategory Optional mapping from entity kinds to categories. If not provided, matching always returns false.
+ * @deprecated Entity selection rules removed - always returns false
  */
 export function matchesSupportingSubjectKinds(
-  entity: EntityContext,
-  rules: EntitySelectionRules,
-  kindToCategory?: Map<string, EntityCategory>
+  _entity: EntityContext,
+  _rules?: unknown,
+  _kindToCategory?: Map<string, EntityCategory>
 ): boolean {
-  if (!kindToCategory) return false;
-  return kindMatchesCategories(entity.kind, rules.supportingSubjectCategories, kindToCategory);
+  return false;
 }
 
 /**
@@ -702,7 +710,7 @@ export function suggestRoleAssignments(
   candidates: EntityContext[],
   roles: RoleDefinition[],
   entryPointId: string,
-  _rules: EntitySelectionRules | undefined, // Deprecated, kept for API compatibility
+  _rules: unknown, // Deprecated - entity selection rules removed
   relationships: RelationshipContext[],
   _kindToCategory: Map<string, EntityCategory>,
   metricsMap?: Map<string, EntitySelectionMetrics>
@@ -847,13 +855,19 @@ export function getRelevantRelationships(
   );
 }
 
+export interface GetRelevantEventsOptions {
+  /** Skip the maxEvents limit (for focal era computation) */
+  skipLimit?: boolean;
+}
+
 /**
  * Get events involving assigned entities.
  */
 export function getRelevantEvents(
   assignments: ChronicleRoleAssignment[],
   allEvents: NarrativeEventContext[],
-  eventRules?: EventSelectionRules
+  _eventRules?: unknown, // Deprecated - event selection rules removed
+  options?: GetRelevantEventsOptions
 ): NarrativeEventContext[] {
   const assignedIds = new Set(assignments.map(a => a.entityId));
 
@@ -862,20 +876,14 @@ export function getRelevantEvents(
     (e.objectId && assignedIds.has(e.objectId))
   );
 
-  // Apply significance filter if rules provided
-  if (eventRules?.significanceRange) {
-    filtered = filtered.filter(
-      e => e.significance >= eventRules.significanceRange.min &&
-           e.significance <= eventRules.significanceRange.max
-    );
-  }
-
-  // Apply max events limit
-  const maxEvents = eventRules?.maxEvents ?? 20;
-  if (filtered.length > maxEvents) {
-    // Sort by significance descending
-    filtered.sort((a, b) => b.significance - a.significance);
-    filtered = filtered.slice(0, maxEvents);
+  // Apply max events limit (unless skipLimit is set)
+  if (!options?.skipLimit) {
+    const maxEvents = 20;
+    if (filtered.length > maxEvents) {
+      // Sort by significance descending
+      filtered.sort((a, b) => b.significance - a.significance);
+      filtered = filtered.slice(0, maxEvents);
+    }
   }
 
   return filtered;

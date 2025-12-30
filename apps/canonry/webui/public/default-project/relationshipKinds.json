@@ -520,5 +520,32 @@
     "cullable": false,
     "decayRate": "none",
     "polarity": "neutral"
+  },
+  {
+    "kind": "occurred_at",
+    "description": "Occurred At",
+    "srcKinds": [
+      "occurrence"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral"
+  },
+  {
+    "kind": "instigated_by",
+    "description": "Instigated By",
+    "srcKinds": [
+      "occurrence"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral"
   }
 ]

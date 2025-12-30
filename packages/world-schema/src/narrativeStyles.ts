@@ -85,45 +85,6 @@ export interface StoryNarrativeStyle {
   pacing: PacingConfig;
 }
 
-// =============================================================================
-// Document Style Support Types
-// These are used by DocumentNarrativeStyle (not story styles)
-// =============================================================================
-
-/**
- * Entity selection rules for document styles
- */
-export interface EntitySelectionRules {
-  primarySubjectCategories?: string[];
-  supportingSubjectCategories?: string[];
-  roles: RoleDefinition[];
-  maxCastSize: number;
-}
-
-/**
- * Event selection rules for document styles
- */
-export interface EventSelectionRules {
-  significanceRange: { min: number; max: number };
-  priorityKinds?: string[];
-  excludeKinds?: string[];
-  priorityTags?: string[];
-  maxEvents: number;
-  usageInstructions: string;
-}
-
-/**
- * Base narrative style (used by document styles)
- */
-export interface BaseNarrativeStyle {
-  id: string;
-  name: string;
-  description: string;
-  tags?: string[];
-  entityRules: EntitySelectionRules;
-  eventRules: EventSelectionRules;
-}
-
 export const DEFAULT_NARRATIVE_STYLES: StoryNarrativeStyle[] = [
   // 1. EPIC DRAMA
   {

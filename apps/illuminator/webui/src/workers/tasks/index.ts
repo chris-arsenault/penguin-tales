@@ -13,9 +13,12 @@ export const TASK_HANDLERS = {
   paletteExpansion: paletteExpansionTask,
 } satisfies TaskHandlerMap;
 
-export async function executeTask(task: WorkerTask, context: TaskContext): Promise<TaskResult> {
+export async function executeTask<TType extends WorkerTask['type']>(
+  task: Extract<WorkerTask, { type: TType }>,
+  context: TaskContext
+): Promise<TaskResult> {
   const handler = TASK_HANDLERS[task.type];
-  return handler.execute(task as never, context);
+  return handler.execute(task, context);
 }
 
 export {
