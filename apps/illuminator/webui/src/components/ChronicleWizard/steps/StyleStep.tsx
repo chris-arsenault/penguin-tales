@@ -13,8 +13,9 @@ function getRoles(style: NarrativeStyle): RoleDefinition[] {
   if (style.format === 'story') {
     return (style as StoryNarrativeStyle).roles || [];
   }
+  // Document styles have roles directly on the style object
   const docStyle = style as DocumentNarrativeStyle;
-  return docStyle.entityRules?.roles || [];
+  return docStyle.roles || [];
 }
 
 interface StyleStepProps {

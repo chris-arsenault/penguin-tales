@@ -49,11 +49,12 @@ function formatEntityFull(e: EntityContext): string {
 }
 
 /**
- * Format a single entity briefly (for other characters).
+ * Format a single entity briefly (for supporting characters).
+ * Uses ### to nest under ## Supporting Characters section.
  */
 function formatEntityBrief(e: EntityContext): string {
   const desc = e.description || '(no description available)';
-  return `## ${e.name} (${e.kind}${e.subtype ? `/${e.subtype}` : ''})
+  return `### ${e.name} (${e.kind}${e.subtype ? `/${e.subtype}` : ''})
 Prominence: ${e.prominence}${e.culture ? `, Culture: ${e.culture}` : ''}
 ${desc}`;
 }
@@ -100,45 +101,6 @@ function buildWorldSection(context: ChronicleGenerationContext): string {
     lines.push('Canon Facts:');
     for (const fact of context.canonFacts) {
       lines.push(`- ${fact}`);
-    }
-  }
-
-  return lines.join('\n');
-}
-
-/**
- * Build the entities section of the prompt.
- * Shows primary entities with full details, supporting entities briefly.
- */
-function buildEntitySection(
-  selection: V2SelectionResult,
-  primaryEntityIds: Set<string>
-): string {
-  const primaryEntities = selection.entities.filter(e => primaryEntityIds.has(e.id));
-  const supportingEntities = selection.entities.filter(e => !primaryEntityIds.has(e.id));
-
-  const lines = [
-    `# Characters (${selection.entities.length} total)`,
-  ];
-
-  // Primary entities get full treatment
-  if (primaryEntities.length > 0) {
-    lines.push('');
-    lines.push('## Primary Characters');
-    for (const entity of primaryEntities) {
-      lines.push('');
-      lines.push(`### ${entity.name}`);
-      lines.push(formatEntityFull(entity));
-    }
-  }
-
-  // Supporting entities get brief treatment
-  if (supportingEntities.length > 0) {
-    lines.push('');
-    lines.push('## Supporting Characters');
-    for (const entity of supportingEntities) {
-      lines.push('');
-      lines.push(formatEntityBrief(entity));
     }
   }
 
@@ -238,27 +200,6 @@ function buildWorldTimeline(eras: EraTemporalInfo[], focalEraId: string): string
   }
 
   return parts.join(' ');
-}
-
-/**
- * Build the name bank section.
- * Provides culture-appropriate names for invented characters.
- */
-function buildNameBankSection(nameBank: Record<string, string[]> | undefined): string {
-  if (!nameBank || Object.keys(nameBank).length === 0) {
-    return '';
-  }
-
-  const lines: string[] = ['# Available Names for Invented Characters'];
-  lines.push('If you need to invent minor characters (e.g., to represent factions), use these culture-appropriate names:');
-
-  for (const [cultureId, names] of Object.entries(nameBank)) {
-    if (names.length > 0) {
-      lines.push(`- ${cultureId}: ${names.join(', ')}`);
-    }
-  }
-
-  return lines.join('\n');
 }
 
 /**
@@ -578,30 +519,175 @@ Requirements:
 // =============================================================================
 
 /**
- * Build the document structure section.
+ * Get word count range from document style.
+ * Handles both new format (pacing.wordCount) and legacy format (documentConfig.wordCount).
  */
-function buildDocumentStructureSection(style: DocumentNarrativeStyle): string {
-  const doc = style.documentConfig;
-  const lines: string[] = [`# Document Type: ${doc.documentType}`];
+function getDocumentWordCount(style: DocumentNarrativeStyle): { min: number; max: number } {
+  // New format
+  if (style.pacing?.wordCount) {
+    return style.pacing.wordCount;
+  }
+  // Legacy format fallback
+  const legacy = style as unknown as { documentConfig?: { wordCount?: { min: number; max: number } } };
+  if (legacy.documentConfig?.wordCount) {
+    return legacy.documentConfig.wordCount;
+  }
+  // Default fallback
+  return { min: 400, max: 600 };
+}
 
-  if (doc.contentInstructions) {
-    lines.push('');
-    lines.push(doc.contentInstructions);
+/**
+ * Get document instructions from style.
+ * Handles both new format (documentInstructions) and legacy format (documentConfig fields).
+ */
+function getDocumentInstructions(style: DocumentNarrativeStyle): string {
+  // New format
+  if (style.documentInstructions) {
+    return style.documentInstructions;
+  }
+  // Legacy format - try to construct from old fields
+  const legacy = style as unknown as {
+    documentConfig?: {
+      documentType?: string;
+      contentInstructions?: string;
+      voice?: string;
+      toneKeywords?: string[];
+      sections?: Array<{ name: string; purpose: string; wordCountTarget?: number; optional?: boolean }>;
+    };
+  };
+  if (legacy.documentConfig) {
+    const doc = legacy.documentConfig;
+    const lines: string[] = [];
+    if (doc.documentType) {
+      lines.push(`Document Type: ${doc.documentType}`);
+    }
+    if (doc.contentInstructions) {
+      lines.push('', doc.contentInstructions);
+    }
+    if (doc.voice) {
+      lines.push('', `Voice: ${doc.voice}`);
+    }
+    if (doc.toneKeywords?.length) {
+      lines.push(`Tone: ${doc.toneKeywords.join(', ')}`);
+    }
+    if (doc.sections?.length) {
+      lines.push('', 'Sections:');
+      doc.sections.forEach((s, i) => {
+        lines.push(`${i + 1}. ${s.name}: ${s.purpose}`);
+      });
+    }
+    return lines.join('\n');
+  }
+  return '';
+}
+
+/**
+ * Build the document instructions section.
+ * Uses the unified documentInstructions field (structure, voice, tone all in one).
+ */
+function buildDocumentInstructionsSection(style: DocumentNarrativeStyle): string {
+  const instructions = getDocumentInstructions(style);
+  if (!instructions) {
+    return '';
   }
 
-  // Document sections
-  if (doc.sections && doc.sections.length > 0) {
+  return `# Document Instructions
+${instructions}`;
+}
+
+/**
+ * Get roles from document style.
+ * Handles both new format (roles) and legacy format (entityRules.roles).
+ */
+function getDocumentRoles(style: DocumentNarrativeStyle): Array<{ role: string; count: { min: number; max: number }; description: string }> {
+  // New format
+  if (style.roles && style.roles.length > 0) {
+    return style.roles;
+  }
+  // Legacy format fallback
+  const legacy = style as unknown as { entityRules?: { roles?: Array<{ role: string; count: { min: number; max: number }; description: string }> } };
+  if (legacy.entityRules?.roles) {
+    return legacy.entityRules.roles;
+  }
+  return [];
+}
+
+/**
+ * Get event instructions from document style.
+ * Handles both new format (eventInstructions) and legacy format (documentConfig.eventUsage).
+ */
+function getDocumentEventInstructions(style: DocumentNarrativeStyle): string {
+  // New format
+  if (style.eventInstructions) {
+    return style.eventInstructions;
+  }
+  // Legacy format fallback
+  const legacy = style as unknown as { documentConfig?: { eventUsage?: string } };
+  if (legacy.documentConfig?.eventUsage) {
+    return legacy.documentConfig.eventUsage;
+  }
+  return '';
+}
+
+/**
+ * Build the document event usage section.
+ */
+function buildDocumentEventUsageSection(style: DocumentNarrativeStyle): string {
+  const instructions = getDocumentEventInstructions(style);
+  if (!instructions) {
+    return '';
+  }
+
+  return `# How to Use Events
+${instructions}`;
+}
+
+/**
+ * Build the unified cast section for document format.
+ * Combines role expectations with character data so the LLM sees roles and characters together.
+ */
+function buildUnifiedDocumentCastSection(
+  selection: V2SelectionResult,
+  primaryEntityIds: Set<string>,
+  style: DocumentNarrativeStyle
+): string {
+  const lines: string[] = [`# Cast (${selection.entities.length} characters)`];
+  const roles = getDocumentRoles(style);
+
+  // Role expectations first - so LLM knows what to look for
+  if (roles.length > 0) {
     lines.push('');
-    lines.push('## Document Sections');
-    for (let i = 0; i < doc.sections.length; i++) {
-      const section = doc.sections[i];
-      const wordTarget = section.wordCountTarget ? ` (~${section.wordCountTarget} words)` : '';
-      const optional = section.optional ? ' [optional]' : '';
-      lines.push(`${i + 1}. **${section.name}**${wordTarget}${optional}`);
-      lines.push(`   Purpose: ${section.purpose}`);
-      if (section.contentGuidance) {
-        lines.push(`   Guidance: ${section.contentGuidance}`);
-      }
+    lines.push('## Document Roles');
+    lines.push('Assign characters from below to these roles:');
+    for (const role of roles) {
+      const countStr = role.count.min === role.count.max
+        ? `${role.count.min}`
+        : `${role.count.min}-${role.count.max}`;
+      lines.push(`- **${role.role}** (${countStr}): ${role.description}`);
+    }
+  }
+
+  // Primary characters
+  const primaryEntities = selection.entities.filter(e => primaryEntityIds.has(e.id));
+  const supportingEntities = selection.entities.filter(e => !primaryEntityIds.has(e.id));
+
+  if (primaryEntities.length > 0) {
+    lines.push('');
+    lines.push('## Primary Characters');
+    for (const entity of primaryEntities) {
+      lines.push('');
+      lines.push(`### ${entity.name}`);
+      lines.push(formatEntityFull(entity));
+    }
+  }
+
+  // Supporting characters
+  if (supportingEntities.length > 0) {
+    lines.push('');
+    lines.push('## Supporting Characters');
+    for (const entity of supportingEntities) {
+      lines.push('');
+      lines.push(formatEntityBrief(entity));
     }
   }
 
@@ -609,99 +695,89 @@ function buildDocumentStructureSection(style: DocumentNarrativeStyle): string {
 }
 
 /**
- * Build the document voice and style section.
- */
-function buildDocumentStyleSection(style: DocumentNarrativeStyle): string {
-  const doc = style.documentConfig;
-  const lines: string[] = ['# Voice & Style'];
-
-  if (doc.voice) {
-    lines.push(`Voice: ${doc.voice}`);
-  }
-  if (doc.toneKeywords?.length) {
-    lines.push(`Tone: ${doc.toneKeywords.join(', ')}`);
-  }
-  if (doc.include?.length) {
-    lines.push(`Include: ${doc.include.join(', ')}`);
-  }
-  if (doc.avoid?.length) {
-    lines.push(`Avoid: ${doc.avoid.join(', ')}`);
-  }
-
-  return lines.join('\n');
-}
-
-/**
- * Build the document entity/event usage section.
- */
-function buildDocumentUsageSection(style: DocumentNarrativeStyle): string {
-  const doc = style.documentConfig;
-  const lines: string[] = [];
-
-  if (doc.entityUsage) {
-    lines.push(`# Entity Usage`);
-    lines.push(doc.entityUsage);
-  }
-
-  if (doc.eventUsage) {
-    if (lines.length > 0) lines.push('');
-    lines.push(`# Event Usage`);
-    lines.push(doc.eventUsage);
-  }
-
-  return lines.join('\n');
-}
-
-/**
  * Build complete prompt for document format.
+ *
+ * Section order matches story prompt structure:
+ *
+ * TASK DATA (how to write it):
+ * 1. TASK - Word count, requirements
+ * 2. DOCUMENT INSTRUCTIONS - Structure, voice, tone guidance
+ * 3. EVENT USAGE - How to incorporate world events
+ * 4. ENTITY PORTRAYAL - Per-kind guidelines
+ *
+ * WORLD DATA (what to write about):
+ * 5. CAST - Document roles + characters
+ * 6. WORLD - Setting context
+ * 7. CULTURAL IDENTITIES - How cultures behave + name bank
+ * 8. HISTORICAL CONTEXT - Era, timeline
+ * 9. RELATIONSHIPS + EVENTS - Data section
  */
 function buildDocumentPrompt(
-  worldSection: string,
-  entitySection: string,
-  dataSection: string,
-  temporalSection: string,
-  nameBankSection: string,
+  context: ChronicleGenerationContext,
+  selection: V2SelectionResult,
+  primaryEntityIds: Set<string>,
   culturalIdentitiesSection: string,
   proseHintsSection: string,
   style: DocumentNarrativeStyle
 ): string {
-  const doc = style.documentConfig;
-  const wordRange = `${doc.wordCount.min}-${doc.wordCount.max}`;
+  const wordCount = getDocumentWordCount(style);
+  const wordRange = `${wordCount.min}-${wordCount.max}`;
 
-  // Build all sections
-  const structureSection = buildDocumentStructureSection(style);
-  const styleSection = buildDocumentStyleSection(style);
-  const usageSection = buildDocumentUsageSection(style);
+  // === TASK DATA ===
 
-  // Combine non-empty sections
-  const sections = [
-    worldSection,
-    temporalSection,
-    entitySection,
-    culturalIdentitiesSection,
-    nameBankSection,
-    dataSection,
-    structureSection,
-    styleSection,
-    proseHintsSection,
-    usageSection,
-  ].filter(Boolean);
-
-  // Task section
+  // 1. TASK
   const taskSection = `# Task
-Write a ${wordRange} word ${doc.documentType}.
+Write a ${wordRange} word ${style.name}.
 
 Requirements:
-- Follow the document structure and sections above
+- Follow the document structure and voice guidance below
+- Assign the provided characters to the document roles defined below
+- Incorporate the listed events naturally as context or content
+- Characters should speak and act according to their cultural identity
 - Ground the document in the historical era and timeline provided
-- Write in the specified voice and tone
-- Draw from the characters and events provided
-- Make the document feel authentic to the world and its time period
-- Respect cultural identities: characters should speak and act according to their culture
+- Make the document feel authentic - as if it exists within the world
+- Write the document directly with no meta-commentary`;
 
-Write the document directly. No meta-commentary.`;
+  // 2. DOCUMENT INSTRUCTIONS
+  const instructionsSection = buildDocumentInstructionsSection(style);
 
-  return [...sections, taskSection].join('\n\n');
+  // 3. EVENT USAGE
+  const eventSection = buildDocumentEventUsageSection(style);
+
+  // 4. ENTITY PORTRAYAL (proseHintsSection passed in)
+
+  // === WORLD DATA ===
+
+  // 5. CAST (unified roles + characters)
+  const castSection = buildUnifiedDocumentCastSection(selection, primaryEntityIds, style);
+
+  // 6. WORLD (setting context)
+  const worldSection = buildWorldSection(context);
+
+  // 7. CULTURAL IDENTITIES (passed in, includes name bank)
+
+  // 8. HISTORICAL CONTEXT
+  const temporalSection = buildTemporalSection(context.temporalContext);
+
+  // 9. RELATIONSHIPS + EVENTS
+  const dataSection = buildDataSection(selection);
+
+  // Combine sections in order: TASK DATA then WORLD DATA
+  const sections = [
+    // TASK DATA
+    taskSection,
+    instructionsSection,
+    eventSection,
+    proseHintsSection,
+    // WORLD DATA
+    castSection,
+    worldSection,
+    culturalIdentitiesSection,
+    temporalSection,
+    dataSection,
+  ].filter(Boolean);
+
+  return sections.join('\n\n');
 }
 
 // =============================================================================
@@ -734,19 +810,10 @@ export function buildV2Prompt(
       style as StoryNarrativeStyle
     );
   } else {
-    // Document format still uses the old assembly (can be refactored later)
-    const worldSection = buildWorldSection(context);
-    const entitySection = buildEntitySection(selection, primaryEntityIds);
-    const dataSection = buildDataSection(selection);
-    const temporalSection = buildTemporalSection(context.temporalContext);
-    const nameBankSection = buildNameBankSection(context.nameBank);
-
     return buildDocumentPrompt(
-      worldSection,
-      entitySection,
-      dataSection,
-      temporalSection,
-      nameBankSection,
+      context,
+      selection,
+      primaryEntityIds,
       culturalIdentitiesSection,
       proseHintsSection,
       style as DocumentNarrativeStyle
@@ -761,7 +828,7 @@ export function buildV2Prompt(
 export function getMaxTokensFromStyle(style: NarrativeStyle): number {
   const maxWords = style.format === 'story'
     ? (style as StoryNarrativeStyle).pacing.totalWordCount.max
-    : (style as DocumentNarrativeStyle).documentConfig.wordCount.max;
+    : getDocumentWordCount(style as DocumentNarrativeStyle).max;
 
   // Add 50% buffer for safety
   return Math.ceil(maxWords / 0.75 * 1.5);
@@ -793,22 +860,25 @@ WORLD DATA (what to write about):
 
 Hierarchy: Narrative Structure and Prose instructions define THIS story. World tone and Entity Portrayal provide the ambient style everything sits within. When both apply, story-specific guidance takes precedence.`;
   } else {
-    const docStyle = style as DocumentNarrativeStyle;
-    return `You are writing an in-universe ${docStyle.documentConfig.documentType}. Your prompt contains:
-
-WORLD DATA (what to write about):
-- World: Setting name, description, canon facts
-- Characters: Entities referenced in the document
-- Cultural Identities: How each culture thinks, speaks, acts
-- Historical Context: Era, timeline, temporal scope
-- Relationships: Connections between characters
-- Events: Background data to draw from
+    return `You are writing an in-universe document. Your prompt contains:
 
 TASK DATA (how to write it):
-- Document Structure: Required sections and their purpose
-- Voice & Style: How the document should read
-- Entity/Event Usage: How to incorporate world data
+- Task: Word count, requirements
+- Document Instructions: Structure, voice, tone, what to include/avoid - THIS IS PRIMARY
+- Event Usage: How to incorporate world events
+- Entity Portrayal: Per-kind guidelines from the world
 
-Write authentically as if the document exists within the world.`;
+WORLD DATA (what to write about):
+- Cast: Document roles to fill, then characters to fill them
+- World: Setting name, description, canon facts
+- Cultural Identities: How each culture thinks, speaks, acts
+  - Name Bank: Culture-appropriate names for invented characters
+- Historical Context: Current era and world timeline
+- Relationships: Connections between characters
+- Events: What happened in the world
+
+Hierarchy: Document Instructions define THIS document's structure and voice. Entity Portrayal and Cultural Identities provide the world context everything sits within. When both apply, document-specific guidance takes precedence.
+
+Write authentically as if the document exists within the world. No meta-commentary.`;
   }
 }

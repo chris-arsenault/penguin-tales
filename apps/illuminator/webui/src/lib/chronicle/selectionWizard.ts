@@ -910,10 +910,10 @@ export function buildWizardSelectionContext(
   // Filter entities to those in the neighborhood
   const neighborEntities = allEntities.filter(e => neighborGraph.ids.has(e.id));
 
-  // Apply style filters
+  // Apply style filters (entityRules deprecated, just passes through)
   const filteredCandidates = filterCandidatesByStyleRules(
     neighborEntities,
-    style.entityRules
+    undefined
   );
 
   // Ensure entry point is included
