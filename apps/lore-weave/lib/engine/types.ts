@@ -127,7 +127,7 @@ export interface EraTransitionEffects {
 export interface Era {
   id: string;
   name: string;
-  description: string;
+  summary: string;
   templateWeights: Record<string, number>;  // 0 = disabled, 2 = double chance
   systemModifiers: Record<string, number>;  // multipliers for system effects
   pressureModifiers?: Record<string, number>;

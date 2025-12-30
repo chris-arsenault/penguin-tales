@@ -199,8 +199,8 @@ function EntityRow({
 
         {/* Content row: description and image side by side */}
         <div style={{ display: 'flex', gap: '12px' }}>
-          {/* Description preview if exists */}
-          {enrichment.description?.summary && (
+          {/* Description preview if exists (summary is now on entity directly) */}
+          {entity.summary && (
             <div
               style={{
                 flex: 1,
@@ -216,7 +216,7 @@ function EntityRow({
               onClick={onEntityClick}
               title="Click to view entity details"
             >
-              {enrichment.description.summary}
+              {entity.summary}
             </div>
           )}
 
@@ -360,8 +360,8 @@ function EntityRow({
 function getEntityCostDisplay(entity, type, status, config, enrichment, buildPrompt) {
   // If complete, show actual cost
   if (status === 'complete') {
-    if (type === 'description' && enrichment?.description?.actualCost) {
-      return formatCost(enrichment.description.actualCost);
+    if (type === 'description' && enrichment?.text?.actualCost) {
+      return formatCost(enrichment.text.actualCost);
     }
     if (type === 'image' && enrichment?.image?.actualCost) {
       return formatCost(enrichment.image.actualCost);
@@ -438,12 +438,9 @@ export default function EntityBrowser({
         return queueItem.status;
       }
 
-      // Check entity enrichment
-      const enrichment = entity.enrichment;
-      if (!enrichment) return 'missing';
-
-      if (type === 'description' && enrichment.description?.summary && enrichment.description?.description) return 'complete';
-      if (type === 'image' && enrichment.image?.imageId) return 'complete';
+      // Check entity fields and enrichment
+      if (type === 'description' && entity.summary && entity.description) return 'complete';
+      if (type === 'image' && entity.enrichment?.image?.imageId) return 'complete';
 
       return 'missing';
     },
@@ -558,7 +555,7 @@ export default function EntityBrowser({
         entity &&
         prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
         getStatus(entity, 'image') === 'missing' &&
-        (!config.requireDescription || (entity.enrichment?.description?.summary && entity.enrichment?.description?.description))
+        (!config.requireDescription || (entity.summary && entity.description))
       ) {
         items.push({ entity, type: 'image', prompt: buildPrompt(entity, 'image') });
       }
@@ -626,7 +623,7 @@ export default function EntityBrowser({
         // If requireDescription is enabled and entity lacks description, queue that first
         if (
           config.requireDescription &&
-          !(entity.enrichment?.description?.summary && entity.enrichment?.description?.description) &&
+          !(entity.summary && entity.description) &&
           getStatus(entity, 'description') === 'missing'
         ) {
           const visualConfig = getVisualConfig ? getVisualConfig(entity) : {};
@@ -670,7 +667,7 @@ export default function EntityBrowser({
         // Count dependent descriptions that would be queued
         if (
           config.requireDescription &&
-          !(entity.enrichment?.description?.summary && entity.enrichment?.description?.description) &&
+          !(entity.summary && entity.description) &&
           getStatus(entity, 'description') === 'missing'
         ) {
           descCount++;
@@ -706,14 +703,14 @@ export default function EntityBrowser({
       const entity = entities.find((e) => e.id === entityId);
       if (!entity) continue;
 
-      const descEnrichment = entity.enrichment?.description;
-      const timestamp = descEnrichment?.generatedAt;
+      const textEnrichment = entity.enrichment?.text;
+      const timestamp = textEnrichment?.generatedAt;
 
       // Check for chain debug (3-step: narrative → thesis → traits)
-      const chainDebug = descEnrichment?.chainDebug;
+      const chainDebug = textEnrichment?.chainDebug;
 
       // Fall back to legacy single debug
-      let legacyDebug = descEnrichment?.debug;
+      let legacyDebug = textEnrichment?.debug;
 
       // Fall back to queue if no persisted debug
       if (!chainDebug && !legacyDebug) {
@@ -731,13 +728,13 @@ export default function EntityBrowser({
           entityName: entity.name,
           entityKind: entity.kind,
           timestamp,
-          model: descEnrichment?.model,
-          // Include generated content for review
-          summary: descEnrichment?.summary,
-          description: descEnrichment?.description,
-          visualThesis: descEnrichment?.visualThesis,
-          visualTraits: descEnrichment?.visualTraits,
-          aliases: descEnrichment?.aliases,
+          model: textEnrichment?.model,
+          // Include generated content for review (now on entity directly)
+          summary: entity.summary,
+          description: entity.description,
+          visualThesis: textEnrichment?.visualThesis,
+          visualTraits: textEnrichment?.visualTraits,
+          aliases: textEnrichment?.aliases,
         };
 
         // Include chain debug if available (all 3 steps)
@@ -1087,12 +1084,12 @@ export default function EntityBrowser({
                   canQueueImage={
                     prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
                     (!config.requireDescription ||
-                      (enrichment.description?.summary && enrichment.description?.description))
+                      (entity.summary && entity.description))
                   }
                   needsDescription={
                     prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
                     config.requireDescription &&
-                    !(enrichment.description?.summary && enrichment.description?.description)
+                    !(entity.summary && entity.description)
                   }
                   onImageClick={openImageModal}
                   onEntityClick={() => openEntityModal(entity)}

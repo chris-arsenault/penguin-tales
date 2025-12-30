@@ -634,15 +634,12 @@ export function matchesSupportingSubjectKinds(
 }
 
 /**
- * Score an entity for a specific role based on style rules and diversity metrics.
- * Uses category-based scoring with diversity penalties/bonuses.
+ * Score an entity for a specific role based on diversity metrics.
  */
 function scoreEntityForRole(
   entity: EntityContext,
   role: string,
-  rules: EntitySelectionRules,
   relationships: RelationshipContext[],
-  kindToCategory: Map<string, EntityCategory>,
   metrics?: EntitySelectionMetrics
 ): number {
   let score = 0;
@@ -650,25 +647,9 @@ function scoreEntityForRole(
   // Base score for having data
   score += 10;
 
-  // Protagonist-like role bonuses based on primarySubjectCategories
-  const protagonistRoles = [
-    'protagonist', 'hero', 'tragic-hero', 'lover-a', 'focal-point',
-    'investigator', 'consciousness', 'player', 'subject', 'doomed'
-  ];
-  if (protagonistRoles.includes(role)) {
-    if (matchesPrimarySubjectKinds(entity, rules, kindToCategory)) {
-      score += 30; // Reduced from 40
-    }
-  } else {
-    // Non-protagonist roles prefer supporting subject categories
-    if (matchesSupportingSubjectKinds(entity, rules, kindToCategory)) {
-      score += 25; // Reduced from 30
-    }
-  }
-
-  // Description availability bonus
-  if (entity.summary || entity.description) {
-    score += 10; // Reduced from 15
+  // Text enrichment bonus (summary and description are generated together)
+  if (entity.summary && entity.description) {
+    score += 10;
   }
 
   // === METRICS-BASED SCORING ===
@@ -714,17 +695,16 @@ function scoreEntityForRole(
 }
 
 /**
- * Auto-suggest role assignments from candidates based on style rules and diversity metrics.
+ * Auto-suggest role assignments from candidates based on diversity metrics.
  * Entry point is assigned to first protagonist-like role.
- * isPrimary is set based on whether the entity kind matches primarySubjectCategories.
  */
 export function suggestRoleAssignments(
   candidates: EntityContext[],
   roles: RoleDefinition[],
   entryPointId: string,
-  rules: EntitySelectionRules,
+  _rules: EntitySelectionRules | undefined, // Deprecated, kept for API compatibility
   relationships: RelationshipContext[],
-  kindToCategory: Map<string, EntityCategory>,
+  _kindToCategory: Map<string, EntityCategory>,
   metricsMap?: Map<string, EntitySelectionMetrics>
 ): ChronicleRoleAssignment[] {
   const assignments: ChronicleRoleAssignment[] = [];
@@ -739,7 +719,7 @@ export function suggestRoleAssignments(
     const scores: Array<{ entity: EntityContext; score: number }> = [];
     for (const entity of candidates) {
       const metrics = metricsMap?.get(entity.id);
-      const score = scoreEntityForRole(entity, roleDef.role, rules, relationships, kindToCategory, metrics);
+      const score = scoreEntityForRole(entity, roleDef.role, relationships, metrics);
       if (score > 0) {
         scores.push({ entity, score });
       }
@@ -753,14 +733,13 @@ export function suggestRoleAssignments(
   if (entryPoint) {
     const firstProtagonistRole = roles.find(r => protagonistRoles.includes(r.role));
     if (firstProtagonistRole) {
-      // isPrimary based on category matching
-      const isPrimary = matchesPrimarySubjectKinds(entryPoint, rules, kindToCategory);
+      // Entry point is always primary
       assignments.push({
         role: firstProtagonistRole.role,
         entityId: entryPoint.id,
         entityName: entryPoint.name,
         entityKind: entryPoint.kind,
-        isPrimary,
+        isPrimary: true,
       });
       usedEntityIds.add(entryPoint.id);
     }
@@ -779,15 +758,12 @@ export function suggestRoleAssignments(
       if (assigned >= roleDef.count.max) break;
       if (usedEntityIds.has(entity.id)) continue;
 
-      // Determine isPrimary based on category matching
-      const isPrimary = matchesPrimarySubjectKinds(entity, rules, kindToCategory);
-
       assignments.push({
         role: roleDef.role,
         entityId: entity.id,
         entityName: entity.name,
         entityKind: entity.kind,
-        isPrimary,
+        isPrimary: false, // Supporting by default
       });
       usedEntityIds.add(entity.id);
       assigned += 1;

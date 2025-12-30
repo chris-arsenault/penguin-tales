@@ -6,16 +6,26 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
+import type { StoryNarrativeStyle, DocumentNarrativeStyle, RoleDefinition } from '@canonry/world-schema';
 import { useWizard } from '../WizardContext';
 import {
   validateRoleAssignments,
-  matchesPrimarySubjectKinds,
-  matchesSupportingSubjectKinds,
   type EntitySelectionMetrics,
 } from '../../../lib/chronicle/selectionWizard';
 import { getEntityUsageStats } from '../../../lib/chronicleStorage';
 
 type SortOption = 'recommended' | 'distance' | 'least-used' | 'strength';
+
+/** Get roles from either story or document style */
+function getRoles(style: { format: string } | null | undefined): RoleDefinition[] {
+  if (!style) return [];
+  if (style.format === 'story') {
+    return (style as StoryNarrativeStyle).roles || [];
+  }
+  // Document styles - check for entityRules.roles or direct roles
+  const docStyle = style as DocumentNarrativeStyle;
+  return docStyle.entityRules?.roles || [];
+}
 
 export default function RoleAssignmentStep() {
   const {
@@ -24,13 +34,11 @@ export default function RoleAssignmentStep() {
     addRoleAssignment,
     removeRoleAssignment,
     togglePrimary,
-    kindToCategory,
     computeMetrics,
   } = useWizard();
 
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
-  const [kindFilter, setKindFilter] = useState<'all' | 'primary' | 'supporting'>('all');
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
   const [hideOverused, setHideOverused] = useState(false);
   const [directOnly, setDirectOnly] = useState(false);
@@ -38,14 +46,11 @@ export default function RoleAssignmentStep() {
   const [metricsMap, setMetricsMap] = useState<Map<string, EntitySelectionMetrics>>(new Map());
 
   const style = state.narrativeStyle;
-  const roles = style?.entityRules.roles || [];
-  const maxCastSize = style?.entityRules.maxCastSize || 10;
-  const entityRules = style?.entityRules;
+  const roles = getRoles(style);
+  const maxCastSize = 10;
 
-  // Load usage stats on mount (we need simulationRunId from somewhere - for now use empty)
-  // In a real implementation, simulationRunId would be passed as a prop or from context
+  // Load usage stats on mount
   useEffect(() => {
-    // Try to get simulationRunId from URL or parent context
     const urlParams = new URLSearchParams(window.location.search);
     const simId = urlParams.get('simulationRunId') || urlParams.get('runId');
     if (simId) {
@@ -68,17 +73,6 @@ export default function RoleAssignmentStep() {
   // Filter and sort candidates
   const filteredCandidates = useMemo(() => {
     let filtered = state.candidates;
-
-    // Apply kind filter
-    if (kindFilter !== 'all' && entityRules) {
-      filtered = filtered.filter(e => {
-        if (kindFilter === 'primary') {
-          return matchesPrimarySubjectKinds(e, entityRules, kindToCategory);
-        } else {
-          return matchesSupportingSubjectKinds(e, entityRules, kindToCategory);
-        }
-      });
-    }
 
     // Apply search filter
     if (searchText.trim()) {
@@ -119,23 +113,16 @@ export default function RoleAssignmentStep() {
           return (metricsB?.avgStrength ?? 0) - (metricsA?.avgStrength ?? 0);
         case 'recommended':
         default:
-          // Primary match first, then by category novelty, then by usage
-          const primaryA = entityRules && matchesPrimarySubjectKinds(a, entityRules, kindToCategory) ? 1 : 0;
-          const primaryB = entityRules && matchesPrimarySubjectKinds(b, entityRules, kindToCategory) ? 1 : 0;
-          if (primaryA !== primaryB) return primaryB - primaryA;
-
-          // Then by category novelty
+          // By category novelty first, then by least used
           const noveltyA = metricsA?.addsNewCategory ? 1 : 0;
           const noveltyB = metricsB?.addsNewCategory ? 1 : 0;
           if (noveltyA !== noveltyB) return noveltyB - noveltyA;
-
-          // Then by least used
           return (metricsA?.usageCount ?? 0) - (metricsB?.usageCount ?? 0);
       }
     });
 
     return filtered;
-  }, [state.candidates, searchText, kindFilter, entityRules, kindToCategory, hideOverused, directOnly, sortBy, metricsMap]);
+  }, [state.candidates, searchText, hideOverused, directOnly, sortBy, metricsMap]);
 
   // Get assigned entity IDs
   const assignedEntityIds = useMemo(() => {
@@ -243,26 +230,14 @@ export default function RoleAssignmentStep() {
             <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
               Available Entities ({filteredCandidates.length})
             </span>
-            <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
-              <select
-                value={kindFilter}
-                onChange={(e) => setKindFilter(e.target.value as 'all' | 'primary' | 'supporting')}
-                className="illuminator-select"
-                style={{ padding: '4px 8px', fontSize: '11px' }}
-              >
-                <option value="all">All</option>
-                <option value="primary">Primary</option>
-                <option value="supporting">Supporting</option>
-              </select>
-              <input
-                type="text"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search..."
-                className="illuminator-input"
-                style={{ width: '100px', padding: '4px 8px', fontSize: '11px' }}
-              />
-            </div>
+            <input
+              type="text"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Search..."
+              className="illuminator-input"
+              style={{ width: '120px', padding: '4px 8px', fontSize: '11px' }}
+            />
           </div>
           {/* Sort and diversity filters */}
           <div style={{
@@ -339,38 +314,6 @@ export default function RoleAssignmentStep() {
                     <span style={{ fontWeight: 500, fontSize: '12px' }}>
                       {entity.name}
                     </span>
-                    {/* Kind match badges */}
-                    {entityRules && matchesPrimarySubjectKinds(entity, entityRules, kindToCategory) && (
-                      <span
-                        title="Recommended for primary subject"
-                        style={{
-                          padding: '1px 4px',
-                          background: isSelected ? 'rgba(255,255,255,0.3)' : 'var(--accent-color)',
-                          color: 'white',
-                          borderRadius: '3px',
-                          fontSize: '8px',
-                          fontWeight: 600,
-                        }}
-                      >
-                        P
-                      </span>
-                    )}
-                    {entityRules && matchesSupportingSubjectKinds(entity, entityRules, kindToCategory) && (
-                      <span
-                        title="Recommended for supporting subject"
-                        style={{
-                          padding: '1px 4px',
-                          background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)',
-                          color: isSelected ? 'white' : 'var(--text-muted)',
-                          borderRadius: '3px',
-                          fontSize: '8px',
-                          fontWeight: 600,
-                          border: isSelected ? 'none' : '1px solid var(--border-color)',
-                        }}
-                      >
-                        S
-                      </span>
-                    )}
                     {isEntryPoint && (
                       <span style={{
                         padding: '1px 4px',
@@ -583,14 +526,7 @@ export default function RoleAssignmentStep() {
                   </div>
 
                   {/* Assigned Entities */}
-                  {assignments.map(assignment => {
-                    // Check if the entity's primary/supporting status matches the style recommendation
-                    const entityForAssignment = state.candidates.find(e => e.id === assignment.entityId);
-                    const matchesPrimary = entityRules && entityForAssignment && matchesPrimarySubjectKinds(entityForAssignment, entityRules, kindToCategory);
-                    const matchesSupporting = entityRules && entityForAssignment && matchesSupportingSubjectKinds(entityForAssignment, entityRules, kindToCategory);
-                    const isRecommended = (assignment.isPrimary && matchesPrimary) || (!assignment.isPrimary && matchesSupporting);
-
-                    return (
+                  {assignments.map(assignment => (
                     <div
                       key={assignment.entityId}
                       style={{
@@ -610,37 +546,24 @@ export default function RoleAssignmentStep() {
                         </span>
                       </span>
 
-                      {/* Primary Toggle with recommendation indicator */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePrimary(assignment.entityId, assignment.role);
-                          }}
-                          style={{
-                            padding: '2px 6px',
-                            background: assignment.isPrimary ? 'var(--accent-color)' : 'var(--bg-secondary)',
-                            color: assignment.isPrimary ? 'white' : 'var(--text-muted)',
-                            border: 'none',
-                            borderRadius: '3px',
-                            fontSize: '9px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {assignment.isPrimary ? 'PRIMARY' : 'Supporting'}
-                        </button>
-                        {isRecommended && (
-                          <span
-                            title="This matches the style's recommendation"
-                            style={{
-                              color: 'var(--success)',
-                              fontSize: '11px',
-                            }}
-                          >
-                            ✓
-                          </span>
-                        )}
-                      </div>
+                      {/* Primary Toggle */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePrimary(assignment.entityId, assignment.role);
+                        }}
+                        style={{
+                          padding: '2px 6px',
+                          background: assignment.isPrimary ? 'var(--accent-color)' : 'var(--bg-secondary)',
+                          color: assignment.isPrimary ? 'white' : 'var(--text-muted)',
+                          border: 'none',
+                          borderRadius: '3px',
+                          fontSize: '9px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {assignment.isPrimary ? 'PRIMARY' : 'Supporting'}
+                      </button>
 
                       {/* Remove Button */}
                       <button
@@ -660,8 +583,7 @@ export default function RoleAssignmentStep() {
                         &times;
                       </button>
                     </div>
-                    );
-                  })}
+                  ))}
                 </div>
               );
             })}

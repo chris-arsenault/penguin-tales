@@ -5,7 +5,17 @@
  */
 
 import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback } from 'react';
-import type { NarrativeStyle, EntityKindDefinition, EntityCategory } from '@canonry/world-schema';
+import type { NarrativeStyle, EntityKindDefinition, EntityCategory, StoryNarrativeStyle, DocumentNarrativeStyle, RoleDefinition } from '@canonry/world-schema';
+
+/** Get roles from either story or document style */
+function getRoles(style: NarrativeStyle | null): RoleDefinition[] {
+  if (!style) return [];
+  if (style.format === 'story') {
+    return (style as StoryNarrativeStyle).roles || [];
+  }
+  const docStyle = style as DocumentNarrativeStyle;
+  return docStyle.entityRules?.roles || [];
+}
 import type {
   ChronicleRoleAssignment,
   EntityContext,
@@ -42,6 +52,7 @@ export type WizardStep = 1 | 2 | 3 | 4 | 5;
  */
 export interface ChronicleSeed {
   narrativeStyleId: string;
+  narrativeStyle?: NarrativeStyle;
   entrypointId?: string; // Same field name as ChronicleRecord
   roleAssignments: ChronicleRoleAssignment[];
   selectedEventIds: string[];
@@ -421,11 +432,12 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
 
       // Auto-fill if accept defaults is checked
       if (state.acceptDefaults) {
+        const roles = getRoles(state.narrativeStyle);
         const suggested = suggestRoleAssignments(
           selectionContext.candidates,
-          state.narrativeStyle.entityRules.roles,
+          roles,
           entity.id,
-          state.narrativeStyle.entityRules,
+          undefined, // entityRules removed
           selectionContext.candidateRelationships,
           kindToCategory
         );
@@ -503,11 +515,12 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
   const autoFillRoles = useCallback((metricsMap?: Map<string, EntitySelectionMetrics>) => {
     if (!state.narrativeStyle || !state.entryPoint) return;
 
+    const roles = getRoles(state.narrativeStyle);
     const suggested = suggestRoleAssignments(
       state.candidates,
-      state.narrativeStyle.entityRules.roles,
+      roles,
       state.entryPoint.id,
-      state.narrativeStyle.entityRules,
+      undefined, // entityRules removed
       state.candidateRelationships,
       kindToCategory,
       metricsMap

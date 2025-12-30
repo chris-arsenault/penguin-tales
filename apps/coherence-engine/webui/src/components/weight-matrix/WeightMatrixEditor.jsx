@@ -414,7 +414,7 @@ export default function WeightMatrixEditor({
               </th>
               <th className="status-col">Eras</th>
               {eras.map((era) => (
-                <th key={era.id} className="era-col" title={era.description || era.name}>
+                <th key={era.id} className="era-col" title={era.summary || era.name}>
                   {era.name || era.id}
                 </th>
               ))}

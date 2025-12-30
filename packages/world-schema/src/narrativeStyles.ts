@@ -232,16 +232,16 @@ Avoid: long descriptions, internal monologue, philosophical reflection, scenes o
     tags: ['romantic', 'emotional', 'character-driven'],
     format: 'story',
 
-    narrativeInstructions: `This is an intimate story about connection. The external world exists only to illuminate the internal journey of two people finding each other.
+    narrativeInstructions: `This is an intimate story about connection. The external world exists only to illuminate the internal journey of lover-a and lover-b finding each other.
 
 Scene Progression:
-1. THE MEETING: Must feel fated even when it appears accidental. Show what each character lacks that the other has. Their first impression should be incomplete, perhaps even wrong - but something catches. A detail they can't stop thinking about. Arc: curiosity → intrigue → remembering
+1. THE MEETING: Must feel fated even when it appears accidental. Show what lover-a lacks that lover-b has, and vice versa. Their first impression should be incomplete, perhaps even wrong - but something catches. A detail they can't stop thinking about. Begin with curiosity, build to intrigue, end with each remembering the other.
 
-2. GROWING CLOSER: The heart of the story. Show them discovering each other through accumulating small moments. Vulnerability exchanged for vulnerability. Laughter that surprises them. Silences that feel comfortable. Physical proximity that becomes electric. Arc: guardedness → opening up → fear of loss
+2. GROWING CLOSER: The heart of the story. Show lover-a and lover-b discovering each other through accumulating small moments. Vulnerability exchanged for vulnerability. Laughter that surprises them. Silences that feel comfortable. The sanctuary may offer them space to connect. Physical proximity becomes electric. Start guarded, move toward opening up, end with the fear of losing what they've found.
 
-3. THE OBSTACLE: What threatens them should feel real and earned. Internal barriers (fear, duty, old wounds) are often more powerful than external ones. The obstacle should make us understand why they can't just be together, even as we ache for them to try. Arc: hope → dread → resignation or defiance
+3. THE OBSTACLE: What threatens them should feel real and earned. The obstacle - whether external force or internal barrier like fear, duty, or old wounds - should make us understand why lover-a and lover-b can't just be together, even as we ache for them to try. Begin with hope, move through dread, arrive at resignation or defiance.
 
-4. THE DECLARATION: The moment of truth. One or both must risk rejection by speaking honestly. The response matters less than the courage of exposure. Even if things work out, there should be acknowledgment of what it cost to get here. Arc: fear → exposure → answer`,
+4. THE DECLARATION: The moment of truth. Lover-a or lover-b (or both) must risk rejection by speaking honestly. The response matters less than the courage of exposure. Even if things work out, there should be acknowledgment of what it cost to get here. Move from fear through the moment of exposure to the answer.`,
 
     proseInstructions: `Tone: tender, yearning, intimate, bittersweet, hopeful.
 
@@ -282,16 +282,16 @@ Avoid: graphic content, rushed emotional development, love at first sight withou
     tags: ['quiet', 'intimate', 'contemplative'],
     format: 'story',
 
-    narrativeInstructions: `This is anti-plot storytelling. There is no crisis, no antagonist, no ticking clock. Instead, we witness life being lived - and in that witness, find meaning. The story follows a natural rhythm - a day, a season, a transition. Feeling builds through layered small moments, not dramatic events.
+    narrativeInstructions: `This is anti-plot storytelling. There is no crisis, no antagonist, no ticking clock. Instead, we witness the focal-point's life being lived - and in that witness, find meaning. The story follows a natural rhythm - a day, a season, a transition. Feeling builds through layered small moments, not dramatic events.
 
 Scene Progression:
-1. MORNING RITUAL: Begin with waking or arriving. Establish the rhythm of life. Capture moments that would be elided in other stories: preparing food, walking familiar paths. Include routine action, sensory grounding, small anticipation. Arc: stillness → awakening
+1. MORNING RITUAL: Begin with the focal-point waking or arriving. Establish the rhythm of their life against the backdrop of their world. Capture moments that would be elided in other stories: preparing food, walking familiar paths. Start in stillness, move gently toward awakening.
 
-2. THE ENCOUNTER: When others appear, there's no dramatic tension - just the genuine awkwardness and grace of people navigating proximity. Conversations wander. Silences are comfortable or uncomfortable. Nothing needs to be resolved. Include another person, exchange, something learned or shared. Arc: solitude → connection → return to self
+2. THE ENCOUNTER: When passing-through characters appear, there's no dramatic tension - just the genuine awkwardness and grace of people navigating proximity. Conversations wander. Silences are comfortable or uncomfortable. Nothing needs to be resolved. Begin in the focal-point's solitude, move into momentary connection, return to self.
 
-3. THE WORK: The extraordinary in the ordinary. A story can be built from someone simply doing their work well. The satisfaction of craft. The texture of routine. Pay attention to the specific knowledge a character has about their world. Include skilled action, competence, quiet satisfaction. Arc: focus → flow → completion
+3. THE WORK: The extraordinary in the ordinary. The focal-point doing their work well. The satisfaction of craft. The texture of routine. Pay attention to the specific knowledge they have about their world. Start with focus, enter the state of flow, arrive at quiet completion.
 
-4. EVENING REFLECTION: The story ends, it doesn't conclude. Perhaps the character notices something has shifted - a small change that holds the seed of the next chapter, which we won't see. Or perhaps we simply leave them in a moment of peace. Include transition to rest, review of day, small gratitude or melancholy. Arc: winding down → peace or loneliness`,
+4. EVENING REFLECTION: The story ends, it doesn't conclude. Perhaps the focal-point notices something has shifted - a small change that holds the seed of the next chapter, which we won't see. Or perhaps we simply leave them in a moment of peace. Move from winding down toward either peace or loneliness.`,
 
     proseInstructions: `Tone: quiet, observant, gentle, present, textured.
 
@@ -330,16 +330,16 @@ Avoid: dramatic conflict, high stakes, life-changing events, rushing to resoluti
     tags: ['political', 'scheming', 'complex'],
     format: 'story',
 
-    narrativeInstructions: `This is chess with people. The reader should feel the thrill of watching brilliant minds maneuver against each other, always two moves ahead. We follow both the surface action (what characters say, what appears to happen) and the hidden action (what they're really doing, what they actually want). The story advances through revelation - each new piece of information changes the board.
+    narrativeInstructions: `This is chess with people. The reader should feel the thrill of watching players maneuver against each other, always two moves ahead. We follow both the surface action (what players say, what appears to happen) and the hidden action (what they're really doing, what they actually want). The story advances through revelation - each new piece of information changes the board.
 
 Scene Progression:
-1. THE PUBLIC FACE: Formal occasions - councils, ceremonies, audiences - where the real work happens through what's not said. Watch body language. Note who stands where. The most important communication happens in glances. Include formal setting, performance, hidden reactions. Arc: composure → mask slipping → recovery
+1. THE PUBLIC FACE: Formal occasions - councils, ceremonies, audiences - where players jockey for position through what's not said. The prize is visible but contested. Pawns may be present, unaware of their role. Watch body language. Note who stands where. Begin with composure, let masks slip slightly, end with recovery.
 
-2. THE PRIVATE MEETING: When masks come off, conversations become transactions. Everyone wants something. Threats are couched in courtesy. Alliances shift based on new information. Include secrecy, leverage, bargain or threat. The reader should track who knows what. Arc: circling → testing → deal or impasse
+2. THE PRIVATE MEETING: When masks come off, players negotiate directly. Everyone wants something. Threats are couched in courtesy. The secret may be leveraged or concealed. Alliances shift based on new information. Track who knows what. Start by circling, move through testing, arrive at deal or impasse.
 
-3. THE REVELATION: At some point, the hidden game becomes visible. The revelation should recontextualize everything - but feel fair. The clues were there. Include proof, reaction, consequence. Arc: tension → exposure → scramble
+3. THE REVELATION: At some point, the hidden game becomes visible. The secret emerges, or a player's true agenda is exposed. The revelation should recontextualize everything - but feel fair. The clues were there. Build tension toward the moment of exposure, then show the scramble that follows.
 
-4. NEW POSITIONS: Recalculated alliances. Characters make decisions based on what they know, which may be incomplete or manipulated. Include new power balance, next move hinted, cost tallied. Arc: dust settling → new tension`,
+4. NEW POSITIONS: Recalculated alliances. Players make decisions based on what they know, which may be incomplete or manipulated. Pawns may realize they've been used. The prize has changed hands or meaning. As the dust settles, new tensions emerge.`,
 
     proseInstructions: `Tone: calculating, tense, layered, dangerous, controlled.
 
@@ -383,13 +383,13 @@ Avoid: obvious villains, simple motivations, characters who say what they mean, 
     narrativeInstructions: `This is prose poetry. Language itself is the experience. Plot exists only as a frame for imagery and emotion. The story does not advance through cause and effect, but through emotional logic. Time is fluid - past and present interweave. A memory can be more vivid than the present moment.
 
 Scene Progression:
-1. THE IMAGE: Begin with a vivid, specific image that will return transformed at the end. This image is the story's secret heart. It should be concrete (a particular light, a particular object) but resonant with unspoken meaning. Include vivid sensory scene, unstated meaning, beauty or strangeness. Arc: attention → mystery
+1. THE IMAGE: The consciousness encounters a vivid, specific image that will return transformed at the end. This image is the story's secret heart. It should be concrete (a particular light, a particular object) but resonant with unspoken meaning. Perhaps it evokes the absence - what is longed for or lost. Begin by paying close attention, end in mystery.
 
-2. MEDITATION: One image leads to another through hidden rhymes of color, texture, feeling. The reader follows a path they sense rather than see. Include memory or reflection, imagery that echoes, emotional undercurrent. Arc: wandering → deepening
+2. MEDITATION: One image leads to another through hidden rhymes of color, texture, feeling. The consciousness wanders through memory or reflection. The reader follows a path they sense rather than see. Begin wandering, end in deepening understanding.
 
-3. THE ENCOUNTER: When other characters appear, they are mirrors or contrasts. Conversation is less about information than about rhythm and gap - what's said, what's almost said, what remains silent. Include moment of connection, gap between people, something unsaid. Arc: closeness → distance
+3. THE ENCOUNTER: A presence enters the consciousness's awareness - mirror or contrast. Conversation is less about information than about rhythm and gap - what's said, what's almost said, what remains silent. The absence may hover between them. Begin with momentary closeness, end in the distance that remains.
 
-4. RETURN: The ending circles back to the opening image, but everything has changed. The reader now sees what they couldn't see before. The image means something new while remaining what it always was. Include same image, new understanding, closure without explanation. Arc: recognition → peace or sorrow`,
+4. RETURN: The ending circles back to the opening image, but the consciousness has changed. The reader now sees what they couldn't see before. The image means something new while remaining what it always was. The absence is named or accepted. Move from recognition toward peace or sorrow.`,
 
     proseInstructions: `Tone: luminous, haunting, delicate, resonant, precise.
 
@@ -431,16 +431,16 @@ Avoid: explaining meaning, plot mechanics, rushed conclusions, clichéd images.`
     tags: ['comedy', 'dark', 'ironic'],
     format: 'story',
 
-    narrativeInstructions: `This is comedy built on suffering. The protagonist's world falls apart, and the falling apart is funny because it's also true. The template: each logical action, each sensible choice, somehow magnifies the disaster. The humor is in the inexorability.
+    narrativeInstructions: `This is comedy built on suffering. The fool's world falls apart, and the falling apart is funny because it's also true. The template: each logical action, each sensible choice, somehow magnifies the disaster. The humor is in the inexorability. The system creates absurd constraints. The catalyst sets everything in motion. The victims suffer the collateral damage.
 
 Scene Progression:
-1. THE SETUP: Establish a normal situation with a small problem. The protagonist is competent, perhaps even confident. They have a reasonable plan. This normalcy must be believable for its destruction to be funny. Include routine situation, small problem, confident protagonist. Arc: confidence → first crack
+1. THE SETUP: Establish a normal situation with a small problem. The fool is competent, perhaps even confident. They have a reasonable plan. The system's rules seem manageable. This normalcy must be believable for its destruction to be funny. Open with the fool's confidence, let the first crack appear, end with reassurance that nothing can go wrong.
 
-2. THE ESCALATION: Something goes wrong. The protagonist's reasonable response makes it worse. Each new attempt at solution creates two new problems. Self-awareness grows even as the situation deteriorates. Dark observations about life emerge through gritted teeth. Include logical action, unexpected consequence, doubling down. Arc: determination → dismay → denial
+2. THE ESCALATION: The catalyst triggers something. The fool's reasonable response makes it worse. The system's rules create absurd constraints. Each new attempt at solution creates two new problems. Self-awareness grows even as the situation deteriorates. Dark observations about life emerge through gritted teeth. Begin with the fool's determination to fix things, move through dismay as problems multiply, end with denial that this is really happening.
 
-3. THE CASCADE: Everything fails at once. Subplots collide. Characters' worst traits are exposed. The protagonist faces impossible choices where every option is terrible. They may laugh, inappropriately, because what else can you do. Include multiple disasters, ironic connections, impossible choices. Arc: panic → absurdity → strange calm
+3. THE CASCADE: Everything fails at once. Subplots collide. The system breaks down spectacularly. The fool faces impossible choices where every option is terrible. Victims accumulate. They may laugh, inappropriately, because what else can you do. Begin in panic as everything goes wrong, move through absurdity as connections become ridiculous, arrive at a strange calm of total surrender.
 
-4. THE AFTERMATH: The smoke clears. Assess the damage. There should be a rueful acceptance - things are terrible, but the protagonist has learned something, even if what they've learned is grim. A note of genuine humanity amidst the wreckage. Include consequences named, ironic observation, suggestion it will happen again. Arc: exhaustion → rueful acceptance`,
+4. THE AFTERMATH: The smoke clears. Assess the damage to the fool and to the victims. There should be a rueful acceptance - things are terrible, but the fool has learned something, even if what they've learned is grim. A note of genuine humanity amidst the wreckage. Move from exhaustion through rueful acceptance, ending with the suggestion it will all happen again.`,
 
     proseInstructions: `Tone: ironic, deadpan, absurd, rueful, dark.
 
@@ -479,16 +479,16 @@ Avoid: winking at audience, jokes that break tone, unsympathetic characters, cru
     tags: ['heroic', 'fantasy', 'triumphant'],
     format: 'story',
 
-    narrativeInstructions: `This is mythic storytelling. The world is enchanted. Good and evil are real forces. The hero's journey transforms not just themselves but the world around them.
+    narrativeInstructions: `This is mythic storytelling. The world is enchanted. Good and evil are real forces. The hero's journey transforms not just themselves but the world around them. The darkness threatens all that is good. The quest-object offers hope. The guide provides wisdom. Companions stand loyal.
 
 Scene Progression:
-1. THE CALL: The hero begins in their ordinary world, which is already touched by darkness or lacking something vital. The call to adventure disrupts their life. They may resist, but destiny is insistent. Include disruption of normal, stakes established, choice to act. Arc: peace → urgency → commitment
+1. THE CALL: The hero begins in their ordinary world, which is already touched by darkness or lacking something vital. The call to adventure disrupts their life - perhaps the guide appears with news, or the quest-object reveals itself. The hero may resist, but destiny is insistent. Begin in fragile peace, let urgency shatter it, end with the hero's commitment to act.
 
-2. THE TRIAL: Crossing into adventure should feel momentous. The hero leaves behind everything familiar. New allies appear - each representing virtues the hero will need. Each challenge tests a specific aspect of the hero's character. Include obstacle, struggle, growth. Arc: determination → struggle → triumph or lesson
+2. THE TRIAL: Crossing into adventure should feel momentous. The hero leaves behind everything familiar. Companions appear - each representing virtues the hero will need. The guide may offer cryptic wisdom. Each challenge tests a specific aspect of the hero's character. The darkness's power becomes clear. Begin with determination, struggle through obstacles, arrive at triumph or hard-won lesson.
 
-3. THE DARK NIGHT: Failure is not just possible but necessary - through defeat, the hero learns what they truly need. The dark night of the soul comes before the dawn. Include failure or loss, despair, spark of hope. Arc: defeat → despair → renewal
+3. THE DARK NIGHT: Failure is not just possible but necessary - through defeat, the hero learns what they truly need. The darkness seems triumphant. Perhaps a companion falls or the quest-object seems lost. The dark night of the soul comes before the dawn. Begin in defeat, descend through despair, end with a spark of renewed hope.
 
-4. THE TRIUMPH: The final battle is as much internal as external. The hero must use everything they've learned. Victory comes not from strength alone but from wisdom, from sacrifice, from becoming who they were meant to be. The hero returns changed. The ordinary world is renewed by their transformation. Include final confrontation, use of what was learned, evil defeated. Arc: determination → struggle → victory`,
+4. THE TRIUMPH: The final battle against the darkness is as much internal as external. The hero must use everything they've learned. The quest-object fulfills its purpose. Victory comes not from strength alone but from wisdom, from sacrifice, from becoming who they were meant to be. The hero returns changed. Begin with determination for the final confrontation, struggle at the limit of endurance, arrive at victory that transforms the world.`,
 
     proseInstructions: `Tone: heroic, inspiring, grand, hopeful, triumphant.
 
@@ -530,16 +530,16 @@ Avoid: moral ambiguity, anticlimactic endings, cynicism, deconstructing the genr
     tags: ['tragic', 'inevitable', 'cathartic'],
     format: 'story',
 
-    narrativeInstructions: `This is tragedy in the classical sense. The protagonist is exceptional - their greatness is real. Their destruction is inevitable, not despite their virtues but because of them. We watch, knowing what they cannot know.
+    narrativeInstructions: `This is tragedy in the classical sense. The doomed is exceptional - their greatness is real. Their destruction is inevitable, not despite their virtues but because of them. We watch, knowing what they cannot know. The flaw works its way through everything. Enablers feed the destruction. The innocent suffer. The witness will remain to tell the tale.
 
 Scene Progression:
-1. AT THE HEIGHT: Show the protagonist at their peak. Their power, their glory, their confidence. But show also the flaw - invisible to them, visible to us. Pride becomes hubris. Strength becomes inflexibility. Vision becomes blindness. Include greatness displayed, flaw visible to reader, confidence. Arc: admiration → unease
+1. AT THE HEIGHT: Show the doomed at their peak. Their power, their glory, their confidence. But show also the flaw - invisible to them, visible to us. Pride becomes hubris. Strength becomes inflexibility. Vision becomes blindness. Enablers praise what will destroy. Begin with admiration for the doomed's greatness, let unease creep in as the flaw becomes visible to the audience.
 
-2. THE TEMPTATION: An opportunity appears that the protagonist cannot refuse. Taking it is completely in character - this is not a mistake, it's an expression of who they are. The audience sees the trap that the protagonist cannot. Include opportunity, choice that seems right, first step down. Arc: desire → decision → crossing the line
+2. THE TEMPTATION: An opportunity appears that the doomed cannot refuse. Taking it is completely in character - this is not a mistake, it's an expression of who they are. The flaw makes the choice feel right. The audience sees the trap that the doomed cannot. Begin with desire for what is offered, move through the fateful decision, end with the line crossed that cannot be uncrossed.
 
-3. THE FALL: Once the first step is taken, the rest follows inevitably. Each attempt to escape makes things worse. The protagonist may begin to see, but too late. Others suffer for their choices. The isolation grows. Include things falling apart, protagonist's blindness, cost to others. Arc: denial → struggle → desperation
+3. THE FALL: Once the first step is taken, the rest follows inevitably. Each attempt to escape makes things worse. The doomed may begin to see, but too late. The innocent suffer for choices they did not make. Enablers scatter or double down. The isolation grows. Begin in denial that anything is truly wrong, struggle as the walls close in, arrive at desperation as options vanish.
 
-4. THE RECOGNITION: The moment of terrible clarity. The protagonist finally sees what we have seen all along. They understand their flaw, their complicity in their own destruction. This recognition is devastating precisely because it comes too late. The ending should leave us with pity and fear. Something has been lost that cannot be recovered. But there may be a kind of peace in acceptance. Arc: blindness → sight → grief`,
+4. THE RECOGNITION: The moment of terrible clarity. The doomed finally sees what we have seen all along. They understand their flaw, their complicity in their own destruction. The witness remains to tell the tale. This recognition is devastating precisely because it comes too late. The ending should leave us with pity and fear. Something has been lost that cannot be recovered. Begin in blindness, break through to terrible sight, end in grief that may hold a kind of peace.`,
 
     proseInstructions: `Tone: inevitable, doomed, magnificent, terrible, cathartic.
 
@@ -580,16 +580,16 @@ Avoid: redemption arcs, last-minute saves, unearned hope, villains to blame.`,
     tags: ['mystery', 'suspense', 'revelation'],
     format: 'story',
 
-    narrativeInstructions: `This is a puzzle story. The reader should be engaged in solving it alongside the investigator. Play fair - all clues should be available to the reader, even if their significance isn't immediately clear.
+    narrativeInstructions: `This is a puzzle story. The reader should be engaged in solving it alongside the investigator. Play fair - all clues should be available to the reader, even if their significance isn't immediately clear. The mystery demands answers. Suspects obscure the truth. The culprit hides in plain sight. Clues wait to be understood.
 
 Scene Progression:
-1. THE MYSTERY: Establish the question that needs answering. Something is wrong, hidden, unexplained. The investigator is drawn in by duty, curiosity, or personal connection. Set up the world of suspects and possibilities. Include question posed, stakes clear, investigator engaged. Arc: curiosity → commitment
+1. THE MYSTERY: Establish the question that needs answering. The mystery presents itself - something is wrong, hidden, unexplained. The investigator is drawn in by duty, curiosity, or personal connection. Set up the world of suspects and possibilities. Begin with curiosity about the mystery, end with the investigator's commitment to find the truth.
 
-2. THE INVESTIGATION: Each scene should yield new information that both advances and complicates the solution. Interview witnesses whose accounts don't quite match. Discover evidence that points in multiple directions. Follow leads that prove to be dead ends - but don't make them feel like wasted time. Arc: progress → confusion → determination
+2. THE INVESTIGATION: Each scene should yield new information that both advances and complicates the solution. Interview suspects whose accounts don't quite match. Discover clues that point in multiple directions. The mystery deepens even as pieces emerge. Follow leads that prove to be dead ends - but don't make them feel like wasted time. Begin with progress, move through confusion as contradictions mount, arrive at renewed determination.
 
-3. THE FALSE TRAIL: Plant at least one seemingly damning piece of evidence against the wrong suspect. It should be convincing enough that the reader considers it seriously, but on reflection, something should feel off. The misdirection should be clever, not cheap. Arc: certainty → doubt
+3. THE FALSE TRAIL: Plant at least one seemingly damning clue against the wrong suspect. It should be convincing enough that the reader considers them seriously, but on reflection, something should feel off. The culprit remains hidden. The misdirection should be clever, not cheap. Begin with certainty that the answer is found, end with creeping doubt.
 
-4. THE REVELATION: The truth should feel inevitable once revealed, even if surprising. It should reframe everything that came before - scenes that seemed irrelevant become crucial, innocent details become damning. The solution should be findable by a careful reader, but not obvious. Show the consequences of truth revealed. Justice may or may not be served. Arc: confusion → clarity → consequence`,
+4. THE REVELATION: The truth about the culprit should feel inevitable once revealed, even if surprising. It should reframe everything that came before - clues that seemed irrelevant become crucial, innocent details become damning. The mystery resolves but the solution should be findable by a careful reader, not obvious. Show the consequences of truth revealed. Justice may or may not be served. Move from confusion through the moment of clarity to the consequences that follow.`,
 
     proseInstructions: `Tone: suspicious, tense, uncertain, curious, revelatory.
 
@@ -630,16 +630,16 @@ Avoid: cheating clues, deus ex machina solutions, obvious culprits, unmotivated 
     tags: ['artifact', 'quest', 'adventure', 'discovery'],
     format: 'story',
 
-    narrativeInstructions: `This is a quest for a legendary object. The artifact itself is a character - its history, power, and mystery drive the narrative.
+    narrativeInstructions: `This is a quest for a legendary object. The treasure itself is a character - its history, power, and mystery drive the narrative. The seeker pursues it with singular focus. The guardian protects it. Rivals compete. The resting-place holds its secrets.
 
 Scene Progression:
-1. THE LEGEND: The artifact must be established as worth pursuing. Perhaps a rumor, a dying mentor's revelation, a fragment of map, or a vision. The protagonist should have both personal and practical reasons to seek it. Establish what competitors or dangers exist. Arc: wonder → determination
+1. THE LEGEND: The treasure must be established as worth pursuing. Perhaps a rumor, a dying mentor's revelation, a fragment of map, or a vision. The seeker should have both personal and practical reasons to seek it. Establish what rivals or guardians stand in the way. Begin with wonder at what the treasure might be, end with determination to find it.
 
-2. THE TRAIL: Each scene brings the protagonist closer while revealing more about the artifact's nature and history. Clues should be physical - inscriptions, old texts, previous seekers' remains. The artifact's trail should pass through varied locations. Include at least one false lead or trap. Arc: pursuit → setback → breakthrough
+2. THE TRAIL: Each scene brings the seeker closer while revealing more about the treasure's nature and history. Clues should be physical - inscriptions, old texts, previous seekers' remains. Rivals may appear or close in. The trail passes through varied locations toward the resting-place. Include at least one false lead or trap. Begin in pursuit, face setbacks that test resolve, arrive at breakthrough when the path becomes clear.
 
-3. THE DISCOVERY: Finding the artifact should be a moment of awe and danger. The object should exceed or subvert expectations. There may be a guardian, a test, or a terrible choice. The artifact's power should be demonstrated, not just described. Arc: anticipation → awe → consequence
+3. THE DISCOVERY: Finding the treasure in its resting-place should be a moment of awe and danger. The object should exceed or subvert expectations. The guardian may present a test or a terrible choice. The treasure's power should be demonstrated, not just described. Begin in anticipation as the seeker nears the goal, break into awe at the discovery, face the consequences of claiming it.
 
-4. THE CHOICE: Possessing the artifact changes everything. Does the protagonist keep it? Destroy it? Pass it on? The ending should honor the quest's difficulty while acknowledging what was sacrificed. Include power demonstrated, cost acknowledged, decision made. Arc: temptation → resolution`,
+4. THE CHOICE: Possessing the treasure changes everything. Does the seeker keep it? Destroy it? Pass it on? The rival's fate may be sealed. The ending should honor the quest's difficulty while acknowledging what was sacrificed. Move from temptation at the treasure's power through the weight of the choice to resolution.`,
 
     proseInstructions: `Tone: adventurous, mysterious, reverent, driven, atmospheric.
 
@@ -681,16 +681,16 @@ Avoid: trivializing the artifact, easy victories, anticlimactic discovery, unexp
     tags: ['artifact', 'horror', 'curse', 'supernatural'],
     format: 'story',
 
-    narrativeInstructions: `This is a horror story where the artifact is the antagonist. The curse unfolds slowly, inevitably.
+    narrativeInstructions: `This is a horror story where the cursed-artifact is the antagonist. The curse unfolds slowly, inevitably. The victim suffers its effects. Previous-owners foreshadow the fate to come. The curse-source explains the malevolence.
 
 Scene Progression:
-1. THE ACQUISITION: The object comes into possession in a way that seems fortunate - inheritance, discovery, purchase, gift. There may be subtle warnings the protagonist ignores. The artifact should seem beautiful or valuable at first. Arc: pleasure → unease
+1. THE ACQUISITION: The cursed-artifact comes into the victim's possession in a way that seems fortunate - inheritance, discovery, purchase, gift. There may be subtle warnings the victim ignores. The cursed-artifact should seem beautiful or valuable at first. Begin with pleasure at the acquisition, let unease creep in as something feels wrong.
 
-2. THE MANIFESTATION: Small wrongnesses accumulate. Dreams change. Relationships strain. Physical symptoms appear. The protagonist may not connect these to the artifact at first. When they do, they try rational explanations. Arc: confusion → fear → denial
+2. THE MANIFESTATION: Small wrongnesses accumulate. Dreams change. Relationships strain. Physical symptoms appear. The victim may not connect these to the cursed-artifact at first. When they do, they try rational explanations. Begin in confusion about what's happening, move through fear as the pattern becomes clear, end in denial that the cursed-artifact could be responsible.
 
-3. THE REVELATION: Investigation reveals the artifact's history - previous owners and their fates. The curse has rules that become clear through pattern. Perhaps there's a way to break it, but the cost is terrible. Arc: investigation → horror → despair
+3. THE REVELATION: Investigation reveals the cursed-artifact's history - previous-owners and their fates. The curse-source may be discovered. The curse has rules that become clear through pattern. Perhaps there's a way to break it, but the cost is terrible. Begin with investigation into the cursed-artifact's past, move through horror as the truth emerges, arrive at despair when the victim understands their fate.
 
-4. THE RECKONING: The curse reaches its peak. The protagonist must make an impossible choice - bear the curse, pass it on, or attempt a dangerous breaking. Whatever the outcome, there should be a sense that the artifact will find new victims. Arc: desperation → sacrifice → aftermath`,
+4. THE RECKONING: The curse reaches its peak. The victim must make an impossible choice - bear the curse, pass it on, or attempt a dangerous breaking. Whatever the outcome, there should be a sense that the cursed-artifact will find new victims. Move from desperation as time runs out, through whatever sacrifice is made, to the aftermath that shows the curse's continuation.`,
 
     proseInstructions: `Tone: dread, creeping, wrong, inevitable, beautiful-terrible.
 
@@ -730,16 +730,16 @@ Avoid: jump scares, gore without meaning, easy cures, heroes who don't suffer.`,
     tags: ['artifact', 'inheritance', 'family', 'history'],
     format: 'story',
 
-    narrativeInstructions: `This is a story about what objects carry across time. The artifact connects generations, and the narrative moves between past and present.
+    narrativeInstructions: `This is a story about what objects carry across time. The heirloom connects generations, and the narrative moves between past and present. The inheritor must reckon with what they've received. Ancestors shaped the heirloom's meaning. Claimants may dispute ownership. Family-traditions define what the heirloom demands.
 
 Scene Progression:
-1. THE INHERITANCE: Someone receives or discovers an artifact connected to their lineage. It may come with expectations, secrets, or obligations. The present-day protagonist must reckon with what this object means. Arc: grief or surprise → responsibility
+1. THE INHERITANCE: The inheritor receives or discovers the heirloom connected to their lineage. It may come with expectations, secrets, or obligations defined by family-tradition. Begin with the grief or surprise of receiving the heirloom, end with the weight of responsibility settling on the inheritor.
 
-2. THE ANCESTOR'S STORY: Flashbacks or discovered records reveal how ancestors acquired and used the artifact. Each generation added meaning. The object accumulated purpose, stain, or power. These stories should illuminate the present. Arc: discovery → understanding → complication
+2. THE ANCESTOR'S STORY: Flashbacks or discovered records reveal how ancestors acquired and used the heirloom. Each generation added meaning. The object accumulated purpose, stain, or power. These stories should illuminate the present. Begin with discovery of the ancestor's connection to the heirloom, move through understanding of what it meant to them, arrive at complications that echo in the present.
 
-3. THE PRESENT CRISIS: The protagonist must decide what to do with this legacy. Keep faith with ancestors? Reject their choices? Transform the artifact's meaning? Other descendants or claimants may have different views. Arc: conflict → decision → action
+3. THE PRESENT CRISIS: The inheritor must decide what to do with this legacy. Keep faith with ancestors? Reject their choices? Transform the heirloom's meaning? Claimants may have different views. Family-traditions may demand specific actions. Begin with conflict over the heirloom's fate, move through the decision the inheritor makes, end with action taken.
 
-4. THE PASSING ON: The artifact passes on again - to the next generation, to a new purpose, or to destruction. The story should acknowledge both continuity and change. Arc: resolution → continuity or closure`,
+4. THE PASSING ON: The heirloom passes on again - to the next generation, to a new purpose, or to destruction. The story should acknowledge both continuity and change. What the ancestors intended meets what the inheritor chooses. Move from resolution of the crisis toward either continuity of tradition or closure that ends it.`,
 
     proseInstructions: `Tone: generational, layered, weighted, familial, bittersweet.
 

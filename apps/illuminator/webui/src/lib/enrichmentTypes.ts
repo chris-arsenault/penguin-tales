@@ -5,8 +5,7 @@
  * Enrichment data is stored on entities and persisted to IndexedDB.
  */
 
-import type { NarrativeStyle } from '@canonry/world-schema';
-import type { ChronicleFormat, ChronicleImageRefs } from './chronicleTypes';
+import type { ChronicleFormat, ChronicleGenerationContext, ChronicleImageRefs } from './chronicleTypes';
 
 export type EnrichmentType = 'description' | 'image' | 'entityChronicle' | 'paletteExpansion';
 
@@ -71,11 +70,13 @@ export interface AcceptedChronicle {
 
 /**
  * Enrichment state stored on each entity
+ *
+ * NOTE: summary and description are stored directly on the entity, not here.
+ * This structure holds visual enrichment data and metadata only.
  */
 export interface EntityEnrichment {
-  description?: {
-    summary: string;
-    description: string;
+  /** Text enrichment metadata (visual fields, aliases, costs) - content is on entity */
+  text?: {
     aliases: string[];
     /** One-sentence visual thesis - the primary visual signal for this entity */
     visualThesis?: string;
@@ -129,7 +130,7 @@ export interface EnrichmentTaskBase {
   type: EnrichmentType;
   prompt: string;
   // For entityChronicle tasks
-  chronicleContext?: SerializableChronicleContext;
+  chronicleContext?: ChronicleGenerationContext;
   chronicleStep?: ChronicleStep;
   chronicleId?: string;
   // For chronicle image tasks
@@ -151,6 +152,8 @@ export interface EnrichmentTaskBase {
   }>;
   /** Era ID this entity was created during (for trait selection) */
   entityEraId?: string;
+  /** If true, entity summary is user-defined and should not be overwritten by enrichment */
+  entityLockedSummary?: boolean;
   /** Elements to avoid in visual thesis (overused motifs, from project config) */
   visualAvoid?: string;
   /** Per-kind domain instructions for visual thesis (required for description tasks) */
@@ -189,110 +192,6 @@ export type QueueItem = EnrichmentTaskPayload & {
 };
 
 /**
- * Serializable chronicle context (for entityChronicle tasks)
- * Maps are converted to Record objects for serialization.
- *
- * IMPORTANT: This must mirror ChronicleGenerationContext from chronicleTypes.ts.
- * When adding fields to ChronicleGenerationContext, also add them here and update:
- * - serializeContext() in useChronicleGeneration.ts
- * - deserializeChronicleContext() in enrichmentCore.ts
- */
-export interface SerializableChronicleContext {
-  // World context
-  worldName: string;
-  worldDescription: string;
-  canonFacts: string[];
-  tone: string;
-
-  // Chronicle focus (primary identity - chronicle-first architecture)
-  focus: {
-    type: 'single' | 'ensemble' | 'relationship' | 'event';
-    roleAssignments: Array<{
-      role: string;
-      entityId: string;
-      entityName: string;
-      entityKind: string;
-      isPrimary: boolean;
-    }>;
-    primaryEntityIds: string[];
-    supportingEntityIds: string[];
-    selectedEntityIds: string[];
-    selectedEventIds: string[];
-    selectedRelationshipIds: string[];
-  };
-
-  // Optional era context (if available)
-  era?: {
-    id: string;
-    name: string;
-    description?: string;
-  };
-
-  // All entities (for cross-referencing)
-  entities: Array<{
-    id: string;
-    name: string;
-    kind: string;
-    subtype?: string;
-    prominence: string;
-    culture?: string;
-    status: string;
-    tags: Record<string, string>;
-    summary?: string;
-    description?: string;
-    aliases?: string[];
-    createdAt: number;
-    updatedAt: number;
-  }>;
-
-  // Relationships involving target
-  relationships: Array<{
-    src: string;
-    dst: string;
-    kind: string;
-    strength?: number;
-    sourceName: string;
-    sourceKind: string;
-    targetName: string;
-    targetKind: string;
-  }>;
-
-  // NarrativeEvents
-  events: Array<{
-    id: string;
-    tick: number;
-    era: string;
-    eventKind: string;
-    significance: number;
-    headline: string;
-    description?: string;
-    subjectId?: string;
-    subjectName?: string;
-    objectId?: string;
-    objectName?: string;
-    participants?: {
-      id: string;
-      name: string;
-      kind: string;
-      subtype?: string;
-    }[];
-    narrativeTags?: string[];
-  }>;
-
-  // Narrative style for chronicle generation
-  narrativeStyle: NarrativeStyle;
-
-  // Name bank for invented characters (culture ID -> array of names)
-  nameBank?: Record<string, string[]>;
-
-  // Prose hints for entity kinds (entityKind -> prose guidance)
-  proseHints?: Record<string, string>;
-
-  // Cultural identities (cultureId -> {VALUES, SPEECH, FEARS, TABOOS, etc.})
-  culturalIdentities?: Record<string, Record<string, string>>;
-}
-
-/**
  * Which step to run for entityChronicle tasks
  */
 export type ChronicleStep =
@@ -327,7 +226,7 @@ export interface WorkerResult {
  * Get enrichment status for an entity and type
  */
 export function getEnrichmentStatus(
-  entity: { id: string; enrichment?: EntityEnrichment },
+  entity: { id: string; summary?: string; description?: string; enrichment?: EntityEnrichment },
   type: EnrichmentType,
   queueItems: QueueItem[]
 ): EnrichmentStatus {
@@ -341,13 +240,15 @@ export function getEnrichmentStatus(
     if (queueItem.status === 'error') return 'error';
   }
 
-  // Check entity enrichment
+  // Check entity fields directly (summary/description are on entity, not nested)
   const enrichment = entity.enrichment;
-  if (!enrichment) return 'missing';
 
-  if (type === 'description' && enrichment.description?.summary && enrichment.description?.description) return 'complete';
-  if (type === 'image' && enrichment.image?.imageId) return 'complete';
-  if (type === 'entityChronicle' && enrichment.entityChronicle?.chronicleId) return 'complete';
+  if (type === 'description') {
+    // Text enrichment is complete when entity has summary and description
+    return (entity.summary && entity.description) ? 'complete' : 'missing';
+  }
+  if (type === 'image' && enrichment?.image?.imageId) return 'complete';
+  if (type === 'entityChronicle' && enrichment?.entityChronicle?.chronicleId) return 'complete';
 
   return 'missing';
 }
@@ -356,80 +257,111 @@ export function getEnrichmentStatus(
  * Check if entity needs enrichment of a given type
  */
 export function needsEnrichment(
-  entity: { enrichment?: EntityEnrichment },
+  entity: { summary?: string; description?: string; enrichment?: EntityEnrichment },
   type: EnrichmentType
 ): boolean {
   const enrichment = entity.enrichment;
-  if (!enrichment) return true;
 
-  if (type === 'description') return !(enrichment.description?.summary && enrichment.description?.description);
-  if (type === 'image') return !enrichment.image?.imageId;
-  if (type === 'entityChronicle') return !enrichment.entityChronicle?.chronicleId;
+  if (type === 'description') {
+    // Text enrichment needed when entity lacks summary or description
+    return !(entity.summary && entity.description);
+  }
+  if (type === 'image') return !enrichment?.image?.imageId;
+  if (type === 'entityChronicle') return !enrichment?.entityChronicle?.chronicleId;
 
   return true;
 }
 
 /**
+ * Result of applying enrichment - includes both enrichment metadata and entity field updates
+ */
+export interface ApplyEnrichmentOutput {
+  enrichment: EntityEnrichment;
+  /** Summary to set on entity (undefined = no change, null = clear) */
+  summary?: string | null;
+  /** Description to set on entity (undefined = no change) */
+  description?: string;
+}
+
+/**
  * Apply enrichment result to entity
+ *
+ * Returns both the enrichment metadata and entity field updates.
+ * Callers should apply both: { ...entity, ...output.entityFields, enrichment: output.enrichment }
+ *
+ * @param lockedSummary - If true, skip setting the summary field (preserves user-defined summary)
  */
 export function applyEnrichmentResult(
   entity: { enrichment?: EntityEnrichment },
   type: EnrichmentType,
-  result: EnrichmentResult
-): EntityEnrichment {
+  result: EnrichmentResult,
+  lockedSummary?: boolean
+): ApplyEnrichmentOutput {
   const existing = entity.enrichment || {};
 
-  if (type === 'description' && result.summary && result.description) {
+  if (type === 'description' && result.description) {
+    // For lockedSummary entities, skip the summary (user-defined takes precedence)
+    // For normal entities, require both summary and description
+    if (!lockedSummary && !result.summary) {
+      return { enrichment: existing };
+    }
     return {
-      ...existing,
-      description: {
-        summary: result.summary,
-        description: result.description,
-        aliases: result.aliases || [],
-        visualThesis: result.visualThesis,
-        visualTraits: result.visualTraits || [],
-        generatedAt: result.generatedAt,
-        model: result.model,
-        estimatedCost: result.estimatedCost,
-        actualCost: result.actualCost,
-        inputTokens: result.inputTokens,
-        outputTokens: result.outputTokens,
-        debug: result.debug,
-        chainDebug: result.chainDebug,
+      enrichment: {
+        ...existing,
+        text: {
+          aliases: result.aliases || [],
+          visualThesis: result.visualThesis,
+          visualTraits: result.visualTraits || [],
+          generatedAt: result.generatedAt,
+          model: result.model,
+          estimatedCost: result.estimatedCost,
+          actualCost: result.actualCost,
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+          debug: result.debug,
+          chainDebug: result.chainDebug,
+        },
       },
+      // Entity field updates - summary/description go directly on entity
+      summary: lockedSummary ? undefined : result.summary,
+      description: result.description,
     };
   }
 
   if (type === 'image' && result.imageId) {
     return {
-      ...existing,
-      image: {
-        imageId: result.imageId,
-        generatedAt: result.generatedAt,
-        model: result.model,
-        revisedPrompt: result.revisedPrompt,
-        estimatedCost: result.estimatedCost,
-        actualCost: result.actualCost,
-        inputTokens: result.inputTokens,
-        outputTokens: result.outputTokens,
+      enrichment: {
+        ...existing,
+        image: {
+          imageId: result.imageId,
+          generatedAt: result.generatedAt,
+          model: result.model,
+          revisedPrompt: result.revisedPrompt,
+          estimatedCost: result.estimatedCost,
+          actualCost: result.actualCost,
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+        },
       },
     };
   }
 
   if (type === 'entityChronicle' && result.chronicleId) {
     return {
-      ...existing,
-      entityChronicle: {
-        chronicleId: result.chronicleId,
-        generatedAt: result.generatedAt,
-        model: result.model,
-        estimatedCost: result.estimatedCost,
-        actualCost: result.actualCost,
-        inputTokens: result.inputTokens,
-        outputTokens: result.outputTokens,
+      enrichment: {
+        ...existing,
+        entityChronicle: {
+          chronicleId: result.chronicleId,
+          generatedAt: result.generatedAt,
+          model: result.model,
+          estimatedCost: result.estimatedCost,
+          actualCost: result.actualCost,
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+        },
       },
     };
   }
 
-  return existing;
+  return { enrichment: existing };
 }

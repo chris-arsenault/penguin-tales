@@ -1443,15 +1443,19 @@ body {
 }
 
 .llm-table-th-label {
-  width: 40%;
+  width: 34%;
 }
 
 .llm-table-th-model {
-  width: 25%;
+  width: 18%;
 }
 
 .llm-table-th-thinking {
-  width: 25%;
+  width: 18%;
+}
+
+.llm-table-th-max {
+  width: 20%;
 }
 
 .llm-table-th-action {
@@ -1514,7 +1518,8 @@ body {
 }
 
 .llm-table-cell-model,
-.llm-table-cell-thinking {
+.llm-table-cell-thinking,
+.llm-table-cell-max {
   padding: 4px 8px;
 }
 

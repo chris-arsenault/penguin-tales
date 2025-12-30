@@ -77,7 +77,16 @@ export interface CanonryConfigItem {
   [key: string]: unknown;
 }
 
-export type CanonryEraConfig = CanonryConfigItem;
+/** Era config uses 'summary' instead of 'description' - user-entered, not LLM-generated */
+export interface CanonryEraConfig {
+  id: string;
+  name?: string;
+  summary?: string;
+  enabled?: boolean;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export type CanonryPressureConfig = CanonryConfigItem;
 export type CanonryGeneratorConfig = CanonryConfigItem;
 export type CanonrySystemConfig = CanonryConfigItem;

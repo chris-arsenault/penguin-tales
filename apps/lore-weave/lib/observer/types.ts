@@ -41,7 +41,7 @@ export interface EpochStartPayload {
   era: {
     id: string;
     name: string;
-    description: string;
+    summary: string;
   };
   tick: number;
 }

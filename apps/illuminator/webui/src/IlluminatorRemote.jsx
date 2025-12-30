@@ -100,7 +100,8 @@ const normalizeEnrichmentConfig = (config) => {
 const shouldApplyPersistedResult = (enrichment, type, result) => {
   if (!result?.generatedAt) return true;
   if (type === 'description') {
-    return (enrichment?.description?.generatedAt || 0) <= result.generatedAt;
+    // Text enrichment metadata now in enrichment.text (not enrichment.description)
+    return (enrichment?.text?.generatedAt || 0) <= result.generatedAt;
   }
   if (type === 'image') {
     return (enrichment?.image?.generatedAt || 0) <= result.generatedAt;
@@ -131,19 +132,29 @@ const mergePersistedResults = (entities, records) => {
     const entityRecords = recordsByEntity.get(entity.id);
     if (!entityRecords) return entity;
 
-    let nextEnrichment = entity.enrichment;
+    let result = { ...entity };
+    let changed = false;
     for (const record of entityRecords) {
-      if (!shouldApplyPersistedResult(nextEnrichment, record.type, record.result)) continue;
-      nextEnrichment = applyEnrichmentResult(
-        { enrichment: nextEnrichment },
+      if (!shouldApplyPersistedResult(result.enrichment, record.type, record.result)) continue;
+      const output = applyEnrichmentResult(
+        { enrichment: result.enrichment },
         record.type,
-        record.result
+        record.result,
+        entity.lockedSummary
       );
+      result = {
+        ...result,
+        enrichment: output.enrichment,
+        // Apply entity field updates from text enrichment
+        ...(output.summary !== undefined && { summary: output.summary }),
+        ...(output.description !== undefined && { description: output.description }),
+      };
+      changed = true;
     }
 
-    if (nextEnrichment !== entity.enrichment) {
+    if (changed) {
       didChange = true;
-      return { ...entity, enrichment: nextEnrichment };
+      return result;
     }
     return entity;
   });
@@ -159,10 +170,11 @@ const DEFAULT_WORLD_CONTEXT = {
   tone: '',
 };
 
-const DESCRIPTION_FIELDS = [
-  'summary',
-  'description',
+// Fields in enrichment.text (summary/description are now on entity directly)
+const TEXT_ENRICHMENT_FIELDS = [
   'aliases',
+  'visualThesis',
+  'visualTraits',
   'generatedAt',
   'model',
   'estimatedCost',
@@ -236,7 +248,7 @@ const isEnrichmentEqual = (left, right) => {
   if (left === right) return true;
   if (!left || !right) return false;
   return (
-    isSectionEqual(left.description, right.description, DESCRIPTION_FIELDS) &&
+    isSectionEqual(left.text, right.text, TEXT_ENRICHMENT_FIELDS) &&
     isSectionEqual(left.image, right.image, IMAGE_FIELDS) &&
     isSectionEqual(left.entityChronicle, right.entityChronicle, CHRONICLE_FIELDS) &&
     isChroniclesEqual(left.chronicles, right.chronicles)
@@ -489,18 +501,47 @@ export default function IlluminatorRemote({
   const persistedEnrichmentRef = useRef({ projectId: null, simulationRunId: null });
 
   // Initialize entities from worldData
-  // NOTE: We do NOT carry over enrichment from previous state based on ID matching.
-  // Enrichment is persisted in worldData itself (via onEnrichmentComplete callback).
+  // NOTE: Enrichment is persisted in worldData itself (via onEnrichmentComplete callback).
   // If entities have same IDs but come from different simulation runs, they should
   // NOT share enrichment - the enrichment belongs to the specific simulation.
+  // However, when worldData reference changes during the same session, we preserve
+  // local enrichment state (summary, description, enrichment) to avoid flash.
   useEffect(() => {
     if (!worldData?.hardState) {
       setEntities([]);
       return;
     }
 
-    // Use entities directly from worldData - enrichment is persisted there
-    setEntities(worldData.hardState);
+    setEntities((prev) => {
+      // If no previous state, use worldData directly
+      if (!prev.length) {
+        return worldData.hardState;
+      }
+
+      // Build map of previous entities with their enrichment
+      const prevById = new Map(prev.map((e) => [e.id, e]));
+
+      // Merge worldData with preserved enrichment from previous state
+      return worldData.hardState.map((entity) => {
+        const prevEntity = prevById.get(entity.id);
+        if (!prevEntity) return entity;
+
+        // Preserve local enrichment state if it's newer or missing in worldData
+        const hasLocalEnrichment = prevEntity.enrichment?.text?.generatedAt;
+        const hasWorldEnrichment = entity.enrichment?.text?.generatedAt;
+
+        if (hasLocalEnrichment && (!hasWorldEnrichment || prevEntity.enrichment.text.generatedAt > entity.enrichment.text.generatedAt)) {
+          return {
+            ...entity,
+            enrichment: prevEntity.enrichment,
+            summary: prevEntity.summary,
+            description: prevEntity.description,
+          };
+        }
+
+        return entity;
+      });
+    });
   }, [worldData]);
 
   const entityById = useMemo(() => buildEntityIndex(entities), [entities]);
@@ -551,11 +592,18 @@ export default function IlluminatorRemote({
   }, []);
 
   // Handle entity enrichment update from queue
-  const handleEntityUpdate = useCallback((entityId, enrichment) => {
+  // output is ApplyEnrichmentOutput with { enrichment, summary?, description? }
+  const handleEntityUpdate = useCallback((entityId, output) => {
     setEntities((prev) =>
       prev.map((entity) =>
         entity.id === entityId
-          ? { ...entity, enrichment: { ...entity.enrichment, ...enrichment } }
+          ? {
+              ...entity,
+              enrichment: { ...entity.enrichment, ...output.enrichment },
+              // Apply entity field updates from text enrichment
+              ...(output.summary !== undefined && { summary: output.summary }),
+              ...(output.description !== undefined && { description: output.description }),
+            }
           : entity
       )
     );
@@ -643,10 +691,19 @@ export default function IlluminatorRemote({
     let didChange = false;
     const enrichedHardState = worldData.hardState.map((entity) => {
       const local = entityById.get(entity.id);
-      if (!local?.enrichment) return entity;
-      if (isEnrichmentEqual(local.enrichment, entity.enrichment)) return entity;
+      if (!local) return entity;
+      // Check for changes in enrichment, summary, or description
+      const enrichmentChanged = local.enrichment && !isEnrichmentEqual(local.enrichment, entity.enrichment);
+      const summaryChanged = local.summary !== entity.summary;
+      const descriptionChanged = local.description !== entity.description;
+      if (!enrichmentChanged && !summaryChanged && !descriptionChanged) return entity;
       didChange = true;
-      return { ...entity, enrichment: local.enrichment };
+      return {
+        ...entity,
+        enrichment: local.enrichment,
+        summary: local.summary,
+        description: local.description,
+      };
     });
 
     if (!didChange) return;
@@ -684,7 +741,7 @@ export default function IlluminatorRemote({
       .map((e) => ({
         id: e.id,
         name: e.name,
-        description: e.enrichment?.description?.description || e.description,
+        description: e.description,
       }));
   }, [entities]);
 
@@ -755,11 +812,11 @@ export default function IlluminatorRemote({
           prominence: entity.prominence,
           culture: entity.culture || '',
           status: entity.status || 'active',
-          summary: entity.enrichment?.description?.summary || '',
-          description: entity.enrichment?.description?.description || '',
+          summary: entity.summary || '',
+          description: entity.description || '',
           tags: entity.tags || {},
-          visualThesis: entity.enrichment?.description?.visualThesis || '',
-          visualTraits: entity.enrichment?.description?.visualTraits || [],
+          visualThesis: entity.enrichment?.text?.visualThesis || '',
+          visualTraits: entity.enrichment?.text?.visualTraits || [],
         },
         relationships,
         era: {

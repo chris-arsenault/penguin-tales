@@ -15,6 +15,7 @@ import type {
   CohesionReport,
 } from './chronicleTypes';
 import type { ChronicleStep } from './enrichmentTypes';
+import type { NarrativeStyle } from '@canonry/world-schema';
 
 // ============================================================================
 // Database Configuration
@@ -52,6 +53,8 @@ export interface ChronicleRecord {
 
   /** Narrative style ID */
   narrativeStyleId: string;
+  /** Narrative style snapshot (stored with the chronicle seed) */
+  narrativeStyle?: NarrativeStyle;
 
   /** Selected entity IDs (all entities in the chronicle) */
   selectedEntityIds: string[];
@@ -210,6 +213,7 @@ export interface ChronicleShellMetadata {
   title?: string;
   format: ChronicleFormat;
   narrativeStyleId: string;
+  narrativeStyle?: NarrativeStyle;
   roleAssignments: ChronicleRoleAssignment[];
   selectedEntityIds: string[];
   selectedEventIds: string[];
@@ -242,6 +246,7 @@ export async function createChronicleShell(
     format: metadata.format,
     focusType,
     narrativeStyleId: metadata.narrativeStyleId,
+    narrativeStyle: metadata.narrativeStyle,
     roleAssignments: metadata.roleAssignments,
     selectedEntityIds: metadata.selectedEntityIds,
     selectedEventIds: metadata.selectedEventIds,
@@ -283,6 +288,7 @@ export interface ChronicleMetadata {
   title?: string;
   format: ChronicleFormat;
   narrativeStyleId: string;
+  narrativeStyle?: NarrativeStyle;
   roleAssignments: ChronicleRoleAssignment[];
   selectedEntityIds: string[];
   selectedEventIds: string[];
@@ -323,6 +329,7 @@ export async function createChronicle(
     format: metadata.format,
     focusType,
     narrativeStyleId: metadata.narrativeStyleId,
+    narrativeStyle: metadata.narrativeStyle,
     roleAssignments: metadata.roleAssignments,
     selectedEntityIds: metadata.selectedEntityIds,
     selectedEventIds: metadata.selectedEventIds,

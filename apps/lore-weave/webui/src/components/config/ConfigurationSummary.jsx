@@ -74,8 +74,8 @@ export default function ConfigurationSummary({
                 <span className="lw-detail-name">{era.name || era.id}</span>
                 <span className="lw-detail-id">{era.id}</span>
               </div>
-              {era.description && (
-                <div className="lw-detail-description">{era.description}</div>
+              {era.summary && (
+                <div className="lw-detail-description">{era.summary}</div>
               )}
             </div>
           ))

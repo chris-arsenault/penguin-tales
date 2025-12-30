@@ -27,7 +27,7 @@ interface EntityContext {
     image?: {
       imageId: string;
     };
-    description?: {
+    text?: {
       visualThesis?: string;
       visualTraits?: string[];
     };
@@ -550,8 +550,8 @@ export default function ChronicleImagePanel({
           id: entity.id,
           name: entity.name,
           kind: entity.kind,
-          visualThesis: entity.enrichment?.description?.visualThesis,
-          visualTraits: entity.enrichment?.description?.visualTraits,
+          visualThesis: entity.enrichment?.text?.visualThesis,
+          visualTraits: entity.enrichment?.text?.visualTraits,
         };
       })
       .filter((e): e is NonNullable<typeof e> => e !== null);

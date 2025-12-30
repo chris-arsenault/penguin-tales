@@ -35,10 +35,10 @@ export function BasicInfoSection({ era, onFieldChange }) {
         </div>
       </div>
       <div className="form-group" style={{ marginTop: '16px' }}>
-        <label className="label">Description</label>
+        <label className="label">Summary</label>
         <textarea
-          value={era.description}
-          onChange={(e) => onFieldChange('description', e.target.value)}
+          value={era.summary}
+          onChange={(e) => onFieldChange('summary', e.target.value)}
           className="textarea"
         />
       </div>

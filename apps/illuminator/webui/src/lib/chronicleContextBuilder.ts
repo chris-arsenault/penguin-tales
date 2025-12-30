@@ -7,6 +7,7 @@
  * See CHRONICLE_DESIGN.md for architecture documentation.
  */
 
+import type { NarrativeStyle } from '@canonry/world-schema';
 import type {
   ChronicleGenerationContext,
   ChronicleRoleAssignment,
@@ -16,6 +17,7 @@ import type {
   RelationshipContext,
   EraContext,
   NarrativeEventContext,
+  ChronicleTemporalContext,
 } from './chronicleTypes';
 
 interface WorldData {
@@ -28,14 +30,13 @@ interface WorldData {
     culture?: string;
     status: string;
     tags?: Record<string, string>;
+    summary?: string;
     description?: string;
     coordinates?: { x: number; y: number };
     createdAt: number;
     updatedAt: number;
     enrichment?: {
-      description?: {
-        summary: string;
-        description: string;
+      text?: {
         aliases?: string[];
       };
     };
@@ -87,9 +88,9 @@ function buildEntityContext(entity: WorldData['hardState'][0]): EntityContext {
     culture: entity.culture,
     status: entity.status,
     tags: entity.tags || {},
-    summary: entity.enrichment?.description?.summary,
-    description: entity.enrichment?.description?.description,
-    aliases: entity.enrichment?.description?.aliases || [],
+    summary: entity.summary,
+    description: entity.description,
+    aliases: entity.enrichment?.text?.aliases || [],
     coordinates: entity.coordinates,
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
@@ -127,7 +128,7 @@ function buildEraContext(entity: WorldData['hardState'][0]): EraContext {
   return {
     id: entity.id,
     name: entity.name,
-    description: entity.enrichment?.description?.description,
+    description: entity.description,
   };
 }
 
@@ -219,17 +220,21 @@ function buildFocus(
  * @param selections - Chronicle selections from wizard
  * @param worldData - World simulation data
  * @param worldContext - World context (name, description, etc.)
+ * @param narrativeStyle - Narrative style selected for this chronicle
  * @param nameBank - Optional pre-generated names by culture for invented characters
  * @param proseHints - Optional per-kind prose hints for narrative guidance
  * @param culturalIdentities - Optional cultural identity data (VALUES, SPEECH, FEARS, TABOOS etc.)
+ * @param temporalContext - Optional temporal context computed from selected events and eras
  */
 export function buildChronicleContext(
   selections: ChronicleSelections,
   worldData: WorldData,
   worldContext: WorldContext,
+  narrativeStyle: NarrativeStyle,
   nameBank?: Record<string, string[]>,
   proseHints?: Record<string, string>,
-  culturalIdentities?: Record<string, Record<string, string>>
+  culturalIdentities?: Record<string, Record<string, string>>,
+  temporalContext?: ChronicleTemporalContext | null
 ): ChronicleGenerationContext {
   const entityMap = new Map(worldData.hardState.map((e) => [e.id, e]));
 
@@ -277,11 +282,14 @@ export function buildChronicleContext(
     worldDescription: worldContext.description || '',
     canonFacts: worldContext.canonFacts || [],
     tone: worldContext.tone || '',
+    narrativeStyle,
 
     // Chronicle focus (primary)
     focus,
 
     era: era ? buildEraContext(era) : undefined,
+    // Full temporal context with all eras and chronicle timeline
+    temporalContext: temporalContext || undefined,
     entities,
     relationships,
     events,

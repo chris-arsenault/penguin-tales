@@ -2,7 +2,7 @@
   {
     "id": "expansion",
     "name": "The Great Thaw",
-    "description": "A period of exploration and colony founding as the ice recedes",
+    "summary": "The great ice sheets retreat, revealing new waters rich with krill and ancient secrets frozen beneath. Bold explorers from the Aurora Stack and Abyssal Trench venture forth to claim territory, founding colonies that will shape penguin civilization for generations. Guild halls rise in every settlement, their charters written on sheets of pressed ice. It is an age of optimism, where even the most marginal rookery dreams of becoming a great berg.",
     "templateWeights": {
       "colony_founding": 1.6,
       "krill_bloom_migration": 1.4,
@@ -115,7 +115,7 @@
   {
     "id": "conflict",
     "name": "The Faction Wars",
-    "description": "Resource scarcity leads to inter-colony conflicts",
+    "summary": "The bounty of the Thaw dwindles as colonies multiply beyond what the waters can sustain. Trade routes become battle lines; old alliances fracture along cultural fault lines between the pragmatic Abyssal Trench and the mystical Aurora Stack. Factions emerge within colonies, each claiming the true path to survival. Heroes rise not from exploration but from war, their names etched in the ice memorials that dot every berg.",
     "templateWeights": {
       "colony_founding": 0.2,
       "krill_bloom_migration": 1.2,
@@ -235,7 +235,7 @@
   {
     "id": "innovation",
     "name": "The Clever Ice Age",
-    "description": "Technology and magic flourish as penguins seek solutions",
+    "summary": "War-weary but unbowed, penguin-kind turns inward to solve problems through cleverness rather than conflict. The great guilds establish schools of magic and workshops of invention, competing to unlock the secrets of fire-core crystals and spectralum lenses. Aurora Stack mystics codify the old ice-memory rituals while Abyssal Trench engineers devise machines to harvest krill at unprecedented scales. It is an age of wonders, though some whisper that not all discoveries should be made.",
     "templateWeights": {
       "krill_bloom_migration": 0.8,
       "orca_raider_arrival": 0,
@@ -345,7 +345,7 @@
   {
     "id": "invasion",
     "name": "The Orca Incursion",
-    "description": "External threats unite the colonies against common enemies",
+    "summary": "The orcas come not as raiders but as conquerors, their war-pods striking with coordination that speaks of dark intelligence. Old feuds between Aurora Stack and Abyssal Trench fade as colonies band together against extinction. The innovations of the previous age become weapons; the heroes of this era are defenders who hold the line at impossible odds. Every culture contributes what it knows best: Trench tactical discipline, Stack mystical barriers, and the desperate courage of those with nowhere left to retreat.",
     "templateWeights": {
       "krill_bloom_migration": 0.4,
       "hero_emergence": 1.8,
@@ -475,7 +475,7 @@
   {
     "id": "reconstruction",
     "name": "The Frozen Peace",
-    "description": "Rebuilding and consolidation after the wars",
+    "summary": "The orca threat recedes, leaving scars that will take generations to heal. Survivors rebuild not just colonies but the bonds between cultures, forging new traditions that blend Aurora Stack mysticism with Abyssal Trench pragmatism. The great festivals return, now tinged with remembrance for the fallen. Guilds that once competed now cooperate, their combined knowledge preserving what was nearly lost. It is an age of quiet determination, where every new chick represents a victory against oblivion.",
     "templateWeights": {
       "krill_bloom_migration": 1.4,
       "succession": 0.8,

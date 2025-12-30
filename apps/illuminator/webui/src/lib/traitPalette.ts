@@ -16,6 +16,7 @@ import {
 import { saveCostRecord, generateCostId } from './costStorage';
 import { estimateTextCost, calculateActualTextCost } from './costEstimation';
 import { getCallConfig } from './llmModelSettings';
+import { calcTokenBudget } from './llmBudget';
 
 // ============================================================================
 // Types
@@ -269,7 +270,8 @@ export async function expandPalette(
   }
 
   // Get model settings for palette expansion
-  const { model, thinkingBudget } = getCallConfig('palette.expansion');
+  const callConfig = getCallConfig('palette.expansion');
+  const { model } = callConfig;
 
   // Gather current state
   const currentPalette = await getPalette(projectId, entityKind);
@@ -283,16 +285,16 @@ export async function expandPalette(
   );
 
   const estimate = estimateTextCost(prompt, 'description', model);
-  const maxTokens = thinkingBudget > 0 ? thinkingBudget + 4096 : 4096;
+  const { totalMaxTokens, thinkingBudget } = calcTokenBudget(callConfig, 4096);
 
   // Call LLM
   const result = await llmClient.complete({
     systemPrompt: EXPANSION_SYSTEM_PROMPT,
     prompt,
     model,
-    maxTokens,
+    maxTokens: totalMaxTokens,
     temperature: 0.9,
-    thinkingBudget: thinkingBudget > 0 ? thinkingBudget : undefined,
+    thinkingBudget,
   });
 
   if (result.error || !result.text) {

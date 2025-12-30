@@ -76,5 +76,62 @@
     "src": "npc_nyla",
     "dst": "loc_nightfall_shelf",
     "strength": 1
+  },
+
+  {
+    "kind": "resident_of",
+    "src": "npc_keeper_hollows",
+    "dst": "loc_drowned_ledge",
+    "strength": 1
+  },
+  {
+    "kind": "stored_at",
+    "src": "artifact_deep_map",
+    "dst": "loc_drowned_ledge",
+    "strength": 1
+  },
+  {
+    "kind": "owned_by",
+    "src": "artifact_deep_map",
+    "dst": "npc_keeper_hollows",
+    "strength": 1
+  },
+
+  {
+    "kind": "leader_of",
+    "src": "npc_grandmother_deep",
+    "dst": "faction_wake_singers",
+    "strength": 1
+  },
+  {
+    "kind": "occupies",
+    "src": "faction_wake_singers",
+    "dst": "loc_corpse_current",
+    "strength": 1
+  },
+  {
+    "kind": "stored_at",
+    "src": "artifact_god_tooth",
+    "dst": "loc_corpse_current",
+    "strength": 1
+  },
+  {
+    "kind": "owned_by",
+    "src": "artifact_god_tooth",
+    "dst": "faction_wake_singers",
+    "strength": 1
+  },
+
+  {
+    "kind": "contained_by",
+    "src": "loc_veil_vents",
+    "dst": "loc_still_pools",
+    "strength": 1
+  },
+  {
+    "kind": "adjacent_to",
+    "src": "loc_forgotten_shore",
+    "dst": "loc_still_pools",
+    "strength": 0.8
   }
 ]

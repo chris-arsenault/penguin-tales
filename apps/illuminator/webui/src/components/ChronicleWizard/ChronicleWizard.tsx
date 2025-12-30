@@ -11,7 +11,7 @@
 
 import { useEffect, useCallback, useMemo } from 'react';
 import type { NarrativeStyle, EntityKindDefinition } from '@canonry/world-schema';
-import type { EntityContext, RelationshipContext, NarrativeEventContext, EraTemporalInfo } from '../../lib/chronicleTypes';
+import type { EntityContext, RelationshipContext, NarrativeEventContext, EraTemporalInfo, ChronicleTemporalContext } from '../../lib/chronicleTypes';
 import { WizardProvider, useWizard, WizardStep, ChronicleSeed } from './WizardContext';
 import StyleStep from './steps/StyleStep';
 import EntryPointStep from './steps/EntryPointStep';
@@ -44,6 +44,7 @@ export interface ChronicleWizardProps {
 
 export interface WizardGenerateConfig {
   narrativeStyleId: string;
+  narrativeStyle: NarrativeStyle;
   entryPointId: string;
   entryPointName: string;
   entryPointKind: string;
@@ -56,6 +57,8 @@ export interface WizardGenerateConfig {
   }>;
   selectedEventIds: string[];
   selectedRelationshipIds: string[];
+  /** Temporal context computed from selected events and eras */
+  temporalContext: ChronicleTemporalContext | null;
 }
 
 // =============================================================================
@@ -95,12 +98,12 @@ function InnerWizard({
   events,
   initialSeed,
 }: InnerWizardProps) {
-  const { state, nextStep, prevStep, reset, goToStep, initFromSeed } = useWizard();
+  const { state, nextStep, prevStep, reset, goToStep, initFromSeed, temporalContext } = useWizard();
 
   // Initialize from seed when opening with one
   useEffect(() => {
     if (isOpen && initialSeed) {
-      const style = narrativeStyles.find(s => s.id === initialSeed.narrativeStyleId);
+      const style = initialSeed.narrativeStyle || narrativeStyles.find(s => s.id === initialSeed.narrativeStyleId);
       const entryPoint = entities.find(e => e.id === initialSeed.entrypointId);
 
       if (style && entryPoint) {
@@ -156,21 +159,23 @@ function InnerWizard({
 
   // Handle generate
   const handleGenerate = useCallback(() => {
-    if (!state.narrativeStyleId || !state.entryPoint) return;
+    if (!state.narrativeStyleId || !state.narrativeStyle || !state.entryPoint) return;
 
     const config: WizardGenerateConfig = {
       narrativeStyleId: state.narrativeStyleId,
+      narrativeStyle: state.narrativeStyle,
       entryPointId: state.entryPoint.id,
       entryPointName: state.entryPoint.name,
       entryPointKind: state.entryPoint.kind,
       roleAssignments: state.roleAssignments,
       selectedEventIds: Array.from(state.selectedEventIds),
       selectedRelationshipIds: Array.from(state.selectedRelationshipIds),
+      temporalContext,
     };
 
     onGenerate(config);
     handleClose();
-  }, [state, onGenerate, handleClose]);
+  }, [state, onGenerate, handleClose, temporalContext]);
 
   // Handle next with auto-skip for accept defaults
   const handleNext = useCallback(() => {

@@ -26,6 +26,7 @@ const CURRENT_VERSION = 1;
 export interface LLMCallConfigStored {
   model?: string;           // undefined = use default
   thinkingBudget?: number;  // undefined = use default, 0 = disabled
+  maxTokens?: number;       // undefined = use default, 0 = auto (style-derived)
 }
 
 /**
@@ -45,6 +46,7 @@ export interface LLMModelSettings {
 export interface ResolvedLLMCallConfig {
   model: string;
   thinkingBudget: number;
+  maxTokens: number;
 }
 
 /**
@@ -105,13 +107,15 @@ export function saveLLMModelSettings(settings: LLMModelSettings): void {
       const metadata = LLM_CALL_METADATA[callType as LLMCallType];
       if (!metadata) continue;
 
-      const hasModelOverride = config.model && config.model !== metadata.defaultModel;
-      const hasThinkingOverride = config.thinkingBudget !== undefined && config.thinkingBudget !== metadata.defaultThinkingBudget;
+      const hasModelOverride = config.model && config.model !== metadata.defaults.model;
+      const hasThinkingOverride = config.thinkingBudget !== undefined && config.thinkingBudget !== metadata.defaults.thinkingBudget;
+      const hasMaxTokensOverride = config.maxTokens !== undefined && config.maxTokens !== metadata.defaults.maxTokens;
 
-      if (hasModelOverride || hasThinkingOverride) {
+      if (hasModelOverride || hasThinkingOverride || hasMaxTokensOverride) {
         cleanOverrides[callType as LLMCallType] = {
           ...(hasModelOverride ? { model: config.model } : {}),
           ...(hasThinkingOverride ? { thinkingBudget: config.thinkingBudget } : {}),
+          ...(hasMaxTokensOverride ? { maxTokens: config.maxTokens } : {}),
         };
       }
     }
@@ -131,7 +135,7 @@ export function saveLLMModelSettings(settings: LLMModelSettings): void {
 export function getModelForCall(callType: LLMCallType): string {
   const settings = getLLMModelSettings();
   const override = settings.callOverrides[callType];
-  return override?.model ?? LLM_CALL_METADATA[callType].defaultModel;
+  return override?.model ?? LLM_CALL_METADATA[callType].defaults.model;
 }
 
 /**
@@ -140,7 +144,16 @@ export function getModelForCall(callType: LLMCallType): string {
 export function getThinkingBudgetForCall(callType: LLMCallType): number {
   const settings = getLLMModelSettings();
   const override = settings.callOverrides[callType];
-  return override?.thinkingBudget ?? LLM_CALL_METADATA[callType].defaultThinkingBudget;
+  return override?.thinkingBudget ?? LLM_CALL_METADATA[callType].defaults.thinkingBudget;
+}
+
+/**
+ * Get the max tokens (pre-reasoning budget) for a specific call type
+ */
+export function getMaxTokensForCall(callType: LLMCallType): number {
+  const settings = getLLMModelSettings();
+  const override = settings.callOverrides[callType];
+  return override?.maxTokens ?? LLM_CALL_METADATA[callType].defaults.maxTokens;
 }
 
 /**
@@ -149,13 +162,14 @@ export function getThinkingBudgetForCall(callType: LLMCallType): number {
 export function getCallConfig(callType: LLMCallType): ResolvedLLMCallConfig {
   const model = getModelForCall(callType);
   let thinkingBudget = getThinkingBudgetForCall(callType);
+  const maxTokens = getMaxTokensForCall(callType);
 
   // Ensure thinking is disabled for models that don't support it
   if (!THINKING_CAPABLE_MODELS.includes(model)) {
     thinkingBudget = 0;
   }
 
-  return { model, thinkingBudget };
+  return { model, thinkingBudget, maxTokens };
 }
 
 /**
@@ -195,8 +209,9 @@ export function hasOverrides(callType: LLMCallType): boolean {
 
   const metadata = LLM_CALL_METADATA[callType];
   return (
-    (override.model !== undefined && override.model !== metadata.defaultModel) ||
-    (override.thinkingBudget !== undefined && override.thinkingBudget !== metadata.defaultThinkingBudget)
+    (override.model !== undefined && override.model !== metadata.defaults.model) ||
+    (override.thinkingBudget !== undefined && override.thinkingBudget !== metadata.defaults.thinkingBudget) ||
+    (override.maxTokens !== undefined && override.maxTokens !== metadata.defaults.maxTokens)
   );
 }
 

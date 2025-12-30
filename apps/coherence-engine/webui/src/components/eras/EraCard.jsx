@@ -185,7 +185,7 @@ export function EraCard({
             <span className="expandable-card-name">{era.name}</span>
             <span className="expandable-card-id">{era.id}</span>
           </div>
-          <div className="expandable-card-desc">{era.description}</div>
+          <div className="expandable-card-desc">{era.summary}</div>
         </div>
         <div className="expandable-card-stats">
           <div className="stat">

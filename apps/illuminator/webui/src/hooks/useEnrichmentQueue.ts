@@ -19,6 +19,7 @@ import type {
   EnrichmentTaskPayload,
   WorkerTask,
   EntityEnrichment,
+  ApplyEnrichmentOutput,
 } from '../lib/enrichmentTypes';
 import { applyEnrichmentResult } from '../lib/enrichmentTypes';
 import type { WorkerConfig, WorkerOutbound } from '../workers/enrichment.worker';
@@ -33,6 +34,8 @@ export interface EnrichedEntity {
   culture: string;
   status: string;
   description: string;
+  summary?: string;
+  lockedSummary?: boolean;
   tags: Record<string, unknown>;
   createdAt?: number;
   enrichment?: EntityEnrichment;
@@ -134,7 +137,7 @@ function findLeastBusyWorker(workers: WorkerState[], queue: QueueItem[]): Worker
 }
 
 export function useEnrichmentQueue(
-  onEntityUpdate: (entityId: string, enrichment: EntityEnrichment) => void,
+  onEntityUpdate: (entityId: string, output: ApplyEnrichmentOutput) => void,
   projectId?: string,
   simulationRunId?: string
 ): UseEnrichmentQueueReturn {
@@ -283,8 +286,8 @@ export function useEnrichmentQueue(
             const queueItem = queueRef.current.find(item => item.id === result.id);
             const isChronicleImage = queueItem?.imageType === 'chronicle';
             if (!isChronicleImage) {
-              const enrichment = applyEnrichmentResult({}, result.type, result.result);
-              onEntityUpdateRef.current(result.entityId, enrichment);
+              const output = applyEnrichmentResult({}, result.type, result.result, queueItem?.entityLockedSummary);
+              onEntityUpdateRef.current(result.entityId, output);
             }
           }
 
@@ -412,6 +415,7 @@ export function useEnrichmentQueue(
           entityKind: entity.kind,
           entitySubtype: entity.subtype,
           entityCulture: entity.culture,
+          entityLockedSummary: entity.lockedSummary,
           ...taskFields,
           simulationRunId: runId,
           status: 'queued' as const,
@@ -531,14 +535,21 @@ export function useEnrichmentQueue(
 
       if (completedItems.length === 0) return entity;
 
-      let enrichment = entity.enrichment || {};
+      let result = { ...entity };
       for (const item of completedItems) {
         if (item.result) {
-          enrichment = applyEnrichmentResult({ enrichment }, item.type, item.result);
+          const output = applyEnrichmentResult({ enrichment: result.enrichment }, item.type, item.result, entity.lockedSummary);
+          result = {
+            ...result,
+            enrichment: output.enrichment,
+            // Apply entity field updates from text enrichment
+            ...(output.summary !== undefined && { summary: output.summary }),
+            ...(output.description !== undefined && { description: output.description }),
+          };
         }
       }
 
-      return { ...entity, enrichment };
+      return result;
     },
     [queue]
   );

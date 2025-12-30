@@ -441,7 +441,9 @@ export class WorldEngine {
         id,
         coordinates,
         createdAt: 0,
-        updatedAt: 0
+        updatedAt: 0,
+        // Seed entities with summaries should have them locked (user-defined, not to be overwritten by enrichment)
+        lockedSummary: entity.summary ? true : undefined
       };
 
       // Initialize catalyst properties for prominent entities
@@ -742,7 +744,9 @@ export class WorldEngine {
         id,
         coordinates,
         createdAt: 0,
-        updatedAt: 0
+        updatedAt: 0,
+        // Seed entities with summaries should have them locked (user-defined, not to be overwritten by enrichment)
+        lockedSummary: entity.summary ? true : undefined
       };
 
       initializeCatalystSmart(loadedEntity);
@@ -891,7 +895,7 @@ export class WorldEngine {
       era: {
         id: era.id,
         name: era.name,
-        description: era.description
+        summary: era.summary
       },
       tick: this.graph.tick
     });

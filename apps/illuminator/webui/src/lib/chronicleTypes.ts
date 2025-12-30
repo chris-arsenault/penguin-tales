@@ -5,6 +5,8 @@
  * See CHRONICLE_DESIGN.md for full architecture documentation.
  */
 
+import type { NarrativeStyle } from '@canonry/world-schema';
+
 // =============================================================================
 // Chronicle Plan - Output of Step 1
 // =============================================================================
@@ -301,6 +303,9 @@ export interface ChronicleGenerationContext {
   canonFacts: string[];
   tone: string;
 
+  // Narrative style used for generation
+  narrativeStyle: NarrativeStyle;
+
   // Chronicle focus (chronicle-first architecture)
   focus: ChronicleFocus;
 
@@ -321,11 +326,6 @@ export interface ChronicleGenerationContext {
 
   /**
    * Name bank for invented characters (culture ID -> array of names).
-   *
-   * SERIALIZATION NOTE: This field must also be added to:
-   * - SerializableChronicleContext in enrichmentTypes.ts
-   * - serializeContext() in useChronicleGeneration.ts
-   * - deserializeChronicleContext() in enrichmentCore.ts
    */
   nameBank?: Record<string, string[]>;
 
@@ -426,7 +426,7 @@ export type TemporalScope = 'moment' | 'episode' | 'arc' | 'saga';
 export interface EraTemporalInfo {
   id: string;
   name: string;
-  description?: string;
+  summary?: string;
   /** Order in the era sequence (0 = first era) */
   order: number;
   /** Starting tick of this era */

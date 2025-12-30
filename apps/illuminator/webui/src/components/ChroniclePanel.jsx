@@ -347,6 +347,7 @@ export default function ChroniclePanel({
         focusType: chronicle.focusType,
         roleAssignments: chronicle.roleAssignments,
         narrativeStyleId: chronicle.narrativeStyleId,
+        narrativeStyle: chronicle.narrativeStyle,
         primaryCount,
         supportingCount,
         selectedEntityIds: chronicle.selectedEntityIds,
@@ -390,10 +391,11 @@ export default function ChroniclePanel({
 
   // Get the narrative style from the selected chronicle's stored seed data
   const selectedNarrativeStyle = useMemo(() => {
+    if (selectedItem?.narrativeStyle) return selectedItem.narrativeStyle;
     if (!selectedItem?.narrativeStyleId) return null;
     if (stylesLoading || !styleLibrary?.narrativeStyles) return null;
     return styleLibrary.narrativeStyles.find((s) => s.id === selectedItem.narrativeStyleId);
-  }, [selectedItem?.narrativeStyleId, styleLibrary, stylesLoading]);
+  }, [selectedItem?.narrativeStyle, selectedItem?.narrativeStyleId, styleLibrary, stylesLoading]);
 
   const refinementState = useMemo(() => {
     if (!selectedItem) return null;
@@ -456,7 +458,7 @@ export default function ChroniclePanel({
 
   // Build generation context for selected item
   const generationContext = useMemo(() => {
-    if (!selectedItem || !worldData) return null;
+    if (!selectedItem || !worldData || !selectedNarrativeStyle) return null;
 
     try {
       const wc = {
@@ -485,6 +487,7 @@ export default function ChroniclePanel({
           },
           worldData,
           wc,
+          selectedNarrativeStyle,
           nameBank,
           proseHints,
           cultureIdentities?.descriptive
@@ -494,7 +497,7 @@ export default function ChroniclePanel({
       console.error('Failed to build generation context:', e);
     }
     return null;
-  }, [selectedItem, worldData, worldContext, nameBank, entityGuidance, cultureIdentities]);
+  }, [selectedItem, worldData, worldContext, nameBank, entityGuidance, cultureIdentities, selectedNarrativeStyle]);
 
   // Handle accept chronicle - saves to IndexedDB (no entity enrichment copy needed)
   const handleAcceptChronicle = useCallback(async () => {
@@ -504,27 +507,23 @@ export default function ChroniclePanel({
 
   const handleCorrectSuggestions = useCallback(() => {
     if (!selectedItem || !generationContext) return;
-    if (!selectedNarrativeStyle) return;
-    correctSuggestions(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
-  }, [selectedItem, generationContext, selectedNarrativeStyle, correctSuggestions]);
+    correctSuggestions(selectedItem.chronicleId, generationContext);
+  }, [selectedItem, generationContext, correctSuggestions]);
 
   const handleGenerateSummary = useCallback(() => {
     if (!selectedItem || !generationContext) return;
-    if (!selectedNarrativeStyle) return;
-    generateSummary(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
-  }, [selectedItem, generationContext, selectedNarrativeStyle, generateSummary]);
+    generateSummary(selectedItem.chronicleId, generationContext);
+  }, [selectedItem, generationContext, generateSummary]);
 
   const handleGenerateImageRefs = useCallback(() => {
     if (!selectedItem || !generationContext) return;
-    if (!selectedNarrativeStyle) return;
-    generateImageRefs(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
-  }, [selectedItem, generationContext, selectedNarrativeStyle, generateImageRefs]);
+    generateImageRefs(selectedItem.chronicleId, generationContext);
+  }, [selectedItem, generationContext, generateImageRefs]);
 
   const handleRevalidate = useCallback(() => {
     if (!selectedItem || !generationContext) return;
-    if (!selectedNarrativeStyle) return;
-    revalidateChronicle(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
-  }, [selectedItem, generationContext, selectedNarrativeStyle, revalidateChronicle]);
+    revalidateChronicle(selectedItem.chronicleId, generationContext);
+  }, [selectedItem, generationContext, revalidateChronicle]);
 
   // Handle regenerate (delete and go back to start screen) - uses restart modal
   const handleRegenerate = useCallback(() => {
@@ -548,6 +547,7 @@ export default function ChroniclePanel({
         // Extract seed from the chronicle record
         const seed = {
           narrativeStyleId: chronicle.narrativeStyleId,
+          narrativeStyle: chronicle.narrativeStyle,
           entrypointId: chronicle.entrypointId,
           roleAssignments: chronicle.roleAssignments || [],
           selectedEventIds: chronicle.selectedEventIds || [],
@@ -585,9 +585,9 @@ export default function ChroniclePanel({
         culture: e.culture,
         status: e.status,
         tags: e.tags || {},
-        summary: e.enrichment?.description?.summary,
-        description: e.enrichment?.description?.description,
-        aliases: e.enrichment?.description?.aliases || [],
+        summary: e.summary,
+        description: e.description,
+        aliases: e.enrichment?.text?.aliases || [],
         coordinates: e.coordinates,
         createdAt: e.createdAt,
         updatedAt: e.updatedAt,
@@ -658,7 +658,7 @@ export default function ChroniclePanel({
       return {
         id: era.id,
         name: era.name,
-        description: era.enrichment?.description?.summary || era.description || '',
+        summary: era.summary || '',
         order: index,
         startTick: range.min,
         endTick: range.max + 1, // exclusive
@@ -675,7 +675,7 @@ export default function ChroniclePanel({
     }
 
     // Get the narrative style from library
-    const narrativeStyle = styleLibrary?.narrativeStyles?.find(
+    const narrativeStyle = wizardConfig.narrativeStyle || styleLibrary?.narrativeStyles?.find(
       (s) => s.id === wizardConfig.narrativeStyleId
     );
     if (!narrativeStyle) {
@@ -726,7 +726,16 @@ export default function ChroniclePanel({
     }
 
     // Build the chronicle generation context (chronicle-first)
-    const context = buildChronicleContext(selections, worldData, wc, wizardNameBank, proseHints, cultureIdentities?.descriptive);
+    const context = buildChronicleContext(
+      selections,
+      worldData,
+      wc,
+      narrativeStyle,
+      wizardNameBank,
+      proseHints,
+      cultureIdentities?.descriptive,
+      wizardConfig.temporalContext
+    );
 
     // Derive chronicle metadata from role assignments
     const title = deriveTitleFromRoles(wizardConfig.roleAssignments);
@@ -738,6 +747,7 @@ export default function ChroniclePanel({
       format: narrativeStyle.format,
       roleAssignments: wizardConfig.roleAssignments,
       narrativeStyleId: wizardConfig.narrativeStyleId,
+      narrativeStyle,
       selectedEntityIds: wizardConfig.roleAssignments.map(r => r.entityId),
       selectedEventIds: wizardConfig.selectedEventIds,
       selectedRelationshipIds: wizardConfig.selectedRelationshipIds,
@@ -762,6 +772,7 @@ export default function ChroniclePanel({
         title,
         format: narrativeStyle.format,
         narrativeStyleId: wizardConfig.narrativeStyleId,
+        narrativeStyle,
         roleAssignments: wizardConfig.roleAssignments,
         selectedEntityIds: wizardConfig.roleAssignments.map(r => r.entityId),
         selectedEventIds: wizardConfig.selectedEventIds,
@@ -775,7 +786,7 @@ export default function ChroniclePanel({
     }
 
     // Generate the chronicle
-    generateV2(chronicleId, context, narrativeStyle, chronicleMetadata);
+    generateV2(chronicleId, context, chronicleMetadata);
 
     // Select the newly generated chronicle by its chronicleId
     setSelectedItemId(chronicleId);
@@ -1083,13 +1094,13 @@ export default function ChroniclePanel({
                 <ChronicleReviewPanel
                   item={selectedItem}
                   onContinueToValidation={() => {
-                    if (generationContext && selectedNarrativeStyle) {
-                      revalidateChronicle(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
+                    if (generationContext) {
+                      revalidateChronicle(selectedItem.chronicleId, generationContext);
                     }
                   }}
                   onValidate={() => {
-                    if (generationContext && selectedNarrativeStyle) {
-                      revalidateChronicle(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
+                    if (generationContext) {
+                      revalidateChronicle(selectedItem.chronicleId, generationContext);
                     }
                   }}
                   onAddImages={handleGenerateImageRefs}

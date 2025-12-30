@@ -18,6 +18,7 @@ import {
   LLM_CALL_METADATA,
   AVAILABLE_MODELS,
   THINKING_BUDGET_OPTIONS,
+  MAX_TOKENS_OPTIONS,
   THINKING_CAPABLE_MODELS,
   CATEGORY_LABELS,
   getCallTypesByCategory,
@@ -39,9 +40,24 @@ const THINKING_SHORT_LABELS = {
   32768: '32K',
 };
 
+const MAX_TOKENS_SHORT_LABELS = {
+  256: '256',
+  512: '512',
+  1024: '1K',
+  2048: '2K',
+  4096: '4K',
+  8192: '8K',
+  16384: '16K',
+  32768: '32K',
+  65536: '64K',
+};
+
 function CallTypeRow({ callType, config, isDefault, onUpdate, isLast }) {
   const metadata = LLM_CALL_METADATA[callType];
   const canThink = THINKING_CAPABLE_MODELS.includes(config.model);
+  const maxTokenOptions = metadata.defaults.maxTokens === 0 || config.maxTokens === 0
+    ? [{ value: 0, label: 'Auto' }, ...MAX_TOKENS_OPTIONS]
+    : MAX_TOKENS_OPTIONS;
 
   const handleModelChange = (e) => {
     const newModel = e.target.value;
@@ -49,16 +65,27 @@ function CallTypeRow({ callType, config, isDefault, onUpdate, isLast }) {
       ? config.thinkingBudget
       : 0;
     onUpdate(callType, {
-      model: newModel === metadata.defaultModel ? undefined : newModel,
-      thinkingBudget: newThinkingBudget === metadata.defaultThinkingBudget ? undefined : newThinkingBudget,
+      model: newModel === metadata.defaults.model ? undefined : newModel,
+      thinkingBudget: newThinkingBudget === metadata.defaults.thinkingBudget ? undefined : newThinkingBudget,
+      maxTokens: config.maxTokens === metadata.defaults.maxTokens ? undefined : config.maxTokens,
     });
   };
 
   const handleThinkingChange = (e) => {
     const newBudget = parseInt(e.target.value, 10);
     onUpdate(callType, {
-      model: config.model === metadata.defaultModel ? undefined : config.model,
-      thinkingBudget: newBudget === metadata.defaultThinkingBudget ? undefined : newBudget,
+      model: config.model === metadata.defaults.model ? undefined : config.model,
+      thinkingBudget: newBudget === metadata.defaults.thinkingBudget ? undefined : newBudget,
+      maxTokens: config.maxTokens === metadata.defaults.maxTokens ? undefined : config.maxTokens,
+    });
+  };
+
+  const handleMaxTokensChange = (e) => {
+    const newMaxTokens = parseInt(e.target.value, 10);
+    onUpdate(callType, {
+      model: config.model === metadata.defaults.model ? undefined : config.model,
+      thinkingBudget: config.thinkingBudget === metadata.defaults.thinkingBudget ? undefined : config.thinkingBudget,
+      maxTokens: newMaxTokens === metadata.defaults.maxTokens ? undefined : newMaxTokens,
     });
   };
 
@@ -81,7 +108,7 @@ function CallTypeRow({ callType, config, isDefault, onUpdate, isLast }) {
           {AVAILABLE_MODELS.map((m) => (
             <option key={m.value} value={m.value}>
               {MODEL_SHORT_LABELS[m.value] || m.label}
-              {m.value === metadata.defaultModel ? '*' : ''}
+              {m.value === metadata.defaults.model ? '*' : ''}
             </option>
           ))}
         </select>
@@ -97,7 +124,22 @@ function CallTypeRow({ callType, config, isDefault, onUpdate, isLast }) {
           {THINKING_BUDGET_OPTIONS.map((b) => (
             <option key={b.value} value={b.value}>
               {THINKING_SHORT_LABELS[b.value] || b.label}
-              {b.value === metadata.defaultThinkingBudget ? '*' : ''}
+              {b.value === metadata.defaults.thinkingBudget ? '*' : ''}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="llm-table-cell llm-table-cell-max">
+        <select
+          value={config.maxTokens}
+          onChange={handleMaxTokensChange}
+          className="llm-table-select"
+          title="Max tokens before thinking budget"
+        >
+          {maxTokenOptions.map((b) => (
+            <option key={b.value} value={b.value}>
+              {MAX_TOKENS_SHORT_LABELS[b.value] || b.label}
+              {b.value === metadata.defaults.maxTokens ? '*' : ''}
             </option>
           ))}
         </select>
@@ -120,7 +162,7 @@ function CallTypeRow({ callType, config, isDefault, onUpdate, isLast }) {
 function CategoryHeader({ category }) {
   return (
     <tr className="llm-table-category-row">
-      <td colSpan={4} className="llm-table-category-cell">
+      <td colSpan={5} className="llm-table-category-cell">
         {CATEGORY_LABELS[category]}
       </td>
     </tr>
@@ -142,7 +184,7 @@ export default function LLMCallConfigPanel() {
       },
     };
 
-    if (!config.model && config.thinkingBudget === undefined) {
+    if (!config.model && config.thinkingBudget === undefined && config.maxTokens === undefined) {
       delete next.callOverrides[callType];
     } else {
       next.callOverrides[callType] = config;
@@ -191,6 +233,7 @@ export default function LLMCallConfigPanel() {
               <th className="llm-table-th llm-table-th-label">Call Type</th>
               <th className="llm-table-th llm-table-th-model">Model</th>
               <th className="llm-table-th llm-table-th-thinking">Thinking</th>
+              <th className="llm-table-th llm-table-th-max">Max Tokens</th>
               <th className="llm-table-th llm-table-th-action"></th>
             </tr>
           </thead>

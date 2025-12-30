@@ -4,11 +4,11 @@
   "title": "Era",
   "description": "An era configuration defining a historical period in world generation",
   "type": "object",
-  "required": ["id", "name", "description", "templateWeights", "systemModifiers"],
+  "required": ["id", "name", "summary", "templateWeights", "systemModifiers"],
   "properties": {
     "id": { "type": "string", "description": "Unique identifier for this era" },
     "name": { "type": "string", "description": "Human-readable name" },
-    "description": { "type": "string", "description": "Description of this historical period" },
+    "summary": { "type": "string", "description": "User-entered summary of this historical period" },
     "templateWeights": {
       "type": "object",
       "additionalProperties": { "type": "number" },

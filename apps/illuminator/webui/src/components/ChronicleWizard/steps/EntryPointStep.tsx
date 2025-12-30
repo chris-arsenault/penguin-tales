@@ -1,13 +1,12 @@
 /**
  * EntryPointStep - Step 2: Graph anchor entity selection
  *
- * Shows a searchable list of entities filtered by the selected style's rules.
+ * Shows a searchable list of entities.
  */
 
 import { useState, useMemo } from 'react';
 import type { EntityContext, RelationshipContext, NarrativeEventContext } from '../../../lib/chronicleTypes';
 import { useWizard } from '../WizardContext';
-import { matchesPrimarySubjectKinds, matchesSupportingSubjectKinds } from '../../../lib/chronicle/selectionWizard';
 
 interface EntryPointStepProps {
   entities: EntityContext[];
@@ -20,9 +19,9 @@ export default function EntryPointStep({
   relationships,
   events,
 }: EntryPointStepProps) {
-  const { state, selectEntryPoint, kindToCategory } = useWizard();
+  const { state, selectEntryPoint } = useWizard();
   const [searchText, setSearchText] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'prominence' | 'connections'>('prominence');
+  const [sortBy, setSortBy] = useState<'name' | 'connections'>('connections');
 
   // Count connections per entity
   const connectionCounts = useMemo(() => {
@@ -34,7 +33,7 @@ export default function EntryPointStep({
     return counts;
   }, [relationships]);
 
-  // Filter entities based on style rules and search
+  // Filter entities based on search
   const filteredEntities = useMemo(() => {
     // Exclude era entities - they are time periods, not cast members
     let filtered = entities.filter(e => e.kind !== 'era');
@@ -49,18 +48,11 @@ export default function EntryPointStep({
       );
     }
 
-    // Sort - prioritize primary subjects, then supporting, then by connections
+    // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
           return a.name.localeCompare(b.name);
-        case 'prominence': {
-          // Sort by kind match: primary first, then supporting, then others
-          const rules = state.narrativeStyle?.entityRules;
-          const aPrimary = rules && matchesPrimarySubjectKinds(a, rules, kindToCategory) ? 0 : (rules && matchesSupportingSubjectKinds(a, rules, kindToCategory) ? 1 : 2);
-          const bPrimary = rules && matchesPrimarySubjectKinds(b, rules, kindToCategory) ? 0 : (rules && matchesSupportingSubjectKinds(b, rules, kindToCategory) ? 1 : 2);
-          return aPrimary - bPrimary;
-        }
         case 'connections':
           return (connectionCounts.get(b.id) || 0) - (connectionCounts.get(a.id) || 0);
         default:
@@ -69,7 +61,7 @@ export default function EntryPointStep({
     });
 
     return filtered;
-  }, [entities, state.narrativeStyle, searchText, sortBy, connectionCounts, kindToCategory]);
+  }, [entities, searchText, sortBy, connectionCounts]);
 
   const handleSelect = (entity: EntityContext) => {
     selectEntryPoint(entity, entities, relationships, events);
@@ -97,10 +89,9 @@ export default function EntryPointStep({
         />
         <select
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as 'name' | 'prominence' | 'connections')}
+          onChange={(e) => setSortBy(e.target.value as 'name' | 'connections')}
           className="illuminator-select"
         >
-          <option value="prominence">Sort by Recommended</option>
           <option value="connections">Sort by Connections</option>
           <option value="name">Sort by Name</option>
         </select>
@@ -118,7 +109,7 @@ export default function EntryPointStep({
       }}>
         {filteredEntities.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            No entities match the selected style's filters.
+            No entities found.
           </div>
         ) : (
           filteredEntities.map(entity => {
@@ -165,40 +156,8 @@ export default function EntryPointStep({
 
                 {/* Entity info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 500, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ fontWeight: 500, fontSize: '13px' }}>
                     {entity.name}
-                    {/* Kind match badges */}
-                    {state.narrativeStyle && matchesPrimarySubjectKinds(entity, state.narrativeStyle.entityRules, kindToCategory) && (
-                      <span
-                        title="Recommended for primary subject"
-                        style={{
-                          padding: '1px 4px',
-                          background: isSelected ? 'rgba(255,255,255,0.3)' : 'var(--accent-color)',
-                          color: 'white',
-                          borderRadius: '3px',
-                          fontSize: '9px',
-                          fontWeight: 600,
-                        }}
-                      >
-                        P
-                      </span>
-                    )}
-                    {state.narrativeStyle && matchesSupportingSubjectKinds(entity, state.narrativeStyle.entityRules, kindToCategory) && (
-                      <span
-                        title="Recommended for supporting subject"
-                        style={{
-                          padding: '1px 4px',
-                          background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)',
-                          color: isSelected ? 'white' : 'var(--text-muted)',
-                          borderRadius: '3px',
-                          fontSize: '9px',
-                          fontWeight: 600,
-                          border: isSelected ? 'none' : '1px solid var(--border-color)',
-                        }}
-                      >
-                        S
-                      </span>
-                    )}
                   </div>
                   <div style={{
                     fontSize: '11px',
@@ -259,4 +218,3 @@ export default function EntryPointStep({
     </div>
   );
 }
-

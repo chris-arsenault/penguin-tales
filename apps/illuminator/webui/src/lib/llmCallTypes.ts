@@ -39,12 +39,17 @@ export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
 
 export type LLMCallCategory = 'description' | 'image' | 'chronicle' | 'palette';
 
+export interface LLMCallDefaults {
+  model: string;
+  thinkingBudget: number;  // 0 = disabled
+  maxTokens: number;       // 0 = auto (style-derived)
+}
+
 export interface LLMCallMetadata {
   label: string;
   description: string;
   category: LLMCallCategory;
-  defaultModel: string;
-  defaultThinkingBudget: number;  // 0 = disabled
+  defaults: LLMCallDefaults;
   recommendedModels: string[];
 }
 
@@ -54,6 +59,7 @@ export interface LLMCallMetadata {
 export interface LLMCallConfig {
   model?: string;
   thinkingBudget?: number;  // 0 = disabled
+  maxTokens?: number;       // 0 = auto (style-derived)
 }
 
 // Available models
@@ -77,85 +83,127 @@ export const THINKING_BUDGET_OPTIONS = [
   { value: 32768, label: '32K tokens (maximum)' },
 ];
 
+export const MAX_TOKENS_OPTIONS = [
+  { value: 256, label: '256' },
+  { value: 512, label: '512' },
+  { value: 1024, label: '1K' },
+  { value: 2048, label: '2K' },
+  { value: 4096, label: '4K' },
+  { value: 8192, label: '8K' },
+  { value: 16384, label: '16K' },
+  { value: 32768, label: '32K' },
+  { value: 65536, label: '64K' },
+];
+
 export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
   'description.narrative': {
     label: 'Narrative',
     description: 'Generates summary, description, and aliases for an entity',
     category: 'description',
-    defaultModel: 'claude-haiku-4-5-20251001',
-    defaultThinkingBudget: 0,
+    defaults: {
+      model: 'claude-haiku-4-5-20251001',
+      thinkingBudget: 0,
+      maxTokens: 1024,
+    },
     recommendedModels: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'],
   },
   'description.visualThesis': {
     label: 'Visual Thesis',
     description: 'Creates the core visual silhouette from narrative description',
     category: 'description',
-    defaultModel: 'claude-sonnet-4-5-20250929',
-    defaultThinkingBudget: 4096,
+    defaults: {
+      model: 'claude-sonnet-4-5-20250929',
+      thinkingBudget: 4096,
+      maxTokens: 256,
+    },
     recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
   },
   'description.visualTraits': {
     label: 'Visual Traits',
     description: 'Generates distinctive visual details that complement the thesis',
     category: 'description',
-    defaultModel: 'claude-haiku-4-5-20251001',
-    defaultThinkingBudget: 0,
+    defaults: {
+      model: 'claude-haiku-4-5-20251001',
+      thinkingBudget: 0,
+      maxTokens: 512,
+    },
     recommendedModels: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'],
   },
   'image.promptFormatting': {
     label: 'Prompt Formatting',
     description: 'Reformats description for the image generation model',
     category: 'image',
-    defaultModel: 'claude-haiku-4-5-20251001',
-    defaultThinkingBudget: 0,
+    defaults: {
+      model: 'claude-haiku-4-5-20251001',
+      thinkingBudget: 0,
+      maxTokens: 1024,
+    },
     recommendedModels: ['claude-haiku-4-5-20251001'],
   },
   'chronicle.generation': {
     label: 'Generation',
     description: 'Creates the initial chronicle narrative content',
     category: 'chronicle',
-    defaultModel: 'claude-sonnet-4-5-20250929',
-    defaultThinkingBudget: 0,
+    defaults: {
+      model: 'claude-sonnet-4-5-20250929',
+      thinkingBudget: 0,
+      maxTokens: 0,
+    },
     recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
   },
   'chronicle.edit': {
     label: 'Edit Pass',
     description: 'Applies style corrections and tone adjustments',
     category: 'chronicle',
-    defaultModel: 'claude-sonnet-4-5-20250929',
-    defaultThinkingBudget: 0,
+    defaults: {
+      model: 'claude-sonnet-4-5-20250929',
+      thinkingBudget: 0,
+      maxTokens: 4096,
+    },
     recommendedModels: ['claude-sonnet-4-5-20250929'],
   },
   'chronicle.validation': {
     label: 'Validation',
     description: 'Checks narrative cohesion and factual consistency',
     category: 'chronicle',
-    defaultModel: 'claude-haiku-4-5-20251001',
-    defaultThinkingBudget: 0,
+    defaults: {
+      model: 'claude-haiku-4-5-20251001',
+      thinkingBudget: 0,
+      maxTokens: 4096,
+    },
     recommendedModels: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'],
   },
   'chronicle.summary': {
     label: 'Summary',
     description: 'Generates title and summary for the chronicle',
     category: 'chronicle',
-    defaultModel: 'claude-haiku-4-5-20251001',
-    defaultThinkingBudget: 0,
+    defaults: {
+      model: 'claude-haiku-4-5-20251001',
+      thinkingBudget: 0,
+      maxTokens: 512,
+    },
     recommendedModels: ['claude-haiku-4-5-20251001'],
   },
   'chronicle.imageRefs': {
     label: 'Image References',
     description: 'Extracts image-worthy moments from the narrative',
     category: 'chronicle',
-    defaultModel: 'claude-haiku-4-5-20251001',
-    defaultThinkingBudget: 0,
+    defaults: {
+      model: 'claude-haiku-4-5-20251001',
+      thinkingBudget: 0,
+      maxTokens: 2048,
+    },
     recommendedModels: ['claude-haiku-4-5-20251001'],
   },
   'palette.expansion': {
     label: 'Palette Expansion',
     description: 'Curates visual trait categories with extended reasoning',
     category: 'palette',
-    defaultModel: 'claude-sonnet-4-5-20250929',
-    defaultThinkingBudget: 8192,
+    defaults: {
+      model: 'claude-sonnet-4-5-20250929',
+      thinkingBudget: 8192,
+      maxTokens: 4096,
+    },
     recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
   },
 };

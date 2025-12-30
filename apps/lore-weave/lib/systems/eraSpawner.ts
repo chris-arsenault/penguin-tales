@@ -46,7 +46,9 @@ export function createEraEntity(
     kind: FRAMEWORK_ENTITY_KINDS.ERA,
     subtype: configEra.id,
     name: configEra.name,
-    description: configEra.description,
+    summary: configEra.summary,       // User-defined, locked
+    lockedSummary: true,              // Prevent enrichment from overwriting
+    description: '',                  // LLM will generate via enrichment
     status: status,
     prominence: 'mythic',  // Eras are always mythic (world-defining)
     culture: FRAMEWORK_CULTURES.WORLD,  // Eras are world-level entities

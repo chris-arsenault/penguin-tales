@@ -298,7 +298,7 @@ export default function ChronicleReviewPanel({
   // Build seed data from item for display
   const seedData = {
     narrativeStyleId: item.narrativeStyleId || '',
-    narrativeStyleName: styleLibrary?.narrativeStyles?.find(s => s.id === item.narrativeStyleId)?.name,
+    narrativeStyleName: item.narrativeStyle?.name || styleLibrary?.narrativeStyles?.find(s => s.id === item.narrativeStyleId)?.name,
     entrypointId: item.entrypointId,
     entrypointName: item.entrypointId
       ? entities?.find(e => e.id === item.entrypointId)?.name

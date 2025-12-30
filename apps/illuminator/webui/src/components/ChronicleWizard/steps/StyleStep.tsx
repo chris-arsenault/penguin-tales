@@ -5,8 +5,17 @@
  */
 
 import { useState, useMemo } from 'react';
-import type { NarrativeStyle } from '@canonry/world-schema';
+import type { NarrativeStyle, StoryNarrativeStyle, DocumentNarrativeStyle, RoleDefinition } from '@canonry/world-schema';
 import { useWizard } from '../WizardContext';
+
+/** Get roles from either story or document style */
+function getRoles(style: NarrativeStyle): RoleDefinition[] {
+  if (style.format === 'story') {
+    return (style as StoryNarrativeStyle).roles || [];
+  }
+  const docStyle = style as DocumentNarrativeStyle;
+  return docStyle.entityRules?.roles || [];
+}
 
 interface StyleStepProps {
   styles: NarrativeStyle[];
@@ -180,7 +189,7 @@ export default function StyleStep({ styles }: StyleStepProps) {
               Required Roles:
             </span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-              {state.narrativeStyle.entityRules.roles.map(role => (
+              {getRoles(state.narrativeStyle).map(role => (
                 <span
                   key={role.role}
                   style={{
@@ -216,8 +225,9 @@ interface StyleCardProps {
 }
 
 function StyleCard({ style, isSelected, onSelect }: StyleCardProps) {
-  const roleCount = style.entityRules.roles.length;
-  const requiredCount = style.entityRules.roles.filter(r => r.count.min > 0).length;
+  const roles = getRoles(style);
+  const roleCount = roles.length;
+  const requiredCount = roles.filter(r => r.count.min > 0).length;
 
   return (
     <div

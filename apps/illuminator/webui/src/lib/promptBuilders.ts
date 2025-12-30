@@ -443,8 +443,8 @@ export function buildImagePromptFromGuidance(
   const kind = e.kind;
   const guidance = entityGuidance[kind] || getDefaultKindGuidance(kind);
 
-  // Use summary for image prompts (shorter), fall back to description
-  const summaryText = e.summary || e.description;
+  // Use summary for image prompts (concise text for visual generation)
+  const summaryText = e.summary || '';
 
   // Visual thesis - THE primary visual signal
   const visualThesisSection = e.visualThesis

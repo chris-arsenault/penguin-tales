@@ -9,9 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { QueueItem, NetworkDebugInfo, DescriptionChainDebug } from '../lib/enrichmentTypes';
 
 interface EntityEnrichment {
-  description?: {
-    summary: string;
-    description: string;
+  text?: {
     aliases: string[];
     visualThesis?: string;
     visualTraits: string[];
@@ -39,6 +37,7 @@ interface Entity {
   prominence: string;
   culture?: string;
   status: string;
+  summary?: string;
   description?: string;
   createdAt?: number;
   updatedAt?: number;
@@ -238,13 +237,13 @@ export default function EntityDetailsModal({
 
   // Get debug info - prefer chain debug, fall back to legacy debug or queue
   const enrichment = entity?.enrichment;
-  const descEnrichment = enrichment?.description;
+  const textEnrichment = enrichment?.text;
 
   // Chain debug (narrative → thesis → traits)
-  const chainDebug: DescriptionChainDebug | undefined = descEnrichment?.chainDebug;
+  const chainDebug: DescriptionChainDebug | undefined = textEnrichment?.chainDebug;
 
   // Legacy single debug (for backwards compat)
-  let legacyDebug: NetworkDebugInfo | undefined = descEnrichment?.debug;
+  let legacyDebug: NetworkDebugInfo | undefined = textEnrichment?.debug;
 
   // If no persisted debug, check queue for recent task
   if (!legacyDebug && !chainDebug && entity) {
@@ -347,8 +346,8 @@ export default function EntityDetailsModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ maxWidth: '800px', width: '100%' }}>
-          {/* Summary */}
-          {descEnrichment?.summary && (
+          {/* Summary - now on entity directly */}
+          {entity?.summary && (
             <div style={{ marginBottom: '24px' }}>
               <div style={{
                 fontSize: '11px',
@@ -365,13 +364,13 @@ export default function EntityDetailsModal({
                 lineHeight: '1.6',
                 margin: 0,
               }}>
-                {descEnrichment.summary}
+                {entity.summary}
               </p>
             </div>
           )}
 
           {/* Visual Thesis - The primary visual signal */}
-          {descEnrichment?.visualThesis && (
+          {textEnrichment?.visualThesis && (
             <div style={{ marginBottom: '24px' }}>
               <div style={{
                 fontSize: '11px',
@@ -393,13 +392,13 @@ export default function EntityDetailsModal({
                 borderRadius: '8px',
                 fontStyle: 'italic',
               }}>
-                {descEnrichment.visualThesis}
+                {textEnrichment.visualThesis}
               </p>
             </div>
           )}
 
-          {/* Full Description */}
-          {descEnrichment?.description && (
+          {/* Full Description - now on entity directly */}
+          {entity?.description && (
             <div style={{ marginBottom: '24px' }}>
               <div style={{
                 fontSize: '11px',
@@ -417,19 +416,19 @@ export default function EntityDetailsModal({
                 margin: 0,
                 whiteSpace: 'pre-wrap',
               }}>
-                {descEnrichment.description}
+                {entity.description}
               </p>
             </div>
           )}
 
           {/* Visual Traits */}
-          <VisualTraitsList traits={descEnrichment?.visualTraits || []} />
+          <VisualTraitsList traits={textEnrichment?.visualTraits || []} />
 
           {/* Aliases */}
-          <AliasesList aliases={descEnrichment?.aliases || []} />
+          <AliasesList aliases={textEnrichment?.aliases || []} />
 
           {/* No enrichment message */}
-          {!descEnrichment && (
+          {!(entity?.summary || entity?.description) && (
             <div style={{
               padding: '40px',
               textAlign: 'center',
@@ -507,7 +506,7 @@ export default function EntityDetailsModal({
           <MetadataRow label="Updated" value={formatDate(entity.updatedAt)} />
 
           {/* Enrichment info */}
-          {descEnrichment && (
+          {textEnrichment && (
             <>
               <div style={{
                 borderTop: '1px solid rgba(255, 255, 255, 0.1)',
@@ -522,14 +521,14 @@ export default function EntityDetailsModal({
               }}>
                 Description Generation
               </div>
-              <MetadataRow label="Model" value={descEnrichment.model} />
-              <MetadataRow label="Generated" value={formatDate(descEnrichment.generatedAt)} />
-              <MetadataRow label="Estimated Cost" value={formatCost(descEnrichment.estimatedCost)} />
-              <MetadataRow label="Actual Cost" value={formatCost(descEnrichment.actualCost)} />
-              {descEnrichment.inputTokens !== undefined && (
+              <MetadataRow label="Model" value={textEnrichment.model} />
+              <MetadataRow label="Generated" value={formatDate(textEnrichment.generatedAt)} />
+              <MetadataRow label="Estimated Cost" value={formatCost(textEnrichment.estimatedCost)} />
+              <MetadataRow label="Actual Cost" value={formatCost(textEnrichment.actualCost)} />
+              {textEnrichment.inputTokens !== undefined && (
                 <MetadataRow
                   label="Tokens"
-                  value={`${descEnrichment.inputTokens} in / ${descEnrichment.outputTokens || 0} out`}
+                  value={`${textEnrichment.inputTokens} in / ${textEnrichment.outputTokens || 0} out`}
                 />
               )}
             </>
@@ -652,7 +651,7 @@ export default function EntityDetailsModal({
             </>
           )}
 
-          {!chainDebug && !legacyDebug && descEnrichment && (
+          {!chainDebug && !legacyDebug && textEnrichment && (
             <div style={{
               fontSize: '12px',
               color: 'rgba(255, 255, 255, 0.4)',

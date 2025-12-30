@@ -11,6 +11,7 @@ import type {
   RelationshipContext,
   NarrativeEventContext,
   ChronicleTemporalContext,
+  EraTemporalInfo,
 } from '../chronicleTypes';
 import type {
   NarrativeStyle,
@@ -30,7 +31,7 @@ type CulturalDescriptiveIdentity = Record<string, Record<string, string>>;
  * Format a single entity with full details (for entry point).
  */
 function formatEntityFull(e: EntityContext): string {
-  const desc = e.description || e.summary || '(no description available)';
+  const desc = e.description || '(no description available)';
   const tags = e.tags && Object.keys(e.tags).length > 0
     ? Object.entries(e.tags).map(([k, v]) => `${k}=${v}`).join(', ')
     : null;
@@ -51,7 +52,7 @@ function formatEntityFull(e: EntityContext): string {
  * Format a single entity briefly (for other characters).
  */
 function formatEntityBrief(e: EntityContext): string {
-  const desc = e.description || e.summary || '(no description available)';
+  const desc = e.description || '(no description available)';
   return `## ${e.name} (${e.kind}${e.subtype ? `/${e.subtype}` : ''})
 Prominence: ${e.prominence}${e.culture ? `, Culture: ${e.culture}` : ''}
 ${desc}`;
@@ -176,46 +177,67 @@ function buildTemporalSection(temporalContext: ChronicleTemporalContext | undefi
   if (!temporalContext) return '';
 
   const lines: string[] = ['# Historical Context'];
-
-  // Focal era
   const focal = temporalContext.focalEra;
-  lines.push(`## Setting: ${focal.name}`);
-  if (focal.description) {
-    lines.push(focal.description);
+
+  // Focal era name and summary
+  lines.push(`## Era: ${focal.name}`);
+  if (focal.summary) {
+    lines.push(focal.summary);
   }
-  lines.push(`Duration: ${focal.duration} ticks (ticks ${focal.startTick}–${focal.endTick})`);
 
-  // Chronicle timeline
+  // World timeline (natural language) - always show
   lines.push('');
-  lines.push('## Chronicle Timeline');
-  lines.push(temporalContext.temporalDescription);
-  lines.push(`Tick range: ${temporalContext.chronicleTickRange[0]}–${temporalContext.chronicleTickRange[1]}`);
-  lines.push(`Scope: ${temporalContext.temporalScope}`);
+  lines.push(buildWorldTimeline(temporalContext.allEras, focal.id));
 
-  // Multi-era notice
+  // Note about events from other eras
   if (temporalContext.isMultiEra) {
     lines.push('');
-    lines.push(`**Note:** This chronicle spans ${temporalContext.touchedEraIds.length} eras. Events from different eras should be woven together thoughtfully, acknowledging the passage of time.`);
-  }
-
-  // Brief era breakdown (all eras for context)
-  if (temporalContext.allEras.length > 1) {
-    lines.push('');
-    lines.push('## Era Overview');
-    for (const era of temporalContext.allEras) {
-      const isFocal = era.id === focal.id;
-      const marker = isFocal ? ' [FOCAL]' : '';
-      const touched = temporalContext.touchedEraIds.includes(era.id) ? ' *' : '';
-      lines.push(`- ${era.name}${marker}${touched}: ticks ${era.startTick}–${era.endTick} (${era.duration} ticks)`);
-      if (era.description && isFocal) {
-        lines.push(`  ${era.description}`);
-      }
-    }
-    lines.push('');
-    lines.push('* = era contains events in this chronicle');
+    lines.push('Some events listed may be from earlier eras. Treat these as historical background that shaped the present, not as scenes to dramatize.');
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Add "the" article to an era name, handling names that already start with "The".
+ */
+function withArticle(name: string): string {
+  // If name starts with "The ", convert to lowercase "the "
+  if (name.startsWith('The ')) {
+    return 'the ' + name.slice(4);
+  }
+  return 'the ' + name;
+}
+
+/**
+ * Build a natural language world timeline.
+ * E.g., "The world passed through the Dawn Age, then the Age of Expansion. It now exists in the Clever Ice Age."
+ */
+function buildWorldTimeline(eras: EraTemporalInfo[], focalEraId: string): string {
+  const sorted = [...eras].sort((a, b) => a.order - b.order);
+  const focalIndex = sorted.findIndex(e => e.id === focalEraId);
+
+  if (focalIndex === -1) return '';
+
+  const past = sorted.slice(0, focalIndex);
+  const current = sorted[focalIndex];
+  const future = sorted.slice(focalIndex + 1);
+
+  const parts: string[] = [];
+
+  if (past.length > 0) {
+    const pastNames = past.map(e => withArticle(e.name)).join(', then ');
+    parts.push(`The world passed through ${pastNames}.`);
+  }
+
+  parts.push(`It now exists in ${withArticle(current.name)}.`);
+
+  if (future.length > 0) {
+    const futureNames = future.map(e => withArticle(e.name)).join(', then ');
+    parts.push(`${futureNames} ${future.length === 1 ? 'lies' : 'lie'} ahead.`);
+  }
+
+  return parts.join(' ');
 }
 
 /**
@@ -242,39 +264,58 @@ function buildNameBankSection(nameBank: Record<string, string[]> | undefined): s
 /**
  * Build the cultural identities section.
  * Provides cultural context (VALUES, SPEECH, FEARS, TABOOS, etc.) for each culture
- * that appears in the chronicle's entities.
+ * that appears in the chronicle's entities. Also includes name bank for each culture.
  */
 function buildCulturalIdentitiesSection(
   culturalIdentities: CulturalDescriptiveIdentity | undefined,
-  entities: EntityContext[]
+  entities: EntityContext[],
+  nameBank: Record<string, string[]> | undefined
 ): string {
-  if (!culturalIdentities || Object.keys(culturalIdentities).length === 0) {
-    return '';
-  }
-
   // Get unique cultures from the chronicle's entities
   const entityCultures = new Set(
     entities.map(e => e.culture).filter((c): c is string => Boolean(c))
   );
 
-  if (entityCultures.size === 0) {
+  const hasIdentities = culturalIdentities && Object.keys(culturalIdentities).length > 0;
+  const hasNames = nameBank && Object.keys(nameBank).length > 0;
+
+  if (entityCultures.size === 0 && !hasNames) {
     return '';
   }
 
   const lines: string[] = ['# Cultural Identities'];
   lines.push('How different cultures think, speak, and behave:');
 
+  // Include cultures from entities
   for (const cultureId of entityCultures) {
-    const identity = culturalIdentities[cultureId];
-    if (!identity) continue;
-
     lines.push('');
     lines.push(`## ${cultureId}`);
 
-    // Include all identity fields
-    for (const [key, value] of Object.entries(identity)) {
-      if (value && value.trim()) {
-        lines.push(`- ${key}: ${value}`);
+    // Identity fields
+    if (hasIdentities) {
+      const identity = culturalIdentities[cultureId];
+      if (identity) {
+        for (const [key, value] of Object.entries(identity)) {
+          if (value && value.trim()) {
+            lines.push(`- ${key}: ${value}`);
+          }
+        }
+      }
+    }
+
+    // Name bank for this culture
+    if (hasNames && nameBank[cultureId] && nameBank[cultureId].length > 0) {
+      lines.push(`- Available Names: ${nameBank[cultureId].join(', ')}`);
+    }
+  }
+
+  // Include any cultures in name bank not already listed
+  if (hasNames) {
+    for (const [cultureId, names] of Object.entries(nameBank)) {
+      if (!entityCultures.has(cultureId) && names.length > 0) {
+        lines.push('');
+        lines.push(`## ${cultureId}`);
+        lines.push(`- Available Names: ${names.join(', ')}`);
       }
     }
   }
@@ -442,14 +483,22 @@ function buildUnifiedStyleSection(
 /**
  * Build complete prompt for story format.
  *
- * Section order (designed for clarity):
- * 1. TASK - What to write (upfront so LLM knows the goal)
- * 2. CAST - Narrative roles + characters (unified)
- * 3. WORLD - Setting context
- * 4. CULTURAL IDENTITIES - How cultures behave
- * 5. DATA - Relationships, events, available names
- * 6. STRUCTURE - Narrative structure, event usage
- * 7. STYLE - All writing guidance (world tone + prose instructions)
+ * Section order matches system prompt exactly:
+ *
+ * TASK DATA (how to write it):
+ * 1. TASK - Word count, scene count, requirements
+ * 2. NARRATIVE STRUCTURE - Scene progression and emotional beats
+ * 3. EVENT USAGE - How to incorporate world events
+ * 4. ENTITY PORTRAYAL - Per-kind guidelines
+ * 5. WRITING STYLE - World tone + prose instructions
+ *
+ * WORLD DATA (what to write about):
+ * 6. CAST - Narrative roles + characters
+ * 7. WORLD - Setting context
+ * 8. CULTURAL IDENTITIES - How cultures behave + name bank
+ * 9. HISTORICAL CONTEXT - Era, timeline, temporal scope
+ * 10. RELATIONSHIPS - Connections between characters
+ * 11. EVENTS - What happened in the world
  */
 function buildStoryPrompt(
   context: ChronicleGenerationContext,
@@ -465,7 +514,9 @@ function buildStoryPrompt(
     ? `${pacing.sceneCount.min}-${pacing.sceneCount.max}`
     : '4-5';
 
-  // 1. TASK (upfront)
+  // === TASK DATA ===
+
+  // 1. TASK
   const taskSection = `# Task
 Write a ${wordRange} word narrative in ${sceneRange} distinct scenes.
 
@@ -476,39 +527,47 @@ Requirements:
 - Characters should speak and act according to their cultural identity
 - Write directly with no section headers or meta-commentary`;
 
-  // 2. CAST (unified roles + characters)
-  const castSection = buildUnifiedCastSection(selection, primaryEntityIds, style);
-
-  // 3. WORLD (setting context only, no style)
-  const worldSection = buildWorldSection(context);
-
-  // 4. CULTURAL IDENTITIES (passed in)
-
-  // 5. DATA (relationships, events, names)
-  const dataSection = buildDataSection(selection);
-  const nameBankSection = buildNameBankSection(context.nameBank);
-  const temporalSection = buildTemporalSection(context.temporalContext);
-
-  // 6. STRUCTURE (narrative structure, event usage)
+  // 2. NARRATIVE STRUCTURE
   const structureSection = buildStoryStructureSection(style);
+
+  // 3. EVENT USAGE
   const eventSection = buildEventUsageSection(style);
 
-  // 7. STYLE (unified tone + prose instructions)
+  // 4. ENTITY PORTRAYAL (proseHintsSection passed in)
+
+  // 5. WRITING STYLE
   const styleSection = buildUnifiedStyleSection(context.tone, style);
 
-  // Combine sections in order
+  // === WORLD DATA ===
+
+  // 6. CAST (unified roles + characters)
+  const castSection = buildUnifiedCastSection(selection, primaryEntityIds, style);
+
+  // 7. WORLD (setting context only, no style)
+  const worldSection = buildWorldSection(context);
+
+  // 8. CULTURAL IDENTITIES (passed in, includes name bank)
+
+  // 9. HISTORICAL CONTEXT
+  const temporalSection = buildTemporalSection(context.temporalContext);
+
+  // 10 & 11. RELATIONSHIPS + EVENTS
+  const dataSection = buildDataSection(selection);
+
+  // Combine sections in order: TASK DATA then WORLD DATA
   const sections = [
+    // TASK DATA
     taskSection,
+    structureSection,
+    eventSection,
+    proseHintsSection,
+    styleSection,
+    // WORLD DATA
     castSection,
     worldSection,
     culturalIdentitiesSection,
     temporalSection,
     dataSection,
-    nameBankSection,
-    structureSection,
-    eventSection,
-    proseHintsSection,
-    styleSection,
   ].filter(Boolean);
 
   return sections.join('\n\n');
@@ -660,7 +719,8 @@ export function buildV2Prompt(
   const primaryEntityIds = new Set(context.focus?.primaryEntityIds || []);
   const culturalIdentitiesSection = buildCulturalIdentitiesSection(
     context.culturalIdentities,
-    selection.entities
+    selection.entities,
+    context.nameBank
   );
   const proseHintsSection = buildProseHintsSection(context.proseHints, selection.entities);
 
@@ -709,13 +769,46 @@ export function getMaxTokensFromStyle(style: NarrativeStyle): number {
 
 /**
  * Get the system prompt for V2 generation.
- * Kept minimal - detailed guidance is in the user prompt.
+ * Describes prompt structure and establishes guidance hierarchy.
  */
 export function getV2SystemPrompt(style: NarrativeStyle): string {
   if (style.format === 'story') {
-    return `You are a narrative writer creating vivid world lore. Write engaging prose that brings characters and their relationships to life.`;
+    return `You are a narrative writer creating world lore. Your prompt contains:
+
+TASK DATA (how to write it):
+- Task: Word count, scene count, requirements
+- Narrative Structure: Scene progression and emotional beats - THIS IS PRIMARY
+- Event Usage: How to incorporate world events
+- Entity Portrayal: Per-kind guidelines from the world
+- Writing Style: World tone sets the backdrop; Prose instructions are specific to this story type
+
+WORLD DATA (what to write about):
+- Cast: Narrative roles to fill, then characters to fill them
+- World: Setting name, description, canon facts
+- Cultural Identities: How each culture thinks, speaks, acts
+  - Name Bank: Culture-appropriate names for invented characters
+- Historical Context: Current era and world timeline
+- Relationships: Connections between characters
+- Events: What happened in the world
+
+Hierarchy: Narrative Structure and Prose instructions define THIS story. World tone and Entity Portrayal provide the ambient style everything sits within. When both apply, story-specific guidance takes precedence.`;
   } else {
     const docStyle = style as DocumentNarrativeStyle;
-    return `You are writing an in-universe ${docStyle.documentConfig.documentType}. Write authentically as if the document exists within the world.`;
+    return `You are writing an in-universe ${docStyle.documentConfig.documentType}. Your prompt contains:
+
+WORLD DATA (what to write about):
+- World: Setting name, description, canon facts
+- Characters: Entities referenced in the document
+- Cultural Identities: How each culture thinks, speaks, acts
+- Historical Context: Era, timeline, temporal scope
+- Relationships: Connections between characters
+- Events: Background data to draw from
+
+TASK DATA (how to write it):
+- Document Structure: Required sections and their purpose
+- Voice & Style: How the document should read
+- Entity/Event Usage: How to incorporate world data
+
+Write authentically as if the document exists within the world.`;
   }
 }

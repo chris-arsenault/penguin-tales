@@ -23,10 +23,7 @@ import {
   type WorkerInbound,
   type WorkerOutbound,
   createClients,
-  executeImageTask,
-  executeTextTask,
-  executeEntityChronicleTask,
-  executePaletteExpansionTask,
+  executeTask as executeEnrichmentTask,
 } from './enrichmentCore';
 import type { LLMClient } from '../lib/llmClient';
 import type { ImageClient } from '../lib/imageClient';
@@ -90,15 +87,12 @@ async function executeTask(task: WorkerTask): Promise<WorkerResult> {
   try {
     let result;
 
-    if (task.type === 'image') {
-      result = await executeImageTask(task, config!, llmClient!, imageClient!, checkAborted);
-    } else if (task.type === 'entityChronicle') {
-      result = await executeEntityChronicleTask(task, config!, llmClient!, checkAborted);
-    } else if (task.type === 'paletteExpansion') {
-      result = await executePaletteExpansionTask(task, config!, llmClient!, checkAborted);
-    } else {
-      result = await executeTextTask(task, config!, llmClient!, checkAborted);
-    }
+    result = await executeEnrichmentTask(task, {
+      config: config!,
+      llmClient: llmClient!,
+      imageClient: imageClient!,
+      isAborted: checkAborted,
+    });
 
     if (!result.success) {
       return {
@@ -142,7 +136,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerInbound>) => {
   switch (message.type) {
     case 'init': {
       config = message.config;
-      console.log('[Worker] Init - textModel:', config.textModel, 'thinkingModel:', config.thinkingModel, 'useThinkingForDescriptions:', config.useThinkingForDescriptions, 'thinkingBudget:', config.thinkingBudget);
+      console.log('[Worker] Init - LLM call settings:', config.llmCallSettings);
       const clients = createClients(config);
       llmClient = clients.llmClient;
       imageClient = clients.imageClient;
