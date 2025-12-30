@@ -191,6 +191,11 @@ function NarrativeStyleCard({ style, onEdit, onDelete }) {
   const isDocument = style.format === 'document';
   const docConfig = style.documentConfig;
 
+  // Extract a short preview of narrative instructions for display
+  const narrativePreview = style.narrativeInstructions
+    ? style.narrativeInstructions.slice(0, 80) + (style.narrativeInstructions.length > 80 ? '...' : '')
+    : null;
+
   return (
     <div className="illuminator-style-card">
       <div className="illuminator-style-card-header">
@@ -226,7 +231,7 @@ function NarrativeStyleCard({ style, onEdit, onDelete }) {
             borderRadius: '4px',
           }}
         >
-          {isDocument ? (docConfig?.documentType || 'document') : (style.plotStructure?.type || 'three-act')}
+          {isDocument ? (docConfig?.documentType || 'document') : 'story'}
         </span>
         {/* Word count badge */}
         <span
@@ -254,20 +259,31 @@ function NarrativeStyleCard({ style, onEdit, onDelete }) {
             ? `${docConfig?.sections?.length || 0} sections`
             : `${style.pacing?.sceneCount?.min || 3}-${style.pacing?.sceneCount?.max || 5} scenes`}
         </span>
+        {/* Roles badge for story styles */}
+        {!isDocument && style.roles?.length > 0 && (
+          <span
+            style={{
+              fontSize: '10px',
+              padding: '2px 6px',
+              background: 'var(--bg-tertiary)',
+              borderRadius: '4px',
+            }}
+          >
+            {style.roles.length} roles
+          </span>
+        )}
       </div>
-      {/* Tone keywords */}
-      {isDocument ? (
-        docConfig?.toneKeywords?.length > 0 && (
-          <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
-            <strong>Tone:</strong> {docConfig.toneKeywords.slice(0, 3).join(', ')}
-          </div>
-        )
-      ) : (
-        style.proseDirectives?.toneKeywords?.length > 0 && (
-          <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
-            <strong>Tone:</strong> {style.proseDirectives.toneKeywords.slice(0, 3).join(', ')}
-          </div>
-        )
+      {/* Narrative preview for story styles */}
+      {!isDocument && narrativePreview && (
+        <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+          {narrativePreview}
+        </div>
+      )}
+      {/* Tone keywords for document styles */}
+      {isDocument && docConfig?.toneKeywords?.length > 0 && (
+        <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+          <strong>Tone:</strong> {docConfig.toneKeywords.slice(0, 3).join(', ')}
+        </div>
       )}
       {style.tags?.length > 0 && (
         <div className="illuminator-style-card-keywords" style={{ marginTop: '8px' }}>
@@ -486,6 +502,13 @@ function DocumentStyleViewModal({ style, onCancel }) {
 
 /**
  * Modal for editing a narrative style
+ *
+ * Simplified structure with freeform text blocks:
+ * - narrativeInstructions: Plot structure, scenes, beats, emotional arcs
+ * - proseInstructions: Tone, dialogue, description, pacing, avoid
+ * - eventInstructions: How to use events (optional)
+ * - roles: Cast positions with counts
+ * - pacing: Word/scene counts
  */
 function NarrativeStyleEditModal({ style, onSave, onCancel }) {
   const isNew = !style?.id;
@@ -495,38 +518,29 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
     return <DocumentStyleViewModal style={style} onCancel={onCancel} />;
   }
 
+  // Default roles for new styles
+  const defaultRoles = [
+    { role: 'protagonist', count: { min: 1, max: 1 }, description: 'Main character driving the story' },
+    { role: 'antagonist', count: { min: 0, max: 1 }, description: 'Character opposing the protagonist' },
+    { role: 'supporting', count: { min: 1, max: 4 }, description: 'Supporting characters' },
+  ];
+
   const [formData, setFormData] = useState({
     id: style?.id || '',
     name: style?.name || '',
     description: style?.description || '',
     tags: style?.tags?.join(', ') || '',
-    // Plot structure - just instructions, no type dropdown
-    plotInstructions: style?.plotStructure?.instructions || '',
-    // Entity rules - category-based
-    primarySubjectCategories: style?.entityRules?.primarySubjectCategories || ['character'],
-    supportingSubjectCategories: style?.entityRules?.supportingSubjectCategories || ['character', 'collective'],
-    // Event rules
-    significanceMin: style?.eventRules?.significanceRange?.min ?? 0.5,
-    significanceMax: style?.eventRules?.significanceRange?.max ?? 1.0,
-    maxEvents: style?.eventRules?.maxEvents ?? 10,
-    priorityKinds: style?.eventRules?.priorityKinds?.join(', ') || '',
-    eventUsageInstructions: style?.eventRules?.usageInstructions || '',
+    // Freeform text blocks
+    narrativeInstructions: style?.narrativeInstructions || '',
+    proseInstructions: style?.proseInstructions || '',
+    eventInstructions: style?.eventInstructions || '',
     // Pacing
     wordCountMin: style?.pacing?.totalWordCount?.min ?? 1500,
     wordCountMax: style?.pacing?.totalWordCount?.max ?? 2500,
     sceneCountMin: style?.pacing?.sceneCount?.min ?? 3,
     sceneCountMax: style?.pacing?.sceneCount?.max ?? 5,
-    // Prose directives
-    toneKeywords: style?.proseDirectives?.toneKeywords?.join(', ') || '',
-    dialogueStyle: style?.proseDirectives?.dialogueStyle || '',
-    descriptionStyle: style?.proseDirectives?.descriptionStyle || '',
-    pacingNotes: style?.proseDirectives?.pacingNotes || '',
-    avoid: style?.proseDirectives?.avoid?.join(', ') || '',
-    // World data focus
-    includeLocations: style?.worldDataFocus?.includeLocations ?? true,
-    includeArtifacts: style?.worldDataFocus?.includeArtifacts ?? false,
-    includeCulturalPractices: style?.worldDataFocus?.includeCulturalPractices ?? false,
-    includeEraContext: style?.worldDataFocus?.includeEraContext ?? true,
+    // Roles (keep as array)
+    roles: style?.roles || defaultRoles,
   });
 
   const [activeTab, setActiveTab] = useState('basic');
@@ -540,21 +554,6 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Preserve existing roles/scene templates, or use defaults for new styles
-    const roles = style?.entityRules?.roles || [
-      { role: 'protagonist', count: { min: 1, max: 1 }, description: 'Main character driving the story' },
-      { role: 'supporting', count: { min: 1, max: 4 }, description: 'Supporting characters' },
-    ];
-    const maxCastSize = style?.entityRules?.maxCastSize || 5;
-
-    // Preserve existing scene templates, or use defaults for new styles
-    const sceneTemplates = style?.sceneTemplates || [
-      { name: 'Opening', purpose: 'Establish world and character', requiredElements: ['setting', 'protagonist'], emotionalArc: 'anticipation' },
-      { name: 'Development', purpose: 'Build tension and stakes', requiredElements: ['conflict', 'stakes'], emotionalArc: 'tension' },
-      { name: 'Climax', purpose: 'Peak confrontation', requiredElements: ['confrontation', 'decision'], emotionalArc: 'intensity' },
-      { name: 'Resolution', purpose: 'Show aftermath', requiredElements: ['consequence', 'meaning'], emotionalArc: 'catharsis' },
-    ];
-
     const result = {
       id: isNew ? `narrative-${Date.now().toString(36)}` : formData.id,
       name: formData.name.trim(),
@@ -562,31 +561,15 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
       tags: parseCommaSeparated(formData.tags),
       format: 'story',
 
-      // Preserve existing plot structure type if present, just update instructions
-      plotStructure: {
-        ...(style?.plotStructure?.type && { type: style.plotStructure.type }),
-        instructions: formData.plotInstructions.trim(),
-      },
+      // Freeform text blocks
+      narrativeInstructions: formData.narrativeInstructions.trim(),
+      proseInstructions: formData.proseInstructions.trim(),
+      eventInstructions: formData.eventInstructions.trim() || undefined,
 
-      entityRules: {
-        primarySubjectCategories: formData.primarySubjectCategories,
-        supportingSubjectCategories: formData.supportingSubjectCategories,
-        roles,
-        maxCastSize,
-      },
+      // Roles
+      roles: formData.roles,
 
-      eventRules: {
-        significanceRange: {
-          min: parseFloat(formData.significanceMin),
-          max: parseFloat(formData.significanceMax),
-        },
-        maxEvents: parseInt(formData.maxEvents, 10),
-        priorityKinds: parseCommaSeparated(formData.priorityKinds),
-        usageInstructions: formData.eventUsageInstructions.trim(),
-      },
-
-      sceneTemplates,
-
+      // Pacing
       pacing: {
         totalWordCount: {
           min: parseInt(formData.wordCountMin, 10),
@@ -597,43 +580,53 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
           max: parseInt(formData.sceneCountMax, 10),
         },
       },
-
-      proseDirectives: {
-        toneKeywords: parseCommaSeparated(formData.toneKeywords),
-        dialogueStyle: formData.dialogueStyle.trim(),
-        descriptionStyle: formData.descriptionStyle.trim(),
-        pacingNotes: formData.pacingNotes.trim(),
-        avoid: parseCommaSeparated(formData.avoid),
-      },
-
-      worldDataFocus: {
-        includeLocations: formData.includeLocations,
-        includeArtifacts: formData.includeArtifacts,
-        includeCulturalPractices: formData.includeCulturalPractices,
-        includeEraContext: formData.includeEraContext,
-      },
     };
 
     onSave(result, isNew);
   };
 
-  const isValid = formData.name.trim() && formData.toneKeywords.trim();
+  const isValid = formData.name.trim() && formData.narrativeInstructions.trim() && formData.proseInstructions.trim();
 
   const tabs = [
     { id: 'basic', label: 'Basic' },
-    { id: 'plot', label: 'Plot' },
-    { id: 'entities', label: 'Entities' },
-    { id: 'events', label: 'Events' },
-    { id: 'pacing', label: 'Pacing' },
+    { id: 'narrative', label: 'Narrative' },
     { id: 'prose', label: 'Prose' },
+    { id: 'roles', label: 'Roles' },
   ];
+
+  // Role management
+  const handleAddRole = () => {
+    setFormData((prev) => ({
+      ...prev,
+      roles: [...prev.roles, { role: '', count: { min: 1, max: 1 }, description: '' }],
+    }));
+  };
+
+  const handleUpdateRole = (index, field, value) => {
+    setFormData((prev) => {
+      const newRoles = [...prev.roles];
+      if (field === 'min' || field === 'max') {
+        newRoles[index] = { ...newRoles[index], count: { ...newRoles[index].count, [field]: parseInt(value, 10) || 0 } };
+      } else {
+        newRoles[index] = { ...newRoles[index], [field]: value };
+      }
+      return { ...prev, roles: newRoles };
+    });
+  };
+
+  const handleRemoveRole = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      roles: prev.roles.filter((_, i) => i !== index),
+    }));
+  };
 
   return (
     <div className="illuminator-modal-overlay" onClick={onCancel}>
       <div
         className="illuminator-modal"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '700px', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+        style={{ maxWidth: '800px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
       >
         <div className="illuminator-modal-header">
           <h3>{isNew ? 'Add' : 'Edit'} Narrative Style</h3>
@@ -701,233 +694,103 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
                     Comma-separated tags for categorization.
                   </p>
                 </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="illuminator-form-group">
+                    <label className="illuminator-label">Word Count</label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="number"
+                        min="100"
+                        step="100"
+                        value={formData.wordCountMin}
+                        onChange={(e) => handleChange('wordCountMin', e.target.value)}
+                        className="illuminator-input"
+                        style={{ width: '80px' }}
+                      />
+                      <span style={{ color: 'var(--text-muted)' }}>to</span>
+                      <input
+                        type="number"
+                        min="100"
+                        step="100"
+                        value={formData.wordCountMax}
+                        onChange={(e) => handleChange('wordCountMax', e.target.value)}
+                        className="illuminator-input"
+                        style={{ width: '80px' }}
+                      />
+                    </div>
+                  </div>
+                  <div className="illuminator-form-group">
+                    <label className="illuminator-label">Scene Count</label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={formData.sceneCountMin}
+                        onChange={(e) => handleChange('sceneCountMin', e.target.value)}
+                        className="illuminator-input"
+                        style={{ width: '60px' }}
+                      />
+                      <span style={{ color: 'var(--text-muted)' }}>to</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={formData.sceneCountMax}
+                        onChange={(e) => handleChange('sceneCountMax', e.target.value)}
+                        className="illuminator-input"
+                        style={{ width: '60px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
               </>
             )}
 
-            {/* Plot Tab */}
-            {activeTab === 'plot' && (
+            {/* Narrative Tab */}
+            {activeTab === 'narrative' && (
               <>
                 <div className="illuminator-form-group">
-                  <label className="illuminator-label">Narrative Structure Instructions</label>
+                  <label className="illuminator-label">Narrative Instructions *</label>
                   <textarea
-                    value={formData.plotInstructions}
-                    onChange={(e) => handleChange('plotInstructions', e.target.value)}
+                    value={formData.narrativeInstructions}
+                    onChange={(e) => handleChange('narrativeInstructions', e.target.value)}
                     className="illuminator-textarea"
-                    rows={6}
-                    placeholder="Describe the narrative structure for this style. For example: 'Build tension through a three-act structure with clear rising action, climax, and resolution. Focus on character transformation...'"
+                    rows={12}
+                    placeholder={`Describe the narrative structure for this style. Include:
+
+- Overall story arc and emotional journey
+- Scene types and their purposes (e.g., "The Opening: Establish world and stakes...")
+- Dramatic beats and turning points
+- How to build tension and release
+- What the ending should feel like
+
+Example:
+"This is a sweeping narrative that builds through conflict toward transformation.
+
+Scene Types:
+- The Setup: Establish the world and the protagonist's ordinary life
+- The Disruption: Something threatens the established order
+- The Struggle: Characters face mounting challenges
+- The Climax: Peak confrontation where everything comes together
+- The Resolution: Show the changed world and transformed characters"`}
                   />
                   <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Freeform instructions for how to structure the narrative. This guides the AI in building plot, pacing, and dramatic beats.
+                    Freeform instructions for plot structure, scenes, and dramatic beats.
                   </p>
                 </div>
-              </>
-            )}
-
-            {/* Entities Tab */}
-            {activeTab === 'entities' && (
-              <>
                 <div className="illuminator-form-group">
-                  <label className="illuminator-label">Primary Subject Categories</label>
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                    Recommended entity categories for primary/protagonist roles.
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {CATEGORY_OPTIONS.filter(c => c.id !== 'era' && c.id !== 'event').map((cat) => (
-                      <label
-                        key={cat.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 10px',
-                          background: formData.primarySubjectCategories.includes(cat.id)
-                            ? '#10b981'
-                            : 'var(--bg-tertiary)',
-                          color: formData.primarySubjectCategories.includes(cat.id)
-                            ? 'white'
-                            : 'var(--text-secondary)',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          transition: 'all 0.2s',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={formData.primarySubjectCategories.includes(cat.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              handleChange('primarySubjectCategories', [...formData.primarySubjectCategories, cat.id]);
-                            } else {
-                              handleChange('primarySubjectCategories', formData.primarySubjectCategories.filter(c => c !== cat.id));
-                            }
-                          }}
-                          style={{ display: 'none' }}
-                        />
-                        {cat.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="illuminator-form-group">
-                  <label className="illuminator-label">Supporting Subject Categories</label>
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                    Recommended entity categories for supporting/secondary roles.
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {CATEGORY_OPTIONS.filter(c => c.id !== 'era' && c.id !== 'event').map((cat) => (
-                      <label
-                        key={cat.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 10px',
-                          background: formData.supportingSubjectCategories.includes(cat.id)
-                            ? '#10b981'
-                            : 'var(--bg-tertiary)',
-                          color: formData.supportingSubjectCategories.includes(cat.id)
-                            ? 'white'
-                            : 'var(--text-secondary)',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          transition: 'all 0.2s',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={formData.supportingSubjectCategories.includes(cat.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              handleChange('supportingSubjectCategories', [...formData.supportingSubjectCategories, cat.id]);
-                            } else {
-                              handleChange('supportingSubjectCategories', formData.supportingSubjectCategories.filter(c => c !== cat.id));
-                            }
-                          }}
-                          style={{ display: 'none' }}
-                        />
-                        {cat.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Events Tab */}
-            {activeTab === 'events' && (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                  <div className="illuminator-form-group">
-                    <label className="illuminator-label">Min Significance</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="1"
-                      value={formData.significanceMin}
-                      onChange={(e) => handleChange('significanceMin', e.target.value)}
-                      className="illuminator-input"
-                    />
-                  </div>
-                  <div className="illuminator-form-group">
-                    <label className="illuminator-label">Max Significance</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="1"
-                      value={formData.significanceMax}
-                      onChange={(e) => handleChange('significanceMax', e.target.value)}
-                      className="illuminator-input"
-                    />
-                  </div>
-                  <div className="illuminator-form-group">
-                    <label className="illuminator-label">Max Events</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="50"
-                      value={formData.maxEvents}
-                      onChange={(e) => handleChange('maxEvents', e.target.value)}
-                      className="illuminator-input"
-                    />
-                  </div>
-                </div>
-                <div className="illuminator-form-group">
-                  <label className="illuminator-label">Priority Event Kinds</label>
-                  <input
-                    type="text"
-                    value={formData.priorityKinds}
-                    onChange={(e) => handleChange('priorityKinds', e.target.value)}
-                    className="illuminator-input"
-                    placeholder="conflict, alliance, death"
-                  />
-                </div>
-                <div className="illuminator-form-group">
-                  <label className="illuminator-label">Event Usage Instructions</label>
+                  <label className="illuminator-label">Event Instructions</label>
                   <textarea
-                    value={formData.eventUsageInstructions}
-                    onChange={(e) => handleChange('eventUsageInstructions', e.target.value)}
+                    value={formData.eventInstructions}
+                    onChange={(e) => handleChange('eventInstructions', e.target.value)}
                     className="illuminator-textarea"
-                    rows={2}
-                    placeholder="How to incorporate events into the narrative..."
+                    rows={3}
+                    placeholder="How to incorporate events from the world data into the narrative. E.g., 'Use events as dramatic turning points. Higher significance events should be climactic moments...'"
                   />
-                </div>
-              </>
-            )}
-
-            {/* Pacing Tab */}
-            {activeTab === 'pacing' && (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div className="illuminator-form-group">
-                    <label className="illuminator-label">Min Word Count</label>
-                    <input
-                      type="number"
-                      min="100"
-                      step="100"
-                      value={formData.wordCountMin}
-                      onChange={(e) => handleChange('wordCountMin', e.target.value)}
-                      className="illuminator-input"
-                    />
-                  </div>
-                  <div className="illuminator-form-group">
-                    <label className="illuminator-label">Max Word Count</label>
-                    <input
-                      type="number"
-                      min="100"
-                      step="100"
-                      value={formData.wordCountMax}
-                      onChange={(e) => handleChange('wordCountMax', e.target.value)}
-                      className="illuminator-input"
-                    />
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div className="illuminator-form-group">
-                    <label className="illuminator-label">Min Scenes</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={formData.sceneCountMin}
-                      onChange={(e) => handleChange('sceneCountMin', e.target.value)}
-                      className="illuminator-input"
-                    />
-                  </div>
-                  <div className="illuminator-form-group">
-                    <label className="illuminator-label">Max Scenes</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={formData.sceneCountMax}
-                      onChange={(e) => handleChange('sceneCountMax', e.target.value)}
-                      className="illuminator-input"
-                    />
-                  </div>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Optional guidance for how world events should be woven into the story.
+                  </p>
                 </div>
               </>
             )}
@@ -936,95 +799,113 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
             {activeTab === 'prose' && (
               <>
                 <div className="illuminator-form-group">
-                  <label className="illuminator-label">Tone Keywords *</label>
-                  <input
-                    type="text"
-                    value={formData.toneKeywords}
-                    onChange={(e) => handleChange('toneKeywords', e.target.value)}
-                    className="illuminator-input"
-                    placeholder="epic, dramatic, tense, emotional"
-                  />
-                </div>
-                <div className="illuminator-form-group">
-                  <label className="illuminator-label">Dialogue Style</label>
-                  <input
-                    type="text"
-                    value={formData.dialogueStyle}
-                    onChange={(e) => handleChange('dialogueStyle', e.target.value)}
-                    className="illuminator-input"
-                    placeholder="e.g., Formal and weighty, characters speak with purpose"
-                  />
-                </div>
-                <div className="illuminator-form-group">
-                  <label className="illuminator-label">Description Style</label>
-                  <input
-                    type="text"
-                    value={formData.descriptionStyle}
-                    onChange={(e) => handleChange('descriptionStyle', e.target.value)}
-                    className="illuminator-input"
-                    placeholder="e.g., Rich sensory detail, focus on atmosphere and emotion"
-                  />
-                </div>
-                <div className="illuminator-form-group">
-                  <label className="illuminator-label">Pacing Notes</label>
-                  <input
-                    type="text"
-                    value={formData.pacingNotes}
-                    onChange={(e) => handleChange('pacingNotes', e.target.value)}
-                    className="illuminator-input"
-                    placeholder="e.g., Build tension steadily, breathe in quiet moments"
-                  />
-                </div>
-                <div className="illuminator-form-group">
-                  <label className="illuminator-label">Avoid</label>
-                  <input
-                    type="text"
-                    value={formData.avoid}
-                    onChange={(e) => handleChange('avoid', e.target.value)}
-                    className="illuminator-input"
-                    placeholder="e.g., modern slang, breaking fourth wall"
+                  <label className="illuminator-label">Prose Instructions *</label>
+                  <textarea
+                    value={formData.proseInstructions}
+                    onChange={(e) => handleChange('proseInstructions', e.target.value)}
+                    className="illuminator-textarea"
+                    rows={12}
+                    placeholder={`Describe the prose style for this narrative. Include:
+
+- Tone and mood (e.g., "epic, dramatic, tense, emotionally charged")
+- Dialogue style (e.g., "Formal and weighty, characters speak with purpose")
+- Description style (e.g., "Rich sensory detail, focus on atmosphere")
+- Pacing guidance (e.g., "Build tension steadily, breathe in quiet moments")
+- World elements to emphasize (e.g., locations, artifacts, cultural practices)
+- Things to avoid (e.g., "modern slang, breaking fourth wall, rushed endings")
+
+Example:
+"Tone: epic, dramatic, tense, emotionally charged.
+Dialogue: Formal and weighty. Characters speak with purpose and meaning.
+Description: Rich sensory detail. Focus on atmosphere and emotion.
+Pacing: Build tension steadily. Allow quiet moments to breathe.
+World Elements: Integrate locations and cultural practices naturally.
+Avoid: modern slang, breaking fourth wall, rushed emotional beats."`}
                   />
                   <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Comma-separated list of things to avoid in the prose.
+                    Freeform instructions for tone, dialogue, description, and writing style.
                   </p>
                 </div>
-                <div className="illuminator-form-group">
-                  <label className="illuminator-label">World Data Focus</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '8px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.includeLocations}
-                        onChange={(e) => handleChange('includeLocations', e.target.checked)}
-                      />
-                      Locations
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.includeArtifacts}
-                        onChange={(e) => handleChange('includeArtifacts', e.target.checked)}
-                      />
-                      Artifacts
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.includeCulturalPractices}
-                        onChange={(e) => handleChange('includeCulturalPractices', e.target.checked)}
-                      />
-                      Cultural Practices
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.includeEraContext}
-                        onChange={(e) => handleChange('includeEraContext', e.target.checked)}
-                      />
-                      Era Context
-                    </label>
-                  </div>
+              </>
+            )}
+
+            {/* Roles Tab */}
+            {activeTab === 'roles' && (
+              <>
+                <div style={{ marginBottom: '12px' }}>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    Define the narrative roles for this style. The AI will assign characters to these roles.
+                  </p>
                 </div>
+                {formData.roles.map((role, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      padding: '12px',
+                      background: 'var(--bg-tertiary)',
+                      borderRadius: '6px',
+                      marginBottom: '8px',
+                      border: '1px solid var(--border-color)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <input
+                          type="text"
+                          value={role.role}
+                          onChange={(e) => handleUpdateRole(index, 'role', e.target.value)}
+                          className="illuminator-input"
+                          placeholder="Role name (e.g., protagonist)"
+                          style={{ marginBottom: '8px' }}
+                        />
+                        <input
+                          type="text"
+                          value={role.description}
+                          onChange={(e) => handleUpdateRole(index, 'description', e.target.value)}
+                          className="illuminator-input"
+                          placeholder="Role description"
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <input
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={role.count.min}
+                          onChange={(e) => handleUpdateRole(index, 'min', e.target.value)}
+                          className="illuminator-input"
+                          style={{ width: '50px' }}
+                        />
+                        <span style={{ color: 'var(--text-muted)' }}>-</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={role.count.max}
+                          onChange={(e) => handleUpdateRole(index, 'max', e.target.value)}
+                          className="illuminator-input"
+                          style={{ width: '50px' }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRole(index)}
+                        className="illuminator-btn-icon illuminator-btn-danger"
+                        style={{ padding: '4px 8px' }}
+                      >
+                        X
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleAddRole}
+                  className="illuminator-btn"
+                  style={{ fontSize: '12px' }}
+                >
+                  + Add Role
+                </button>
               </>
             )}
           </div>

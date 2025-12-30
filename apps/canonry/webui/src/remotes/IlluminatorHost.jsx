@@ -45,8 +45,10 @@ export default function IlluminatorHost({
   onWorldDataChange,
   worldContext,
   onWorldContextChange,
-  promptTemplates,
-  onPromptTemplatesChange,
+  entityGuidance,
+  onEntityGuidanceChange,
+  cultureIdentities,
+  onCultureIdentitiesChange,
   enrichmentConfig,
   onEnrichmentConfigChange,
   styleSelection,
@@ -65,8 +67,10 @@ export default function IlluminatorHost({
           onEnrichmentComplete={onWorldDataChange}
           worldContext={worldContext}
           onWorldContextChange={onWorldContextChange}
-          promptTemplates={promptTemplates}
-          onPromptTemplatesChange={onPromptTemplatesChange}
+          entityGuidance={entityGuidance}
+          onEntityGuidanceChange={onEntityGuidanceChange}
+          cultureIdentities={cultureIdentities}
+          onCultureIdentitiesChange={onCultureIdentitiesChange}
           enrichmentConfig={enrichmentConfig}
           onEnrichmentConfigChange={onEnrichmentConfigChange}
           styleSelection={styleSelection}

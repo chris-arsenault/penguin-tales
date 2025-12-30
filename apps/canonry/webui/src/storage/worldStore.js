@@ -437,18 +437,17 @@ export async function loadEnrichmentConfig(projectId) {
 }
 
 /**
- * Save Illuminator prompt templates (shared across slots)
+ * Save entity guidance (shared across slots)
  */
-export async function savePromptTemplates(projectId, promptTemplates) {
-  await saveWorldStore(projectId, { promptTemplates });
+export async function saveEntityGuidance(projectId, entityGuidance) {
+  await saveWorldStore(projectId, { entityGuidance });
 }
 
 /**
- * Load Illuminator prompt templates
+ * Save culture identities (shared across slots)
  */
-export async function loadPromptTemplates(projectId) {
-  const store = await loadWorldStore(projectId);
-  return store?.promptTemplates || null;
+export async function saveCultureIdentities(projectId, cultureIdentities) {
+  await saveWorldStore(projectId, { cultureIdentities });
 }
 
 /**

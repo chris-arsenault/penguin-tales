@@ -73,7 +73,6 @@ function categorizeCosts(summary) {
     'chronicleRevision',
     'chronicleSummary',
     'chronicleImageRefs',
-    'chronicleProseBlend',
     'chronicleV2',
   ];
 

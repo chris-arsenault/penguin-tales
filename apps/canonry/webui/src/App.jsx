@@ -15,8 +15,8 @@ import {
   saveWorldData,
   loadWorldContext,
   saveWorldContext,
-  loadPromptTemplates,
-  savePromptTemplates,
+  saveEntityGuidance,
+  saveCultureIdentities,
   saveEnrichmentConfig,
   saveStyleSelection,
   getSlots,
@@ -292,7 +292,8 @@ export default function App() {
   const [helpModalOpen, setHelpModalOpen] = useState(initialUiState.helpModalOpen);
   const [archivistData, setArchivistData] = useState(null);
   const [worldContext, setWorldContext] = useState(null);
-  const [promptTemplates, setPromptTemplates] = useState(null);
+  const [entityGuidance, setEntityGuidance] = useState(null);
+  const [cultureIdentities, setCultureIdentities] = useState(null);
   const [enrichmentConfig, setEnrichmentConfig] = useState(null);
   const [styleSelection, setStyleSelection] = useState(null);
   const [simulationResults, setSimulationResults] = useState(null);
@@ -357,6 +358,30 @@ export default function App() {
     reloadProjectFromDefaults,
     DEFAULT_PROJECT_ID,
   } = useProjectStorage();
+
+  // Wrap reloadProjectFromDefaults to also update React state
+  const handleReloadFromDefaults = useCallback(async () => {
+    await reloadProjectFromDefaults();
+    // Re-read worldStore since the useEffect won't re-run (same project ID)
+    if (currentProject?.id) {
+      const store = await loadWorldStore(currentProject.id);
+      if (store?.worldContext) {
+        setWorldContext(store.worldContext);
+      }
+      if (store?.entityGuidance) {
+        setEntityGuidance(store.entityGuidance);
+      }
+      if (store?.cultureIdentities) {
+        setCultureIdentities(store.cultureIdentities);
+      }
+      if (store?.enrichmentConfig) {
+        setEnrichmentConfig(store.enrichmentConfig);
+      }
+      if (store?.styleSelection) {
+        setStyleSelection(store.styleSelection);
+      }
+    }
+  }, [reloadProjectFromDefaults, currentProject?.id]);
 
   const handleIlluminatorWorldDataChange = useCallback(async (enrichedWorld) => {
     // Extract loreData from enriched entities (with current imageRefs from ChronicleRecords)
@@ -424,7 +449,8 @@ export default function App() {
     setSimulationState(null);
     setArchivistData(null);
     setWorldContext(null);
-    setPromptTemplates(null);
+    setEntityGuidance(null);
+    setCultureIdentities(null);
     setEnrichmentConfig(null);
     setStyleSelection(null);
     setSlots({});
@@ -466,12 +492,15 @@ export default function App() {
         }
       }
 
-      // Load shared data (world context, prompt templates, and Illuminator config)
+      // Load shared data (world context, entity guidance, culture identities, and Illuminator config)
       if (store?.worldContext) {
         setWorldContext(store.worldContext);
       }
-      if (store?.promptTemplates) {
-        setPromptTemplates(store.promptTemplates);
+      if (store?.entityGuidance) {
+        setEntityGuidance(store.entityGuidance);
+      }
+      if (store?.cultureIdentities) {
+        setCultureIdentities(store.cultureIdentities);
       }
       if (store?.enrichmentConfig) {
         setEnrichmentConfig(store.enrichmentConfig);
@@ -588,15 +617,25 @@ export default function App() {
     return () => clearTimeout(timeoutId);
   }, [currentProject?.id, worldContext]);
 
-  // Persist prompt templates when they change (for Illuminator)
+  // Persist entity guidance when it changes (for Illuminator)
   useEffect(() => {
     if (!currentProject?.id) return;
-    if (!promptTemplates) return;
+    if (!entityGuidance) return;
     const timeoutId = setTimeout(() => {
-      savePromptTemplates(currentProject.id, promptTemplates);
+      saveEntityGuidance(currentProject.id, entityGuidance);
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [currentProject?.id, promptTemplates]);
+  }, [currentProject?.id, entityGuidance]);
+
+  // Persist culture identities when they change (for Illuminator)
+  useEffect(() => {
+    if (!currentProject?.id) return;
+    if (!cultureIdentities) return;
+    const timeoutId = setTimeout(() => {
+      saveCultureIdentities(currentProject.id, cultureIdentities);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [currentProject?.id, cultureIdentities]);
 
   // Persist enrichment config when it changes (for Illuminator)
   useEffect(() => {
@@ -887,7 +926,8 @@ export default function App() {
         simulationResults: payload.simulationResults ?? worldData,
         simulationState: payload.simulationState ?? null,
         worldContext: payload.worldContext,
-        promptTemplates: payload.promptTemplates,
+        entityGuidance: payload.entityGuidance,
+        cultureIdentities: payload.cultureIdentities,
         slotTitle: payload.slot?.title,
         slotCreatedAt: payload.slot?.createdAt,
       };
@@ -927,9 +967,13 @@ export default function App() {
       setWorldContext(parsed.worldContext);
       await saveWorldContext(currentProject.id, parsed.worldContext);
     }
-    if (parsed.promptTemplates !== undefined) {
-      setPromptTemplates(parsed.promptTemplates);
-      await savePromptTemplates(currentProject.id, parsed.promptTemplates);
+    if (parsed.entityGuidance !== undefined) {
+      setEntityGuidance(parsed.entityGuidance);
+      await saveEntityGuidance(currentProject.id, parsed.entityGuidance);
+    }
+    if (parsed.cultureIdentities !== undefined) {
+      setCultureIdentities(parsed.cultureIdentities);
+      await saveCultureIdentities(currentProject.id, parsed.cultureIdentities);
     }
 
     await handleLoadSlot(slotIndex);
@@ -937,10 +981,6 @@ export default function App() {
     currentProject?.id,
     parseSlotImportPayload,
     handleLoadSlot,
-    saveSlot,
-    saveWorldContext,
-    savePromptTemplates,
-    generateSlotTitle,
   ]);
 
   const handleExportSlot = useCallback((slotIndex) => {
@@ -969,7 +1009,8 @@ export default function App() {
       simulationResults: slot.simulationResults || null,
       simulationState: slot.simulationState || null,
       worldContext: worldContext ?? null,
-      promptTemplates: promptTemplates ?? null,
+      entityGuidance: entityGuidance ?? null,
+      cultureIdentities: cultureIdentities ?? null,
     };
 
     const safeBase = (exportPayload.slot.title || `slot-${slotIndex}`)
@@ -985,7 +1026,7 @@ export default function App() {
     link.download = filename;
     link.click();
     URL.revokeObjectURL(url);
-  }, [slots, worldContext, promptTemplates]);
+  }, [slots, worldContext, entityGuidance, cultureIdentities]);
 
   const handleImportSlot = useCallback(async (slotIndex, file) => {
     if (!currentProject?.id || !file) return;
@@ -1328,8 +1369,10 @@ export default function App() {
                 onWorldDataChange={handleIlluminatorWorldDataChange}
                 worldContext={worldContext}
                 onWorldContextChange={setWorldContext}
-                promptTemplates={promptTemplates}
-                onPromptTemplatesChange={setPromptTemplates}
+                entityGuidance={entityGuidance}
+                onEntityGuidanceChange={setEntityGuidance}
+                cultureIdentities={cultureIdentities}
+                onCultureIdentitiesChange={setCultureIdentities}
                 enrichmentConfig={enrichmentConfig}
                 onEnrichmentConfigChange={setEnrichmentConfig}
                 styleSelection={styleSelection}
@@ -1382,7 +1425,7 @@ export default function App() {
         onDuplicateProject={duplicateProject}
         onExportProject={exportProject}
         onImportProject={importProject}
-        onReloadFromDefaults={reloadProjectFromDefaults}
+        onReloadFromDefaults={handleReloadFromDefaults}
         defaultProjectId={DEFAULT_PROJECT_ID}
         onGoHome={handleGoHome}
         validationResult={validationResult}

@@ -220,12 +220,16 @@ function buildFocus(
  * @param worldData - World simulation data
  * @param worldContext - World context (name, description, etc.)
  * @param nameBank - Optional pre-generated names by culture for invented characters
+ * @param proseHints - Optional per-kind prose hints for narrative guidance
+ * @param culturalIdentities - Optional cultural identity data (VALUES, SPEECH, FEARS, TABOOS etc.)
  */
 export function buildChronicleContext(
   selections: ChronicleSelections,
   worldData: WorldData,
   worldContext: WorldContext,
-  nameBank?: Record<string, string[]>
+  nameBank?: Record<string, string[]>,
+  proseHints?: Record<string, string>,
+  culturalIdentities?: Record<string, Record<string, string>>
 ): ChronicleGenerationContext {
   const entityMap = new Map(worldData.hardState.map((e) => [e.id, e]));
 
@@ -284,6 +288,12 @@ export function buildChronicleContext(
 
     // Name bank for invented characters
     nameBank,
+
+    // Prose hints for entity kinds (e.g., how to write about NPCs vs locations)
+    proseHints,
+
+    // Cultural identities for cultures (VALUES, SPEECH, FEARS, TABOOS, etc.)
+    culturalIdentities,
   };
 }
 

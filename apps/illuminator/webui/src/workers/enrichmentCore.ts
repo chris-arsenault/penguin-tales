@@ -41,7 +41,6 @@ import {
   updateChronicleEdit,
   updateChronicleSummary,
   updateChronicleImageRefs,
-  updateChronicleProseBlend,
   updateChronicleFailure,
   getChronicle,
 } from '../lib/chronicleStorage';
@@ -68,27 +67,30 @@ import type {
   StoryNarrativeStyle,
   DocumentNarrativeStyle,
 } from '@canonry/world-schema';
+import type { LLMCallType, ResolvedLLMCallConfig } from '../lib/llmCallTypes';
 
 // ============================================================================
 // Types
 // ============================================================================
 
+/**
+ * Resolved LLM call settings - model and thinking budget per call type.
+ * All values are resolved (no undefined) - ready to use directly.
+ */
+export type ResolvedLLMCallSettings = Record<LLMCallType, ResolvedLLMCallConfig>;
+
 export interface WorkerConfig {
   anthropicApiKey: string;
   openaiApiKey: string;
-  textModel: string;
-  chronicleModel?: string;  // Model for chronicles (defaults to textModel)
   imageModel: string;
   imageSize: string;
   imageQuality: string;
   numWorkers?: number;
   useClaudeForImagePrompt?: boolean;
   claudeImagePromptTemplate?: string;
-  // Thinking model configuration (for complex reasoning tasks like palette curation)
-  thinkingModel?: string;       // Model ID (sonnet/opus - must support extended thinking)
-  thinkingBudget?: number;      // Token budget for extended thinking (0 = disabled)
-  // Use thinking model for description generation (visual thesis benefits from reasoning)
-  useThinkingForDescriptions?: boolean;
+
+  // Per-call LLM configuration (model + thinking budget)
+  llmCallSettings: ResolvedLLMCallSettings;
 }
 
 export type WorkerInbound =
@@ -503,21 +505,22 @@ export async function formatImagePromptWithClaude(
     return { prompt: originalPrompt };
   }
 
-  const textModel = config.textModel || 'claude-sonnet-4-20250514';
+  const { model, thinkingBudget } = getCallParams(config, 'image.promptFormatting');
   const imageModel = config.imageModel || 'dall-e-3';
   const formattingPrompt = config.claudeImagePromptTemplate
     .replace(/\{\{modelName\}\}/g, imageModel)
     .replace(/\{\{prompt\}\}/g, originalPrompt);
 
-  const estimate = estimateTextCost(formattingPrompt, 'description', textModel);
+  const estimate = estimateTextCost(formattingPrompt, 'description', model);
 
   try {
     const result = await llmClient.complete({
       systemPrompt: 'You are a prompt engineer specializing in image generation. Respond only with the reformatted prompt, no explanations or preamble.',
       prompt: formattingPrompt,
-      model: textModel,
+      model,
       maxTokens: 1024,
       temperature: 0.3,
+      thinkingBudget,
     });
 
     if (result.text && !result.error) {
@@ -530,7 +533,7 @@ export async function formatImagePromptWithClaude(
       if (result.usage) {
         inputTokens = result.usage.inputTokens;
         outputTokens = result.usage.outputTokens;
-        actualCost = calculateActualTextCost(inputTokens, outputTokens, textModel);
+        actualCost = calculateActualTextCost(inputTokens, outputTokens, model);
       }
 
       return {
@@ -555,10 +558,11 @@ export async function formatImagePromptWithClaude(
 // ============================================================================
 
 export function createClients(config: WorkerConfig): { llmClient: LLMClient; imageClient: ImageClient } {
+  // LLMClient model is set per-call; use a default for the base client
   const llmClient = new LLMClient({
     enabled: Boolean(config.anthropicApiKey),
     apiKey: config.anthropicApiKey,
-    model: config.textModel || 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250929', // Default; overridden per call
   });
 
   const imageClient = new ImageClient({
@@ -570,6 +574,17 @@ export function createClients(config: WorkerConfig): { llmClient: LLMClient; ima
   });
 
   return { llmClient, imageClient };
+}
+
+/**
+ * Helper to get call config with optional thinking budget
+ */
+function getCallParams(config: WorkerConfig, callType: LLMCallType): { model: string; thinkingBudget?: number } {
+  const callConfig = config.llmCallSettings[callType];
+  return {
+    model: callConfig.model,
+    thinkingBudget: callConfig.thinkingBudget > 0 ? callConfig.thinkingBudget : undefined,
+  };
 }
 
 // ============================================================================
@@ -728,9 +743,6 @@ export async function executeTextTask(
     return { success: false, error: 'Text generation not configured - missing Anthropic API key' };
   }
 
-  // Use configured model (user controls whether it's thinking or not)
-  const model = config.textModel || 'claude-sonnet-4-20250514';
-
   // Track cumulative costs across all chain steps
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
@@ -744,6 +756,8 @@ export async function executeTextTask(
   // ============================================================================
   console.log('[Worker] Description chain step 1: Narrative');
 
+  const narrativeParams = getCallParams(config, 'description.narrative');
+
   // Strip output format instructions from task.prompt - each step has its own format
   const entityContext = task.prompt
     .replace(/OUTPUT FORMAT.*$/s, '')
@@ -753,9 +767,10 @@ export async function executeTextTask(
   const narrativeResult = await llmClient.complete({
     systemPrompt: buildNarrativePrompt(),
     prompt: entityContext,
-    model,
+    model: narrativeParams.model,
     maxTokens: 1024,
     temperature: 0.7,
+    thinkingBudget: narrativeParams.thinkingBudget,
   });
   chainDebug.narrative = narrativeResult.debug;
 
@@ -793,7 +808,7 @@ export async function executeTextTask(
   if (narrativeResult.usage) {
     totalInputTokens += narrativeResult.usage.inputTokens;
     totalOutputTokens += narrativeResult.usage.outputTokens;
-    totalActualCost += calculateActualTextCost(narrativeResult.usage.inputTokens, narrativeResult.usage.outputTokens, model);
+    totalActualCost += calculateActualTextCost(narrativeResult.usage.inputTokens, narrativeResult.usage.outputTokens, narrativeParams.model);
   }
 
   // ============================================================================
@@ -801,25 +816,22 @@ export async function executeTextTask(
   // ============================================================================
   console.log('[Worker] Description chain step 2: Visual Thesis');
 
+  const thesisParams = getCallParams(config, 'description.visualThesis');
+
   // Build slimmed down visual context - remove noise that doesn't inform silhouette
-  // Extract: entity basics, world, era, and CULTURAL VISUAL IDENTITY (for visual thesis/traits)
-  const worldMatch = entityContext.match(/WORLD:\s*(.+?)(?:\n\n|\nENTITY:)/s);
-  const eraMatch = entityContext.match(/ERA:\s*(.+?)(?:\n---|$)/s);
+  // Extract: entity basics and CULTURAL VISUAL IDENTITY (for visual thesis/traits)
+  // NOTE: World description removed - it's noise for silhouette decisions. Culture identity has the visual signal.
   const visualIdentityMatch = entityContext.match(/CULTURAL VISUAL IDENTITY[^:]*:\n((?:- [A-Z_]+: .+\n?)+)/);
-  const worldContext = worldMatch ? worldMatch[1].trim() : '';
-  const eraContext = eraMatch ? eraMatch[1].trim() : '';
   const visualIdentityContext = visualIdentityMatch ? visualIdentityMatch[0].trim() : '';
 
   const visualContext = `Entity: ${task.entityName} (${task.entityKind})
-Culture: ${task.entityCulture || 'unaffiliated'}
-World: ${worldContext}
-Era: ${eraContext}${visualIdentityContext ? `\n\n${visualIdentityContext}` : ''}`;
+Culture: ${task.entityCulture || 'unaffiliated'}${visualIdentityContext ? `\n\n${visualIdentityContext}` : ''}`;
 
   // Validate instructions are provided (from defaults or per-kind override)
   if (!task.visualThesisInstructions) {
     return {
       success: false,
-      error: `Missing visualThesisInstructions for entity kind '${task.entityKind}'. Configure in promptTemplates.defaults.image.visualThesisInstructions or promptTemplates.byKind.${task.entityKind}.image.visualThesisInstructions`,
+      error: `Missing visualThesisInstructions for entity kind '${task.entityKind}'. Configure in entityGuidance.${task.entityKind}.visualThesis`,
     };
   }
 
@@ -838,9 +850,10 @@ Generate the visual thesis.`;
   const thesisResult = await llmClient.complete({
     systemPrompt: thesisSystemPrompt,
     prompt: thesisPrompt,
-    model,
-    maxTokens: 256,
+    model: thesisParams.model,
+    maxTokens: thesisParams.thinkingBudget ? thesisParams.thinkingBudget + 256 : 256,
     temperature: 0.7,
+    thinkingBudget: thesisParams.thinkingBudget,
   });
   chainDebug.thesis = thesisResult.debug;
 
@@ -866,13 +879,15 @@ Generate the visual thesis.`;
   if (thesisResult.usage) {
     totalInputTokens += thesisResult.usage.inputTokens;
     totalOutputTokens += thesisResult.usage.outputTokens;
-    totalActualCost += calculateActualTextCost(thesisResult.usage.inputTokens, thesisResult.usage.outputTokens, model);
+    totalActualCost += calculateActualTextCost(thesisResult.usage.inputTokens, thesisResult.usage.outputTokens, thesisParams.model);
   }
 
   // ============================================================================
   // Step 3: Visual Traits (given thesis + palette guidance)
   // ============================================================================
   console.log('[Worker] Description chain step 3: Visual Traits');
+
+  const traitsParams = getCallParams(config, 'description.visualTraits');
 
   // Fetch trait guidance for diversity (run-scoped avoidance, project-scoped palette)
   // Pass subtype and era to filter categories relevant to this entity
@@ -896,7 +911,7 @@ Generate the visual thesis.`;
   if (!task.visualTraitsInstructions) {
     return {
       success: false,
-      error: `Missing visualTraitsInstructions for entity kind '${task.entityKind}'. Configure in promptTemplates.defaults.image.visualTraitsInstructions or promptTemplates.byKind.${task.entityKind}.image.visualTraitsInstructions`,
+      error: `Missing visualTraitsInstructions for entity kind '${task.entityKind}'. Configure in entityGuidance.${task.entityKind}.visualTraits`,
     };
   }
 
@@ -918,9 +933,10 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
   const traitsResult = await llmClient.complete({
     systemPrompt: traitsSystemPrompt,
     prompt: traitsPrompt,
-    model,
-    maxTokens: 512,
+    model: traitsParams.model,
+    maxTokens: traitsParams.thinkingBudget ? traitsParams.thinkingBudget + 512 : 512,
     temperature: 0.7,
+    thinkingBudget: traitsParams.thinkingBudget,
   });
   chainDebug.traits = traitsResult.debug;
 
@@ -942,7 +958,7 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
   if (traitsResult.usage) {
     totalInputTokens += traitsResult.usage.inputTokens;
     totalOutputTokens += traitsResult.usage.outputTokens;
-    totalActualCost += calculateActualTextCost(traitsResult.usage.inputTokens, traitsResult.usage.outputTokens, model);
+    totalActualCost += calculateActualTextCost(traitsResult.usage.inputTokens, traitsResult.usage.outputTokens, traitsParams.model);
   }
 
   // ============================================================================
@@ -968,10 +984,10 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
     console.warn('[Worker] Failed to register traits:', err);
   }
 
-  // Calculate estimated cost (for comparison)
-  const estimate = estimateTextCost(task.prompt, 'description', model);
+  // Calculate estimated cost (for comparison) - use narrative model as base
+  const estimate = estimateTextCost(task.prompt, 'description', narrativeParams.model);
 
-  // Save cost record with combined totals
+  // Save cost record with combined totals (use narrative model as primary for record)
   await saveCostRecord({
     id: generateCostId(),
     timestamp: Date.now(),
@@ -981,7 +997,7 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
     entityName: task.entityName,
     entityKind: task.entityKind,
     type: 'description' as CostType,
-    model,
+    model: narrativeParams.model,
     estimatedCost: estimate.estimatedCost,
     actualCost: totalActualCost,
     inputTokens: totalInputTokens,
@@ -999,7 +1015,7 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
       visualThesis,
       visualTraits,
       generatedAt: Date.now(),
-      model,
+      model: narrativeParams.model,  // Primary model for display
       estimatedCost: estimate.estimatedCost,
       actualCost: totalActualCost,
       inputTokens: totalInputTokens,
@@ -1077,6 +1093,8 @@ function deserializeChronicleContext(ctx: SerializableChronicleContext): Chronic
       narrativeTags: e.narrativeTags,
     })),
     nameBank: ctx.nameBank,
+    proseHints: ctx.proseHints,
+    culturalIdentities: ctx.culturalIdentities,
   };
 }
 
@@ -1095,15 +1113,14 @@ export async function executeEntityChronicleTask(
   }
 
   const step = task.chronicleStep || 'generate_v2';
-  const textModel = config.chronicleModel || config.textModel || 'claude-sonnet-4-20250514';
-  console.log(`[Worker] Chronicle step=${step} for entity=${task.entityId}, model=${textModel}`);
+  console.log(`[Worker] Chronicle step=${step} for entity=${task.entityId}`);
 
   // V2 single-shot generation - primary generation path
   if (step === 'generate_v2') {
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for generate_v2 step' };
     }
-    return executeV2GenerationStep(task, config, llmClient, isAborted, textModel);
+    return executeV2GenerationStep(task, config, llmClient, isAborted);
   }
 
   // For post-generation steps, we need the existing chronicle
@@ -1120,35 +1137,28 @@ export async function executeEntityChronicleTask(
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for edit step' };
     }
-    return executeEditStep(task, chronicleRecord, config, llmClient, isAborted, textModel);
+    return executeEditStep(task, chronicleRecord, config, llmClient, isAborted);
   }
 
   if (step === 'summary') {
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for summary step' };
     }
-    return executeSummaryStep(task, chronicleRecord, config, llmClient, isAborted, textModel);
+    return executeSummaryStep(task, chronicleRecord, config, llmClient, isAborted);
   }
 
   if (step === 'image_refs') {
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for image refs step' };
     }
-    return executeImageRefsStep(task, chronicleRecord, config, llmClient, isAborted, textModel);
-  }
-
-  if (step === 'prose_blend') {
-    if (!task.chronicleContext) {
-      return { success: false, error: 'Chronicle context required for prose blend step' };
-    }
-    return executeProseBlendStep(task, chronicleRecord, config, llmClient, isAborted, textModel);
+    return executeImageRefsStep(task, chronicleRecord, config, llmClient, isAborted);
   }
 
   if (step === 'validate') {
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for validate step' };
     }
-    return executeValidateStep(task, chronicleRecord, config, llmClient, isAborted, textModel);
+    return executeValidateStep(task, chronicleRecord, config, llmClient, isAborted);
   }
 
   return { success: false, error: `Unknown step: ${step}` };
@@ -1162,8 +1172,7 @@ async function executeV2GenerationStep(
   task: WorkerTask,
   config: WorkerConfig,
   llmClient: LLMClient,
-  isAborted: () => boolean,
-  textModel: string
+  isAborted: () => boolean
 ): Promise<TaskResult> {
   const chronicleContext = task.chronicleContext!;
   const context = deserializeChronicleContext(chronicleContext);
@@ -1177,8 +1186,9 @@ async function executeV2GenerationStep(
     return { success: false, error: 'chronicleId required for generate_v2 step' };
   }
 
+  const { model, thinkingBudget } = getCallParams(config, 'chronicle.generation');
   const chronicleId = task.chronicleId;
-  console.log(`[Worker] V2 generation for chronicle=${chronicleId}, style="${narrativeStyle.name}"`);
+  console.log(`[Worker] V2 generation for chronicle=${chronicleId}, style="${narrativeStyle.name}", model=${model}`);
 
   // Simple entity/event selection from 2-hop neighborhood
   const selection = selectEntitiesV2(context, DEFAULT_V2_CONFIG);
@@ -1186,9 +1196,10 @@ async function executeV2GenerationStep(
 
   // Build single-shot prompt
   const prompt = buildV2Prompt(context, narrativeStyle, selection);
-  const maxTokens = getMaxTokensFromStyle(narrativeStyle);
+  const baseMaxTokens = getMaxTokensFromStyle(narrativeStyle);
+  const maxTokens = thinkingBudget ? thinkingBudget + baseMaxTokens : baseMaxTokens;
   const systemPrompt = getV2SystemPrompt(narrativeStyle);
-  const estimate = estimateTextCost(prompt, 'description', textModel);
+  const estimate = estimateTextCost(prompt, 'description', model);
 
   console.log(`[Worker] V2 prompt length: ${prompt.length} chars, maxTokens: ${maxTokens}`);
 
@@ -1196,9 +1207,10 @@ async function executeV2GenerationStep(
   const result = await llmClient.complete({
     systemPrompt,
     prompt,
-    model: textModel,
+    model,
     maxTokens,
     temperature: 0.7,
+    thinkingBudget,
   });
 
   if (isAborted()) {
@@ -1220,7 +1232,7 @@ async function executeV2GenerationStep(
   const cost = {
     estimated: estimate.estimatedCost,
     actual: result.usage
-      ? calculateActualTextCost(result.usage.inputTokens, result.usage.outputTokens, textModel)
+      ? calculateActualTextCost(result.usage.inputTokens, result.usage.outputTokens, model)
       : estimate.estimatedCost,
     inputTokens: result.usage?.inputTokens || estimate.inputTokens,
     outputTokens: result.usage?.outputTokens || estimate.outputTokens,
@@ -1238,7 +1250,7 @@ async function executeV2GenerationStep(
     await createChronicle(chronicleId, {
       projectId: task.projectId,
       simulationRunId: task.simulationRunId,
-      model: textModel,
+      model,
       title: existingChronicle?.title,
       format: existingChronicle?.format || narrativeStyle.format,
       narrativeStyleId: existingChronicle?.narrativeStyleId || narrativeStyle.id,
@@ -1271,7 +1283,7 @@ async function executeV2GenerationStep(
     entityKind: task.entityKind,
     chronicleId,
     type: 'chronicleV2',
-    model: textModel,
+    model,
     estimatedCost: cost.estimated,
     actualCost: cost.actual,
     inputTokens: cost.inputTokens,
@@ -1283,7 +1295,7 @@ async function executeV2GenerationStep(
     result: {
       chronicleId,
       generatedAt: Date.now(),
-      model: textModel,
+      model,
       estimatedCost: cost.estimated,
       actualCost: cost.actual,
       inputTokens: cost.inputTokens,
@@ -1301,8 +1313,7 @@ async function executeEditStep(
   chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
   config: WorkerConfig,
   llmClient: LLMClient,
-  isAborted: () => boolean,
-  textModel: string
+  isAborted: () => boolean
 ): Promise<TaskResult> {
   if (!chronicleRecord) {
     return { success: false, error: 'Chronicle record missing for editing' };
@@ -1321,7 +1332,8 @@ async function executeEditStep(
     return failEdit('Chronicle has no validation report to edit against');
   }
 
-  console.log('[Worker] Editing chronicle based on validation feedback...');
+  const { model, thinkingBudget } = getCallParams(config, 'chronicle.edit');
+  console.log(`[Worker] Editing chronicle based on validation feedback, model=${model}...`);
 
   // Build edit prompt from validation issues
   const issues = chronicleRecord.cohesionReport.issues || [];
@@ -1342,14 +1354,16 @@ ${chronicleRecord.assembledContent}
 2. Maintain entity names, facts, and relationships accurately
 3. Return ONLY the revised chronicle text, no explanations`;
 
-  const editEstimate = estimateTextCost(editPrompt, 'description', textModel);
+  const editEstimate = estimateTextCost(editPrompt, 'description', model);
+  const maxTokens = thinkingBudget ? thinkingBudget + 4096 : 4096;
 
   const editResult = await llmClient.complete({
     systemPrompt: 'You are a narrative editor. Revise the chronicle to address the validation feedback while maintaining quality and consistency.',
     prompt: editPrompt,
-    model: textModel,
-    maxTokens: 4096,
+    model,
+    maxTokens,
     temperature: 0.3,
+    thinkingBudget,
   });
   const debug = editResult.debug;
 
@@ -1362,7 +1376,7 @@ ${chronicleRecord.assembledContent}
   }
 
   const actualCost = editResult.usage
-    ? calculateActualTextCost(editResult.usage.inputTokens, editResult.usage.outputTokens, textModel)
+    ? calculateActualTextCost(editResult.usage.inputTokens, editResult.usage.outputTokens, model)
     : editEstimate.estimatedCost;
   const editCost = {
     estimated: editEstimate.estimatedCost,
@@ -1385,7 +1399,7 @@ ${chronicleRecord.assembledContent}
     entityKind: task.entityKind,
     chronicleId,
     type: 'chronicleRevision',
-    model: textModel,
+    model,
     estimatedCost: editCost.estimated,
     actualCost: editCost.actual,
     inputTokens: editCost.inputTokens,
@@ -1406,8 +1420,7 @@ ${chronicleRecord.assembledContent}
     updatedChronicleRecord,
     config,
     llmClient,
-    isAborted,
-    textModel
+    isAborted
   );
 
   if (!validationResult.success) {
@@ -1568,8 +1581,7 @@ async function executeValidateStep(
   chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
   config: WorkerConfig,
   llmClient: LLMClient,
-  isAborted: () => boolean,
-  textModel: string
+  isAborted: () => boolean
 ): Promise<TaskResult> {
   if (!chronicleRecord) {
     return { success: false, error: 'Chronicle record missing for validation' };
@@ -1591,18 +1603,21 @@ async function executeValidateStep(
     return failValidate('Narrative style is required for validation');
   }
 
-  console.log('[Worker] Validating cohesion...');
+  const { model, thinkingBudget } = getCallParams(config, 'chronicle.validation');
+  console.log(`[Worker] Validating cohesion, model=${model}...`);
   const validationPrompt = buildV2ValidationPrompt(chronicleRecord.assembledContent, context, narrativeStyle);
   const systemPrompt = 'You are a narrative quality evaluator. Analyze the chronicle and provide a structured assessment.';
 
-  const validationEstimate = estimateTextCost(validationPrompt, 'description', textModel);
+  const validationEstimate = estimateTextCost(validationPrompt, 'description', model);
+  const maxTokens = thinkingBudget ? thinkingBudget + 4096 : 4096;
 
   const validationResult = await llmClient.complete({
     systemPrompt,
     prompt: validationPrompt,
-    model: textModel,
-    maxTokens: 4096,
+    model,
+    maxTokens,
     temperature: 0.3,
+    thinkingBudget,
   });
   const debug = validationResult.debug;
 
@@ -1613,7 +1628,7 @@ async function executeValidateStep(
   const validationCost = {
     estimated: validationEstimate.estimatedCost,
     actual: validationResult.usage
-      ? calculateActualTextCost(validationResult.usage.inputTokens, validationResult.usage.outputTokens, textModel)
+      ? calculateActualTextCost(validationResult.usage.inputTokens, validationResult.usage.outputTokens, model)
       : validationEstimate.estimatedCost,
     inputTokens: validationResult.usage?.inputTokens || validationEstimate.inputTokens,
     outputTokens: validationResult.usage?.outputTokens || validationEstimate.outputTokens,
@@ -1627,7 +1642,7 @@ async function executeValidateStep(
   try {
     cohesionReport = parseV2ValidationResponse(validationResult.text);
     cohesionReport.generatedAt = Date.now();
-    cohesionReport.model = textModel;
+    cohesionReport.model = model;
   } catch (err) {
     return failValidate(`Failed to parse validation response: ${err}`, debug);
   }
@@ -1646,7 +1661,7 @@ async function executeValidateStep(
     entityKind: task.entityKind,
     chronicleId,
     type: 'chronicleValidation',
-    model: textModel,
+    model,
     estimatedCost: validationCost.estimated,
     actualCost: validationCost.actual,
     inputTokens: validationCost.inputTokens,
@@ -1658,7 +1673,7 @@ async function executeValidateStep(
     result: {
       chronicleId,
       generatedAt: Date.now(),
-      model: textModel,
+      model,
       estimatedCost: validationCost.estimated,
       actualCost: validationCost.actual,
       inputTokens: validationCost.inputTokens,
@@ -1904,26 +1919,12 @@ function parseImageRefsResponse(text: string): ChronicleImageRef[] {
   });
 }
 
-function buildProseBlendPrompt(content: string): string {
-  return `Rewrite the chronicle into a more cohesive, freeform narrative while keeping ALL relevant details.
-Rules:
-- Preserve names, dates, facts, and outcomes.
-- Avoid dropping any information.
-- Smooth transitions and remove outline-like phrasing.
-- If the text is already a discrete document (letter, decree, log), keep that form and polish the prose.
-Return ONLY the rewritten chronicle content.
-
-Chronicle:
-${content}`;
-}
-
 async function executeSummaryStep(
   task: WorkerTask,
   chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
   config: WorkerConfig,
   llmClient: LLMClient,
-  isAborted: () => boolean,
-  textModel: string
+  isAborted: () => boolean
 ): Promise<TaskResult> {
   if (!chronicleRecord) {
     return { success: false, error: 'Chronicle record missing for summary' };
@@ -1932,16 +1933,19 @@ async function executeSummaryStep(
     return { success: false, error: 'Chronicle has no assembled content to summarize' };
   }
 
+  const { model, thinkingBudget } = getCallParams(config, 'chronicle.summary');
   const chronicleId = chronicleRecord.chronicleId;
   const summaryPrompt = buildSummaryPrompt(chronicleRecord.assembledContent);
-  const summaryEstimate = estimateTextCost(summaryPrompt, 'description', textModel);
+  const summaryEstimate = estimateTextCost(summaryPrompt, 'description', model);
+  const maxTokens = thinkingBudget ? thinkingBudget + 512 : 512;
 
   const summaryResult = await llmClient.complete({
     systemPrompt: 'You are a careful editor who writes concise, faithful summaries. Always respond with valid JSON.',
     prompt: summaryPrompt,
-    model: textModel,
-    maxTokens: 512,
+    model,
+    maxTokens,
     temperature: 0.3,
+    thinkingBudget,
   });
   const debug = summaryResult.debug;
 
@@ -1978,13 +1982,13 @@ async function executeSummaryStep(
   const summaryCost = {
     estimated: summaryEstimate.estimatedCost,
     actual: summaryResult.usage
-      ? calculateActualTextCost(summaryResult.usage.inputTokens, summaryResult.usage.outputTokens, textModel)
+      ? calculateActualTextCost(summaryResult.usage.inputTokens, summaryResult.usage.outputTokens, model)
       : summaryEstimate.estimatedCost,
     inputTokens: summaryResult.usage?.inputTokens || summaryEstimate.inputTokens,
     outputTokens: summaryResult.usage?.outputTokens || summaryEstimate.outputTokens,
   };
 
-  await updateChronicleSummary(chronicleId, summaryText, summaryCost, textModel, title);
+  await updateChronicleSummary(chronicleId, summaryText, summaryCost, model, title);
 
   await saveCostRecord({
     id: generateCostId(),
@@ -1996,7 +2000,7 @@ async function executeSummaryStep(
     entityKind: task.entityKind,
     chronicleId,
     type: 'chronicleSummary' as CostType,
-    model: textModel,
+    model,
     estimatedCost: summaryCost.estimated,
     actualCost: summaryCost.actual,
     inputTokens: summaryCost.inputTokens,
@@ -2008,7 +2012,7 @@ async function executeSummaryStep(
     result: {
       chronicleId,
       generatedAt: Date.now(),
-      model: textModel,
+      model,
       estimatedCost: summaryCost.estimated,
       actualCost: summaryCost.actual,
       inputTokens: summaryCost.inputTokens,
@@ -2023,8 +2027,7 @@ async function executeImageRefsStep(
   chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
   config: WorkerConfig,
   llmClient: LLMClient,
-  isAborted: () => boolean,
-  textModel: string
+  isAborted: () => boolean
 ): Promise<TaskResult> {
   if (!chronicleRecord) {
     return { success: false, error: 'Chronicle record missing for image refs' };
@@ -2033,17 +2036,20 @@ async function executeImageRefsStep(
     return { success: false, error: 'Chronicle has no assembled content for image refs' };
   }
 
+  const { model, thinkingBudget } = getCallParams(config, 'chronicle.imageRefs');
   const chronicleId = chronicleRecord.chronicleId;
   const context = deserializeChronicleContext(task.chronicleContext!);
   const imageRefsPrompt = buildImageRefsPrompt(chronicleRecord.assembledContent, context);
-  const imageRefsEstimate = estimateTextCost(imageRefsPrompt, 'description', textModel);
+  const imageRefsEstimate = estimateTextCost(imageRefsPrompt, 'description', model);
+  const maxTokens = thinkingBudget ? thinkingBudget + 2048 : 2048;
 
   const imageRefsResult = await llmClient.complete({
     systemPrompt: 'You are planning draft image placements for a chronicle.',
     prompt: imageRefsPrompt,
-    model: textModel,
-    maxTokens: 2048,
+    model,
+    maxTokens,
     temperature: 0.4,
+    thinkingBudget,
   });
   const debug = imageRefsResult.debug;
 
@@ -2088,19 +2094,19 @@ async function executeImageRefsStep(
   const imageRefs: ChronicleImageRefs = {
     refs: parsedRefs,
     generatedAt: Date.now(),
-    model: textModel,
+    model,
   };
 
   const imageRefsCost = {
     estimated: imageRefsEstimate.estimatedCost,
     actual: imageRefsResult.usage
-      ? calculateActualTextCost(imageRefsResult.usage.inputTokens, imageRefsResult.usage.outputTokens, textModel)
+      ? calculateActualTextCost(imageRefsResult.usage.inputTokens, imageRefsResult.usage.outputTokens, model)
       : imageRefsEstimate.estimatedCost,
     inputTokens: imageRefsResult.usage?.inputTokens || imageRefsEstimate.inputTokens,
     outputTokens: imageRefsResult.usage?.outputTokens || imageRefsEstimate.outputTokens,
   };
 
-  await updateChronicleImageRefs(chronicleId, imageRefs, imageRefsCost, textModel);
+  await updateChronicleImageRefs(chronicleId, imageRefs, imageRefsCost, model);
 
   await saveCostRecord({
     id: generateCostId(),
@@ -2112,7 +2118,7 @@ async function executeImageRefsStep(
     entityKind: task.entityKind,
     chronicleId,
     type: 'chronicleImageRefs' as CostType,
-    model: textModel,
+    model,
     estimatedCost: imageRefsCost.estimated,
     actualCost: imageRefsCost.actual,
     inputTokens: imageRefsCost.inputTokens,
@@ -2124,95 +2130,11 @@ async function executeImageRefsStep(
     result: {
       chronicleId,
       generatedAt: Date.now(),
-      model: textModel,
+      model,
       estimatedCost: imageRefsCost.estimated,
       actualCost: imageRefsCost.actual,
       inputTokens: imageRefsCost.inputTokens,
       outputTokens: imageRefsCost.outputTokens,
-    },
-    debug,
-  };
-}
-
-async function executeProseBlendStep(
-  task: WorkerTask,
-  chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
-  config: WorkerConfig,
-  llmClient: LLMClient,
-  isAborted: () => boolean,
-  textModel: string
-): Promise<TaskResult> {
-  if (!chronicleRecord) {
-    return { success: false, error: 'Chronicle record missing for prose blending' };
-  }
-  if (!chronicleRecord.assembledContent) {
-    return { success: false, error: 'Chronicle has no assembled content to blend' };
-  }
-
-  const chronicleId = chronicleRecord.chronicleId;
-  const blendPrompt = buildProseBlendPrompt(chronicleRecord.assembledContent);
-  const blendEstimate = estimateTextCost(blendPrompt, 'description', textModel);
-
-  const blendResult = await llmClient.complete({
-    systemPrompt: 'You are a narrative editor who smooths prose without losing details.',
-    prompt: blendPrompt,
-    model: textModel,
-    maxTokens: 8192,
-    temperature: 0.4,
-  });
-  const debug = blendResult.debug;
-
-  if (isAborted()) {
-    return { success: false, error: 'Task aborted', debug };
-  }
-
-  if (blendResult.error || !blendResult.text) {
-    return { success: false, error: `Prose blend failed: ${blendResult.error || 'Empty response'}`, debug };
-  }
-
-  const blendedContent = stripLeadingWrapper(blendResult.text).trim();
-  if (!blendedContent) {
-    return { success: false, error: 'Prose blend response empty', debug };
-  }
-
-  const blendCost = {
-    estimated: blendEstimate.estimatedCost,
-    actual: blendResult.usage
-      ? calculateActualTextCost(blendResult.usage.inputTokens, blendResult.usage.outputTokens, textModel)
-      : blendEstimate.estimatedCost,
-    inputTokens: blendResult.usage?.inputTokens || blendEstimate.inputTokens,
-    outputTokens: blendResult.usage?.outputTokens || blendEstimate.outputTokens,
-  };
-
-  await updateChronicleProseBlend(chronicleId, blendedContent, blendCost, textModel);
-
-  await saveCostRecord({
-    id: generateCostId(),
-    timestamp: Date.now(),
-    projectId: task.projectId,
-    simulationRunId: task.simulationRunId,
-    entityId: task.entityId,
-    entityName: task.entityName,
-    entityKind: task.entityKind,
-    chronicleId,
-    type: 'chronicleProseBlend' as CostType,
-    model: textModel,
-    estimatedCost: blendCost.estimated,
-    actualCost: blendCost.actual,
-    inputTokens: blendCost.inputTokens,
-    outputTokens: blendCost.outputTokens,
-  });
-
-  return {
-    success: true,
-    result: {
-      chronicleId,
-      generatedAt: Date.now(),
-      model: textModel,
-      estimatedCost: blendCost.estimated,
-      actualCost: blendCost.actual,
-      inputTokens: blendCost.inputTokens,
-      outputTokens: blendCost.outputTokens,
     },
     debug,
   };
@@ -2404,9 +2326,8 @@ export async function executePaletteExpansionTask(
     return { success: false, error: 'Entity kind required for palette expansion' };
   }
 
-  // Use thinking model for palette curation (complex reasoning task)
-  const thinkingModel = config.thinkingModel || 'claude-sonnet-4-5-20250929';
-  const thinkingBudget = config.thinkingBudget ?? 8192;
+  // Use per-call settings for palette expansion
+  const { model, thinkingBudget } = getCallParams(config, 'palette.expansion');
 
   // Get available subtypes and eras for this entity kind
   const subtypes = task.paletteSubtypes || [];
@@ -2420,7 +2341,7 @@ export async function executePaletteExpansionTask(
     task.paletteCultureContext
   );
 
-  const estimate = estimateTextCost(prompt, 'description', thinkingModel);
+  const estimate = estimateTextCost(prompt, 'description', model);
 
   // max_tokens must be > thinking budget; add response budget on top
   const responseBudget = 4096;
@@ -2429,7 +2350,7 @@ export async function executePaletteExpansionTask(
   const result = await llmClient.complete({
     systemPrompt: PALETTE_EXPANSION_SYSTEM_PROMPT,
     prompt,
-    model: thinkingModel,
+    model,
     maxTokens: totalMaxTokens,
     thinkingBudget: thinkingBudget > 0 ? thinkingBudget : undefined,
   });
@@ -2464,7 +2385,7 @@ export async function executePaletteExpansionTask(
   const inputTokens = result.usage?.inputTokens || estimate.inputTokens;
   const outputTokens = result.usage?.outputTokens || estimate.outputTokens;
   const actualCost = result.usage
-    ? calculateActualTextCost(inputTokens, outputTokens, thinkingModel)
+    ? calculateActualTextCost(inputTokens, outputTokens, model)
     : estimate.estimatedCost;
 
   // Save cost record
@@ -2474,7 +2395,7 @@ export async function executePaletteExpansionTask(
     projectId: task.projectId,
     simulationRunId: task.simulationRunId,
     type: 'paletteExpansion' as CostType,
-    model: thinkingModel,
+    model,
     estimatedCost: estimate.estimatedCost,
     actualCost,
     inputTokens,
@@ -2485,7 +2406,7 @@ export async function executePaletteExpansionTask(
     success: true,
     result: {
       generatedAt: Date.now(),
-      model: thinkingModel,
+      model,
       estimatedCost: estimate.estimatedCost,
       actualCost,
       inputTokens,

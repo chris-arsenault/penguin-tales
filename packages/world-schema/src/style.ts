@@ -27,18 +27,14 @@ export { DEFAULT_COLOR_PALETTES } from './colorPalettes.js';
 
 // Narrative Styles (story-based chronicles)
 export type {
-  PlotStructureType,
-  PlotStructure,
   RoleDefinition,
-  EntitySelectionRules,
-  EventSelectionRules,
-  SceneTemplate,
-  WorldDataFocus,
-  ProseDirectives,
   PacingConfig,
   NarrativeFormat,
-  BaseNarrativeStyle,
   StoryNarrativeStyle,
+  // Document style support types
+  EntitySelectionRules,
+  EventSelectionRules,
+  BaseNarrativeStyle,
 } from './narrativeStyles.js';
 export { DEFAULT_NARRATIVE_STYLES } from './narrativeStyles.js';
 

@@ -255,19 +255,8 @@ export function useProjectStorage() {
               const worldStoreData = {
                 slots: {},
                 activeSlotIndex: 0,
+                ...defaultData.illuminatorConfig,
               };
-              if (defaultData.illuminatorConfig.worldContext) {
-                worldStoreData.worldContext = defaultData.illuminatorConfig.worldContext;
-              }
-              if (defaultData.illuminatorConfig.promptTemplates) {
-                worldStoreData.promptTemplates = defaultData.illuminatorConfig.promptTemplates;
-              }
-              if (defaultData.illuminatorConfig.enrichmentConfig) {
-                worldStoreData.enrichmentConfig = defaultData.illuminatorConfig.enrichmentConfig;
-              }
-              if (defaultData.illuminatorConfig.styleSelection) {
-                worldStoreData.styleSelection = defaultData.illuminatorConfig.styleSelection;
-              }
               await saveWorldStore(defaultData.project.id, worldStoreData);
             }
           }
@@ -439,9 +428,11 @@ export function useProjectStorage() {
         let illuminatorConfig = null;
         const worldStore = await loadWorldStore(project.id);
         if (worldStore) {
+          // Export entityGuidance and cultureIdentities at top level
           illuminatorConfig = {
             worldContext: worldStore.worldContext || null,
-            promptTemplates: worldStore.promptTemplates || null,
+            entityGuidance: worldStore.entityGuidance || null,
+            cultureIdentities: worldStore.cultureIdentities || null,
             enrichmentConfig: worldStore.enrichmentConfig || null,
             styleSelection: worldStore.styleSelection || null,
           };
@@ -493,19 +484,8 @@ export function useProjectStorage() {
           const worldStoreData = {
             slots: {},
             activeSlotIndex: 0,
+            ...illuminatorConfig,
           };
-          if (illuminatorConfig.worldContext) {
-            worldStoreData.worldContext = illuminatorConfig.worldContext;
-          }
-          if (illuminatorConfig.promptTemplates) {
-            worldStoreData.promptTemplates = illuminatorConfig.promptTemplates;
-          }
-          if (illuminatorConfig.enrichmentConfig) {
-            worldStoreData.enrichmentConfig = illuminatorConfig.enrichmentConfig;
-          }
-          if (illuminatorConfig.styleSelection) {
-            worldStoreData.styleSelection = illuminatorConfig.styleSelection;
-          }
           await saveWorldStore(project.id, worldStoreData);
         }
 
@@ -554,19 +534,8 @@ export function useProjectStorage() {
           const worldStoreData = {
             slots: {},
             activeSlotIndex: 0,
+            ...defaultData.illuminatorConfig,
           };
-          if (defaultData.illuminatorConfig.worldContext) {
-            worldStoreData.worldContext = defaultData.illuminatorConfig.worldContext;
-          }
-          if (defaultData.illuminatorConfig.promptTemplates) {
-            worldStoreData.promptTemplates = defaultData.illuminatorConfig.promptTemplates;
-          }
-          if (defaultData.illuminatorConfig.enrichmentConfig) {
-            worldStoreData.enrichmentConfig = defaultData.illuminatorConfig.enrichmentConfig;
-          }
-          if (defaultData.illuminatorConfig.styleSelection) {
-            worldStoreData.styleSelection = defaultData.illuminatorConfig.styleSelection;
-          }
           await saveWorldStore(currentProject.id, worldStoreData);
         }
 

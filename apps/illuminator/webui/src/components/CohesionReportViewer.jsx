@@ -212,7 +212,7 @@ export default function CohesionReportViewer({
   // Style library integration props
   styleLibrary = null,
   cultures = null,
-  promptTemplates = null,
+  cultureIdentities = null,
   worldContext = null,
   chronicleTitle = null,
 }) {
@@ -384,7 +384,7 @@ export default function CohesionReportViewer({
           }}
         >
           <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            Validation is stale after prose blending. Revalidate to refresh the report.
+            Validation is stale after edits. Revalidate to refresh the report.
           </div>
           {onRevalidate && (
             <button
@@ -466,7 +466,7 @@ export default function CohesionReportViewer({
             )}
           </div>
 
-          {/* 3. Image Refs - should run after prose blending since it uses anchor text */}
+          {/* 3. Image Refs - finds image placement opportunities in the narrative */}
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', fontWeight: 500 }}>Add Image Refs</div>
@@ -522,7 +522,7 @@ export default function CohesionReportViewer({
                 isGenerating={isGenerating}
                 styleLibrary={styleLibrary}
                 cultures={cultures}
-                promptTemplates={promptTemplates}
+                cultureIdentities={cultureIdentities}
                 worldContext={worldContext}
                 chronicleTitle={chronicleTitle}
               />

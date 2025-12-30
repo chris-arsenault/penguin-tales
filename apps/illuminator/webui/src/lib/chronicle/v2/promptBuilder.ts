@@ -19,6 +19,9 @@ import type {
 } from '@canonry/world-schema';
 import type { V2SelectionResult } from './types';
 
+// Cultural identity type for descriptive identity per culture
+type CulturalDescriptiveIdentity = Record<string, Record<string, string>>;
+
 // =============================================================================
 // Entity Formatting
 // =============================================================================
@@ -83,12 +86,12 @@ function formatEvent(e: NarrativeEventContext): string {
 
 /**
  * Build the world section of the prompt.
+ * Contains world context only - style/tone guidance is handled separately.
  */
 function buildWorldSection(context: ChronicleGenerationContext): string {
   const lines = [
     `# World: ${context.worldName}`,
     context.worldDescription || '',
-    context.tone ? `Tone: ${context.tone}` : '',
   ].filter(Boolean);
 
   if (context.canonFacts && context.canonFacts.length > 0) {
@@ -236,121 +239,200 @@ function buildNameBankSection(nameBank: Record<string, string[]> | undefined): s
   return lines.join('\n');
 }
 
+/**
+ * Build the cultural identities section.
+ * Provides cultural context (VALUES, SPEECH, FEARS, TABOOS, etc.) for each culture
+ * that appears in the chronicle's entities.
+ */
+function buildCulturalIdentitiesSection(
+  culturalIdentities: CulturalDescriptiveIdentity | undefined,
+  entities: EntityContext[]
+): string {
+  if (!culturalIdentities || Object.keys(culturalIdentities).length === 0) {
+    return '';
+  }
+
+  // Get unique cultures from the chronicle's entities
+  const entityCultures = new Set(
+    entities.map(e => e.culture).filter((c): c is string => Boolean(c))
+  );
+
+  if (entityCultures.size === 0) {
+    return '';
+  }
+
+  const lines: string[] = ['# Cultural Identities'];
+  lines.push('How different cultures think, speak, and behave:');
+
+  for (const cultureId of entityCultures) {
+    const identity = culturalIdentities[cultureId];
+    if (!identity) continue;
+
+    lines.push('');
+    lines.push(`## ${cultureId}`);
+
+    // Include all identity fields
+    for (const [key, value] of Object.entries(identity)) {
+      if (value && value.trim()) {
+        lines.push(`- ${key}: ${value}`);
+      }
+    }
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Build the prose hints section.
+ * Provides per-kind guidance for how to portray different entity types in narrative prose.
+ * Only includes hints for kinds present in the chronicle's entities.
+ */
+function buildProseHintsSection(
+  proseHints: Record<string, string> | undefined,
+  entities: EntityContext[]
+): string {
+  if (!proseHints || Object.keys(proseHints).length === 0) {
+    return '';
+  }
+
+  // Get unique entity kinds from the chronicle's entities
+  const entityKinds = new Set(entities.map(e => e.kind));
+
+  // Filter hints to only include kinds present in this chronicle
+  const relevantHints: [string, string][] = [];
+  for (const [kind, hint] of Object.entries(proseHints)) {
+    if (entityKinds.has(kind) && hint.trim()) {
+      relevantHints.push([kind, hint]);
+    }
+  }
+
+  if (relevantHints.length === 0) {
+    return '';
+  }
+
+  const lines: string[] = ['# Entity Portrayal Guidelines'];
+  lines.push('When writing about different types of entities, follow these guidelines:');
+  lines.push('');
+
+  for (const [kind, hint] of relevantHints) {
+    lines.push(`**${kind}**: ${hint}`);
+  }
+
+  return lines.join('\n');
+}
+
 // =============================================================================
 // Story Format - Structure & Style Building
 // =============================================================================
 
 /**
  * Build the narrative structure section for story format.
- * Includes plot structure type, instructions, and scene progression.
+ * Uses the unified narrativeInstructions field.
  */
 function buildStoryStructureSection(style: StoryNarrativeStyle): string {
   const lines: string[] = ['# Narrative Structure'];
 
-  // Plot structure type and instructions
-  if (style.plotStructure) {
-    lines.push(`Type: ${style.plotStructure.type}`);
-    if (style.plotStructure.instructions) {
-      lines.push('');
-      lines.push(style.plotStructure.instructions);
-    }
-  }
-
-  // Scene progression
+  // Scene count guidance
   if (style.pacing?.sceneCount) {
+    lines.push(`Target: ${style.pacing.sceneCount.min}-${style.pacing.sceneCount.max} scenes`);
     lines.push('');
-    lines.push(`## Scene Progression (${style.pacing.sceneCount.min}-${style.pacing.sceneCount.max} scenes)`);
   }
 
-  if (style.sceneTemplates && style.sceneTemplates.length > 0) {
-    if (!style.pacing?.sceneCount) {
-      lines.push('');
-      lines.push('## Scene Progression');
-    }
-    lines.push('Follow this emotional arc through the narrative:');
-    for (let i = 0; i < style.sceneTemplates.length; i++) {
-      const scene = style.sceneTemplates[i];
-      lines.push(`${i + 1}. **${scene.name}** - ${scene.purpose}`);
-      if (scene.emotionalArc) {
-        lines.push(`   Emotional arc: ${scene.emotionalArc}`);
-      }
-      if (scene.requiredElements && scene.requiredElements.length > 0) {
-        lines.push(`   Include: ${scene.requiredElements.join(', ')}`);
-      }
-    }
+  // Narrative instructions (plot structure, scenes, beats, emotional arcs)
+  if (style.narrativeInstructions) {
+    lines.push(style.narrativeInstructions);
   }
 
   return lines.join('\n');
 }
 
 /**
- * Build the cast rules section for story format.
- * Includes role expectations and cast size guidance.
+ * Build the unified cast section for story format.
+ * Combines role expectations with character data so the LLM sees roles and characters together.
  */
-function buildCastRulesSection(style: StoryNarrativeStyle): string {
-  const lines: string[] = ['# Cast Rules'];
-  let hasContent = false;
+function buildUnifiedCastSection(
+  selection: V2SelectionResult,
+  primaryEntityIds: Set<string>,
+  style: StoryNarrativeStyle
+): string {
+  const lines: string[] = [`# Cast (${selection.entities.length} characters)`];
 
-  // Role expectations
-  if (style.entityRules?.roles && style.entityRules.roles.length > 0) {
-    lines.push('Expected roles in narrative:');
-    for (const role of style.entityRules.roles) {
+  // Role expectations first - so LLM knows what to look for
+  if (style.roles && style.roles.length > 0) {
+    lines.push('');
+    lines.push('## Narrative Roles');
+    lines.push('Assign characters from below to these roles:');
+    for (const role of style.roles) {
       const countStr = role.count.min === role.count.max
         ? `${role.count.min}`
         : `${role.count.min}-${role.count.max}`;
-      lines.push(`- ${role.role} (${countStr}): ${role.description}`);
+      lines.push(`- **${role.role}** (${countStr}): ${role.description}`);
     }
-    hasContent = true;
   }
 
-  // Max cast size
-  if (style.entityRules?.maxCastSize) {
-    if (hasContent) lines.push('');
-    lines.push(`Focus on ${style.entityRules.maxCastSize} or fewer characters for clarity.`);
-    hasContent = true;
+  // Primary characters
+  const primaryEntities = selection.entities.filter(e => primaryEntityIds.has(e.id));
+  const supportingEntities = selection.entities.filter(e => !primaryEntityIds.has(e.id));
+
+  if (primaryEntities.length > 0) {
+    lines.push('');
+    lines.push('## Primary Characters');
+    for (const entity of primaryEntities) {
+      lines.push('');
+      lines.push(`### ${entity.name}`);
+      lines.push(formatEntityFull(entity));
+    }
   }
 
-  return hasContent ? lines.join('\n') : '';
+  // Supporting characters
+  if (supportingEntities.length > 0) {
+    lines.push('');
+    lines.push('## Supporting Characters');
+    for (const entity of supportingEntities) {
+      lines.push('');
+      lines.push(formatEntityBrief(entity));
+    }
+  }
+
+  return lines.join('\n');
 }
 
 /**
  * Build the event usage section for story format.
  */
 function buildEventUsageSection(style: StoryNarrativeStyle): string {
-  if (!style.eventRules?.usageInstructions) {
+  if (!style.eventInstructions) {
     return '';
   }
 
   return `# How to Use Events
-${style.eventRules.usageInstructions}`;
+${style.eventInstructions}`;
 }
 
 /**
- * Build the world data focus section for story format.
+ * Build the unified style section for story format.
+ * Combines world tone/voice guidance with prose instructions from the narrative style.
+ * This is the single location for all writing style guidance.
  */
-function buildWorldDataFocusSection(style: StoryNarrativeStyle): string {
-  if (!style.worldDataFocus) {
-    return '';
-  }
-
-  const wdf = style.worldDataFocus;
-  const lines: string[] = ['# World Elements'];
+function buildUnifiedStyleSection(
+  tone: string | undefined,
+  style: StoryNarrativeStyle
+): string {
+  const lines: string[] = [`# Writing Style`];
   let hasContent = false;
 
-  if (wdf.includeLocations && wdf.locationUsage) {
-    lines.push(`Locations: ${wdf.locationUsage}`);
+  // World tone/voice guidance (may contain detailed style instructions)
+  if (tone) {
+    lines.push('');
+    lines.push(tone);
     hasContent = true;
   }
-  if (wdf.includeArtifacts && wdf.artifactUsage) {
-    lines.push(`Artifacts: ${wdf.artifactUsage}`);
-    hasContent = true;
-  }
-  if (wdf.includeCulturalPractices && wdf.culturalUsage) {
-    lines.push(`Culture: ${wdf.culturalUsage}`);
-    hasContent = true;
-  }
-  if (wdf.includeEraContext && wdf.eraUsage) {
-    lines.push(`Era: ${wdf.eraUsage}`);
+
+  // Prose instructions from narrative style (tone, dialogue, description, world elements, avoid)
+  if (style.proseInstructions) {
+    if (hasContent) lines.push('');
+    lines.push(`## Prose: ${style.name}`);
+    lines.push(style.proseInstructions);
     hasContent = true;
   }
 
@@ -358,46 +440,23 @@ function buildWorldDataFocusSection(style: StoryNarrativeStyle): string {
 }
 
 /**
- * Build the prose style section for story format.
- */
-function buildProseStyleSection(style: StoryNarrativeStyle): string {
-  const pd = style.proseDirectives;
-  if (!pd) return '';
-
-  const lines: string[] = [`# Prose Style: ${style.name}`];
-
-  if (pd.toneKeywords?.length) {
-    lines.push(`Tone: ${pd.toneKeywords.join(', ')}`);
-  }
-  if (pd.dialogueStyle) {
-    lines.push(`Dialogue: ${pd.dialogueStyle}`);
-  }
-  if (pd.descriptionStyle) {
-    lines.push(`Description: ${pd.descriptionStyle}`);
-  }
-  if (pd.pacingNotes) {
-    lines.push(`Pacing: ${pd.pacingNotes}`);
-  }
-  if (pd.avoid?.length) {
-    lines.push(`Avoid: ${pd.avoid.join(', ')}`);
-  }
-  if (pd.exampleProse) {
-    lines.push('');
-    lines.push(`Example prose style: "${pd.exampleProse}"`);
-  }
-
-  return lines.join('\n');
-}
-
-/**
  * Build complete prompt for story format.
+ *
+ * Section order (designed for clarity):
+ * 1. TASK - What to write (upfront so LLM knows the goal)
+ * 2. CAST - Narrative roles + characters (unified)
+ * 3. WORLD - Setting context
+ * 4. CULTURAL IDENTITIES - How cultures behave
+ * 5. DATA - Relationships, events, available names
+ * 6. STRUCTURE - Narrative structure, event usage
+ * 7. STYLE - All writing guidance (world tone + prose instructions)
  */
 function buildStoryPrompt(
-  worldSection: string,
-  entitySection: string,
-  dataSection: string,
-  temporalSection: string,
-  nameBankSection: string,
+  context: ChronicleGenerationContext,
+  selection: V2SelectionResult,
+  primaryEntityIds: Set<string>,
+  culturalIdentitiesSection: string,
+  proseHintsSection: string,
   style: StoryNarrativeStyle
 ): string {
   const pacing = style.pacing;
@@ -406,42 +465,53 @@ function buildStoryPrompt(
     ? `${pacing.sceneCount.min}-${pacing.sceneCount.max}`
     : '4-5';
 
-  // Build all sections
-  const structureSection = buildStoryStructureSection(style);
-  const castSection = buildCastRulesSection(style);
-  const eventSection = buildEventUsageSection(style);
-  const worldFocusSection = buildWorldDataFocusSection(style);
-  const proseSection = buildProseStyleSection(style);
-
-  // Combine non-empty sections
-  const sections = [
-    worldSection,
-    temporalSection,
-    entitySection,
-    nameBankSection,
-    dataSection,
-    structureSection,
-    castSection,
-    eventSection,
-    worldFocusSection,
-    proseSection,
-  ].filter(Boolean);
-
-  // Task section
+  // 1. TASK (upfront)
   const taskSection = `# Task
 Write a ${wordRange} word narrative in ${sceneRange} distinct scenes.
 
 Requirements:
-- Follow the narrative structure type and scene progression above
-- Ground the story in the historical era and timeline provided
-- Protagonist must be an entity of the correct kind (typically a person, not a faction or location)
-- Use relationships to drive tension or connection
-- Incorporate events according to the usage instructions
-- Feature multiple characters from the data provided
+- Assign the provided characters to the narrative roles defined below
+- Follow the plot structure and scene progression
+- Incorporate the listed events naturally into the narrative
+- Characters should speak and act according to their cultural identity
+- Write directly with no section headers or meta-commentary`;
 
-Write the narrative directly. No section headers, no meta-commentary.`;
+  // 2. CAST (unified roles + characters)
+  const castSection = buildUnifiedCastSection(selection, primaryEntityIds, style);
 
-  return [...sections, taskSection].join('\n\n');
+  // 3. WORLD (setting context only, no style)
+  const worldSection = buildWorldSection(context);
+
+  // 4. CULTURAL IDENTITIES (passed in)
+
+  // 5. DATA (relationships, events, names)
+  const dataSection = buildDataSection(selection);
+  const nameBankSection = buildNameBankSection(context.nameBank);
+  const temporalSection = buildTemporalSection(context.temporalContext);
+
+  // 6. STRUCTURE (narrative structure, event usage)
+  const structureSection = buildStoryStructureSection(style);
+  const eventSection = buildEventUsageSection(style);
+
+  // 7. STYLE (unified tone + prose instructions)
+  const styleSection = buildUnifiedStyleSection(context.tone, style);
+
+  // Combine sections in order
+  const sections = [
+    taskSection,
+    castSection,
+    worldSection,
+    culturalIdentitiesSection,
+    temporalSection,
+    dataSection,
+    nameBankSection,
+    structureSection,
+    eventSection,
+    proseHintsSection,
+    styleSection,
+  ].filter(Boolean);
+
+  return sections.join('\n\n');
 }
 
 // =============================================================================
@@ -532,6 +602,8 @@ function buildDocumentPrompt(
   dataSection: string,
   temporalSection: string,
   nameBankSection: string,
+  culturalIdentitiesSection: string,
+  proseHintsSection: string,
   style: DocumentNarrativeStyle
 ): string {
   const doc = style.documentConfig;
@@ -547,10 +619,12 @@ function buildDocumentPrompt(
     worldSection,
     temporalSection,
     entitySection,
+    culturalIdentitiesSection,
     nameBankSection,
     dataSection,
     structureSection,
     styleSection,
+    proseHintsSection,
     usageSection,
   ].filter(Boolean);
 
@@ -564,6 +638,7 @@ Requirements:
 - Write in the specified voice and tone
 - Draw from the characters and events provided
 - Make the document feel authentic to the world and its time period
+- Respect cultural identities: characters should speak and act according to their culture
 
 Write the document directly. No meta-commentary.`;
 
@@ -582,29 +657,38 @@ export function buildV2Prompt(
   style: NarrativeStyle,
   selection: V2SelectionResult
 ): string {
-  const worldSection = buildWorldSection(context);
   const primaryEntityIds = new Set(context.focus?.primaryEntityIds || []);
-  const entitySection = buildEntitySection(selection, primaryEntityIds);
-  const dataSection = buildDataSection(selection);
-  const temporalSection = buildTemporalSection(context.temporalContext);
-  const nameBankSection = buildNameBankSection(context.nameBank);
+  const culturalIdentitiesSection = buildCulturalIdentitiesSection(
+    context.culturalIdentities,
+    selection.entities
+  );
+  const proseHintsSection = buildProseHintsSection(context.proseHints, selection.entities);
 
   if (style.format === 'story') {
     return buildStoryPrompt(
-      worldSection,
-      entitySection,
-      dataSection,
-      temporalSection,
-      nameBankSection,
+      context,
+      selection,
+      primaryEntityIds,
+      culturalIdentitiesSection,
+      proseHintsSection,
       style as StoryNarrativeStyle
     );
   } else {
+    // Document format still uses the old assembly (can be refactored later)
+    const worldSection = buildWorldSection(context);
+    const entitySection = buildEntitySection(selection, primaryEntityIds);
+    const dataSection = buildDataSection(selection);
+    const temporalSection = buildTemporalSection(context.temporalContext);
+    const nameBankSection = buildNameBankSection(context.nameBank);
+
     return buildDocumentPrompt(
       worldSection,
       entitySection,
       dataSection,
       temporalSection,
       nameBankSection,
+      culturalIdentitiesSection,
+      proseHintsSection,
       style as DocumentNarrativeStyle
     );
   }
@@ -625,15 +709,13 @@ export function getMaxTokensFromStyle(style: NarrativeStyle): number {
 
 /**
  * Get the system prompt for V2 generation.
- * Incorporates style-specific guidance.
+ * Kept minimal - detailed guidance is in the user prompt.
  */
 export function getV2SystemPrompt(style: NarrativeStyle): string {
   if (style.format === 'story') {
-    const storyStyle = style as StoryNarrativeStyle;
-    const structureType = storyStyle.plotStructure?.type || 'three-act';
-    return `You are a narrative writer creating vivid world lore. Write engaging prose that brings characters and their relationships to life. Follow ${structureType} narrative structure precisely.`;
+    return `You are a narrative writer creating vivid world lore. Write engaging prose that brings characters and their relationships to life.`;
   } else {
     const docStyle = style as DocumentNarrativeStyle;
-    return `You are writing an in-universe ${docStyle.documentConfig.documentType}. Write authentically as if the document exists within the world. Maintain consistent voice throughout.`;
+    return `You are writing an in-universe ${docStyle.documentConfig.documentType}. Write authentically as if the document exists within the world.`;
   }
 }

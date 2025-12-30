@@ -101,8 +101,6 @@ export interface ChronicleRecord {
   imageRefs?: ChronicleImageRefs;
   imageRefsGeneratedAt?: number;
   imageRefsModel?: string;
-  proseBlendGeneratedAt?: number;
-  proseBlendModel?: string;
   validationStale?: boolean;
 
   // Revision tracking
@@ -358,7 +356,7 @@ export async function createChronicle(
 }
 
 /**
- * Update chronicle with assembled content (regeneration or prose blend)
+ * Update chronicle with assembled content (regeneration)
  */
 export async function updateChronicleAssembly(
   chronicleId: string,
@@ -390,8 +388,6 @@ export async function updateChronicleAssembly(
       record.imageRefs = undefined;
       record.imageRefsGeneratedAt = undefined;
       record.imageRefsModel = undefined;
-      record.proseBlendGeneratedAt = undefined;
-      record.proseBlendModel = undefined;
       record.validationStale = false;
       record.updatedAt = Date.now();
 
@@ -437,8 +433,6 @@ export async function updateChronicleEdit(
       record.imageRefs = undefined;
       record.imageRefsGeneratedAt = undefined;
       record.imageRefsModel = undefined;
-      record.proseBlendGeneratedAt = undefined;
-      record.proseBlendModel = undefined;
       record.validationStale = false;
       record.status = 'editing';
       record.failureStep = undefined;
@@ -677,54 +671,6 @@ export async function updateChronicleImageRef(
 
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle image ref'));
-  });
-}
-
-/**
- * Update chronicle with prose blend refinement
- */
-export async function updateChronicleProseBlend(
-  chronicleId: string,
-  blendedContent: string,
-  cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number },
-  model: string
-): Promise<void> {
-  const db = await openChronicleDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(CHRONICLE_STORE_NAME);
-    const getReq = store.get(chronicleId);
-
-    getReq.onsuccess = () => {
-      const record = getReq.result as ChronicleRecord | undefined;
-      if (!record) {
-        reject(new Error(`Chronicle ${chronicleId} not found`));
-        return;
-      }
-
-      record.assembledContent = blendedContent;
-      record.assembledAt = Date.now();
-      record.proseBlendGeneratedAt = Date.now();
-      record.proseBlendModel = model;
-      record.validationStale = Boolean(record.cohesionReport);
-      record.summary = undefined;
-      record.summaryGeneratedAt = undefined;
-      record.summaryModel = undefined;
-      record.imageRefs = undefined;
-      record.imageRefsGeneratedAt = undefined;
-      record.imageRefsModel = undefined;
-      record.totalEstimatedCost += cost.estimated;
-      record.totalActualCost += cost.actual;
-      record.totalInputTokens += cost.inputTokens;
-      record.totalOutputTokens += cost.outputTokens;
-      record.updatedAt = Date.now();
-
-      store.put(record);
-    };
-
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle prose blend'));
   });
 }
 

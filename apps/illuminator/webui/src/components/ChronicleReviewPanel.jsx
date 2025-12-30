@@ -83,7 +83,7 @@ function RefinementOptionsPanel({
   entityMap,
   styleLibrary,
   cultures,
-  promptTemplates,
+  cultureIdentities,
   worldContext,
 }) {
   const formatTimestamp = (timestamp) => new Date(timestamp).toLocaleString();
@@ -241,7 +241,7 @@ function RefinementOptionsPanel({
               isGenerating={isGenerating}
               styleLibrary={styleLibrary}
               cultures={cultures}
-              promptTemplates={promptTemplates}
+              cultureIdentities={cultureIdentities}
               worldContext={worldContext}
               chronicleTitle={item.name}
             />
@@ -280,7 +280,8 @@ export default function ChronicleReviewPanel({
   entities,
   styleLibrary,
   cultures,
-  promptTemplates,
+  entityGuidance,
+  cultureIdentities,
   worldContext,
 }) {
   // Build entity map for ChronicleImagePanel (expects Map, not array)
@@ -386,7 +387,7 @@ export default function ChronicleReviewPanel({
           entityMap={entityMap}
           styleLibrary={styleLibrary}
           cultures={cultures}
-          promptTemplates={promptTemplates}
+          cultureIdentities={cultureIdentities}
           worldContext={worldContext}
         />
 
@@ -431,7 +432,7 @@ export default function ChronicleReviewPanel({
             onGenerateChronicleImage={onGenerateChronicleImage}
             styleLibrary={styleLibrary}
             cultures={cultures}
-            promptTemplates={promptTemplates}
+            cultureIdentities={cultureIdentities}
             worldContext={worldContext}
             chronicleTitle={item.title || item.name}
           />

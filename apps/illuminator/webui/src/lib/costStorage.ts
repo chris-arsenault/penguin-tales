@@ -18,7 +18,6 @@ export type CostType =
   | 'chronicleRevision'
   | 'chronicleSummary'
   | 'chronicleImageRefs'
-  | 'chronicleProseBlend'
   | 'chronicleV2'          // Single-shot V2 pipeline generation
   | 'paletteExpansion';    // Trait palette expansion/deduplication
 

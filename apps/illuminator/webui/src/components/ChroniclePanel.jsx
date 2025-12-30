@@ -12,7 +12,7 @@ import { ChronicleWizard } from './ChronicleWizard';
 import { buildChronicleContext } from '../lib/chronicleContextBuilder';
 import { generateNameBank, extractCultureIds } from '../lib/chronicle/nameBank';
 import { useChronicleGeneration, deriveStatus } from '../hooks/useChronicleGeneration';
-import { buildChronicleImagePrompt } from '../lib/promptTemplates';
+import { buildChronicleImagePrompt } from '../lib/promptBuilders';
 import { resolveStyleSelection } from './StyleSelector';
 import {
   updateChronicleImageRef,
@@ -205,7 +205,8 @@ export default function ChroniclePanel({
   buildPrompt,
   styleLibrary,
   styleSelection,
-  promptTemplates,
+  entityGuidance,
+  cultureIdentities,
 }) {
   // Load persisted state from localStorage
   const [activeType, setActiveType] = useState(() => {
@@ -465,6 +466,14 @@ export default function ChroniclePanel({
         tone: worldContext?.tone || '',
       };
 
+      // Extract prose hints from entity guidance (if available)
+      const proseHints = {};
+      for (const [kind, guidance] of Object.entries(entityGuidance || {})) {
+        if (guidance?.proseHint) {
+          proseHints[kind] = guidance.proseHint;
+        }
+      }
+
       // Chronicles use the chronicle-first context builder
       if (selectedItem.type === 'chronicles') {
         return buildChronicleContext(
@@ -476,14 +485,16 @@ export default function ChroniclePanel({
           },
           worldData,
           wc,
-          nameBank
+          nameBank,
+          proseHints,
+          cultureIdentities?.descriptive
         );
       }
     } catch (e) {
       console.error('Failed to build generation context:', e);
     }
     return null;
-  }, [selectedItem, worldData, worldContext, nameBank]);
+  }, [selectedItem, worldData, worldContext, nameBank, entityGuidance, cultureIdentities]);
 
   // Handle accept chronicle - saves to IndexedDB (no entity enrichment copy needed)
   const handleAcceptChronicle = useCallback(async () => {
@@ -706,8 +717,16 @@ export default function ChroniclePanel({
       }
     }
 
+    // Extract prose hints from entity guidance (if available)
+    const proseHints = {};
+    for (const [kind, guidance] of Object.entries(entityGuidance || {})) {
+      if (guidance?.proseHint) {
+        proseHints[kind] = guidance.proseHint;
+      }
+    }
+
     // Build the chronicle generation context (chronicle-first)
-    const context = buildChronicleContext(selections, worldData, wc, wizardNameBank);
+    const context = buildChronicleContext(selections, worldData, wc, wizardNameBank, proseHints, cultureIdentities?.descriptive);
 
     // Derive chronicle metadata from role assignments
     const title = deriveTitleFromRoles(wizardConfig.roleAssignments);
@@ -764,7 +783,7 @@ export default function ChroniclePanel({
 
     // Close the wizard
     setShowWizard(false);
-  }, [worldData, worldContext, styleLibrary, generateV2, simulationRunId, refresh]);
+  }, [worldData, worldContext, styleLibrary, generateV2, simulationRunId, refresh, entityGuidance]);
 
   // Handle generating a chronicle image
   const handleGenerateChronicleImage = useCallback(
@@ -1086,7 +1105,8 @@ export default function ChroniclePanel({
                   entities={entities}
                   styleLibrary={styleLibrary}
                   cultures={worldData?.schema?.cultures}
-                  promptTemplates={promptTemplates}
+                  entityGuidance={entityGuidance}
+                  cultureIdentities={cultureIdentities}
                   worldContext={worldContext}
                 />
               )}

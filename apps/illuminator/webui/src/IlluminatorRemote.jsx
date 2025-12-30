@@ -19,7 +19,7 @@ import './App.css';
 import EntityBrowser from './components/EntityBrowser';
 import ChroniclePanel from './components/ChroniclePanel';
 import WorldContextEditor from './components/WorldContextEditor';
-import PromptTemplateEditor from './components/PromptTemplateEditor';
+import EntityGuidanceEditor from './components/EntityGuidanceEditor';
 import VisualIdentityPanel from './components/VisualIdentityPanel';
 import ActivityPanel from './components/ActivityPanel';
 import ConfigPanel from './components/ConfigPanel';
@@ -30,17 +30,19 @@ import StyleLibraryEditor from './components/StyleLibraryEditor';
 import { useEnrichmentQueue } from './hooks/useEnrichmentQueue';
 import { useStyleLibrary } from './hooks/useStyleLibrary';
 import {
-  createDefaultPromptTemplates,
-  buildDescriptionPrompt,
-  buildImagePrompt,
-  getEffectiveTemplate,
-  mergeWithDefaults,
-} from './lib/promptTemplates';
+  buildDescriptionPromptFromGuidance,
+  buildImagePromptFromGuidance,
+  getVisualConfigFromGuidance,
+  createDefaultEntityGuidance,
+  createDefaultCultureIdentities,
+  buildProseHints,
+} from './lib/promptBuilders';
 import { buildEntityIndex, buildRelationshipIndex, resolveEraInfo } from './lib/worldData';
 import { resolveStyleSelection } from './components/StyleSelector';
 import { exportImagePrompts, downloadImagePromptExport } from './lib/workerStorage';
 import { getEnrichmentResults } from './lib/enrichmentStorage';
 import { applyEnrichmentResult } from './lib/enrichmentTypes';
+import { getResolvedLLMCallSettings } from './lib/llmModelSettings';
 
 // Expose diagnostic functions on window for console access (for Module Federation)
 if (typeof window !== 'undefined') {
@@ -56,7 +58,7 @@ if (typeof window !== 'undefined') {
 const TABS = [
   { id: 'configure', label: 'Configure' },   // 1. Set API keys and models
   { id: 'context', label: 'Context' },       // 2. Define world context
-  { id: 'templates', label: 'Templates' },   // 3. Customize prompts
+  { id: 'guidance', label: 'Guidance' },      // 3. Per-kind entity guidance
   { id: 'identity', label: 'Identity' },     // 4. Visual identity per culture
   { id: 'styles', label: 'Styles' },         // 5. Manage style library
   { id: 'entities', label: 'Entities' },     // 6. Main enrichment work
@@ -74,9 +76,9 @@ Original prompt:
 {{prompt}}`;
 
 // Default enrichment config
+// Note: LLM model settings are now managed per-call-type via llmModelSettings.ts
+// and configured in the LLMCallConfigPanel. Only image-related settings remain here.
 const DEFAULT_CONFIG = {
-  textModel: 'claude-sonnet-4-5-20250929',
-  chronicleModel: 'claude-sonnet-4-5-20250929',  // Model for chronicles
   imageModel: 'gpt-image-1.5',
   imageSize: 'auto',
   imageQuality: 'auto',
@@ -90,39 +92,9 @@ const DEFAULT_CONFIG = {
 
 const normalizeEnrichmentConfig = (config) => {
   if (!config) return null;
-  const normalized = { ...config };
-
-  if (!normalized.textModel && normalized.textModal) {
-    normalized.textModel = normalized.textModal;
-  }
-  if (!normalized.chronicleModel && normalized.chronicleModal) {
-    normalized.chronicleModel = normalized.chronicleModal;
-  }
-  if (normalized.textModal) {
-    delete normalized.textModal;
-  }
-  if (normalized.chronicleModal) {
-    delete normalized.chronicleModal;
-  }
-
-  if (!normalized.textModel) {
-    normalized.textModel = DEFAULT_CONFIG.textModel;
-  }
-  if (!normalized.chronicleModel) {
-    normalized.chronicleModel = normalized.textModel;
-  }
-
-  return { ...DEFAULT_CONFIG, ...normalized };
-};
-
-const needsConfigSync = (config) => {
-  if (!config) return false;
-  return (
-    !config.textModel ||
-    !config.chronicleModel ||
-    Boolean(config.textModal) ||
-    Boolean(config.chronicleModal)
-  );
+  // Remove legacy model fields that have been migrated to per-call settings
+  const { textModel, chronicleModel, textModal, chronicleModal, thinkingModel, thinkingBudget, useThinkingForDescriptions, ...rest } = config;
+  return { ...DEFAULT_CONFIG, ...rest };
 };
 
 const shouldApplyPersistedResult = (enrichment, type, result) => {
@@ -278,8 +250,10 @@ export default function IlluminatorRemote({
   onEnrichmentComplete,
   worldContext: externalWorldContext,
   onWorldContextChange,
-  promptTemplates: externalPromptTemplates,
-  onPromptTemplatesChange,
+  entityGuidance: externalEntityGuidance,
+  onEntityGuidanceChange,
+  cultureIdentities: externalCultureIdentities,
+  onCultureIdentitiesChange,
   enrichmentConfig: externalEnrichmentConfig,
   onEnrichmentConfigChange,
   styleSelection: externalStyleSelection,
@@ -358,11 +332,8 @@ export default function IlluminatorRemote({
       const normalized = normalizeEnrichmentConfig(externalEnrichmentConfig) || DEFAULT_CONFIG;
       skipConfigSyncRef.current = true;
       setLocalConfig(normalized);
-      if (onEnrichmentConfigChange && needsConfigSync(externalEnrichmentConfig)) {
-        onEnrichmentConfigChange(normalized);
-      }
     }
-  }, [externalEnrichmentConfig, onEnrichmentConfigChange]);
+  }, [externalEnrichmentConfig]);
 
   // Use the local config as the active config
   const config = localConfig;
@@ -488,25 +459,30 @@ export default function IlluminatorRemote({
     setLocalWorldContext(nextContext);
   }, [externalWorldContext]);
 
-  // Prompt templates - edit locally and debounce sync to shell
-  const [localPromptTemplates, setLocalPromptTemplates] = useState(() => createDefaultPromptTemplates());
-  const promptTemplates = localPromptTemplates;
-  const promptTemplatesSyncTimeoutRef = useRef(null);
-  const promptTemplatesDirtyRef = useRef(false);
-  const pendingPromptTemplatesRef = useRef(localPromptTemplates);
+  // Entity guidance and culture identities - the canonical configuration format
+  const [localEntityGuidance, setLocalEntityGuidance] = useState(() => createDefaultEntityGuidance());
+  const [localCultureIdentities, setLocalCultureIdentities] = useState(() => createDefaultCultureIdentities());
+  const entityGuidance = localEntityGuidance;
+  const cultureIdentities = localCultureIdentities;
+  const pendingEntityGuidanceRef = useRef(localEntityGuidance);
+  const pendingCultureIdentitiesRef = useRef(localCultureIdentities);
   const lastWorldDataRef = useRef(null);
 
+  // Sync entity guidance from external prop
   useEffect(() => {
-    if (externalPromptTemplates === undefined) return;
-    if (promptTemplatesSyncTimeoutRef.current) {
-      clearTimeout(promptTemplatesSyncTimeoutRef.current);
-      promptTemplatesSyncTimeoutRef.current = null;
-    }
-    promptTemplatesDirtyRef.current = false;
-    const nextTemplates = externalPromptTemplates || createDefaultPromptTemplates();
-    pendingPromptTemplatesRef.current = nextTemplates;
-    setLocalPromptTemplates(nextTemplates);
-  }, [externalPromptTemplates]);
+    if (externalEntityGuidance === undefined) return;
+    const nextEntityGuidance = externalEntityGuidance || createDefaultEntityGuidance();
+    pendingEntityGuidanceRef.current = nextEntityGuidance;
+    setLocalEntityGuidance(nextEntityGuidance);
+  }, [externalEntityGuidance]);
+
+  // Sync culture identities from external prop
+  useEffect(() => {
+    if (externalCultureIdentities === undefined) return;
+    const nextCultureIdentities = externalCultureIdentities || createDefaultCultureIdentities();
+    pendingCultureIdentitiesRef.current = nextCultureIdentities;
+    setLocalCultureIdentities(nextCultureIdentities);
+  }, [externalCultureIdentities]);
 
   // Entities with enrichment state
   const [entities, setEntities] = useState([]);
@@ -550,10 +526,6 @@ export default function IlluminatorRemote({
     }
     return map;
   }, [entities]);
-  const mergedPromptTemplates = useMemo(
-    () => mergeWithDefaults(promptTemplates),
-    [promptTemplates]
-  );
 
   // Handle assigning an existing image from the library to an entity
   const handleAssignImage = useCallback((entityId, imageId, imageMetadata) => {
@@ -648,18 +620,14 @@ export default function IlluminatorRemote({
       initializeWorker({
         anthropicApiKey,
         openaiApiKey,
-        textModel: config.textModel,
-        chronicleModel: config.chronicleModel,
         imageModel: config.imageModel,
         imageSize: config.imageSize,
         imageQuality: config.imageQuality,
         // Multishot prompting options
         useClaudeForImagePrompt: config.useClaudeForImagePrompt,
         claudeImagePromptTemplate: config.claudeImagePromptTemplate,
-        // Extended thinking options
-        thinkingModel: config.thinkingModel,
-        thinkingBudget: config.thinkingBudget,
-        useThinkingForDescriptions: config.useThinkingForDescriptions,
+        // Per-call LLM model settings (resolved from localStorage)
+        llmCallSettings: getResolvedLLMCallSettings(),
       });
     }
   }, [anthropicApiKey, openaiApiKey, config, initializeWorker]);
@@ -741,11 +709,9 @@ export default function IlluminatorRemote({
   const hasRequiredKeys = hasAnthropicKey;
 
   // Get visual config for an entity (thesis/traits prompts, avoid elements, era)
-  // Uses image template since visual thesis/traits inform image generation
   const getVisualConfig = useCallback(
     (entity) => {
-      const templates = mergedPromptTemplates;
-      const imageTemplate = getEffectiveTemplate(templates, entity.kind, 'image');
+      const visualConfig = getVisualConfigFromGuidance(entityGuidance, entity.kind);
 
       // Find entity's era via created_during relationship (origin era)
       // Falls back to active_during if no created_during exists
@@ -756,106 +722,65 @@ export default function IlluminatorRemote({
       const entityEraId = eraRel?.dst;
 
       return {
-        visualAvoid: imageTemplate.avoidElements,
-        visualThesisInstructions: imageTemplate.visualThesisInstructions,
-        visualThesisFraming: imageTemplate.visualThesisFraming,
-        visualTraitsInstructions: imageTemplate.visualTraitsInstructions,
-        visualTraitsFraming: imageTemplate.visualTraitsFraming,
+        ...visualConfig,
         entityEraId,
       };
     },
-    [mergedPromptTemplates, relationshipsByEntity]
+    [entityGuidance, relationshipsByEntity]
   );
 
-  // Build prompt for entity
+  // Build prompt for entity using EntityGuidance and CultureIdentities directly
   const buildPrompt = useCallback(
     (entity, type) => {
-      const templates = mergedPromptTemplates;
-      const relationships = (relationshipsByEntity.get(entity.id) || []).slice(0, 5).map((rel) => {
+      // Build relationships
+      const relationships = (relationshipsByEntity.get(entity.id) || []).slice(0, 8).map((rel) => {
         const targetId = rel.src === entity.id ? rel.dst : rel.src;
         const target = entityById.get(targetId);
         return {
           kind: rel.kind,
           targetName: target?.name || targetId,
           targetKind: target?.kind || 'unknown',
+          targetSubtype: target?.subtype,
           strength: rel.strength,
         };
       });
 
-      // Build minimal context for prompt
-      const context = {
-        world: {
-          name: worldContext.name || '[World Name]',
-          description: worldContext.description || '',
-          canonFacts: worldContext.canonFacts || [],
-          tone: worldContext.tone || '',
-        },
+      // Build entity context
+      const entityContext = {
         entity: {
-          entity: {
-            id: entity.id,
-            name: entity.name,
-            kind: entity.kind,
-            subtype: entity.subtype,
-            prominence: entity.prominence,
-            culture: entity.culture || '',
-            status: entity.status || 'active',
-            summary: entity.enrichment?.description?.summary || '',
-            description: entity.enrichment?.description?.description || '',
-            tags: entity.tags || {},
-            visualThesis: entity.enrichment?.description?.visualThesis || '',
-            visualTraits: entity.enrichment?.description?.visualTraits || [],
-          },
-          relationships,
-          era: {
-            name: currentEra?.name || worldData?.metadata?.era || '',
-            description: currentEra?.description,
-          },
-          entityAge: 'established',
-          culturalPeers: (prominentByCulture.get(entity.culture) || [])
-            .filter((peer) => peer.id !== entity.id)
-            .slice(0, 3)
-            .map((peer) => peer.name),
+          id: entity.id,
+          name: entity.name,
+          kind: entity.kind,
+          subtype: entity.subtype,
+          prominence: entity.prominence,
+          culture: entity.culture || '',
+          status: entity.status || 'active',
+          summary: entity.enrichment?.description?.summary || '',
+          description: entity.enrichment?.description?.description || '',
+          tags: entity.tags || {},
+          visualThesis: entity.enrichment?.description?.visualThesis || '',
+          visualTraits: entity.enrichment?.description?.visualTraits || [],
         },
+        relationships,
+        era: {
+          name: currentEra?.name || worldData?.metadata?.era || '',
+          description: currentEra?.description,
+        },
+        entityAge: 'established',
+        culturalPeers: (prominentByCulture.get(entity.culture) || [])
+          .filter((peer) => peer.id !== entity.id)
+          .slice(0, 3)
+          .map((peer) => peer.name),
       };
 
       if (type === 'description') {
-        const template = getEffectiveTemplate(templates, entity.kind, 'description');
-
-        // Get descriptive identity for this entity's culture, filtered by entity kind's keys
-        const cultureDescriptiveIdentity = templates.cultureDescriptiveIdentities?.[entity.culture] || {};
-        const allowedDescriptiveKeys = templates.descriptiveIdentityKeysByKind?.[entity.kind] || [];
-        const filteredDescriptiveIdentity = {};
-        for (const key of allowedDescriptiveKeys) {
-          if (cultureDescriptiveIdentity[key]) {
-            filteredDescriptiveIdentity[key] = cultureDescriptiveIdentity[key];
-          }
-        }
-
-        // Get visual identity for this entity's culture, filtered by entity kind's keys
-        // This informs the visual thesis and traits generation
-        const cultureVisualIdentity = templates.cultureVisualIdentities?.[entity.culture] || {};
-        const allowedVisualKeys = templates.visualIdentityKeysByKind?.[entity.kind] || [];
-        const filteredVisualIdentity = {};
-        for (const key of allowedVisualKeys) {
-          if (cultureVisualIdentity[key]) {
-            filteredVisualIdentity[key] = cultureVisualIdentity[key];
-          }
-        }
-
-        const descriptiveInfo = {
-          descriptiveIdentity: Object.keys(filteredDescriptiveIdentity).length > 0 ? filteredDescriptiveIdentity : undefined,
-          visualIdentity: Object.keys(filteredVisualIdentity).length > 0 ? filteredVisualIdentity : undefined,
-        };
-
-        return buildDescriptionPrompt(template, context, descriptiveInfo);
+        return buildDescriptionPromptFromGuidance(
+          entityGuidance,
+          cultureIdentities,
+          worldContext,
+          entityContext
+        );
       } else if (type === 'image') {
-        const template = getEffectiveTemplate(templates, entity.kind, 'image');
-        // Use enriched description if available (for multishot prompting)
-        const enrichedDescription = entity.enrichment?.description?.description;
-        if (enrichedDescription) {
-          context.entity.entity.description = enrichedDescription;
-        }
-
         // Resolve style selection for this entity
         const resolvedStyle = resolveStyleSelection({
           selection: styleSelection,
@@ -865,33 +790,29 @@ export default function IlluminatorRemote({
           styleLibrary,
         });
 
-        // Get visual identity for this entity's culture, filtered by entity kind's keys
-        const cultureVisualIdentity = templates.cultureVisualIdentities?.[entity.culture] || {};
-        const allowedKeys = templates.visualIdentityKeysByKind?.[entity.kind] || [];
-        const filteredVisualIdentity = {};
-        for (const key of allowedKeys) {
-          if (cultureVisualIdentity[key]) {
-            filteredVisualIdentity[key] = cultureVisualIdentity[key];
-          }
-        }
-
         // Build style info for the prompt
         const styleInfo = {
           artisticPromptFragment: resolvedStyle.artisticStyle?.promptFragment,
           compositionPromptFragment: resolvedStyle.compositionStyle?.promptFragment,
           colorPalettePromptFragment: resolvedStyle.colorPalette?.promptFragment,
           cultureKeywords: resolvedStyle.cultureKeywords,
-          visualIdentity: Object.keys(filteredVisualIdentity).length > 0 ? filteredVisualIdentity : undefined,
         };
 
-        return buildImagePrompt(template, context, styleInfo);
+        return buildImagePromptFromGuidance(
+          entityGuidance,
+          cultureIdentities,
+          worldContext,
+          entityContext,
+          styleInfo
+        );
       }
 
       return `Describe ${entity.name}, a ${entity.subtype} ${entity.kind}.`;
     },
     [
       worldContext,
-      mergedPromptTemplates,
+      entityGuidance,
+      cultureIdentities,
       relationshipsByEntity,
       entityById,
       currentEra,
@@ -931,23 +852,40 @@ export default function IlluminatorRemote({
     [onWorldContextChange]
   );
 
-  const updatePromptTemplates = useCallback(
-    (nextTemplates) => {
-      setLocalPromptTemplates(nextTemplates);
-      pendingPromptTemplatesRef.current = nextTemplates;
-      if (!onPromptTemplatesChange) return;
-      promptTemplatesDirtyRef.current = true;
-      if (promptTemplatesSyncTimeoutRef.current) {
-        clearTimeout(promptTemplatesSyncTimeoutRef.current);
+  // Update entity guidance
+  const entityGuidanceSyncTimeoutRef = useRef(null);
+  const updateEntityGuidance = useCallback(
+    (nextGuidance) => {
+      setLocalEntityGuidance(nextGuidance);
+      pendingEntityGuidanceRef.current = nextGuidance;
+      if (!onEntityGuidanceChange) return;
+      if (entityGuidanceSyncTimeoutRef.current) {
+        clearTimeout(entityGuidanceSyncTimeoutRef.current);
       }
-      promptTemplatesSyncTimeoutRef.current = setTimeout(() => {
-        if (!promptTemplatesDirtyRef.current) return;
-        promptTemplatesDirtyRef.current = false;
-        onPromptTemplatesChange(pendingPromptTemplatesRef.current);
-        promptTemplatesSyncTimeoutRef.current = null;
+      entityGuidanceSyncTimeoutRef.current = setTimeout(() => {
+        onEntityGuidanceChange(pendingEntityGuidanceRef.current);
+        entityGuidanceSyncTimeoutRef.current = null;
       }, 300);
     },
-    [onPromptTemplatesChange]
+    [onEntityGuidanceChange]
+  );
+
+  // Update culture identities
+  const cultureIdentitiesSyncTimeoutRef = useRef(null);
+  const updateCultureIdentities = useCallback(
+    (nextIdentities) => {
+      setLocalCultureIdentities(nextIdentities);
+      pendingCultureIdentitiesRef.current = nextIdentities;
+      if (!onCultureIdentitiesChange) return;
+      if (cultureIdentitiesSyncTimeoutRef.current) {
+        clearTimeout(cultureIdentitiesSyncTimeoutRef.current);
+      }
+      cultureIdentitiesSyncTimeoutRef.current = setTimeout(() => {
+        onCultureIdentitiesChange(pendingCultureIdentitiesRef.current);
+        cultureIdentitiesSyncTimeoutRef.current = null;
+      }, 300);
+    },
+    [onCultureIdentitiesChange]
   );
 
   useEffect(() => {
@@ -956,18 +894,19 @@ export default function IlluminatorRemote({
         clearTimeout(worldContextSyncTimeoutRef.current);
         worldContextSyncTimeoutRef.current = null;
       }
-      if (promptTemplatesSyncTimeoutRef.current) {
-        clearTimeout(promptTemplatesSyncTimeoutRef.current);
-        promptTemplatesSyncTimeoutRef.current = null;
+      if (entityGuidanceSyncTimeoutRef.current) {
+        clearTimeout(entityGuidanceSyncTimeoutRef.current);
+        entityGuidanceSyncTimeoutRef.current = null;
+      }
+      if (cultureIdentitiesSyncTimeoutRef.current) {
+        clearTimeout(cultureIdentitiesSyncTimeoutRef.current);
+        cultureIdentitiesSyncTimeoutRef.current = null;
       }
       if (worldContextDirtyRef.current && onWorldContextChange) {
         onWorldContextChange(pendingWorldContextRef.current);
       }
-      if (promptTemplatesDirtyRef.current && onPromptTemplatesChange) {
-        onPromptTemplatesChange(pendingPromptTemplatesRef.current);
-      }
     };
-  }, [onWorldContextChange, onPromptTemplatesChange]);
+  }, [onWorldContextChange]);
 
   if (!hasWorldData) {
     return (
@@ -1147,7 +1086,8 @@ export default function IlluminatorRemote({
               buildPrompt={buildPrompt}
               styleLibrary={styleLibrary}
               styleSelection={styleSelection}
-              promptTemplates={promptTemplates}
+              entityGuidance={entityGuidance}
+              cultureIdentities={cultureIdentities}
             />
           </div>
         )}
@@ -1161,11 +1101,11 @@ export default function IlluminatorRemote({
           </div>
         )}
 
-        {activeTab === 'templates' && (
+        {activeTab === 'guidance' && (
           <div className="illuminator-content">
-            <PromptTemplateEditor
-              templates={promptTemplates}
-              onTemplatesChange={updatePromptTemplates}
+            <EntityGuidanceEditor
+              entityGuidance={entityGuidance}
+              onEntityGuidanceChange={updateEntityGuidance}
               worldContext={worldContext}
               worldData={worldData}
               worldSchema={worldSchema}
@@ -1179,8 +1119,8 @@ export default function IlluminatorRemote({
             <VisualIdentityPanel
               cultures={worldSchema?.cultures || []}
               entityKinds={worldSchema?.entityKinds || []}
-              templates={promptTemplates}
-              onTemplatesChange={updatePromptTemplates}
+              cultureIdentities={cultureIdentities}
+              onCultureIdentitiesChange={updateCultureIdentities}
             />
           </div>
         )}

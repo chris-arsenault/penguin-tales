@@ -284,6 +284,12 @@ export interface SerializableChronicleContext {
 
   // Name bank for invented characters (culture ID -> array of names)
   nameBank?: Record<string, string[]>;
+
+  // Prose hints for entity kinds (entityKind -> prose guidance)
+  proseHints?: Record<string, string>;
+
+  // Cultural identities (cultureId -> {VALUES, SPEECH, FEARS, TABOOS, etc.})
+  culturalIdentities?: Record<string, Record<string, string>>;
 }
 
 /**
@@ -294,8 +300,7 @@ export type ChronicleStep =
   | 'validate'
   | 'edit'
   | 'summary'
-  | 'image_refs'
-  | 'prose_blend';
+  | 'image_refs';
 
 /**
  * Worker task - what we send to the worker (single task)

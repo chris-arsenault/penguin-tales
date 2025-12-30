@@ -14,9 +14,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useImageUrl } from '../hooks/useImageUrl';
 import StyleSelector, { resolveStyleSelection, CULTURE_DEFAULT_ID } from './StyleSelector';
-import { buildChronicleImagePrompt } from '../lib/promptTemplates';
+import { buildChronicleImagePrompt } from '../lib/promptBuilders';
 import type { ChronicleImageRefs, EntityImageRef, PromptRequestRef } from '../lib/chronicleTypes';
-import type { StyleInfo } from '../lib/promptTemplates';
+import type { StyleInfo } from '../lib/promptBuilders';
 
 interface EntityContext {
   id: string;
@@ -54,9 +54,11 @@ interface WorldContext {
   tone?: string;
 }
 
-interface PromptTemplates {
-  cultureVisualIdentities?: Record<string, Record<string, string>>;
-  visualIdentityKeysByKind?: Record<string, string[]>;
+interface CultureIdentities {
+  visual?: Record<string, Record<string, string>>;
+  descriptive?: Record<string, Record<string, string>>;
+  visualKeysByKind?: Record<string, string[]>;
+  descriptiveKeysByKind?: Record<string, string[]>;
 }
 
 interface ChronicleImagePanelProps {
@@ -72,8 +74,8 @@ interface ChronicleImagePanelProps {
   onStyleSelectionChange?: (selection: { artisticStyleId?: string; compositionStyleId?: string; colorPaletteId?: string }) => void;
   /** Available cultures for visual identity */
   cultures?: Culture[];
-  /** Prompt templates containing visual identity data */
-  promptTemplates?: PromptTemplates;
+  /** Culture identities containing visual identity data */
+  cultureIdentities?: CultureIdentities;
   /** World context for prompt building */
   worldContext?: WorldContext;
   /** Chronicle title for prompt context */
@@ -426,7 +428,7 @@ export default function ChronicleImagePanel({
   styleSelection: externalStyleSelection,
   onStyleSelectionChange,
   cultures,
-  promptTemplates,
+  cultureIdentities,
   worldContext,
   chronicleTitle,
 }: ChronicleImagePanelProps) {
@@ -513,8 +515,8 @@ export default function ChronicleImagePanel({
     });
 
     // Get visual identity for the selected culture
-    const cultureVisualIdentity = promptTemplates?.cultureVisualIdentities?.[derivedCultureId] || {};
-    const allowedKeys = promptTemplates?.visualIdentityKeysByKind?.[DEFAULT_VISUAL_IDENTITY_KIND] ||
+    const cultureVisualIdentity = cultureIdentities?.visual?.[derivedCultureId] || {};
+    const allowedKeys = cultureIdentities?.visualKeysByKind?.[DEFAULT_VISUAL_IDENTITY_KIND] ||
       Object.keys(cultureVisualIdentity); // Use all keys if no kind-specific filtering
 
     const filteredVisualIdentity: Record<string, string> = {};
@@ -531,7 +533,7 @@ export default function ChronicleImagePanel({
       cultureKeywords: resolved.cultureKeywords,
       visualIdentity: Object.keys(filteredVisualIdentity).length > 0 ? filteredVisualIdentity : undefined,
     };
-  }, [styleSelection, derivedCultureId, cultures, styleLibrary, promptTemplates]);
+  }, [styleSelection, derivedCultureId, cultures, styleLibrary, cultureIdentities]);
 
   // Handle generating a single image
   const handleGenerateImage = useCallback((ref: PromptRequestRef) => {
@@ -698,9 +700,9 @@ export default function ChronicleImagePanel({
                   </option>
                 ))}
               </select>
-              {derivedCultureId && promptTemplates?.cultureVisualIdentities?.[derivedCultureId] && (
+              {derivedCultureId && cultureIdentities?.visual?.[derivedCultureId] && (
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                  ({Object.keys(promptTemplates.cultureVisualIdentities[derivedCultureId]).length} visual identity keys)
+                  ({Object.keys(cultureIdentities.visual[derivedCultureId]).length} visual identity keys)
                 </span>
               )}
             </div>

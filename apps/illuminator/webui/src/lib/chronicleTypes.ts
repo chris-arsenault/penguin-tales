@@ -328,6 +328,20 @@ export interface ChronicleGenerationContext {
    * - deserializeChronicleContext() in enrichmentCore.ts
    */
   nameBank?: Record<string, string[]>;
+
+  /**
+   * Prose hints for different entity kinds (entityKind -> prose guidance).
+   * Helps chronicles write consistently about different entity types.
+   * E.g., "Focus on gesture, tic, or signature object" for NPCs.
+   */
+  proseHints?: Record<string, string>;
+
+  /**
+   * Cultural identities for cultures present in the world.
+   * Provides VALUES, SPEECH, FEARS, TABOOS etc. per culture.
+   * Helps chronicles write culturally-authentic dialogue and behavior.
+   */
+  culturalIdentities?: Record<string, Record<string, string>>;
 }
 
 // =============================================================================

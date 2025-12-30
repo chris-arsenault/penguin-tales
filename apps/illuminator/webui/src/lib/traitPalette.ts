@@ -10,12 +10,12 @@ import {
   getPalette,
   updatePaletteItems,
   getHistoricalTraits,
-  countUsedTraits,
   type TraitPalette,
   type PaletteItem,
 } from './traitRegistry';
 import { saveCostRecord, generateCostId } from './costStorage';
 import { estimateTextCost, calculateActualTextCost } from './costEstimation';
+import { getCallConfig } from './llmModelSettings';
 
 // ============================================================================
 // Types
@@ -260,14 +260,16 @@ function parseExpansionResponse(text: string): ExpansionResponse {
 
 export async function expandPalette(
   request: PaletteExpansionRequest,
-  llmClient: LLMClient,
-  textModel: string
+  llmClient: LLMClient
 ): Promise<PaletteExpansionResult> {
   const { projectId, entityKind, worldContext } = request;
 
   if (!llmClient.isEnabled()) {
     return { success: false, error: 'LLM client not configured' };
   }
+
+  // Get model settings for palette expansion
+  const { model, thinkingBudget } = getCallConfig('palette.expansion');
 
   // Gather current state
   const currentPalette = await getPalette(projectId, entityKind);
@@ -280,15 +282,17 @@ export async function expandPalette(
     historicalTraits
   );
 
-  const estimate = estimateTextCost(prompt, 'description', textModel);
+  const estimate = estimateTextCost(prompt, 'description', model);
+  const maxTokens = thinkingBudget > 0 ? thinkingBudget + 4096 : 4096;
 
   // Call LLM
   const result = await llmClient.complete({
     systemPrompt: EXPANSION_SYSTEM_PROMPT,
     prompt,
-    model: textModel,
-    maxTokens: 4096,
+    model,
+    maxTokens,
     temperature: 0.9,
+    thinkingBudget: thinkingBudget > 0 ? thinkingBudget : undefined,
   });
 
   if (result.error || !result.text) {
@@ -320,7 +324,7 @@ export async function expandPalette(
   const inputTokens = result.usage?.inputTokens || estimate.inputTokens;
   const outputTokens = result.usage?.outputTokens || estimate.outputTokens;
   const actualCost = result.usage
-    ? calculateActualTextCost(inputTokens, outputTokens, textModel)
+    ? calculateActualTextCost(inputTokens, outputTokens, model)
     : estimate.estimatedCost;
 
   const cost = {
@@ -337,7 +341,7 @@ export async function expandPalette(
     projectId,
     simulationRunId: request.simulationRunId,
     type: 'paletteExpansion',
-    model: textModel,
+    model,
     estimatedCost: cost.estimated,
     actualCost: cost.actual,
     inputTokens: cost.inputTokens,
@@ -354,72 +358,4 @@ export async function expandPalette(
     },
     cost,
   };
-}
-
-// ============================================================================
-// Auto-Trigger Check
-// ============================================================================
-
-export interface AutoExpandCheck {
-  shouldExpand: boolean;
-  reason?: string;
-}
-
-const AUTO_EXPAND_TRAIT_THRESHOLD = 20;
-const AUTO_EXPAND_MIN_PALETTE_SIZE = 5;
-const AUTO_EXPAND_STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-export async function shouldAutoExpandPalette(
-  projectId: string,
-  entityKind: string
-): Promise<AutoExpandCheck> {
-  const usedCount = await countUsedTraits(projectId, entityKind);
-  const palette = await getPalette(projectId, entityKind);
-
-  // Not enough usage to warrant expansion
-  if (usedCount < AUTO_EXPAND_TRAIT_THRESHOLD) {
-    return { shouldExpand: false };
-  }
-
-  // Palette doesn't exist or is too small
-  if (!palette || palette.items.length < AUTO_EXPAND_MIN_PALETTE_SIZE) {
-    return {
-      shouldExpand: true,
-      reason: `Palette has ${palette?.items.length || 0} categories, needs at least ${AUTO_EXPAND_MIN_PALETTE_SIZE}`,
-    };
-  }
-
-  // Palette is stale
-  const age = Date.now() - palette.updatedAt;
-  if (age > AUTO_EXPAND_STALE_MS) {
-    return {
-      shouldExpand: true,
-      reason: `Palette last updated ${Math.round(age / (60 * 60 * 1000))} hours ago`,
-    };
-  }
-
-  return { shouldExpand: false };
-}
-
-// ============================================================================
-// Convenience Wrapper
-// ============================================================================
-
-/**
- * Check if auto-expansion is needed and perform it if so.
- * Safe to call frequently - will no-op if expansion not needed.
- */
-export async function maybeExpandPalette(
-  request: PaletteExpansionRequest,
-  llmClient: LLMClient,
-  textModel: string
-): Promise<PaletteExpansionResult | null> {
-  const check = await shouldAutoExpandPalette(request.projectId, request.entityKind);
-
-  if (!check.shouldExpand) {
-    return null;
-  }
-
-  console.log(`[TraitPalette] Auto-expanding palette for ${request.entityKind}: ${check.reason}`);
-  return expandPalette(request, llmClient, textModel);
 }

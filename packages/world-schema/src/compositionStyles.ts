@@ -74,6 +74,66 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
   },
 
   // ===========================
+  // POSE compositions
+  // ===========================
+  {
+    id: 'pose-superhero',
+    name: 'Pose: Superhero',
+    description: 'Heroic power stance with confident posture',
+    promptFragment: 'full body view, heroic power stance, hands on hips, chest forward, confident posture, cape or cloak flowing, low angle perspective, dramatic silhouette',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pose-rooftop-leap',
+    name: 'Pose: Rooftop Leap',
+    description: 'Dynamic mid-jump from building edge',
+    promptFragment: 'full body view, leaping from rooftop edge, mid-air dynamic pose, city below, wind-swept clothing, outstretched limbs, dramatic height perspective',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pose-seated',
+    name: 'Pose: Seated',
+    description: 'Character sitting in relaxed or contemplative pose',
+    promptFragment: 'full body view, seated pose, relaxed posture, legs crossed or resting, hands visible, thoughtful expression, environmental seating context',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pose-reclining',
+    name: 'Pose: Reclining',
+    description: 'Laying down in restful or dramatic pose',
+    promptFragment: 'full body view, reclining pose, laying down, horizontal composition, relaxed limbs, soft or dramatic lighting, surface context visible',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pose-crouching',
+    name: 'Pose: Crouching',
+    description: 'Low crouch ready to spring or hide',
+    promptFragment: 'full body view, crouching low, coiled tension, ready to spring, one hand touching ground, predatory or stealthy stance, compact silhouette',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pose-kneeling',
+    name: 'Pose: Kneeling',
+    description: 'On one or both knees in reverence or defeat',
+    promptFragment: 'full body view, kneeling pose, one or both knees on ground, head bowed or lifted, arms at sides or raised, ceremonial or defeated posture',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pose-walking',
+    name: 'Pose: Walking',
+    description: 'Mid-stride walking with purpose',
+    promptFragment: 'full body view, walking pose, mid-stride, purposeful movement, natural arm swing, forward momentum, confident gait',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pose-back-turned',
+    name: 'Pose: Back Turned',
+    description: 'Mysterious view from behind',
+    promptFragment: 'full body view, back turned to viewer, looking away or over shoulder, mysterious silhouette, costume details visible from behind, atmospheric backdrop',
+    targetCategory: 'character',
+  },
+
+  // ===========================
   // COLLECTIVE compositions
   // ===========================
   {

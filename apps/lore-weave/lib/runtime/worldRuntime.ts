@@ -549,7 +549,9 @@ export class WorldRuntime implements Graph {
     const partial = settingsOrPartial as Partial<HardState>;
     const resolvedSource = (settingsOrPartial as CreateEntitySettings).source ?? source;
     const resolvedPlacementStrategy = (settingsOrPartial as CreateEntitySettings).placementStrategy ?? placementStrategy;
-    const namingContext = (settingsOrPartial as CreateEntitySettings).namingContext;
+    // Check both CreateEntitySettings.namingContext and partial.namingContext (template interpreter adds it to partial)
+    const namingContext = (settingsOrPartial as CreateEntitySettings).namingContext
+      ?? (settingsOrPartial as Partial<HardState> & { namingContext?: Record<string, string> }).namingContext;
 
     const coords = partial.coordinates;
     if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number' || typeof coords.z !== 'number') {

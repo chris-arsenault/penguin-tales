@@ -1,0 +1,185 @@
+/**
+ * LLM Call Types - Per-call model and thinking configuration
+ *
+ * Defines all distinct LLM call types in Illuminator and their default configurations.
+ * Settings are stored in localStorage (not per-project) for cross-project consistency.
+ */
+
+export type LLMCallType =
+  // Entity Description Chain
+  | 'description.narrative'      // Step 1: summary/description/aliases
+  | 'description.visualThesis'   // Step 2: visual thesis
+  | 'description.visualTraits'   // Step 3: visual traits
+
+  // Image Generation
+  | 'image.promptFormatting'     // Claude reformats prompt for image model
+
+  // Chronicle Generation
+  | 'chronicle.generation'       // Single-shot V2 generation
+  | 'chronicle.edit'             // Edit pass
+  | 'chronicle.validation'       // Cohesion validation
+  | 'chronicle.summary'          // Title + summary
+  | 'chronicle.imageRefs'        // Image reference extraction
+
+  // Palette
+  | 'palette.expansion';         // Trait palette curation
+
+export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
+  'description.narrative',
+  'description.visualThesis',
+  'description.visualTraits',
+  'image.promptFormatting',
+  'chronicle.generation',
+  'chronicle.edit',
+  'chronicle.validation',
+  'chronicle.summary',
+  'chronicle.imageRefs',
+  'palette.expansion',
+];
+
+export type LLMCallCategory = 'description' | 'image' | 'chronicle' | 'palette';
+
+export interface LLMCallMetadata {
+  label: string;
+  description: string;
+  category: LLMCallCategory;
+  defaultModel: string;
+  defaultThinkingBudget: number;  // 0 = disabled
+  recommendedModels: string[];
+}
+
+/**
+ * Per-call configuration (partial - undefined means use default)
+ */
+export interface LLMCallConfig {
+  model?: string;
+  thinkingBudget?: number;  // 0 = disabled
+}
+
+// Available models
+export const AVAILABLE_MODELS = [
+  { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5', tier: 'premium' },
+  { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5', tier: 'standard' },
+  { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', tier: 'fast' },
+] as const;
+
+// Models that support extended thinking
+export const THINKING_CAPABLE_MODELS = [
+  'claude-opus-4-5-20251101',
+  'claude-sonnet-4-5-20250929',
+];
+
+export const THINKING_BUDGET_OPTIONS = [
+  { value: 0, label: 'Disabled' },
+  { value: 4096, label: '4K tokens (light)' },
+  { value: 8192, label: '8K tokens (moderate)' },
+  { value: 16384, label: '16K tokens (deep)' },
+  { value: 32768, label: '32K tokens (maximum)' },
+];
+
+export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
+  'description.narrative': {
+    label: 'Narrative',
+    description: 'Generates summary, description, and aliases for an entity',
+    category: 'description',
+    defaultModel: 'claude-haiku-4-5-20251001',
+    defaultThinkingBudget: 0,
+    recommendedModels: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'],
+  },
+  'description.visualThesis': {
+    label: 'Visual Thesis',
+    description: 'Creates the core visual silhouette from narrative description',
+    category: 'description',
+    defaultModel: 'claude-sonnet-4-5-20250929',
+    defaultThinkingBudget: 4096,
+    recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
+  },
+  'description.visualTraits': {
+    label: 'Visual Traits',
+    description: 'Generates distinctive visual details that complement the thesis',
+    category: 'description',
+    defaultModel: 'claude-haiku-4-5-20251001',
+    defaultThinkingBudget: 0,
+    recommendedModels: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'],
+  },
+  'image.promptFormatting': {
+    label: 'Prompt Formatting',
+    description: 'Reformats description for the image generation model',
+    category: 'image',
+    defaultModel: 'claude-haiku-4-5-20251001',
+    defaultThinkingBudget: 0,
+    recommendedModels: ['claude-haiku-4-5-20251001'],
+  },
+  'chronicle.generation': {
+    label: 'Generation',
+    description: 'Creates the initial chronicle narrative content',
+    category: 'chronicle',
+    defaultModel: 'claude-sonnet-4-5-20250929',
+    defaultThinkingBudget: 0,
+    recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
+  },
+  'chronicle.edit': {
+    label: 'Edit Pass',
+    description: 'Applies style corrections and tone adjustments',
+    category: 'chronicle',
+    defaultModel: 'claude-sonnet-4-5-20250929',
+    defaultThinkingBudget: 0,
+    recommendedModels: ['claude-sonnet-4-5-20250929'],
+  },
+  'chronicle.validation': {
+    label: 'Validation',
+    description: 'Checks narrative cohesion and factual consistency',
+    category: 'chronicle',
+    defaultModel: 'claude-haiku-4-5-20251001',
+    defaultThinkingBudget: 0,
+    recommendedModels: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'],
+  },
+  'chronicle.summary': {
+    label: 'Summary',
+    description: 'Generates title and summary for the chronicle',
+    category: 'chronicle',
+    defaultModel: 'claude-haiku-4-5-20251001',
+    defaultThinkingBudget: 0,
+    recommendedModels: ['claude-haiku-4-5-20251001'],
+  },
+  'chronicle.imageRefs': {
+    label: 'Image References',
+    description: 'Extracts image-worthy moments from the narrative',
+    category: 'chronicle',
+    defaultModel: 'claude-haiku-4-5-20251001',
+    defaultThinkingBudget: 0,
+    recommendedModels: ['claude-haiku-4-5-20251001'],
+  },
+  'palette.expansion': {
+    label: 'Palette Expansion',
+    description: 'Curates visual trait categories with extended reasoning',
+    category: 'palette',
+    defaultModel: 'claude-sonnet-4-5-20250929',
+    defaultThinkingBudget: 8192,
+    recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
+  },
+};
+
+export const CATEGORY_LABELS: Record<LLMCallCategory, string> = {
+  description: 'Entity Descriptions',
+  image: 'Image Generation',
+  chronicle: 'Chronicle Generation',
+  palette: 'Trait Palette',
+};
+
+export const CATEGORY_DESCRIPTIONS: Record<LLMCallCategory, string> = {
+  description: 'Three-step chain for generating entity narrative and visual details',
+  image: 'Preprocessing for image generation prompts',
+  chronicle: 'Multi-step pipeline for long-form narrative documents',
+  palette: 'AI-assisted curation of visual trait categories',
+};
+
+// Group call types by category
+export function getCallTypesByCategory(): Record<LLMCallCategory, LLMCallType[]> {
+  return {
+    description: ['description.narrative', 'description.visualThesis', 'description.visualTraits'],
+    image: ['image.promptFormatting'],
+    chronicle: ['chronicle.generation', 'chronicle.edit', 'chronicle.validation', 'chronicle.summary', 'chronicle.imageRefs'],
+    palette: ['palette.expansion'],
+  };
+}

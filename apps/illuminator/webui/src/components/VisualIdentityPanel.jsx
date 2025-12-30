@@ -352,62 +352,62 @@ function IdentitySection({ title, subtitle, children, defaultOpen = true }) {
 export default function VisualIdentityPanel({
   cultures,
   entityKinds,
-  templates,
-  onTemplatesChange,
+  cultureIdentities,
+  onCultureIdentitiesChange,
 }) {
   // Collect all visual identity keys
   const visualKeys = useMemo(() => {
     const keys = new Set();
-    const identities = templates.cultureVisualIdentities || {};
+    const identities = cultureIdentities.visual || {};
     for (const cultureId of Object.keys(identities)) {
       for (const key of Object.keys(identities[cultureId])) {
         keys.add(key);
       }
     }
     return Array.from(keys).sort();
-  }, [templates.cultureVisualIdentities]);
+  }, [cultureIdentities.visual]);
 
   // Collect all descriptive identity keys
   const descriptiveKeys = useMemo(() => {
     const keys = new Set();
-    const identities = templates.cultureDescriptiveIdentities || {};
+    const identities = cultureIdentities.descriptive || {};
     for (const cultureId of Object.keys(identities)) {
       for (const key of Object.keys(identities[cultureId])) {
         keys.add(key);
       }
     }
     return Array.from(keys).sort();
-  }, [templates.cultureDescriptiveIdentities]);
+  }, [cultureIdentities.descriptive]);
 
   // Visual identity handlers
   const handleVisualIdentitiesChange = useCallback((newIdentities) => {
-    onTemplatesChange({
-      ...templates,
-      cultureVisualIdentities: newIdentities,
+    onCultureIdentitiesChange({
+      ...cultureIdentities,
+      visual: newIdentities,
     });
-  }, [templates, onTemplatesChange]);
+  }, [cultureIdentities, onCultureIdentitiesChange]);
 
   const handleVisualKeysByKindChange = useCallback((newKeysByKind) => {
-    onTemplatesChange({
-      ...templates,
-      visualIdentityKeysByKind: newKeysByKind,
+    onCultureIdentitiesChange({
+      ...cultureIdentities,
+      visualKeysByKind: newKeysByKind,
     });
-  }, [templates, onTemplatesChange]);
+  }, [cultureIdentities, onCultureIdentitiesChange]);
 
   // Descriptive identity handlers
   const handleDescriptiveIdentitiesChange = useCallback((newIdentities) => {
-    onTemplatesChange({
-      ...templates,
-      cultureDescriptiveIdentities: newIdentities,
+    onCultureIdentitiesChange({
+      ...cultureIdentities,
+      descriptive: newIdentities,
     });
-  }, [templates, onTemplatesChange]);
+  }, [cultureIdentities, onCultureIdentitiesChange]);
 
   const handleDescriptiveKeysByKindChange = useCallback((newKeysByKind) => {
-    onTemplatesChange({
-      ...templates,
-      descriptiveIdentityKeysByKind: newKeysByKind,
+    onCultureIdentitiesChange({
+      ...cultureIdentities,
+      descriptiveKeysByKind: newKeysByKind,
     });
-  }, [templates, onTemplatesChange]);
+  }, [cultureIdentities, onCultureIdentitiesChange]);
 
   return (
     <div className="illuminator-visual-identity-panel">
@@ -427,7 +427,7 @@ export default function VisualIdentityPanel({
         >
           <CultureIdentityEditor
             cultures={cultures}
-            identities={templates.cultureVisualIdentities}
+            identities={cultureIdentities.visual}
             onIdentitiesChange={handleVisualIdentitiesChange}
             allKeys={visualKeys}
             keyPlaceholder="KEY (e.g., ATTIRE)"
@@ -443,7 +443,7 @@ export default function VisualIdentityPanel({
           <IdentityKeySelector
             entityKinds={entityKinds}
             availableKeys={visualKeys}
-            keysByKind={templates.visualIdentityKeysByKind}
+            keysByKind={cultureIdentities.visualKeysByKind}
             onKeysByKindChange={handleVisualKeysByKindChange}
             emptyMessage="No visual identity keys defined yet. Add keys to cultures above."
           />
@@ -466,7 +466,7 @@ export default function VisualIdentityPanel({
         >
           <CultureIdentityEditor
             cultures={cultures}
-            identities={templates.cultureDescriptiveIdentities}
+            identities={cultureIdentities.descriptive}
             onIdentitiesChange={handleDescriptiveIdentitiesChange}
             allKeys={descriptiveKeys}
             keyPlaceholder="KEY (e.g., CUSTOMS)"
@@ -482,7 +482,7 @@ export default function VisualIdentityPanel({
           <IdentityKeySelector
             entityKinds={entityKinds}
             availableKeys={descriptiveKeys}
-            keysByKind={templates.descriptiveIdentityKeysByKind}
+            keysByKind={cultureIdentities.descriptiveKeysByKind}
             onKeysByKindChange={handleDescriptiveKeysByKindChange}
             emptyMessage="No descriptive identity keys defined yet. Add keys to cultures above."
           />

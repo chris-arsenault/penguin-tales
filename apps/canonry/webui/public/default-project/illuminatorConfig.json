@@ -14,117 +14,158 @@
     ],
     "tone": "Dark, war-weary fantasy in the tradition of Malazan Book of the Fallen, Brent Weeks, and the Powder Mage trilogy. History is written by survivors who remember the cost. Tragedy happens without ceremony - important figures die in half-sentences, battles end mid-action, and not everything resolves.\n\nSTYLE PRINCIPLES:\n- Specificity over abstraction: Not 'a weapon' but 'a fire-core hammer with a cracked head.' Not 'he felt sad' but 'his flippers wouldn't stop shaking.'\n- Show through action and object, not introspection: Characters reveal themselves by what they do, carry, avoid, or destroy - not by what they 'realize' or 'understand.'\n- Subtext over statement: Let implications land. If someone betrayed their colony, don't say they feel guilty - mention they haven't visited the memorial.\n- Uncomfortable details: Include the ugly, inconvenient, or unresolved. A hero's hands might be scarred from something shameful. A victory might cost more than it was worth.\n- Trust the reader: Don't explain metaphors. Don't summarize lessons. End on images, not morals.\n\nSYNTACTIC POETRY:\nAim for the compressed power of 'First in; last out; for the last time.' Sentences that carry weight through rhythm and omission. Not fragmented violence, but poetic compression - where what's left unsaid hits harder than what's spoken. Semicolons can do the work of paragraphs. Repetition with variation creates resonance.\n\nBITTER CAMARADERIE:\nThis is essential. Grimness alone is exhausting. Include:\n- Dark humor between allies - jokes that wouldn't be funny if you hadn't been there\n- Loyalty that persists despite betrayal, stupidity, or failure\n- Small kindnesses in terrible contexts - sharing rations, remembering names, carrying someone's token\n- Soldiers/workers who mock the causes they'll die for\n- The way people become family through shared suffering, not shared values\n- Irony that isn't cruel - the bitter laugh, not the sneer\n- Heroic sacrifice that EARNS its weight - not cheap martyrdom, but the moment someone trades their life for something they actually loved. Make it cost. Make it matter.\n\nExample: Don't just say 'he died in the raid.' Say 'He died in the raid. Kaela still sets out two cups when she brews fire-tea.'\n\nSTRUCTURAL VARIETY:\n- Not every entity needs a death beat. Some are alive. Some mysteries stay mysteries.\n- Some endings are mid-action, unresolved. Some are quiet. Some are bitter-funny.\n- Vary the emotional shape: tragedy, irony, stubborn hope, grim humor, unearned survival.\n\nAVOID THESE AI TELLS:\n- Balance words: yet, however, still, ultimately, in the end, nevertheless\n- Introspection clichés: 'couldn't help but feel,' 'realized that,' 'in that moment,' 'understood that'\n- Polite diction: gentle, quiet, subtle, bittersweet, meaningful, profound\n- Vague sensory: warm, soft, heavy silence, cool breeze (anchor these to specifics or cut them)\n- Flat metaphors: light=hope, darkness=fear, storms=turmoil (find stranger, more specific images)\n- Clean resolutions: Not everything works out. Some things stay broken.\n- Time-skipping without texture: Don't write 'days passed' - either skip entirely or make the waiting hurt\n- RELENTLESS GRIMNESS: If everything is dark, nothing is. Leaven tragedy with dark humor, bitter irony, or stubborn human connection.\n\nDescriptions should read as if written by a war-chronicle keeper or a faction historian with biases, blind spots, and something to prove."
   },
-  "promptTemplates": {
-    "defaults": {
-      "description": {
-        "instructions": "Write a description that emerges from who this entity IS and what they're CONNECTED to.\n\nUse the provided relationships to ground the description - if they're allied with a faction, that shapes who they are. If they have rivals, hint at tension. If they're a member of something, show belonging.\n\nThe entity's prominence ({{entity.prominence}}) should calibrate the scope:\n- mythic/renowned: World-shaping, widely known, legendary qualities\n- recognized: Notable within their sphere, respected or feared\n- marginal/forgotten: Intimate scale, personal details, local significance\n\nConsider their age in the world ({{entityAge}}) - ancient entities carry history, new ones have fresh energy.",
-        "tone": "{{world.tone}}",
-        "constraints": "Never contradict these facts: {{world.canonFacts}}\n\nWork WITH the existing description if present, expanding rather than replacing.\nDon't invent major relationships not implied by the data - the relationships provided are canonical.\n\nSTYLE ENFORCEMENT:\n- No balance words (yet, however, still, ultimately, nevertheless)\n- No introspection clichés (realized, understood, couldn't help but feel)\n- No polite abstractions (gentle, subtle, meaningful, profound)\n- Ground every sensory detail in something specific\n- End on an image or action, not a summary or lesson\n- If something is broken or ugly, let it stay that way",
-        "outputFormat": "2-3 sentences. Dense with meaning, grounded in specifics. Vary sentence rhythm - mix long and short. Name at least one relationship or cultural detail when relevant. End on something concrete, not a reflection."
+
+  "entityGuidance": {
+    "npc": {
+      "focus": "Reveal personality through concrete details: what they carry, wear, or refuse to touch. Physical tics, scars, or habits that tell a story. What they've lost or what they're protecting. How others react to them (fear, respect, pity, avoidance). No one is purely good or evil - everyone has costs, compromises, or things they won't talk about. Include one uncomfortable or unglamorous detail: a coward's streak, a cruel habit, an old shame. Characters should feel like they existed before this moment and will continue after it.",
+      "relationshipUse": "ONE [strong] relationship that truly defines or shaped them. Not a catalog of connections - the description should be ABOUT the entity, not a tour of their relationships.",
+      "proseHint": "Focus on gesture, tic, or signature object. Show how others remember them, mourn them, or joke about them. Someone carries their token. Someone still curses their name fondly. Someone refuses to sit in their chair.",
+      "visualThesis": {
+        "domain": "You design characters for a fighting game roster or anime ensemble cast. Each character must be INSTANTLY RECOGNIZABLE from silhouette alone - like Overwatch heroes or League of Legends champions. The visual thesis is the ONE THING that makes this character's shape unique in the roster.",
+        "focus": "SHAPE ELEMENTS (prioritize structural over gestural):\n- Structural gear: oversized weapons, distinctive hats, floating objects, massive armor\n- Profile extensions: mounted equipment, carried tools, backpacks, capes\n- Body modifications: scars, missing limbs, unusual proportions, asymmetry\n- Clothing: robes, cloaks, armor plates, harnesses - what they WEAR changes silhouette",
+        "framing": "This is a CHARACTER - describe the dominant silhouette feature that makes them instantly recognizable.\n\nFORMAT: Always begin with the species: 'A penguin with...', 'An orca with...', etc. The thesis describes the CHARACTER, not just an accessory.\n\nFocus on: clothing, equipment, gear, armor, weapons, magical effects, body modifications.\nPose can SUPPORT the thesis but cannot BE the thesis. A hunched posture is only distinctive if combined with structural elements (armor, gear, clothing)."
       },
-      "image": {
-        "imageInstructions": "Create concept art that captures this entity's essence. Focus on the individual traits and visual identity provided. The image should feel like it belongs in an illustrated bestiary or game art book.",
-        "avoidElements": "Text, labels, watermarks, UI elements. Modern clothing or technology. Multiple versions of the same subject. Blurry or low-quality rendering. Human features on penguins. Contradicting the visual identity."
+      "visualTraits": {
+        "domain": "You're completing a character design brief for an action figure or concept art. The thesis defines the PRIMARY silhouette. Your job is to add 2-4 ADDITIONAL distinctive features that make this character unique - things the thesis didn't cover. Think action figure accessories: what extra details would the toy include?",
+        "focus": "TRAITS SHOULD ADD, NOT REPEAT:\n- If thesis mentions robes → traits could add floating orbs, glowing eyes, unusual footwear\n- If thesis mentions armor → traits could add trophy skulls, ritual scars, bound weapons\n- Find what's MISSING from the thesis",
+        "framing": "This is a CHARACTER - traits should describe additional distinctive features that complement the primary silhouette."
       },
-      "relationship": "Describe how {{entity.name}} relates to others in {{world.name}}.\n\nENTITY: {{entity.name}} ({{entity.subtype}} {{entity.kind}})\nSTATUS: {{entity.status}} | PROMINENCE: {{entity.prominence}}\n\nKNOWN CONNECTIONS:\n{{#relationships}}\n- {{kind}}: {{targetName}} ({{targetKind}}){{#strength}} [strength: {{strength}}]{{/strength}}\n{{/relationships}}\n{{^relationships}}\n(No established relationships yet)\n{{/relationships}}\n\n{{#culturalPeers.length}}\nCULTURAL PEERS ({{entity.culture}}): {{culturalPeers}}\n{{/culturalPeers.length}}\n\nWrite 2-3 sentences about how these connections shape {{entity.name}}'s place in the world. Focus on dynamics that create story potential - alliances, tensions, dependencies.",
-      "eraNarrative": "Write a narrative summary for this era/event in {{world.name}}.\n\nNAME: {{entity.name}}\nTYPE: {{entity.subtype}} {{entity.kind}}\nEXISTING DESCRIPTION: {{entity.description}}\n\nThis {{entityAge}} {{entity.kind}} exists within the broader context of {{world.description}}.\n\nCanon facts: {{world.canonFacts}}\n\nCraft 2-3 sentences capturing the essence of this period. Write like a war-chronicle keeper recording history that hurts to remember.\n\nERA VOICE:\n- What did this period cost? Who paid?\n- What was lost that can never be recovered?\n- What uncomfortable truth does hindsight reveal?\n- Name specific entities if relationships exist - history is made by individuals, not abstractions\n\nSTRUCTURAL VARIETY:\n- Not every era ends in catastrophe. Some end in exhaustion. Some just... stop.\n- Include the dark humor of survival - the absurdity of what people endured, the bitter jokes they told\n- Show what people held onto: a song, a grudge, a promise to someone dead\n- Some eras are remembered fondly by those who caused the most harm\n\nSYNTACTIC POETRY:\nAim for compressed power: 'First in; last out; for the last time.' Semicolons can do the work of paragraphs. Repetition with variation creates resonance. End mid-thought if it hits harder.\n\nAvoid: 'ultimately,' 'in the end,' 'they learned that,' 'it taught them,' 'a new era of hope,' 'the cycle continues'"
+      "imageInstructions": "The main subject is a CHARACTER. Create a portrait that showcases their individual traits as the focal point. The character should feel like a distinct individual, not a generic representative of their species or role.",
+      "imageAvoid": "Flipper/wing gestures as the SOLE identifying element (raised flipper, wing pressed to chest). Characters defined ONLY by body language with no distinctive gear, clothing, or equipment. NOTE: Upright poses are FINE when combined with distinctive structural elements - the issue is poses WITHOUT distinguishing features, not upright poses themselves."
     },
-    "byKind": {
-      "npc": {
-        "description": {
-          "instructions": "This is a character in {{world.name}}. Focus on what makes them distinctive as a person.\n\nTheir relationships define them:\n{{#relationships}}\n- {{kind}} {{targetName}} ({{targetKind}})\n{{/relationships}}\n\nReveal personality through concrete details:\n- What they carry, wear, or refuse to touch\n- Physical tics, scars, or habits that tell a story\n- What they've lost or what they're protecting\n- How others react to them (fear, respect, pity, avoidance)\n\nTheir {{entity.subtype}} role shapes their worldview. Their {{entity.prominence}} status affects how others see them.\n\n{{#culturalPeers.length}}They exist alongside other {{entity.culture}} figures like {{culturalPeers}}.{{/culturalPeers.length}}\n\nCHARACTER VOICE:\n- No one is purely good or evil. Everyone has costs, compromises, or things they won't talk about.\n- Don't explain their psychology. Let their actions and objects speak.\n- Include one uncomfortable or unglamorous detail - a coward's streak, a cruel habit, an old shame.\n- Characters should feel like they existed before this moment and will continue after it.\n\nBITTER CAMARADERIE:\n- Show how others remember them, mourn them, or joke about them\n- Include a relationship detail that's darkly funny or stubbornly loyal\n- Someone carries their token. Someone still curses their name fondly. Someone refuses to sit in their chair.\n- Not every character dies. Some survive and carry the weight. Some are simply... still here.\n\nSYNTACTIC POETRY:\nAim for compressed power: 'First in; last out; for the last time.' Use semicolons to do the work of paragraphs. Repetition with variation. What's unsaid hits hardest."
-        },
-        "image": {
-          "imageInstructions": "The main subject is a CHARACTER. Create a portrait that showcases their individual traits as the focal point. The character should feel like a distinct individual, not a generic representative of their species or role.",
-          "avoidElements": "Flipper/wing gestures as primary identifying element (raised flipper, wing pressed to chest, arms folded). Generic upright poses without distinctive equipment or markings. Body language alone as visual thesis - require structural elements like headgear, armor, tools, magical effects, scars, or clothing.",
-          "visualThesisInstructions": "You design characters for a fighting game roster or anime ensemble cast.\n\nEach character must be INSTANTLY RECOGNIZABLE from silhouette alone - like Overwatch heroes or League of Legends champions.\n\nThe visual thesis is the ONE THING that makes this character's shape unique in the roster.\n\nSHAPE ELEMENTS (prioritize structural over gestural):\n- Structural gear: oversized weapons, distinctive hats, floating objects, massive armor\n- Profile extensions: mounted equipment, carried tools, backpacks, capes\n- Body modifications: scars, missing limbs, unusual proportions, asymmetry",
-          "visualThesisFraming": "This is a CHARACTER - describe the dominant silhouette feature that makes them instantly recognizable.\n\nFocus on: equipment, gear, armor, weapons, magical effects, body modifications.\nDO NOT use pose or gesture as the primary identifier.",
-          "visualTraitsInstructions": "You're completing a character design brief for an action figure or concept art.\n\nThe thesis defines the PRIMARY silhouette. Your job is to add 2-4 ADDITIONAL distinctive features that make this character unique - things the thesis didn't cover.\n\nThink action figure accessories: what extra details would the toy include?\n\nTRAITS SHOULD ADD, NOT REPEAT:\n- If thesis mentions robes → traits could add floating orbs, glowing eyes, unusual footwear\n- If thesis mentions armor → traits could add trophy skulls, ritual scars, bound weapons\n- Find what's MISSING from the thesis",
-          "visualTraitsFraming": "This is a CHARACTER - traits should describe additional distinctive features that complement the primary silhouette."
-        }
+
+    "location": {
+      "focus": "Anchor in ONE specific sensory detail first - a smell, a sound, a texture underfoot. Not 'cold' but 'the kind of cold that makes your beak ache.' Show what HAPPENED here: scars, stains, cracks that were never repaired, repairs made with wrong materials. Who controls it NOW vs who BUILT it - layers of history in one place. Not every location is haunted or dangerous. Some are just tired. Some are beloved despite being ugly.",
+      "relationshipUse": "Show how people USE this place - the regulars, the rituals, the unwritten rules. Include one detail of stubborn life: graffiti, offerings, someone's initials carved where they shouldn't be. What joke do locals tell about this place? What do they refuse to call it by its official name?",
+      "proseHint": "Anchor in one visceral sensory detail. Show what it costs to be there. What joke do locals tell about this place?",
+      "visualThesis": {
+        "domain": "You design environments for a video game or animated film. The visual thesis is what makes THIS location visually distinct from other places. Think iconic game levels - each has a defining visual landmark or spatial quality.",
+        "focus": "ENVIRONMENT ELEMENTS:\n- Structures: towers, bridges, walls, platforms, monuments\n- Natural formations: cliffs, caves, crystals, ice formations, chasms\n- Spatial qualities: vast open, claustrophobic tunnels, vertical spires, layered depths\n- Lighting character: aurora-lit, shadow-shrouded, fire-warmed, crystal-refracted",
+        "framing": "This is a LOCATION or PLACE - describe the environment's defining architectural or natural feature.\n\nFocus on: structures, formations, spatial relationships, the shape of the space itself.\nDO NOT describe characters or creatures."
       },
-      "location": {
-        "description": {
-          "instructions": "This is a place in {{world.name}}. Evoke what it's like to STAND here - not what it represents.\n\nWhat entities are connected to this location?\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nThe {{entity.prominence}} level suggests how well-known or hidden it is.\n\nLOCATION VOICE:\n- Anchor description in ONE specific sensory detail first - a smell, a sound, a texture underfoot. Not 'cold' but 'the kind of cold that makes your beak ache.'\n- Show what HAPPENED here. Places carry scars. What stain won't come out? What crack was never repaired?\n- Who controls it NOW vs. who BUILT it. Layers of history in one place.\n\nBITTER CAMARADERIE:\n- Show how people USE this place - the regulars, the rituals, the unwritten rules\n- Include one detail of stubborn life: graffiti, offerings, repairs made with wrong materials, someone's initials carved where they shouldn't be\n- Not every location is haunted or dangerous. Some are just tired. Some are beloved despite being ugly.\n- What joke do locals tell about this place? What do they refuse to call it by its official name?\n\nSYNTACTIC POETRY:\n'First in; last out; for the last time.' Compressed weight. End on a sensory detail or an absence.\n\nAvoid: 'a place of great importance,' 'known for its,' 'visitors often remark,' 'atmosphere of peace/mystery/danger'"
-        },
-        "image": {
-          "imageInstructions": "The main subject is a PLACE. Create an environmental shot that captures the atmosphere and character of this location. Include architectural or natural details that make it feel like a real, lived-in space.",
-          "visualThesisInstructions": "You design environments for a video game or animated film.\n\nThe visual thesis is what makes THIS location visually distinct from other places. Think iconic game levels - each has a defining visual landmark or spatial quality.\n\nENVIRONMENT ELEMENTS:\n- Structures: towers, bridges, walls, platforms, monuments\n- Natural formations: cliffs, caves, crystals, ice formations, chasms\n- Spatial qualities: vast open, claustrophobic tunnels, vertical spires, layered depths\n- Lighting character: aurora-lit, shadow-shrouded, fire-warmed, crystal-refracted",
-          "visualThesisFraming": "This is a LOCATION or PLACE - describe the environment's defining architectural or natural feature.\n\nFocus on: structures, formations, spatial relationships, the shape of the space itself.\nDO NOT describe characters or creatures.",
-          "visualTraitsInstructions": "You're adding detail to an environment design brief for a location.\n\nThe thesis defines the primary visual landmark. Your job is to add 2-4 ADDITIONAL environmental details that make this place distinctive.\n\nThink video game level design: what secondary features, atmospheric effects, or environmental storytelling elements make this location memorable?",
-          "visualTraitsFraming": "This is a LOCATION - traits should describe additional environmental details and atmospheric qualities."
-        }
+      "visualTraits": {
+        "domain": "You're adding detail to an environment design brief for a location. The thesis defines the primary visual landmark. Your job is to add 2-4 ADDITIONAL environmental details that make this place distinctive. Think video game level design: what secondary features, atmospheric effects, or environmental storytelling elements make this location memorable?",
+        "focus": "Secondary features, atmospheric effects, environmental storytelling elements that support the primary landmark.",
+        "framing": "This is a LOCATION - traits should describe additional environmental details and atmospheric qualities."
       },
-      "faction": {
-        "description": {
-          "instructions": "This is an organization/group in {{world.name}}. Focus on what holds them together and what threatens to tear them apart.\n\nKey relationships:\n{{#relationships}}\n- {{kind}}: {{targetName}} ({{targetKind}})\n{{/relationships}}\n\nTheir {{entity.prominence}} reflects their influence. Their {{entity.status}} shows their current state.\n\n{{#factionMembers.length}}Notable members include: {{factionMembers}}{{/factionMembers.length}}\n\nFACTION VOICE:\n- Every faction has a founding wound - the injustice, defeat, or loss that forged them. Reference it.\n- Show the internal tensions. What do the hardliners want vs. the pragmatists?\n- Include what the faction has DONE - not just what they believe. Actions, not mission statements.\n- Outsiders' views should include fear, contempt, or grudging respect - not neutral acknowledgment.\n\nBITTER CAMARADERIE:\n- Show the culture of belonging - the in-jokes, the shared complaints, the rituals that outsiders find baffling\n- Include one detail of loyalty that persists despite everything: members who hate the leadership but won't leave, rivals who'd still fight for each other\n- What do members say about the faction when they're drunk? What do they never say?\n- Some factions survive on stubbornness more than purpose. Some on dark humor. Some on spite.\n\nSYNTACTIC POETRY:\n'First in; last out; for the last time.' Compressed weight. Semicolons as paragraph breaks. End mid-thought if it resonates.\n\nAvoid: 'dedicated to,' 'believe in the importance of,' 'united by their shared vision,' 'seek to create a better'"
-        },
-        "image": {
-          "imageInstructions": "The main subject is an ORGANIZATION. Choose one of: a council of leaders, the faction's headquarters, their banner or symbol, or a representative member in ceremonial attire. The image should convey collective identity and purpose.",
-          "visualThesisInstructions": "You design faction identity for a strategy game or worldbuilding project.\n\nThe visual thesis captures the faction's ESSENCE in one iconic visual - what makes them instantly recognizable as a group.\n\nFACTION IDENTITY ELEMENTS:\n- Symbols: banners, insignias, heraldic devices, sacred objects\n- Architecture: headquarters, meeting halls, monuments, fortifications\n- Regalia: ceremonial dress, uniforms, shared equipment\n- Gathering: council formation, ritual arrangement, military display",
-          "visualThesisFraming": "This is a FACTION or ORGANIZATION - describe the visual element that defines their collective identity.\n\nFocus on: symbols, architecture, ceremonial objects, group formations.\nThis should represent the GROUP, not an individual member.",
-          "visualTraitsInstructions": "You're adding detail to a faction design brief.\n\nThe thesis defines the primary visual identity. Your job is to add 2-4 ADDITIONAL elements that reinforce what this faction stands for.\n\nThink faction design in strategy games: what secondary symbols, colors, or motifs make them distinctive?",
-          "visualTraitsFraming": "This is a FACTION - traits should describe additional elements of collective identity (symbols, colors, architectural details, ceremonial objects)."
-        }
-      },
-      "occurrence": {
-        "description": {
-          "instructions": "This is an event in {{world.name}}. Capture the moment as if recording it for a war chronicle.\n\nEntities involved:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nThe {{entity.prominence}} indicates historical significance. As an {{entityAge}} event, how present is it in memory?\n\nEVENT VOICE:\n- Focus on what was LOST, BROKEN, or CHANGED FOREVER - not lessons learned\n- Name the dead or the cost. History is paid for.\n- Capture one visceral detail - the smell, the sound, the thing someone dropped and never picked up\n- Don't explain significance. Let the facts do the work.\n\nBITTER CAMARADERIE:\n- Show how survivors remember it - the dark jokes they tell, the things they won't discuss\n- Include one detail of stubborn loyalty or absurd kindness amid chaos\n- Someone carried someone else. Someone went back. Someone still flinches at a certain sound.\n- Not every event is tragedy. Some are darkly comic. Some are just exhausting.\n\nSYNTACTIC POETRY:\nAim for compressed power: 'First in; last out; for the last time.' Semicolons can do the work of paragraphs. End mid-action if it hits harder. What's unsaid resonates.\n\nAvoid: 'would come to be known as,' 'marked the beginning of,' 'in the aftermath,' 'they would never forget,' 'the survivors learned'"
-        },
-        "image": {
-          "imageInstructions": "The main subject is an EVENT. Create a dramatic scene capturing the pivotal moment. Show the action as if witnessed firsthand - triumphant, tragic, or transformative.",
-          "visualThesisInstructions": "You design key frames for historical moments in an animated film or graphic novel.\n\nThe visual thesis captures the PIVOTAL MOMENT - the single frame that would represent this event in a history book.\n\nEVENT COMPOSITION ELEMENTS:\n- Action: the central dramatic gesture or movement\n- Stakes: visual tension showing what's at risk\n- Scale: intimate confrontation vs epic battlefield vs cosmic phenomenon\n- Aftermath indicators: smoke, debris, fallen figures, changed landscape",
-          "visualThesisFraming": "This is an EVENT or OCCURRENCE - describe the pivotal visual moment that defines this event.\n\nFocus on: action, tension, scale, consequences.\nCapture the MOMENT, not a static scene.",
-          "visualTraitsInstructions": "You're adding detail to an event illustration brief.\n\nThe thesis defines the central dramatic moment. Your job is to add 2-4 ADDITIONAL visual elements that reinforce the event's significance.\n\nThink key frame illustration: what environmental details, secondary actions, or atmospheric effects enhance the drama?",
-          "visualTraitsFraming": "This is an EVENT - traits should describe additional dramatic elements (environmental effects, secondary actions, atmospheric conditions, visual stakes)."
-        }
-      },
-      "era": {
-        "description": {
-          "instructions": "This is a period of time in {{world.name}}. Convey the weight of the age as a historian who lived through it.\n\nWhat defined this era? The {{entity.subtype}} tells us what kind of period this was.\n\nKey elements of this era:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nERA VOICE:\n- Eras are defined by what they cost, not what they achieved\n- Name the central tension that couldn't be resolved - the thing everyone argued about, the wound that wouldn't close\n- Don't frame eras as 'dark' or 'golden' - show the texture. Golden ages have rot beneath. Dark ages have stubborn hope.\n\nBITTER CAMARADERIE:\n- What did people hold onto? A song, a ritual, a grudge, a joke that stopped being funny\n- Show the absurdity of endurance - the things people did to stay sane, the dark humor that got them through\n- Include one detail of connection that persisted: a trade that continued despite war, a friendship across enemy lines, a tradition no one remembers the origin of\n- Some eras are remembered fondly by exactly the wrong people\n\nSYNTACTIC POETRY:\n'First in; last out; for the last time.' Aim for compressed weight. Semicolons can do the work of paragraphs. Repetition with variation. End mid-thought if it resonates.\n\nAvoid: 'a time of great change,' 'would shape generations to come,' 'in the end,' 'taught them the value of,' 'era of hope/darkness/rebirth,' 'the cycle continues'"
-        },
-        "image": {
-          "imageInstructions": "The main subject is a TIME PERIOD. Create a symbolic or panoramic scene that captures the spirit of this era. Use visual metaphor - rising sun, gathering storm, crumbling walls - to convey the age's defining mood.",
-          "visualThesisInstructions": "You design chapter headers and era illustrations for a history book or fantasy chronicle.\n\nThe visual thesis captures the SPIRIT OF THE AGE - what single symbolic image represents this time period?\n\nERA VISUALIZATION ELEMENTS:\n- Symbolic landscapes: rising/setting suns, storms gathering, seasons changing\n- Architectural states: cities rising, ruins crumbling, monuments being built\n- Atmospheric conditions: golden age light, dark age shadows, transitional twilight\n- Emblematic objects: crowns, weapons, tools, symbols of the era's defining activity",
-          "visualThesisFraming": "This is an ERA or TIME PERIOD - describe the symbolic visual that captures the spirit of this age.\n\nFocus on: symbolic imagery, atmospheric mood, emblematic objects.\nThis is SYMBOLIC - not a specific moment, but the essence of an entire period.",
-          "visualTraitsInstructions": "You're adding detail to an era illustration.\n\nThe thesis defines the central symbolic image. Your job is to add 2-4 ADDITIONAL visual elements that reinforce the era's character.\n\nThink history book chapter headers: what secondary symbols, atmospheric details, or visual metaphors enhance the mood?",
-          "visualTraitsFraming": "This is an ERA - traits should describe additional symbolic elements (atmospheric effects, secondary symbols, visual metaphors for the age's character)."
-        }
-      },
-      "abilities": {
-        "image": {
-          "imageInstructions": "The main subject is a MAGICAL POWER or ability. Focus on the manifestation of the power itself, not on characters using it. Show energy, effects, or the visual signature of this magic in action.",
-          "visualThesisInstructions": "You design VFX and magical effects for a video game or animated film.\n\nThe visual thesis is what makes THIS magic visually distinct from other powers. Think spell effects in a fighting game - each power has a unique visual signature.\n\nVFX ELEMENTS:\n- Energy patterns: spirals, fractals, geometric shapes, organic flows\n- Elemental forms: ice crystals, fire tongues, light beams, shadow tendrils\n- Manifestation style: explosive, creeping, pulsing, steady glow\n- Scale and intensity: subtle shimmer vs massive eruption",
-          "visualThesisFraming": "This is a MAGICAL ABILITY or POWER - describe how the magic MANIFESTS, not a character using it.\n\nFocus on: energy patterns, visual effects, elemental forms, the shape of the magic itself.\nDO NOT describe a character wearing gear or holding items.",
-          "visualTraitsInstructions": "You're adding detail to a VFX design brief for a magical power.\n\nThe thesis defines the primary visual effect. Your job is to add 2-4 ADDITIONAL visual properties that make this magic distinctive.\n\nThink video game spell effects: what secondary particles, afterimages, or environmental reactions make this power unique?",
-          "visualTraitsFraming": "This is a MAGICAL ABILITY - traits should describe additional visual properties of the magic effect itself."
-        }
-      },
-      "rules": {
-        "image": {
-          "imageInstructions": "The main subject is a MAGICAL SYSTEM or rule. Create an abstract or symbolic representation that conveys how this magic works - perhaps glyphs, energy flows, or the interaction of elemental forces.",
-          "visualThesisInstructions": "You design magic system diagrams and abstract visualizations for a fantasy RPG rulebook.\n\nThe visual thesis captures the FUNDAMENTAL PRINCIPLE - how does this rule or system manifest visually?\n\nSYSTEM VISUALIZATION ELEMENTS:\n- Diagrams: flow charts, circular patterns, hierarchical structures\n- Symbols: glyphs, runes, geometric shapes, elemental icons\n- Energy flows: connections, channels, nodes, barriers\n- Abstract representations: balance scales, interlocking forces, transformation cycles",
-          "visualThesisFraming": "This is a MAGICAL SYSTEM or RULE - describe the abstract visual representation of how this system works.\n\nFocus on: diagrams, symbols, energy flows, conceptual structures.\nThis is ABSTRACT - not a scene, not a character, but a visualization of a principle.",
-          "visualTraitsInstructions": "You're adding detail to a magic system diagram.\n\nThe thesis defines the core visual concept. Your job is to add 2-4 ADDITIONAL symbolic or diagrammatic elements that clarify how the system works.\n\nThink RPG rulebook illustrations: what secondary symbols, flows, or annotations make the system clearer?",
-          "visualTraitsFraming": "This is a MAGICAL SYSTEM - traits should describe additional abstract elements (symbols, flows, connections, visual metaphors for the rules)."
-        }
-      },
-      "artifact": {
-        "description": {
-          "instructions": "This is an artifact in {{world.name}}. Focus on what it HAS DONE, not just what it IS.\n\nWho created or discovered it:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nThe {{entity.prominence}} indicates how famous it is. The {{entity.status}} shows its current condition.\n\nARTIFACT VOICE:\n- Start with a physical detail that tells a story - a notch in the blade, a stain that won't come out, a crack that appeared after a specific use\n- Artifacts earn their legends. What did this object DO that made it famous? Name a death, a victory, a betrayal.\n- Include the cost. Powerful things demand something. What has this artifact taken from its wielders?\n- Show the weight of history in how it's described - who held it last, who refuses to touch it, what happens to those who carry it too long\n- If it's lost, show why no one has retrieved it. If it's held, show why no one has stolen it.\n\nAvoid: 'said to possess,' 'legends speak of,' 'those who wield it,' 'great power,' 'ancient and mysterious'"
-        },
-        "image": {
-          "imageInstructions": "The main subject is an ARTIFACT or magical object. Create a detailed study of the item as if it were being catalogued in a museum or bestiary. Show the object in isolation or on a pedestal/display, emphasizing its unique features and craftsmanship.",
-          "visualThesisInstructions": "You design legendary items for a fantasy RPG or video game.\n\nThe visual thesis captures what makes THIS artifact instantly recognizable - its defining visual feature.\n\nARTIFACT ELEMENTS:\n- Form: sword, staff, orb, tome, crown, amulet, ring, gauntlet\n- Material: crystal, ice, bone, gold, shadow-metal, aurora-glass\n- Enchantment effects: glowing runes, emanating light, floating particles, frost crystals\n- Signs of age/power: weathering, cracks, embedded gems, inscriptions",
-          "visualThesisFraming": "This is an ARTIFACT or magical item - describe its primary visual form and distinguishing feature.\n\nFocus on: shape, material, enchantment effects, signs of power.\nThis should represent the OBJECT itself, not someone holding it.",
-          "visualTraitsInstructions": "You're adding detail to an artifact design brief.\n\nThe thesis defines the primary form. Your job is to add 2-4 ADDITIONAL visual details that make this artifact distinctive.\n\nThink legendary item design: what secondary details, inscriptions, or magical effects make it memorable?",
-          "visualTraitsFraming": "This is an ARTIFACT - traits should describe additional visual elements (material details, magical effects, inscriptions, ornamental features)."
-        }
-      }
+      "imageInstructions": "The main subject is a PLACE. Create an environmental shot that captures the atmosphere and character of this location. Include architectural or natural details that make it feel like a real, lived-in space.",
+      "imageAvoid": "Characters as primary focus. Empty sterile spaces without signs of use or history."
     },
-    "cultureVisualIdentities": {
+
+    "faction": {
+      "focus": "Every faction has a founding wound - the injustice, defeat, or loss that forged them. Reference it. Show the internal tensions: what do hardliners want vs pragmatists? Include what the faction has DONE - not just what they believe. Actions, not mission statements. Outsiders' views should include fear, contempt, or grudging respect - not neutral acknowledgment. Some factions survive on stubbornness more than purpose. Some on dark humor. Some on spite.",
+      "relationshipUse": "Show the culture of belonging - the in-jokes, the shared complaints, the rituals that outsiders find baffling. Include one detail of loyalty that persists despite everything: members who hate the leadership but won't leave, rivals who'd still fight for each other. What do members say about the faction when they're drunk? What do they never say?",
+      "proseHint": "Show the culture of belonging - in-jokes, shared complaints, rituals that outsiders find baffling. What do members say when drunk?",
+      "visualThesis": {
+        "domain": "You design faction identity for a strategy game or worldbuilding project. The visual thesis captures the faction's ESSENCE in one iconic visual - what makes them instantly recognizable as a group.",
+        "focus": "FACTION IDENTITY ELEMENTS:\n- Symbols: banners, insignias, heraldic devices, sacred objects\n- Architecture: headquarters, meeting halls, monuments, fortifications\n- Regalia: ceremonial dress, uniforms, shared equipment\n- Gathering: council formation, ritual arrangement, military display",
+        "framing": "This is a FACTION or ORGANIZATION - describe the visual element that defines their collective identity.\n\nFocus on: symbols, architecture, ceremonial objects, group formations.\nThis should represent the GROUP, not an individual member."
+      },
+      "visualTraits": {
+        "domain": "You're adding detail to a faction design brief. The thesis defines the primary visual identity. Your job is to add 2-4 ADDITIONAL elements that reinforce what this faction stands for. Think faction design in strategy games: what secondary symbols, colors, or motifs make them distinctive?",
+        "focus": "Secondary symbols, colors, motifs, architectural details that reinforce faction identity.",
+        "framing": "This is a FACTION - traits should describe additional elements of collective identity (symbols, colors, architectural details, ceremonial objects)."
+      },
+      "imageInstructions": "The main subject is an ORGANIZATION. Choose one of: a council of leaders, the faction's headquarters, their banner or symbol, or a representative member in ceremonial attire. The image should convey collective identity and purpose.",
+      "imageAvoid": "Generic group shots. Individual portraits that don't convey faction identity."
+    },
+
+    "occurrence": {
+      "focus": "Focus on what was LOST, BROKEN, or CHANGED FOREVER - not lessons learned. Name the dead or the cost. History is paid for. Capture one visceral detail - the smell, the sound, the thing someone dropped and never picked up. Don't explain significance - let the facts do the work. Not every event is tragedy. Some are darkly comic. Some are just exhausting.",
+      "relationshipUse": "Show how survivors remember it - the dark jokes they tell, the things they won't discuss. Include one detail of stubborn loyalty or absurd kindness amid chaos. Someone carried someone else. Someone went back. Someone still flinches at a certain sound.",
+      "proseHint": "Show how survivors remember it - the dark jokes they tell, the things they won't discuss. Someone still flinches at a certain sound.",
+      "visualThesis": {
+        "domain": "You design key frames for historical moments in an animated film or graphic novel. The visual thesis captures the PIVOTAL MOMENT - the single frame that would represent this event in a history book.",
+        "focus": "EVENT COMPOSITION ELEMENTS:\n- Action: the central dramatic gesture or movement\n- Stakes: visual tension showing what's at risk\n- Scale: intimate confrontation vs epic battlefield vs cosmic phenomenon\n- Aftermath indicators: smoke, debris, fallen figures, changed landscape",
+        "framing": "This is an EVENT or OCCURRENCE - describe the pivotal visual moment that defines this event.\n\nFocus on: action, tension, scale, consequences.\nCapture the MOMENT, not a static scene."
+      },
+      "visualTraits": {
+        "domain": "You're adding detail to an event illustration brief. The thesis defines the central dramatic moment. Your job is to add 2-4 ADDITIONAL visual elements that reinforce the event's significance. Think key frame illustration: what environmental details, secondary actions, or atmospheric effects enhance the drama?",
+        "focus": "Environmental details, secondary actions, atmospheric effects that enhance the drama.",
+        "framing": "This is an EVENT - traits should describe additional dramatic elements (environmental effects, secondary actions, atmospheric conditions, visual stakes)."
+      },
+      "imageInstructions": "The main subject is an EVENT. Create a dramatic scene capturing the pivotal moment. Show the action as if witnessed firsthand - triumphant, tragic, or transformative.",
+      "imageAvoid": "Static posed scenes. Before/after comparisons. Abstract representations of events."
+    },
+
+    "era": {
+      "focus": "Eras are defined by what they cost, not what they achieved. Name the central tension that couldn't be resolved - the thing everyone argued about, the wound that wouldn't close. Don't frame eras as 'dark' or 'golden' - show the texture. Golden ages have rot beneath. Dark ages have stubborn hope. Some eras are remembered fondly by exactly the wrong people.",
+      "relationshipUse": "What did people hold onto? A song, a ritual, a grudge, a joke that stopped being funny. Show the absurdity of endurance - the things people did to stay sane, the dark humor that got them through. Include one detail of connection that persisted: a trade that continued despite war, a friendship across enemy lines, a tradition no one remembers the origin of.",
+      "proseHint": "Show the absurdity of endurance - what people did to stay sane, the dark humor that got them through. A trade that continued despite war.",
+      "visualThesis": {
+        "domain": "You design chapter headers and era illustrations for a history book or fantasy chronicle. The visual thesis captures the SPIRIT OF THE AGE - what single symbolic image represents this time period?",
+        "focus": "ERA VISUALIZATION ELEMENTS:\n- Symbolic landscapes: rising/setting suns, storms gathering, seasons changing\n- Architectural states: cities rising, ruins crumbling, monuments being built\n- Atmospheric conditions: golden age light, dark age shadows, transitional twilight\n- Emblematic objects: crowns, weapons, tools, symbols of the era's defining activity",
+        "framing": "This is an ERA or TIME PERIOD - describe the symbolic visual that captures the spirit of this age.\n\nFocus on: symbolic imagery, atmospheric mood, emblematic objects.\nThis is SYMBOLIC - not a specific moment, but the essence of an entire period."
+      },
+      "visualTraits": {
+        "domain": "You're adding detail to an era illustration. The thesis defines the central symbolic image. Your job is to add 2-4 ADDITIONAL visual elements that reinforce the era's character. Think history book chapter headers: what secondary symbols, atmospheric details, or visual metaphors enhance the mood?",
+        "focus": "Secondary symbols, atmospheric details, visual metaphors for the age's character.",
+        "framing": "This is an ERA - traits should describe additional symbolic elements (atmospheric effects, secondary symbols, visual metaphors for the age's character)."
+      },
+      "imageInstructions": "The main subject is a TIME PERIOD. Create a symbolic or panoramic scene that captures the spirit of this era. Use visual metaphor - rising sun, gathering storm, crumbling walls - to convey the age's defining mood.",
+      "imageAvoid": "Specific dated events. Individual character portraits. Literal historical scenes."
+    },
+
+    "artifact": {
+      "focus": "Focus on what it HAS DONE, not just what it IS. Start with a physical detail that tells a story - a notch in the blade, a stain that won't come out, a crack that appeared after a specific use. Artifacts earn their legends. What did this object DO that made it famous? Name a death, a victory, a betrayal. Include the cost - powerful things demand something. What has this artifact taken from its wielders? Show the weight of history: who held it last, who refuses to touch it, what happens to those who carry it too long.",
+      "relationshipUse": "If it's lost, show why no one has retrieved it. If it's held, show why no one has stolen it. The relationships around an artifact reveal its true nature.",
+      "proseHint": "Show the weight of history - who held it last, who refuses to touch it. The cost of wielding it.",
+      "visualThesis": {
+        "domain": "You design legendary items for a fantasy RPG or video game. The visual thesis captures what makes THIS artifact instantly recognizable - its defining visual feature.",
+        "focus": "ARTIFACT ELEMENTS:\n- Form: sword, staff, orb, tome, crown, amulet, ring, gauntlet\n- Material: crystal, ice, bone, gold, shadow-metal, aurora-glass\n- Enchantment effects: glowing runes, emanating light, floating particles, frost crystals\n- Signs of age/power: weathering, cracks, embedded gems, inscriptions",
+        "framing": "This is an ARTIFACT or magical item - describe its primary visual form and distinguishing feature.\n\nFocus on: shape, material, enchantment effects, signs of power.\nThis should represent the OBJECT itself, not someone holding it."
+      },
+      "visualTraits": {
+        "domain": "You're adding detail to an artifact design brief. The thesis defines the primary form. Your job is to add 2-4 ADDITIONAL visual details that make this artifact distinctive. Think legendary item design: what secondary details, inscriptions, or magical effects make it memorable?",
+        "focus": "Secondary details, inscriptions, magical effects that make the artifact distinctive.",
+        "framing": "This is an ARTIFACT - traits should describe additional visual elements (material details, magical effects, inscriptions, ornamental features)."
+      },
+      "imageInstructions": "The main subject is an ARTIFACT or magical object. Create a detailed study of the item as if it were being catalogued in a museum or bestiary. Show the object in isolation or on a pedestal/display, emphasizing its unique features and craftsmanship.",
+      "imageAvoid": "Characters holding the artifact. Action scenes. The artifact as a small detail in a larger scene."
+    },
+
+    "abilities": {
+      "focus": "Focus on how the magic MANIFESTS and what it COSTS. Magic should feel dangerous or strange, not convenient.",
+      "relationshipUse": "Who taught this? Who fears it? Who died learning it wrong?",
+      "proseHint": "Show the physical sensation of magic - what it smells like, sounds like, what it takes from the user.",
+      "visualThesis": {
+        "domain": "You design VFX and magical effects for a video game or animated film. The visual thesis is what makes THIS magic visually distinct from other powers. Think spell effects in a fighting game - each power has a unique visual signature.",
+        "focus": "VFX ELEMENTS:\n- Energy patterns: spirals, fractals, geometric shapes, organic flows\n- Elemental forms: ice crystals, fire tongues, light beams, shadow tendrils\n- Manifestation style: explosive, creeping, pulsing, steady glow\n- Scale and intensity: subtle shimmer vs massive eruption",
+        "framing": "This is a MAGICAL ABILITY or POWER - describe how the magic MANIFESTS, not a character using it.\n\nFocus on: energy patterns, visual effects, elemental forms, the shape of the magic itself.\nDO NOT describe a character wearing gear or holding items."
+      },
+      "visualTraits": {
+        "domain": "You're adding detail to a VFX design brief for a magical power. The thesis defines the primary visual effect. Your job is to add 2-4 ADDITIONAL visual properties that make this magic distinctive. Think video game spell effects: what secondary particles, afterimages, or environmental reactions make this power unique?",
+        "focus": "Secondary particles, afterimages, environmental reactions that make this power unique.",
+        "framing": "This is a MAGICAL ABILITY - traits should describe additional visual properties of the magic effect itself."
+      },
+      "imageInstructions": "The main subject is a MAGICAL POWER or ability. Focus on the manifestation of the power itself, not on characters using it. Show energy, effects, or the visual signature of this magic in action.",
+      "imageAvoid": "Characters as the focus. Static representations of magic. Abstract symbols alone."
+    },
+
+    "rules": {
+      "focus": "Focus on how the rule CONSTRAINS or ENABLES. Magic systems should feel like they have costs and limits.",
+      "relationshipUse": "Who enforces this rule? Who breaks it? What happens to those who test its limits?",
+      "proseHint": "Show the rule through its exceptions - who has broken it, what happened when they did.",
+      "visualThesis": {
+        "domain": "You design magic system diagrams and abstract visualizations for a fantasy RPG rulebook. The visual thesis captures the FUNDAMENTAL PRINCIPLE - how does this rule or system manifest visually?",
+        "focus": "SYSTEM VISUALIZATION ELEMENTS:\n- Diagrams: flow charts, circular patterns, hierarchical structures\n- Symbols: glyphs, runes, geometric shapes, elemental icons\n- Energy flows: connections, channels, nodes, barriers\n- Abstract representations: balance scales, interlocking forces, transformation cycles",
+        "framing": "This is a MAGICAL SYSTEM or RULE - describe the abstract visual representation of how this system works.\n\nFocus on: diagrams, symbols, energy flows, conceptual structures.\nThis is ABSTRACT - not a scene, not a character, but a visualization of a principle."
+      },
+      "visualTraits": {
+        "domain": "You're adding detail to a magic system diagram. The thesis defines the core visual concept. Your job is to add 2-4 ADDITIONAL symbolic or diagrammatic elements that clarify how the system works. Think RPG rulebook illustrations: what secondary symbols, flows, or annotations make the system clearer?",
+        "focus": "Secondary symbols, flows, annotations that clarify the system.",
+        "framing": "This is a MAGICAL SYSTEM - traits should describe additional abstract elements (symbols, flows, connections, visual metaphors for the rules)."
+      },
+      "imageInstructions": "The main subject is a MAGICAL SYSTEM or rule. Create an abstract or symbolic representation that conveys how this magic works - perhaps glyphs, energy flows, or the interaction of elemental forces.",
+      "imageAvoid": "Specific characters. Narrative scenes. Literal depictions of magic use."
+    }
+  },
+
+  "cultureIdentities": {
+    "visual": {
       "orca": {
         "SPECIES": "Apex predators. Size and scarification vary by role - raiders lean and scarred, shamans massive and unmarked, warriors somewhere between. Posture ranges from coiled ambush stillness to rigid military display.",
+        "ATTIRE": "Minimal - orcas wear function, not fashion. Raiders: kelp-rope harnesses for carrying weapons, nothing else. Warriors: bone-plated shoulder guards, tooth-string bandoliers. Shamans: ceremonial whale-bone headdresses, kelp cloaks heavy with salt. Kill-trophies worn as status: penguin beaks on cords, enemy fins dried and strapped to flanks. No fabric - everything is leather, bone, kelp, or trophy.",
         "ARCHITECTURE": "No permanent structures. Temporary hunting camps marked by kelp-rope barriers, bone totems, skull warnings. Sacred spaces are natural formations claimed, not built.",
         "TECH": "Ocean-current weaponry - shock-lances, current-whips, pressure harpoons. Equipment is brutal and functional. Trophy display varies: some drape kills, others maintain austere discipline.",
         "MAGIC": "Blood and pressure. Rituals leave physical marks - scarification, tooth-notching, fin-splitting. Magic manifests as water distortion, pressure waves, cold spots. Dead god symbols are ancient, half-forgotten, inconsistently applied.",
@@ -135,7 +176,8 @@
         "DECAY_PATTERN": "Orca things don't decay - they're consumed. Equipment is used until destroyed, then scavenged. Trophies are preserved in salt and pressure. Abandoned camps leave only bone totems that bleach white over decades."
       },
       "nightshelf": {
-        "SPECIES": "Cave-adapted penguins. Builds range from compact tunnel-runners to broader cavern-dwellers. Bone and crystal mark status but placement varies - some favor crowns, others belts, others hidden talismans. Dress ranges from heavy wrappings to minimal stealth-wear.",
+        "SPECIES": "Cave-adapted penguins. Builds range from compact tunnel-runners to broader cavern-dwellers. Bone and crystal mark status but placement varies - some favor crowns, others belts, others hidden talismans.",
+        "ATTIRE": "Layered for warmth and utility. Common: heavy fur-lined wraps in charcoal and ember-brown, leather aprons for forge-workers, hooded cloaks for tunnel travel. Status markers: fire-core amulets at the throat, ancestor-bone clasps, bioluminescent thread embroidery visible only in darkness. Stealth-workers: minimal black wrappings, bare flippers for grip. Guild masters: ornate leather coats with brass fittings, multiple tool-belts. Ceremonial: ash-gray robes with glowing ember-thread hems. No bright colors - everything absorbs light.",
         "ARCHITECTURE": "Subterranean networks mixing natural caverns and carved tunnels. Bioluminescent accents and fire-braziers for light. Sacred spaces go deeper and darker. Public areas glow; private areas don't.",
         "TECH": "Captured elemental fire drives everything - braziers, forges, engines. Steampunk aesthetic but visibility varies: lamp-bearers are obvious, shadow-workers hide their gear. Bone integrated as structural material and decoration.",
         "MAGIC": "Ice and fire in tension. Practical applications over spectacle. Magic users often understated - subtle warmth, quiet frost. Rituals happen in darkness. Effects are felt before seen.",
@@ -147,6 +189,7 @@
       },
       "aurora-stack": {
         "SPECIES": "Open-ice penguins. Posture tends tall and proud but varies by role - merchants bustle, mystics stand still, soldiers brace. Crystalline ice integrated into equipment at varying degrees - some carry staves, others wear jewelry, others embed it in armor or tools.",
+        "ATTIRE": "Elegant and layered against the wind. Common: flowing white and silver robes with aurora-glass clasps, fur-trimmed hoods for storms. Soldiers: ice-plate armor with crystalline pauldrons, aurora-charged bracers. Mystics: sheer ceremonial gowns that catch and refract aurora-light, crystal circlets. Merchants: practical but fine - embroidered coats, silver thread, subtle status gems. Airship crews: tight-wrapped wind-gear, goggles, harnesses. All favor pale colors - whites, silvers, ice-blues, soft golds. Fire colors are avoided as Nightshelf markers.",
         "ARCHITECTURE": "Vertical ice spires with open-air galleries designed to catch aurora-light. Elegant and organic-looking but clearly engineered. Public spaces soar; private quarters are modest cells within the ice.",
         "TECH": "Ice-magic fusion powers everything. Crystalline conductors, aurora-charged capacitors. Prefer blunt and crushing weapons to blades. Airship crews dress for wind; wall-builders dress for cold; merchants dress for impression.",
         "MAGIC": "Pure ice channeling. Adepts glow faintly from within - intensity varies by power level. Magic manifests as crystalline growth, temperature drops, aurora-reflection. Mundane members show no glow but may carry charged equipment.",
@@ -168,84 +211,7 @@
         "DECAY_PATTERN": "The Berg does not decay - it transforms. Ice becomes water becomes ice. Crevasses open and close over centuries. Nothing is destroyed, only moved, compressed, or frozen deeper. The only true decay is melting, and the berg resists that with something like will."
       }
     },
-    "visualIdentityKeysByKind": {
-      "npc": [
-        "SPECIES",
-        "MAGIC",
-        "TECH"
-      ],
-      "location": [
-        "SPECIES",
-        "ARCHITECTURE"
-      ],
-      "faction": [
-        "SPECIES",
-        "ARCHITECTURE",
-        "TECH"
-      ],
-      "occurrence": [
-        "SPECIES",
-        "WEATHER_ASSOCIATION",
-        "COLOR_PALETTE"
-      ],
-      "abilities": [
-        "TECH",
-        "MAGIC"
-      ],
-      "rules": [
-        "ARCHITECTURE",
-        "TECH"
-      ],
-      "artifact": [
-        "ARTIFACT",
-        "TECH",
-        "MAGIC"
-      ],
-      "era": [
-        "ARCHITECTURE",
-        "WEATHER_ASSOCIATION",
-        "DECAY_PATTERN"
-      ]
-    },
-    "descriptiveIdentityKeysByKind": {
-      "npc": [
-        "VALUES",
-        "SPEECH",
-        "FEARS",
-        "TABOOS"
-      ],
-      "faction": [
-        "VALUES",
-        "GOVERNANCE",
-        "SELF_VIEW",
-        "OUTSIDER_VIEW"
-      ],
-      "location": [
-        "FEARS",
-        "TABOOS"
-      ],
-      "occurrence": [
-        "SPEECH",
-        "OUTSIDER_VIEW"
-      ],
-      "era": [
-        "GOVERNANCE",
-        "SELF_VIEW"
-      ],
-      "abilities": [
-        "SPEECH",
-        "TABOOS"
-      ],
-      "rules": [
-        "GOVERNANCE",
-        "OUTSIDER_VIEW"
-      ],
-      "artifact": [
-        "SPEECH",
-        "TABOOS"
-      ]
-    },
-    "cultureDescriptiveIdentities": {
+    "descriptive": {
       "aurora-stack": {
         "VALUES": "Harmony, patience, collective welfare over individual glory. They believe the aurora judges all actions and that pride invites the cold.",
         "SPEECH": "Formal, measured, rich with astronomical metaphors. They speak of 'cycles' not 'time,' 'alignments' not 'agreements.' Elders are addressed by their position in family constellation-charts.",
@@ -282,8 +248,29 @@
         "FEARS": "If The Berg fears, it fears melting. Or perhaps it fears waking.",
         "TABOOS": "Some say drilling too deep angers the ice. Some say this is superstition. The Nightshelf stopped drilling at a certain point and won't say why."
       }
+    },
+    "visualKeysByKind": {
+      "npc": ["SPECIES", "ATTIRE", "MAGIC", "TECH"],
+      "location": ["SPECIES", "ARCHITECTURE"],
+      "faction": ["SPECIES", "ATTIRE", "ARCHITECTURE", "TECH"],
+      "occurrence": ["SPECIES", "WEATHER_ASSOCIATION", "COLOR_PALETTE"],
+      "abilities": ["TECH", "MAGIC"],
+      "rules": ["ARCHITECTURE", "TECH"],
+      "artifact": ["ARTIFACT", "TECH", "MAGIC"],
+      "era": ["ARCHITECTURE", "WEATHER_ASSOCIATION", "DECAY_PATTERN"]
+    },
+    "descriptiveKeysByKind": {
+      "npc": ["VALUES", "SPEECH", "FEARS", "TABOOS"],
+      "faction": ["VALUES", "GOVERNANCE", "SELF_VIEW", "OUTSIDER_VIEW"],
+      "location": ["FEARS", "TABOOS"],
+      "occurrence": ["SPEECH", "OUTSIDER_VIEW"],
+      "era": ["GOVERNANCE", "SELF_VIEW"],
+      "abilities": ["SPEECH", "TABOOS"],
+      "rules": ["GOVERNANCE", "OUTSIDER_VIEW"],
+      "artifact": ["SPEECH", "TABOOS"]
     }
   },
+
   "enrichmentConfig": {
     "textModel": "claude-haiku-4-5-20251001",
     "chronicleModel": "claude-haiku-4-5-20251001",
@@ -294,8 +281,9 @@
     "numWorkers": 4,
     "requireDescription": true,
     "useClaudeForImagePrompt": true,
-    "claudeImagePromptTemplate": "Transform the below knowledge graph into a single, coherent image prompt for {{modelName}}. Do NOT simply reformat—actively synthesize and reshape:\n\nExtract the core visual essence: Identify the single most compelling visual moment or aspect of this entity. Discard extraneous metadata.\nTranslate non-visual data into visual directives:\n\nConvert abstract concepts (magic, history, relationships) into concrete visual metaphors\nTurn status/prominence into visual hierarchy and focus\nMake any fantastical/non-standard elements explicit visual directives (size, material, form)\n\nBuild a coherent artistic vision: Combine STYLE + SUBJECT + TONE into a unified visual strategy. Make these reinforce each other, not just coexist.\nEstablish clear composition and perspective:\n\nChoose a specific vantage point (macro, wide-establishing, intimate detail, aerial, etc.)\nDecide what the viewer is meant to feel spatially\nUse environmental storytelling (objects, weathering, traces) to convey history\n\nCreate specific visual instructions: Rather than listing adjectives, use concrete visual language: \"weathered by decades of X,\" \"visible scars of Y,\" \"rendered in the style of Z but with the emotional weight of W\"\nCondense to a single, authoritative prompt: Output should be 150-300 words, reading as a clear artistic direction that could be handed to a concept artist—not a bulleted list or knowledge base entry.\n\nOriginal prompt:\n{{prompt}}"
+    "claudeImagePromptTemplate": "Transform the structured prompt below into a single, coherent image prompt for {{modelName}}. Do NOT simply reformat—actively synthesize and reshape:\n\nHonor the VISUAL THESIS: This is the primary visual signal. The thesis describes the dominant silhouette feature that makes this entity instantly recognizable. Build the entire image around it.\n\nSynthesize, don't list:\n- Merge SUBJECT + CONTEXT + CULTURAL IDENTITY into a unified visual\n- Apply STYLE (artistic approach) and COMPOSITION (framing/perspective) to shape the rendering\n- Translate SUPPORTING TRAITS into concrete visual details that reinforce the thesis\n- Incorporate COLOR PALETTE if provided\n\nEstablish clear composition and perspective:\n- Honor the COMPOSITION directive for framing and vantage point\n- Use environmental storytelling (objects, weathering, traces) to convey history\n- The SETTING provides world context but the subject is the focus\n\nCreate specific visual instructions: Rather than listing adjectives, use concrete visual language: \"weathered by decades of X,\" \"visible scars of Y,\" \"rendered in the style of Z\"\n\nRespect the AVOID list: These are hard constraints—elements that break the visual language.\n\nCondense to a single, authoritative prompt: Output should be 150-300 words, reading as clear artistic direction that could be handed to a concept artist—not a bulleted list.\n\nOriginal prompt:\n{{prompt}}"
   },
+
   "styleSelection": {
     "artisticStyleId": "hdr-nature-photography",
     "compositionStyleId": "action-battle"

@@ -90,7 +90,6 @@ export interface UseChronicleGenerationReturn {
   correctSuggestions: (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
   generateSummary: (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
   generateImageRefs: (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
-  blendProse: (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
   revalidateChronicle: (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
   acceptChronicle: (chronicleId: string, entities: WikiLinkEntity[]) => Promise<AcceptedChronicle | null>;
   restartChronicle: (chronicleId: string) => Promise<void>;
@@ -185,6 +184,12 @@ function serializeContext(
 
     // Name bank for invented characters
     nameBank: context.nameBank,
+
+    // Prose hints for entity kinds
+    proseHints: context.proseHints,
+
+    // Cultural identities for cultures
+    culturalIdentities: context.culturalIdentities,
   };
   return serialized;
 }
@@ -490,38 +495,6 @@ export function useChronicleGeneration(
     [chronicles, onEnqueue, buildEntityRef]
   );
 
-  const blendProse = useCallback(
-    (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
-      const chronicle = chronicles.get(chronicleId);
-      if (!chronicle) {
-        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
-        return;
-      }
-      if (chronicle.finalContent) {
-        console.error('[Chronicle] Prose blending is only available before acceptance');
-        return;
-      }
-      if (!chronicle.assembledContent) {
-        console.error('[Chronicle] No assembled content to blend');
-        return;
-      }
-      if (!narrativeStyle) {
-        console.error('[Chronicle] Narrative style required to blend prose');
-        return;
-      }
-
-      onEnqueue([{
-        entity: buildEntityRef(chronicleId, context, chronicle),
-        type: 'entityChronicle' as EnrichmentType,
-        prompt: '',
-        chronicleContext: serializeContext(context, narrativeStyle),
-        chronicleStep: 'prose_blend',
-        chronicleId,
-      }]);
-    },
-    [chronicles, onEnqueue, buildEntityRef]
-  );
-
   const revalidateChronicle = useCallback(
     (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
       const chronicle = chronicles.get(chronicleId);
@@ -631,7 +604,6 @@ export function useChronicleGeneration(
     correctSuggestions,
     generateSummary,
     generateImageRefs,
-    blendProse,
     revalidateChronicle,
     acceptChronicle,
     restartChronicle,
