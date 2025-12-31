@@ -97,7 +97,7 @@ export function MutationCard({
       case 'change_status':
         return `${mutation.entity || '?'} -> ${mutation.newStatus || '?'}`;
       case 'adjust_prominence':
-        return `${mutation.entity || '?'} ${mutation.direction || 'up'}`;
+        return `${mutation.entity || '?'} ${formatDelta(mutation.delta)}`;
       case 'archive_relationship': {
         const withLabel = mutation.with ? ` with ${mutation.with}` : '';
         return `${mutation.entity || '?'} ${mutation.relationshipKind || '?'}${withLabel}`;
@@ -252,15 +252,14 @@ export function MutationCard({
                   options={entityRefs}
                   placeholder="Select entity..."
                 />
-                <ReferenceDropdown
-                  label="Direction"
-                  value={mutation.direction || 'up'}
-                  onChange={(v) => update('direction', v)}
-                  options={[
-                    { value: 'up', label: 'Up' },
-                    { value: 'down', label: 'Down' },
-                  ]}
-                />
+                <div className="form-group">
+                  <label className="label">Delta</label>
+                  <NumberInput
+                    value={mutation.delta}
+                    onChange={(v) => update('delta', v ?? 0)}
+                    placeholder="e.g., 0.25 or -0.15"
+                  />
+                </div>
               </>
             )}
 

@@ -46,7 +46,7 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
             {rule.condition?.operator || '>='} {rule.condition?.threshold || '?'}
           </div>
           <div className="item-card-subtitle">
-            {rule.action?.type} - {(rule.probability * 100).toFixed(0)}% chance
+            {rule.action?.type} ({rule.action?.delta >= 0 ? '+' : ''}{rule.action?.delta ?? '?'}) - {(rule.probability * 100).toFixed(0)}% chance
           </div>
         </div>
         <div className="item-card-actions">
@@ -128,15 +128,14 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
                 />
               )}
               {rule.action?.type === 'adjust_prominence' && (
-                <ReferenceDropdown
-                  label="Direction"
-                  value={rule.action?.direction || 'up'}
-                  onChange={(v) => updateAction('direction', v)}
-                  options={[
-                    { value: 'up', label: 'Up' },
-                    { value: 'down', label: 'Down' },
-                  ]}
-                />
+                <div className="form-group">
+                  <label className="label">Delta</label>
+                  <NumberInput
+                    value={rule.action?.delta}
+                    onChange={(v) => updateAction('delta', v ?? 0)}
+                    placeholder="e.g., 0.25 or -0.15"
+                  />
+                </div>
               )}
               {rule.action?.type === 'create_relationship' && (
                 <>
@@ -285,7 +284,7 @@ export function ConnectionEvolutionTab({ system, onChange, schema }) {
     updateConfig('rules', [...rules, {
       condition: { operator: '>=', threshold: 1 },
       probability: 0.1,
-      action: { type: 'adjust_prominence', entity: '$self', direction: 'up' },
+      action: { type: 'adjust_prominence', entity: '$self', delta: 0.2 },
     }]);
   };
 

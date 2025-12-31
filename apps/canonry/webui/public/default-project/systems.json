@@ -156,7 +156,7 @@
             "threshold": 5,
             "multiplier": 6
           },
-          "probability": 0.1,
+          "probability": 0.7,
           "action": {
             "type": "adjust_prominence",
             "delta": 0.2,
@@ -168,7 +168,7 @@
             "operator": "<=",
             "threshold": 2
           },
-          "probability": 0.35,
+          "probability": 0.8,
           "action": {
             "type": "adjust_prominence",
             "delta": -0.15,
@@ -176,7 +176,7 @@
           }
         }
       ],
-      "throttleChance": 0.3,
+      "throttleChance": 0.15,
       "selection": {
         "strategy": "by_kind",
         "kind": "any"
@@ -1171,7 +1171,7 @@
             "operator": ">=",
             "threshold": 1
           },
-          "probability": 0.12,
+          "probability": 0.7,
           "action": {
             "type": "adjust_prominence",
             "delta": 0.2,
@@ -1183,7 +1183,7 @@
             "operator": "<=",
             "threshold": 0
           },
-          "probability": 0.4,
+          "probability": 0.8,
           "action": {
             "type": "adjust_prominence",
             "delta": -0.15,
@@ -1191,7 +1191,7 @@
           }
         }
       ],
-      "throttleChance": 0.3,
+      "throttleChance": 0.15,
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
@@ -1233,7 +1233,7 @@
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.4,
+      "throttleChance": 0.2,
       "selection": {
         "strategy": "by_kind",
         "kind": "abilities",

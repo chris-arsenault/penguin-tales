@@ -969,7 +969,7 @@ export class GraphStore implements Graph {
       }
 
       // Track other field changes (status, prominence, etc.)
-      const trackedFields = ['status', 'prominence', 'culture', 'description'] as const;
+      const trackedFields = ['status', 'prominence', 'culture'] as const;
       for (const field of trackedFields) {
         if (field in changes && changes[field] !== entity[field]) {
           this.mutationTracker.recordFieldChanged(

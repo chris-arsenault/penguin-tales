@@ -180,7 +180,7 @@ export function ThresholdTriggerTab({ system, onChange, schema, pressures }) {
       case 'change_status':
         return { type: 'change_status', entity: '$self', newStatus: '' };
       case 'adjust_prominence':
-        return { type: 'adjust_prominence', entity: '$self', direction: 'up' };
+        return { type: 'adjust_prominence', entity: '$self', delta: 0.25 };
       case 'archive_relationship':
         return { type: 'archive_relationship', entity: '$self', relationshipKind: '', direction: 'both' };
       case 'adjust_relationship_strength':
