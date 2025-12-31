@@ -105,9 +105,13 @@ export type {
   CoordinateState,
   DistributionMetrics,
   GraphMetrics,
+  ReachabilityMetrics,
   Validation,
   ValidationResult,
   EntityTags,
+  // Lineage system (see apps/lore-weave/lib/narrative/LINEAGE.md)
+  ExecutionContext,
+  ExecutionSource,
 } from './world.js';
 
 // Project types

@@ -677,6 +677,45 @@ const CAPITALIZATION_MODIFIERS: Record<string, TokenCapitalization> = {
 const DERIVATION_MODIFIERS = new Set(["er", "est", "ing", "ed", "poss", "comp"]);
 
 /**
+ * Truncation modifiers: ~chopL, ~chopR, ~chop
+ *
+ * These remove 1-3 characters from words to create truncated/whispered names:
+ * - ~chopL: remove 1-3 chars from left/start (silent → ent, lent, ilent)
+ * - ~chopR: remove 1-3 chars from right/end (shadow → shado, shad, sha)
+ * - ~chop: randomly choose left or right truncation
+ */
+type TruncationType = "chopL" | "chopR" | "chop";
+const TRUNCATION_MODIFIERS = new Set<string>(["chopL", "chopR", "chop"]);
+
+function isTruncationType(s: string): s is TruncationType {
+  return TRUNCATION_MODIFIERS.has(s);
+}
+
+/**
+ * Apply truncation to a string, removing 1-3 characters from start or end.
+ * Ensures at least 2 characters remain.
+ */
+function applyTruncation(str: string, type: TruncationType, rng: () => number): string {
+  if (str.length <= 3) return str; // Don't truncate very short strings
+
+  const maxChop = Math.min(3, str.length - 2); // Keep at least 2 chars
+  const chopAmount = 1 + Math.floor(rng() * maxChop);
+
+  switch (type) {
+    case "chopL":
+      return str.slice(chopAmount);
+    case "chopR":
+      return str.slice(0, -chopAmount);
+    case "chop":
+      return rng() > 0.5
+        ? str.slice(chopAmount)
+        : str.slice(0, -chopAmount);
+    default:
+      return str;
+  }
+}
+
+/**
  * Marker format for deferred token capitalization.
  * Using Unicode private use area characters to avoid conflicts.
  */
@@ -729,23 +768,26 @@ function applyTokenCapitalization(str: string, modifier: TokenCapitalization): s
 
 /**
  * Parsed modifiers from a token pattern.
- * Supports chaining: "slot:foo~er~cap" → derivation: "er", capitalization: "cap"
+ * Supports chaining: "slot:foo~er~chopL~cap" → derivation: "er", truncation: "chopL", capitalization: "cap"
  */
 interface ParsedModifiers {
   pattern: string;
   derivation: DerivationType | null;
+  truncation: TruncationType | null;
   capitalization: TokenCapitalization | null;
 }
 
 /**
  * Parse and remove all modifiers from a pattern.
- * Modifiers are processed right-to-left, supporting chains like "slot:foo~er~cap".
+ * Modifiers are processed right-to-left, supporting chains like "slot:foo~er~chopL~cap".
  *
- * E.g., "slot:foo~cap" → { pattern: "slot:foo", derivation: null, capitalization: "cap" }
- * E.g., "slot:foo~er~cap" → { pattern: "slot:foo", derivation: "er", capitalization: "cap" }
+ * E.g., "slot:foo~cap" → { pattern: "slot:foo", derivation: null, truncation: null, capitalization: "cap" }
+ * E.g., "slot:foo~er~cap" → { pattern: "slot:foo", derivation: "er", truncation: null, capitalization: "cap" }
+ * E.g., "slot:foo~chopL~cap" → { pattern: "slot:foo", derivation: null, truncation: "chopL", capitalization: "cap" }
  */
 function parseModifiers(pattern: string): ParsedModifiers {
   let derivation: DerivationType | null = null;
+  let truncation: TruncationType | null = null;
   let capitalization: TokenCapitalization | null = null;
   let remaining = pattern;
 
@@ -757,9 +799,13 @@ function parseModifiers(pattern: string): ParsedModifiers {
     const modifierStr = remaining.substring(tildeIndex + 1);
     const capMod = CAPITALIZATION_MODIFIERS[modifierStr];
     const isDerivMod = DERIVATION_MODIFIERS.has(modifierStr);
+    const isTruncMod = TRUNCATION_MODIFIERS.has(modifierStr);
 
     if (capMod && !capitalization) {
       capitalization = capMod;
+      remaining = remaining.substring(0, tildeIndex);
+    } else if (isTruncMod && isTruncationType(modifierStr) && !truncation) {
+      truncation = modifierStr;
       remaining = remaining.substring(0, tildeIndex);
     } else if (isDerivMod && isDerivationType(modifierStr) && !derivation) {
       derivation = modifierStr;
@@ -770,7 +816,7 @@ function parseModifiers(pattern: string): ParsedModifiers {
     }
   }
 
-  return { pattern: remaining, derivation, capitalization };
+  return { pattern: remaining, derivation, truncation, capitalization };
 }
 
 /**
@@ -817,17 +863,19 @@ function resolveSegmentWithPrefix(
 /**
  * Resolve a simple token (no ^ handling, but handles ~ modifiers).
  *
- * Supports derivation and capitalization modifiers:
+ * Supports derivation, truncation, and capitalization modifiers:
  * - "slot:core~er" → apply agentive (hunt → hunter)
  * - "slot:core~er~cap" → apply agentive then capitalize (hunt → Hunter)
+ * - "slot:core~chopL" → truncate left (silent → ent)
+ * - "slot:core~chopL~cap" → truncate then capitalize (silent → Ent)
  */
 function resolveSimpleToken(
   token: string,
   ctx: GenerationContext,
   expansionCtx: GrammarExpansionContext
 ): string {
-  // Parse all modifiers (derivation + capitalization)
-  const { pattern, derivation, capitalization } = parseModifiers(token);
+  // Parse all modifiers (derivation + truncation + capitalization)
+  const { pattern, derivation, truncation, capitalization } = parseModifiers(token);
 
   let result: string;
 
@@ -885,6 +933,11 @@ function resolveSimpleToken(
   // Apply derivation first (e.g., hunt → hunter)
   if (derivation) {
     result = applyDerivation(result, derivation);
+  }
+
+  // Apply truncation second (e.g., silent → ent)
+  if (truncation) {
+    result = applyTruncation(result, truncation, ctx.rng);
   }
 
   // Wrap in capitalization marker if specified (applied later, after grammar-level)

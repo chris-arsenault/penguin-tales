@@ -11,6 +11,7 @@ import WikiExplorer from './components/WikiExplorer.tsx';
 import type { WorldState, LoreData, ImageMetadata, ImageLoader } from './types/world.ts';
 
 export interface ChroniclerRemoteProps {
+  projectId?: string;
   worldData?: WorldState | null;
   loreData?: LoreData | null;
   imageData?: ImageMetadata | null;
@@ -18,6 +19,7 @@ export interface ChroniclerRemoteProps {
 }
 
 export default function ChroniclerRemote({
+  projectId,
   worldData = null,
   loreData = null,
   imageData = null,
@@ -50,6 +52,7 @@ export default function ChroniclerRemote({
 
   return (
     <WikiExplorer
+      projectId={projectId}
       worldData={worldData}
       loreData={loreData}
       imageData={imageData}

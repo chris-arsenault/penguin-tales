@@ -28,6 +28,14 @@ export interface LLMRequest {
 export interface NetworkDebugInfo {
   request: string;
   response?: string;
+  meta?: {
+    provider?: 'anthropic' | 'openai';
+    status?: number;
+    statusText?: string;
+    durationMs?: number;
+    requestId?: string;
+    rateLimit?: Record<string, string>;
+  };
 }
 
 export interface LLMResult {
@@ -60,6 +68,46 @@ export interface CallLogEntry {
   attempt: number;
 }
 
+const RATE_LIMIT_HEADER_KEYS = [
+  'retry-after',
+  'x-ratelimit-limit-requests',
+  'x-ratelimit-remaining-requests',
+  'x-ratelimit-reset-requests',
+  'x-ratelimit-limit-tokens',
+  'x-ratelimit-remaining-tokens',
+  'x-ratelimit-reset-tokens',
+  'anthropic-ratelimit-requests-limit',
+  'anthropic-ratelimit-requests-remaining',
+  'anthropic-ratelimit-requests-reset',
+  'anthropic-ratelimit-tokens-limit',
+  'anthropic-ratelimit-tokens-remaining',
+  'anthropic-ratelimit-tokens-reset',
+];
+
+const REQUEST_ID_HEADER_KEYS = [
+  'request-id',
+  'x-request-id',
+  'anthropic-request-id',
+  'openai-request-id',
+];
+
+function extractRateLimitHeaders(headers: Headers): Record<string, string> {
+  const info: Record<string, string> = {};
+  for (const key of RATE_LIMIT_HEADER_KEYS) {
+    const value = headers.get(key);
+    if (value) info[key] = value;
+  }
+  return info;
+}
+
+function extractRequestId(headers: Headers): string | undefined {
+  for (const key of REQUEST_ID_HEADER_KEYS) {
+    const value = headers.get(key);
+    if (value) return value;
+  }
+  return undefined;
+}
+
 export class LLMClient {
   private cache = new Map<string, string>();
   private config: LLMConfig;
@@ -81,6 +129,7 @@ export class LLMClient {
 
   public async complete(request: LLMRequest): Promise<LLMResult> {
     if (!this.isEnabled()) {
+      console.warn('[LLM] Client disabled - missing API key');
       return { text: '', cached: false, skipped: true };
     }
 
@@ -88,6 +137,11 @@ export class LLMClient {
     const cacheKey = await this.createCacheKey(request, resolvedModel);
     const cached = this.cache.get(cacheKey);
     if (cached) {
+      console.log('[LLM] Cache hit', {
+        model: resolvedModel,
+        promptChars: request.prompt.length,
+        systemChars: request.systemPrompt.length,
+      });
       return { text: cached, cached: true };
     }
 
@@ -103,14 +157,17 @@ export class LLMClient {
       attempt++;
       try {
         const logEntry = this.logRequest(request, attempt, callNumber, resolvedModel);
+        const requestStart = Date.now();
 
         // Build request body - extended thinking requires special handling
         const useThinking = request.thinkingBudget && request.thinkingBudget > 0;
+        const resolvedMaxTokens = request.maxTokens || this.config.maxTokens || 256;
+        const resolvedTemperature = useThinking ? 1 : (request.temperature ?? this.config.temperature ?? 0.4);
         const requestBody: Record<string, unknown> = {
           model: resolvedModel,
-          max_tokens: request.maxTokens || this.config.maxTokens || 256,
+          max_tokens: resolvedMaxTokens,
           // Temperature must be 1 when using extended thinking
-          temperature: useThinking ? 1 : (request.temperature ?? this.config.temperature ?? 0.4),
+          temperature: resolvedTemperature,
           system: request.systemPrompt,
           messages: [{ role: 'user', content: request.prompt }],
         };
@@ -126,6 +183,17 @@ export class LLMClient {
         const rawRequest = JSON.stringify(requestBody);
         lastDebug = { request: rawRequest };
 
+        console.log('[LLM] Request start', {
+          callNumber,
+          attempt,
+          model: resolvedModel,
+          maxTokens: resolvedMaxTokens,
+          temperature: resolvedTemperature,
+          promptChars: request.prompt.length,
+          systemChars: request.systemPrompt.length,
+          thinkingBudget: request.thinkingBudget,
+        });
+
         const response = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
@@ -138,9 +206,27 @@ export class LLMClient {
         });
 
         const responseText = await response.text();
-        lastDebug = { request: rawRequest, response: responseText };
+        const durationMs = Date.now() - requestStart;
+        const rateLimit = extractRateLimitHeaders(response.headers);
+        const requestId = extractRequestId(response.headers);
+        const responseMeta = {
+          provider: 'anthropic' as const,
+          status: response.status,
+          statusText: response.statusText,
+          durationMs,
+          requestId,
+          rateLimit: Object.keys(rateLimit).length > 0 ? rateLimit : undefined,
+        };
+
+        lastDebug = { request: rawRequest, response: responseText, meta: responseMeta };
 
         if (!response.ok) {
+          console.warn('[LLM] Response error', {
+            callNumber,
+            attempt,
+            ...responseMeta,
+            responseChars: responseText.length,
+          });
           throw new Error(`API error ${response.status}: ${responseText}`);
         }
 
@@ -162,6 +248,14 @@ export class LLMClient {
           inputTokens: data.usage.input_tokens || 0,
           outputTokens: data.usage.output_tokens || 0,
         } : undefined;
+
+        console.log('[LLM] Response success', {
+          callNumber,
+          attempt,
+          ...responseMeta,
+          usage,
+          responseChars: responseText.length,
+        });
 
         this.logResponse(logEntry, text);
 
@@ -286,12 +380,14 @@ export class ImageGenerationClient {
 
   public async generate(request: ImageRequest): Promise<ImageResult> {
     if (!this.isEnabled()) {
+      console.warn('[Image] Client disabled - missing API key');
       return { imageUrl: null, skipped: true };
     }
 
     let debug: NetworkDebugInfo | undefined;
 
     try {
+      const requestStart = Date.now();
       const model = this.config.model || 'dall-e-3';
       const isGptImageModel = model.startsWith('gpt-image');
 
@@ -303,19 +399,19 @@ export class ImageGenerationClient {
       };
 
       // Size parameter
-      const size = request.size || this.config.size;
-      if (size && size !== 'auto') {
-        requestBody.size = size;
-      } else if (isGptImageModel && size === 'auto') {
+      const sizeParam = request.size || this.config.size;
+      if (sizeParam && sizeParam !== 'auto') {
+        requestBody.size = sizeParam;
+      } else if (isGptImageModel && sizeParam === 'auto') {
         // GPT image models support 'auto' as an explicit value
         requestBody.size = 'auto';
       }
 
       // Quality parameter
-      const quality = request.quality || this.config.quality;
-      if (quality && quality !== 'auto') {
-        requestBody.quality = quality;
-      } else if (isGptImageModel && quality === 'auto') {
+      const qualityParam = request.quality || this.config.quality;
+      if (qualityParam && qualityParam !== 'auto') {
+        requestBody.quality = qualityParam;
+      } else if (isGptImageModel && qualityParam === 'auto') {
         // GPT image models support 'auto' as an explicit value
         requestBody.quality = 'auto';
       }
@@ -326,6 +422,13 @@ export class ImageGenerationClient {
       }
 
       const rawRequest = JSON.stringify(requestBody);
+      console.log('[Image] Request start', {
+        model,
+        promptChars: request.prompt.length,
+        size: sizeParam,
+        quality: qualityParam,
+      });
+
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
@@ -336,9 +439,25 @@ export class ImageGenerationClient {
       });
 
       const responseText = await response.text();
-      debug = { request: rawRequest, response: responseText };
+      const durationMs = Date.now() - requestStart;
+      const rateLimit = extractRateLimitHeaders(response.headers);
+      const requestId = extractRequestId(response.headers);
+      const responseMeta = {
+        provider: 'openai' as const,
+        status: response.status,
+        statusText: response.statusText,
+        durationMs,
+        requestId,
+        rateLimit: Object.keys(rateLimit).length > 0 ? rateLimit : undefined,
+      };
+
+      debug = { request: rawRequest, response: responseText, meta: responseMeta };
 
       if (!response.ok) {
+        console.warn('[Image] Response error', {
+          ...responseMeta,
+          responseChars: responseText.length,
+        });
         throw new Error(`API error ${response.status}: ${responseText}`);
       }
 
@@ -368,6 +487,12 @@ export class ImageGenerationClient {
         inputTokens: data.usage.input_tokens || 0,
         outputTokens: data.usage.output_tokens || 0,
       } : undefined;
+
+      console.log('[Image] Response success', {
+        ...responseMeta,
+        usage,
+        responseChars: responseText.length,
+      });
 
       return {
         imageUrl: null,  // No URL when using b64_json format

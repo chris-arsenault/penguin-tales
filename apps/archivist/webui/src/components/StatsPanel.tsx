@@ -155,8 +155,10 @@ export default function StatsPanel({ worldData, isOpen, onToggle }: StatsPanelPr
                     <h4 className="stats-section-title">Prominence Distribution</h4>
                     <div className="distribution-bars">
                       {Object.entries(distributionMetrics.prominenceRatios)
-                        .sort((a, b) => (prominenceOrder.get(a[0]) ?? 0) - (prominenceOrder.get(b[0]) ?? 0))
-                        .map(([prominence, ratio]) => (
+                        .sort((a, b) => (prominenceOrder.get(a[0] as typeof prominenceLevels[number]) ?? 0) - (prominenceOrder.get(b[0] as typeof prominenceLevels[number]) ?? 0))
+                        .map(([prominence, ratio]) => {
+                          const prominenceKey = prominence as typeof prominenceLevels[number];
+                          return (
                           <div key={prominence} className="distribution-item">
                             <div className="distribution-label">{prominence}</div>
                             <div className="distribution-bar-container">
@@ -164,13 +166,14 @@ export default function StatsPanel({ worldData, isOpen, onToggle }: StatsPanelPr
                                 className="distribution-bar-fill"
                                 style={{
                                   width: `${ratio * 100}%`,
-                                  background: getProminenceColor(prominence, worldData.schema),
+                                  background: getProminenceColor(prominenceKey, worldData.schema),
                                 }}
                               />
                               <span className="distribution-percentage">{(ratio * 100).toFixed(1)}%</span>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                     </div>
                   </div>
                 )}

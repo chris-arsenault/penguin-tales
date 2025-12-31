@@ -27,6 +27,7 @@ import CostsPanel from './components/CostsPanel';
 import StoragePanel from './components/StoragePanel';
 import TraitPaletteSection from './components/TraitPaletteSection';
 import StyleLibraryEditor from './components/StyleLibraryEditor';
+import StaticPagesPanel from './components/StaticPagesPanel';
 import { useEnrichmentQueue } from './hooks/useEnrichmentQueue';
 import { useStyleLibrary } from './hooks/useStyleLibrary';
 import {
@@ -63,10 +64,11 @@ const TABS = [
   { id: 'styles', label: 'Styles' },         // 5. Manage style library
   { id: 'entities', label: 'Entities' },     // 6. Main enrichment work
   { id: 'chronicle', label: 'Chronicle' },   // 7. Wiki-ready long-form content
-  { id: 'activity', label: 'Activity' },     // 8. Monitor queue
-  { id: 'costs', label: 'Costs' },           // 9. Track spending
-  { id: 'storage', label: 'Storage' },       // 10. Manage images
-  { id: 'traits', label: 'Traits' },         // 11. Visual trait palettes
+  { id: 'pages', label: 'Pages' },           // 8. Static pages (user-authored)
+  { id: 'activity', label: 'Activity' },     // 9. Monitor queue
+  { id: 'costs', label: 'Costs' },           // 10. Track spending
+  { id: 'storage', label: 'Storage' },       // 11. Manage images
+  { id: 'traits', label: 'Traits' },         // 12. Visual trait palettes
 ];
 
 // Default image prompt template for Claude formatting
@@ -499,6 +501,7 @@ export default function IlluminatorRemote({
   // Entities with enrichment state
   const [entities, setEntities] = useState([]);
   const persistedEnrichmentRef = useRef({ projectId: null, simulationRunId: null });
+  const lastSimulationRunIdRef = useRef(null);
 
   // Initialize entities from worldData
   // NOTE: Enrichment is persisted in worldData itself (via onEnrichmentComplete callback).
@@ -509,12 +512,17 @@ export default function IlluminatorRemote({
   useEffect(() => {
     if (!worldData?.hardState) {
       setEntities([]);
+      lastSimulationRunIdRef.current = null;
       return;
     }
 
+    const nextRunId = worldData?.metadata?.simulationRunId || null;
+    const shouldPreserve = nextRunId && lastSimulationRunIdRef.current === nextRunId;
+    lastSimulationRunIdRef.current = nextRunId;
+
     setEntities((prev) => {
       // If no previous state, use worldData directly
-      if (!prev.length) {
+      if (!prev.length || !shouldPreserve) {
         return worldData.hardState;
       }
 
@@ -1230,6 +1238,15 @@ export default function IlluminatorRemote({
               styleSelection={styleSelection}
               entityGuidance={entityGuidance}
               cultureIdentities={cultureIdentities}
+            />
+          </div>
+        )}
+
+        {activeTab === 'pages' && (
+          <div className="illuminator-content">
+            <StaticPagesPanel
+              projectId={projectId}
+              entities={entities}
             />
           </div>
         )}

@@ -30,7 +30,8 @@ type GlobalSharedPool = typeof globalThis & {
 type GlobalServiceWorkerState = typeof globalThis & {
   __illuminatorServiceWorkerPool?: WorkerHandle[];
   __illuminatorServiceWorkerRegistration?: Promise<ServiceWorkerRegistration> | null;
-  __illuminatorServiceWorkerActive?: Promise<ServiceWorker> | null;
+  __illuminatorServiceWorkerHandleMap?: Map<string, ServiceWorkerHandleEntry>;
+  __illuminatorServiceWorkerListenerAttached?: boolean;
 };
 
 /**
@@ -63,6 +64,44 @@ function getServiceWorkerPool(): WorkerHandle[] {
     globalScope.__illuminatorServiceWorkerPool = [];
   }
   return globalScope.__illuminatorServiceWorkerPool;
+}
+
+type ServiceWorkerHandleEntry = {
+  handle: WorkerHandle;
+  reconnect: () => void;
+  markDisconnected: () => void;
+};
+
+function getServiceWorkerHandleMap(): Map<string, ServiceWorkerHandleEntry> {
+  const globalScope = globalThis as GlobalServiceWorkerState;
+  if (!globalScope.__illuminatorServiceWorkerHandleMap) {
+    globalScope.__illuminatorServiceWorkerHandleMap = new Map();
+  }
+  return globalScope.__illuminatorServiceWorkerHandleMap;
+}
+
+function ensureServiceWorkerMessageRouter(): void {
+  const globalScope = globalThis as GlobalServiceWorkerState;
+  if (globalScope.__illuminatorServiceWorkerListenerAttached) return;
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+
+  navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
+    const message = event.data as WorkerOutbound & { handleId?: string };
+    if (!message || typeof message !== 'object' || !message.handleId) return;
+    const entry = getServiceWorkerHandleMap().get(message.handleId);
+    if (!entry?.handle.onmessage) return;
+    entry.handle.onmessage({ data: message } as MessageEvent<WorkerOutbound>);
+  });
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    console.log('[WorkerFactory] Service worker controller changed, reconnecting handles');
+    for (const entry of getServiceWorkerHandleMap().values()) {
+      entry.markDisconnected();
+      entry.reconnect();
+    }
+  });
+
+  globalScope.__illuminatorServiceWorkerListenerAttached = true;
 }
 
 function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration> {
@@ -105,13 +144,12 @@ function waitForActiveServiceWorker(
 }
 
 function getActiveServiceWorker(): Promise<ServiceWorker> {
-  const globalScope = globalThis as GlobalServiceWorkerState;
-  if (!globalScope.__illuminatorServiceWorkerActive) {
-    globalScope.__illuminatorServiceWorkerActive = getServiceWorkerRegistration().then(
-      waitForActiveServiceWorker
-    );
-  }
-  return globalScope.__illuminatorServiceWorkerActive;
+  return getServiceWorkerRegistration().then((registration) => {
+    if (registration.active && registration.active.state === 'activated') {
+      return registration.active;
+    }
+    return waitForActiveServiceWorker(registration);
+  });
 }
 
 function createSharedWorkerHandle(): WorkerHandle {
@@ -152,10 +190,66 @@ function createSharedWorkerHandle(): WorkerHandle {
 
 function createServiceWorkerHandle(): WorkerHandle {
   const handleId = `illuminator_sw_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const channel = new MessageChannel();
-  const port = channel.port1;
+  let port: MessagePort | null = null;
+  let connectedScriptUrl: string | null = null;
   const pending: Array<Record<string, unknown>> = [];
   let isConnected = false;
+  let isConnecting = false;
+  let lastInitPayload: Record<string, unknown> | null = null;
+  let pendingInitPayload: Record<string, unknown> | null = null;
+
+  const bindPort = (nextPort: MessagePort) => {
+    if (port) {
+      port.onmessage = null;
+      port.onmessageerror = null;
+      port.close();
+    }
+    port = nextPort;
+    port.onmessage = (event: MessageEvent<WorkerOutbound>) => {
+      handle.onmessage?.(event);
+    };
+    port.onmessageerror = () => {
+      isConnected = false;
+      handle.onerror?.(new ErrorEvent('error', { message: 'Service worker message error' }));
+    };
+    port.start();
+  };
+
+  const connect = () => {
+    if (isConnecting) return;
+    isConnecting = true;
+    const channel = new MessageChannel();
+    bindPort(channel.port1);
+
+    getActiveServiceWorker()
+      .then((worker) => {
+        if (connectedScriptUrl && connectedScriptUrl !== worker.scriptURL) {
+          console.log('[WorkerFactory] Service worker changed, reconnecting handle', {
+            handleId,
+            prev: connectedScriptUrl,
+            next: worker.scriptURL,
+          });
+        }
+        connectedScriptUrl = worker.scriptURL;
+        worker.postMessage({ type: 'connect', handleId }, [channel.port2]);
+        isConnected = true;
+        isConnecting = false;
+        const initPayload = pendingInitPayload || lastInitPayload;
+        if (initPayload) {
+          worker.postMessage(initPayload);
+          pendingInitPayload = null;
+        }
+        for (const payload of pending) {
+          worker.postMessage(payload);
+        }
+        pending.length = 0;
+      })
+      .catch((err) => {
+        isConnected = false;
+        isConnecting = false;
+        handle.onerror?.(new ErrorEvent('error', { message: String(err) }));
+      });
+  };
 
   const handle: WorkerHandle = {
     type: 'service',
@@ -164,49 +258,55 @@ function createServiceWorkerHandle(): WorkerHandle {
 
     postMessage(message: unknown) {
       const payload = { ...(message as Record<string, unknown>), handleId };
+      if (payload.type === 'init') {
+        lastInitPayload = payload;
+        if (!isConnected) {
+          pendingInitPayload = payload;
+          connect();
+          return;
+        }
+      }
       if (!isConnected) {
         pending.push(payload);
+        connect();
         return;
       }
 
       getActiveServiceWorker()
         .then((worker) => {
+          if (connectedScriptUrl && connectedScriptUrl !== worker.scriptURL) {
+            isConnected = false;
+            pending.push(payload);
+            connect();
+            return;
+          }
           worker.postMessage(payload);
         })
         .catch((err) => {
+          isConnected = false;
           handle.onerror?.(new ErrorEvent('error', { message: String(err) }));
         });
     },
 
     terminate() {
-      port.close();
+      if (port) {
+        port.close();
+      }
+      isConnected = false;
+      getServiceWorkerHandleMap().delete(handleId);
     },
   };
-
-  port.onmessage = (event: MessageEvent<WorkerOutbound>) => {
-    handle.onmessage?.(event);
+  const reconnect = () => {
+    connect();
   };
-
-  port.onmessageerror = () => {
-    handle.onerror?.(new ErrorEvent('error', { message: 'Service worker message error' }));
+  const markDisconnected = () => {
+    isConnected = false;
   };
-
-  port.start();
-
-  getActiveServiceWorker()
-    .then((worker) => {
-      worker.postMessage({ type: 'connect', handleId }, [channel.port2]);
-      isConnected = true;
-      for (const payload of pending) {
-        worker.postMessage(payload);
-      }
-      pending.length = 0;
-    })
-    .catch((err) => {
-      handle.onerror?.(new ErrorEvent('error', { message: String(err) }));
-    });
+  connect();
 
   console.log('[WorkerFactory] Created ServiceWorker handle');
+  ensureServiceWorkerMessageRouter();
+  getServiceWorkerHandleMap().set(handleId, { handle, reconnect, markDisconnected });
   return handle;
 }
 

@@ -13,6 +13,7 @@
 const IMAGE_DB_NAME = 'canonry-images';
 const IMAGE_DB_VERSION = 4;  // Bumped for chronicleId index (must match imageStore.js)
 const IMAGE_STORE_NAME = 'images';
+const LOG_PREFIX = '[WorkerStorage]';
 
 // ============================================================================
 // Database Connection
@@ -135,8 +136,22 @@ export async function saveImage(
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(IMAGE_STORE_NAME, 'readwrite');
-    tx.oncomplete = () => resolve(imageId);
-    tx.onerror = () => reject(tx.error || new Error('Failed to save image'));
+    tx.oncomplete = () => {
+      console.log(`${LOG_PREFIX} Image save complete`, {
+        imageId,
+        entityId: metadata.entityId,
+        projectId: metadata.projectId,
+        size: blob.size,
+      });
+      resolve(imageId);
+    };
+    tx.onerror = () => {
+      console.error(`${LOG_PREFIX} Image save failed`, {
+        imageId,
+        error: tx.error || new Error('Failed to save image'),
+      });
+      reject(tx.error || new Error('Failed to save image'));
+    };
 
     const record: ImageRecord = {
       imageId,
@@ -147,6 +162,12 @@ export async function saveImage(
       savedAt: Date.now(),
     };
 
+    console.log(`${LOG_PREFIX} Image save start`, {
+      imageId,
+      entityId: metadata.entityId,
+      projectId: metadata.projectId,
+      size: blob.size,
+    });
     tx.objectStore(IMAGE_STORE_NAME).put(record);
   });
 }
@@ -159,6 +180,140 @@ export async function deleteImage(imageId: string): Promise<void> {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error || new Error('Failed to delete image'));
     tx.objectStore(IMAGE_STORE_NAME).delete(imageId);
+  });
+}
+
+/**
+ * Lightweight image metadata for listing (no blob data)
+ */
+export interface ImageListItem {
+  imageId: string;
+  entityId: string;
+  projectId: string;
+  entityName?: string;
+  entityKind?: string;
+  generatedAt: number;
+}
+
+/**
+ * Search options for paginated image queries
+ */
+export interface ImageSearchOptions {
+  projectId?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Search images with pagination - returns metadata only (no blobs)
+ * This is efficient for large image libraries.
+ */
+export async function searchImages(options: ImageSearchOptions = {}): Promise<{
+  items: ImageListItem[];
+  total: number;
+  hasMore: boolean;
+}> {
+  const { projectId, search, limit = 20, offset = 0 } = options;
+  const db = await openImageDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IMAGE_STORE_NAME, 'readonly');
+    const store = tx.objectStore(IMAGE_STORE_NAME);
+
+    // Use index if filtering by projectId, otherwise scan all
+    const source = projectId
+      ? store.index('projectId').openCursor(IDBKeyRange.only(projectId))
+      : store.openCursor();
+
+    const searchLower = search?.toLowerCase() || '';
+    const items: ImageListItem[] = [];
+    let total = 0;
+    let skipped = 0;
+
+    source.onsuccess = (event) => {
+      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
+      if (cursor) {
+        const record = cursor.value as ImageRecord;
+
+        // Apply search filter (on entityName only - lightweight)
+        const matches = !searchLower ||
+          (record.entityName && record.entityName.toLowerCase().includes(searchLower));
+
+        if (matches) {
+          total++;
+
+          // Apply pagination
+          if (skipped < offset) {
+            skipped++;
+          } else if (items.length < limit) {
+            // Only extract metadata, not blob
+            items.push({
+              imageId: record.imageId,
+              entityId: record.entityId,
+              projectId: record.projectId,
+              entityName: record.entityName,
+              entityKind: record.entityKind,
+              generatedAt: record.generatedAt,
+            });
+          }
+        }
+
+        cursor.continue();
+      } else {
+        // Done iterating
+        resolve({
+          items,
+          total,
+          hasMore: offset + items.length < total,
+        });
+      }
+    };
+
+    source.onerror = () => reject(source.error || new Error('Failed to search images'));
+  });
+}
+
+/**
+ * Load a single image's dataUrl by ID (on-demand loading)
+ */
+export async function getImageDataUrl(imageId: string): Promise<string | null> {
+  const db = await openImageDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IMAGE_STORE_NAME, 'readonly');
+    const request = tx.objectStore(IMAGE_STORE_NAME).get(imageId);
+
+    request.onsuccess = async () => {
+      const record = request.result as ImageRecord | undefined;
+      if (!record?.blob) {
+        resolve(null);
+        return;
+      }
+
+      try {
+        const dataUrl = await blobToDataUrl(record.blob);
+        resolve(dataUrl);
+      } catch (err) {
+        console.warn(`Failed to convert image ${imageId} to dataUrl:`, err);
+        resolve(null);
+      }
+    };
+
+    request.onerror = () => reject(request.error || new Error('Failed to get image'));
+  });
+}
+
+/**
+ * Convert blob to data URL
+ */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('Failed to read blob'));
+    reader.readAsDataURL(blob);
   });
 }
 

@@ -23,6 +23,36 @@ type ServiceWorkerMessage =
   | ({ type: 'connect'; handleId: string })
   | ({ handleId: string } & WorkerInbound);
 
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+const LOG_PREFIX = '[ServiceWorker]';
+
+function log(level: LogLevel, message: string, data?: Record<string, unknown>): void {
+  const logger = console[level] || console.log;
+  if (data) {
+    logger(`${LOG_PREFIX} ${message}`, data);
+  } else {
+    logger(`${LOG_PREFIX} ${message}`);
+  }
+}
+
+function summarizeTask(task: WorkerTask): Record<string, unknown> {
+  return {
+    id: task.id,
+    type: task.type,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    entitySubtype: task.entitySubtype,
+    entityCulture: task.entityCulture,
+    simulationRunId: task.simulationRunId,
+    imageType: task.imageType,
+    chronicleId: task.chronicleId,
+    imageRefId: task.imageRefId,
+    promptChars: task.prompt?.length,
+  };
+}
+
 // ============================================================================
 // State
 // ============================================================================
@@ -34,16 +64,19 @@ let imageClient: ImageClient | null = null;
 const handlePorts = new Map<string, MessagePort>();
 const pendingReady = new Set<string>();
 const activeTasks = new Map<string, { handleId: string; aborted: boolean }>();
+const handleClients = new Map<string, string>();
 
 // ============================================================================
 // Lifecycle
 // ============================================================================
 
 ctx.addEventListener('install', (event) => {
+  log('info', 'Install');
   event.waitUntil(ctx.skipWaiting());
 });
 
 ctx.addEventListener('activate', (event) => {
+  log('info', 'Activate');
   event.waitUntil(ctx.clients.claim());
 });
 
@@ -51,22 +84,63 @@ ctx.addEventListener('activate', (event) => {
 // Helpers
 // ============================================================================
 
+function rememberClient(handleId: string, source: Client | null | undefined): void {
+  if (!source || typeof (source as Client).id !== 'string') return;
+  handleClients.set(handleId, (source as Client).id);
+}
+
+async function postToClient(handleId: string, message: WorkerOutbound): Promise<void> {
+  const clientId = handleClients.get(handleId);
+  if (!clientId) {
+    log('warn', 'Fallback post skipped - no clientId for handle', { handleId, messageType: message.type });
+    return;
+  }
+  const client = await ctx.clients.get(clientId);
+  if (!client) {
+    log('warn', 'Fallback post skipped - client not found', { handleId, clientId, messageType: message.type });
+    return;
+  }
+  client.postMessage({ ...message, handleId, via: 'service-worker-fallback' });
+  log('debug', 'Fallback post sent', { handleId, messageType: message.type });
+}
+
 function safePostMessage(handleId: string, message: WorkerOutbound): void {
   const port = handlePorts.get(handleId);
-  if (!port) return;
+  if (!port) {
+    log('warn', 'PostMessage skipped - no port for handle', { handleId, messageType: message.type });
+    void postToClient(handleId, message);
+    return;
+  }
 
   try {
     port.postMessage(message);
   } catch {
     handlePorts.delete(handleId);
+    log('warn', 'PostMessage failed - port removed', { handleId, messageType: message.type });
+    void postToClient(handleId, message);
   }
 }
 
 async function persistResult(task: WorkerTask, result?: EnrichmentResult): Promise<void> {
-  if (!result) return;
-  if (!task.projectId || !task.simulationRunId) return;
+  if (!result) {
+    log('warn', 'Persist skipped - missing result', { taskId: task.id });
+    return;
+  }
+  if (!task.projectId || !task.simulationRunId) {
+    log('warn', 'Persist skipped - missing project or simulationRunId', {
+      taskId: task.id,
+      projectId: task.projectId,
+      simulationRunId: task.simulationRunId,
+    });
+    return;
+  }
 
   try {
+    log('info', 'Persist result start', {
+      taskId: task.id,
+      entityId: task.entityId,
+      type: task.type,
+    });
     await saveEnrichmentResult({
       projectId: task.projectId,
       simulationRunId: task.simulationRunId,
@@ -79,8 +153,16 @@ async function persistResult(task: WorkerTask, result?: EnrichmentResult): Promi
       chronicleId: task.chronicleId,
       imageRefId: task.imageRefId,
     });
+    log('info', 'Persist result complete', {
+      taskId: task.id,
+      entityId: task.entityId,
+      type: task.type,
+    });
   } catch (err) {
-    console.warn('[ServiceWorker] Failed to persist enrichment result:', err);
+    log('error', 'Persist result failed', {
+      taskId: task.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -92,12 +174,11 @@ async function executeTask(task: WorkerTask, handleId: string): Promise<void> {
   const taskState = activeTasks.get(task.id);
   const checkAborted = () => taskState?.aborted ?? false;
 
+  log('info', 'Task started', summarizeTask(task));
   safePostMessage(handleId, { type: 'started', taskId: task.id });
 
   try {
-    let result;
-
-    result = await executeEnrichmentTask(task, {
+    const result = await executeEnrichmentTask(task, {
       config: config!,
       llmClient: llmClient!,
       imageClient: imageClient!,
@@ -105,6 +186,11 @@ async function executeTask(task: WorkerTask, handleId: string): Promise<void> {
     });
 
     if (!result.success) {
+      log('warn', 'Task failed', {
+        taskId: task.id,
+        error: result.error || 'Unknown error',
+        debugMeta: result.debug?.meta,
+      });
       safePostMessage(handleId, {
         type: 'error',
         taskId: task.id,
@@ -116,6 +202,10 @@ async function executeTask(task: WorkerTask, handleId: string): Promise<void> {
 
     await persistResult(task, result.result);
 
+    log('info', 'Task complete', {
+      taskId: task.id,
+      type: task.type,
+    });
     safePostMessage(handleId, {
       type: 'complete',
       result: {
@@ -128,6 +218,10 @@ async function executeTask(task: WorkerTask, handleId: string): Promise<void> {
       },
     });
   } catch (error) {
+    log('error', 'Task execution threw', {
+      taskId: task.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
     safePostMessage(handleId, {
       type: 'error',
       taskId: task.id,
@@ -135,6 +229,7 @@ async function executeTask(task: WorkerTask, handleId: string): Promise<void> {
     });
   } finally {
     activeTasks.delete(task.id);
+    log('debug', 'Task cleared', { taskId: task.id, activeCount: activeTasks.size });
   }
 }
 
@@ -144,7 +239,13 @@ async function executeTask(task: WorkerTask, handleId: string): Promise<void> {
 
 function handleInit(handleId: string, nextConfig: WorkerConfig): void {
   config = nextConfig;
-  console.log('[ServiceWorker] Init - LLM call settings:', config.llmCallSettings);
+  log('info', 'Init', {
+    handleId,
+    llmEnabled: Boolean(config.anthropicApiKey),
+    imageEnabled: Boolean(config.openaiApiKey),
+    numWorkers: config.numWorkers,
+    llmCallSettings: config.llmCallSettings,
+  });
   const clients = createClients(config);
   llmClient = clients.llmClient;
   imageClient = clients.imageClient;
@@ -153,6 +254,7 @@ function handleInit(handleId: string, nextConfig: WorkerConfig): void {
     safePostMessage(handleId, { type: 'ready' });
   } else {
     pendingReady.add(handleId);
+    log('debug', 'Init pending - no port yet', { handleId });
   }
 }
 
@@ -161,11 +263,14 @@ function handleAbort(handleId: string, taskId?: string): void {
   const taskState = activeTasks.get(taskId);
   if (taskState) {
     taskState.aborted = true;
+    log('info', 'Task abort requested', { handleId, taskId });
     safePostMessage(handleId, {
       type: 'error',
       taskId,
       error: 'Task aborted by user',
     });
+  } else {
+    log('warn', 'Abort requested for unknown task', { handleId, taskId });
   }
 }
 
@@ -179,16 +284,22 @@ ctx.addEventListener('message', (event) => {
     if (handleId && port) {
       handlePorts.set(handleId, port);
       port.start();
+      rememberClient(handleId, event.source as Client | null);
+      log('info', 'Client connected', { handleId });
       if (pendingReady.has(handleId)) {
         pendingReady.delete(handleId);
         safePostMessage(handleId, { type: 'ready' });
+        log('debug', 'Ready sent to connected client', { handleId });
       }
+    } else {
+      log('warn', 'Connect message missing handle or port', { handleId });
     }
     return;
   }
 
   if (!('handleId' in message) || !message.handleId) return;
   const handleId = message.handleId;
+  rememberClient(handleId, event.source as Client | null);
 
   switch (message.type) {
     case 'init':
@@ -197,6 +308,7 @@ ctx.addEventListener('message', (event) => {
 
     case 'execute':
       if (!config) {
+        log('warn', 'Execute before init', { handleId, taskId: message.task.id });
         safePostMessage(handleId, {
           type: 'error',
           taskId: message.task.id,
@@ -204,11 +316,13 @@ ctx.addEventListener('message', (event) => {
         });
         return;
       }
+      log('debug', 'Execute received', summarizeTask(message.task));
       activeTasks.set(message.task.id, { handleId, aborted: false });
       event.waitUntil(executeTask(message.task, handleId));
       break;
 
     case 'abort':
+      log('debug', 'Abort received', { handleId, taskId: message.taskId });
       event.waitUntil(Promise.resolve(handleAbort(handleId, message.taskId)));
       break;
   }

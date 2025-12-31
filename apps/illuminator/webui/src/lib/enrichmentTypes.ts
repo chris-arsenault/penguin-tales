@@ -12,6 +12,14 @@ export type EnrichmentType = 'description' | 'image' | 'entityChronicle' | 'pale
 export interface NetworkDebugInfo {
   request: string;
   response?: string;
+  meta?: {
+    provider?: 'anthropic' | 'openai';
+    status?: number;
+    statusText?: string;
+    durationMs?: number;
+    requestId?: string;
+    rateLimit?: Record<string, string>;
+  };
 }
 
 /**

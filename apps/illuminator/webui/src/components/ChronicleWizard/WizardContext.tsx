@@ -27,7 +27,6 @@ import type {
 } from '../../lib/chronicleTypes';
 import {
   buildWizardSelectionContext,
-  buildNeighborGraph,
   suggestRoleAssignments,
   computeAllEntityMetrics,
   computeAllEventMetrics,
@@ -71,9 +70,13 @@ export interface WizardState {
   // Step 2: Entry point selection
   entryPointId: string | null;
   entryPoint: EntityContext | null;
+  /** Include era relationships in 2-hop neighborhood calculation */
+  includeErasInNeighborhood: boolean;
 
   // Step 3: Role assignment
   candidates: EntityContext[];
+  /** Distance map from entry point (preserves paths through non-candidate entities) */
+  candidateDistances: Map<string, number>;
   roleAssignments: ChronicleRoleAssignment[];
 
   // Step 4: Event/relationship resolution
@@ -94,7 +97,9 @@ type WizardAction =
   | { type: 'SELECT_STYLE'; style: NarrativeStyle; acceptDefaults: boolean }
   | { type: 'SET_ACCEPT_DEFAULTS'; acceptDefaults: boolean }
   | { type: 'SELECT_ENTRY_POINT'; entity: EntityContext }
-  | { type: 'SET_CANDIDATES'; candidates: EntityContext[]; relationships: RelationshipContext[]; events: NarrativeEventContext[] }
+  | { type: 'CLEAR_ENTRY_POINT' }
+  | { type: 'SET_INCLUDE_ERAS_IN_NEIGHBORHOOD'; include: boolean }
+  | { type: 'SET_CANDIDATES'; candidates: EntityContext[]; relationships: RelationshipContext[]; events: NarrativeEventContext[]; distances: Map<string, number> }
   | { type: 'SET_ROLE_ASSIGNMENTS'; assignments: ChronicleRoleAssignment[] }
   | { type: 'ADD_ROLE_ASSIGNMENT'; assignment: ChronicleRoleAssignment }
   | { type: 'REMOVE_ROLE_ASSIGNMENT'; entityId: string; role: string }
@@ -120,7 +125,9 @@ const initialState: WizardState = {
   acceptDefaults: false,
   entryPointId: null,
   entryPoint: null,
+  includeErasInNeighborhood: false,
   candidates: [],
+  candidateDistances: new Map(),
   roleAssignments: [],
   candidateEvents: [],
   candidateRelationships: [],
@@ -150,6 +157,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         entryPointId: null,
         entryPoint: null,
         candidates: [],
+        candidateDistances: new Map(),
         roleAssignments: [],
         candidateEvents: [],
         candidateRelationships: [],
@@ -170,6 +178,35 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         entryPoint: action.entity,
         // Reset downstream selections when entry point changes
         candidates: [],
+        candidateDistances: new Map(),
+        roleAssignments: [],
+        candidateEvents: [],
+        candidateRelationships: [],
+        selectedEventIds: new Set(),
+        selectedRelationshipIds: new Set(),
+      };
+
+    case 'CLEAR_ENTRY_POINT':
+      return {
+        ...state,
+        entryPointId: null,
+        entryPoint: null,
+        candidates: [],
+        candidateDistances: new Map(),
+        roleAssignments: [],
+        candidateEvents: [],
+        candidateRelationships: [],
+        selectedEventIds: new Set(),
+        selectedRelationshipIds: new Set(),
+      };
+
+    case 'SET_INCLUDE_ERAS_IN_NEIGHBORHOOD':
+      return {
+        ...state,
+        includeErasInNeighborhood: action.include,
+        // Clear candidates when this changes - will need to re-select entry point
+        candidates: [],
+        candidateDistances: new Map(),
         roleAssignments: [],
         candidateEvents: [],
         candidateRelationships: [],
@@ -181,6 +218,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       return {
         ...state,
         candidates: action.candidates,
+        candidateDistances: action.distances,
         candidateRelationships: action.relationships,
         candidateEvents: action.events,
       };
@@ -315,6 +353,8 @@ interface WizardContextValue {
 
   // Step 2 actions
   selectEntryPoint: (entity: EntityContext, allEntities: EntityContext[], allRelationships: RelationshipContext[], allEvents: NarrativeEventContext[]) => void;
+  clearEntryPoint: () => void;
+  setIncludeErasInNeighborhood: (include: boolean) => void;
 
   // Step 3 actions
   autoFillRoles: (metricsMap?: Map<string, EntitySelectionMetrics>) => void;
@@ -465,7 +505,8 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
         allEntities,
         allRelationships,
         allEvents,
-        state.narrativeStyle
+        state.narrativeStyle,
+        { includeErasInNeighborhood: state.includeErasInNeighborhood }
       );
 
       dispatch({
@@ -473,6 +514,7 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
         candidates: selectionContext.candidates,
         relationships: selectionContext.candidateRelationships,
         events: selectionContext.candidateEvents,
+        distances: selectionContext.distances,
       });
 
       // Auto-fill if accept defaults is checked
@@ -489,28 +531,32 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
         dispatch({ type: 'SET_ROLE_ASSIGNMENTS', assignments: suggested });
       }
     }
-  }, [state.narrativeStyle, state.acceptDefaults, kindToCategory]);
+  }, [state.narrativeStyle, state.acceptDefaults, state.includeErasInNeighborhood, kindToCategory]);
 
-  // Compute metrics helper
+  // Clear entry point
+  const clearEntryPoint = useCallback(() => {
+    dispatch({ type: 'CLEAR_ENTRY_POINT' });
+  }, []);
+
+  // Set include eras in neighborhood option
+  const setIncludeErasInNeighborhood = useCallback((include: boolean) => {
+    dispatch({ type: 'SET_INCLUDE_ERAS_IN_NEIGHBORHOOD', include });
+  }, []);
+
+  // Compute metrics helper - uses stored distances from original graph construction
   const computeMetrics = useCallback((usageStats: Map<string, { usageCount: number }>) => {
     if (!state.entryPoint) return new Map<string, EntitySelectionMetrics>();
-
-    const neighborGraph = buildNeighborGraph(
-      state.candidateRelationships,
-      state.entryPoint.id,
-      2
-    );
 
     return computeAllEntityMetrics(
       state.candidates,
       state.entryPoint.id,
       state.candidateRelationships,
-      neighborGraph.distances,
+      state.candidateDistances,
       usageStats,
       state.roleAssignments,
       kindToCategory
     );
-  }, [state.entryPoint, state.candidates, state.candidateRelationships, state.roleAssignments, kindToCategory]);
+  }, [state.entryPoint, state.candidates, state.candidateRelationships, state.candidateDistances, state.roleAssignments, kindToCategory]);
 
   // Compute effective focal era (respecting override)
   const effectiveFocalEraId = useMemo(() => {
@@ -684,6 +730,8 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
     selectStyle,
     setAcceptDefaults,
     selectEntryPoint,
+    clearEntryPoint,
+    setIncludeErasInNeighborhood,
     autoFillRoles,
     addRoleAssignment,
     removeRoleAssignment,
@@ -713,6 +761,8 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
     selectStyle,
     setAcceptDefaults,
     selectEntryPoint,
+    clearEntryPoint,
+    setIncludeErasInNeighborhood,
     autoFillRoles,
     addRoleAssignment,
     removeRoleAssignment,

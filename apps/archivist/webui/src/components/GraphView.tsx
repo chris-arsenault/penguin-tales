@@ -1,6 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import cytoscape from 'cytoscape';
-import type { Core, NodeSingular } from 'cytoscape';
+import type { Core, NodeSingular, StylesheetJsonBlock } from 'cytoscape';
 // @ts-ignore
 import coseBilkent from 'cytoscape-cose-bilkent';
 import type { WorldState } from '../types/world.ts';
@@ -9,20 +9,45 @@ import { transformWorldData } from '../utils/dataTransform.ts';
 
 cytoscape.use(coseBilkent);
 
+const SUPPORTED_NODE_SHAPES = new Set<cytoscape.Css.NodeShape>([
+  'ellipse',
+  'diamond',
+  'hexagon',
+  'rectangle',
+  'star',
+  'triangle',
+  'octagon',
+]);
+
+function toNodeShape(shape?: string): cytoscape.Css.NodeShape | undefined {
+  if (!shape) return undefined;
+  return SUPPORTED_NODE_SHAPES.has(shape as cytoscape.Css.NodeShape)
+    ? (shape as cytoscape.Css.NodeShape)
+    : undefined;
+}
+
 // Generate Cytoscape style array from entity kind definitions
-function generateEntityKindStyles(entityKinds: EntityKindDefinition[]) {
-  return entityKinds.map(ek => ({
-    selector: `node[kind="${ek.kind}"]`,
-    style: {
+function generateEntityKindStyles(entityKinds: EntityKindDefinition[]): StylesheetJsonBlock[] {
+  return entityKinds.map(ek => {
+    const shape = toNodeShape(ek.style?.shape);
+    const style: cytoscape.Css.Node = {
       'background-color': (() => {
         if (!ek.style?.color) {
           throw new Error(`Archivist: entity kind "${ek.kind}" is missing style.color.`);
         }
         return ek.style.color;
       })(),
-      ...(ek.style?.shape ? { shape: ek.style.shape } : {})
+    };
+
+    if (shape) {
+      style.shape = shape;
     }
-  }));
+
+    return {
+      selector: `node[kind="${ek.kind}"]`,
+      style,
+    };
+  });
 }
 
 // Map Cytoscape shape to CSS clip-path for legend
@@ -130,8 +155,7 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
           }
         },
         // Dynamic entity kind styles from schema
-        // Dynamic entity kind styles from schema
-        ...entityStyles as any,
+        ...entityStyles,
         {
           selector: 'node:selected',
           style: {

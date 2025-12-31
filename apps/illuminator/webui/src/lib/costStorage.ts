@@ -64,6 +64,7 @@ export interface CostSummary {
 const COST_DB_NAME = 'canonry-costs';
 const COST_DB_VERSION = 2;
 const COST_STORE_NAME = 'costs';
+const LOG_PREFIX = '[CostStorage]';
 
 // ============================================================================
 // Database Connection
@@ -150,8 +151,26 @@ export async function saveCostRecord(record: CostRecord): Promise<void> {
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(COST_STORE_NAME, 'readwrite');
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to save cost record'));
+    tx.oncomplete = () => {
+      console.debug(`${LOG_PREFIX} Save complete`, {
+        id: record.id,
+        type: record.type,
+        model: record.model,
+      });
+      resolve();
+    };
+    tx.onerror = () => {
+      console.error(`${LOG_PREFIX} Save failed`, {
+        id: record.id,
+        error: tx.error || new Error('Failed to save cost record'),
+      });
+      reject(tx.error || new Error('Failed to save cost record'));
+    };
+    console.debug(`${LOG_PREFIX} Save start`, {
+      id: record.id,
+      type: record.type,
+      model: record.model,
+    });
     tx.objectStore(COST_STORE_NAME).put(record);
   });
 }

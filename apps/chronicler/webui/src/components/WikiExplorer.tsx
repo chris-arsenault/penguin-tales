@@ -9,9 +9,10 @@
  */
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import type { WorldState, LoreData, ImageMetadata, WikiPage, WikiPageIndex, PageIndexEntry, HardState, ImageLoader } from '../types/world.ts';
+import type { WorldState, LoreData, ImageMetadata, WikiPage, HardState, ImageLoader } from '../types/world.ts';
 import { buildPageIndex, buildPageById } from '../lib/wikiBuilder.ts';
 import { getCompletedChroniclesForSimulation, type ChronicleRecord } from '../lib/chronicleStorage.ts';
+import { getPublishedStaticPagesForProject, type StaticPage } from '../lib/staticPageStorage.ts';
 import WikiNav from './WikiNav.tsx';
 import ChronicleIndex from './ChronicleIndex.tsx';
 import WikiPageView from './WikiPage.tsx';
@@ -95,6 +96,8 @@ const styles = {
 };
 
 interface WikiExplorerProps {
+  /** Project ID - used to load static pages (project-scoped, not simulation-scoped) */
+  projectId?: string;
   worldData: WorldState;
   loreData: LoreData | null;
   imageData: ImageMetadata | null;
@@ -102,13 +105,14 @@ interface WikiExplorerProps {
   imageLoader?: ImageLoader;
 }
 
-export default function WikiExplorer({ worldData, loreData, imageData, imageLoader }: WikiExplorerProps) {
+export default function WikiExplorer({ projectId, worldData, loreData, imageData, imageLoader }: WikiExplorerProps) {
   // Initialize from hash on mount
   const [currentPageId, setCurrentPageId] = useState<string | null>(() => parseHashPageId());
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Chronicles loaded from IndexedDB
+  // Chronicles and static pages loaded from IndexedDB
   const [chronicles, setChronicles] = useState<ChronicleRecord[]>([]);
+  const [staticPages, setStaticPages] = useState<StaticPage[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const simulationRunId = (worldData as { metadata?: { simulationRunId?: string } }).metadata?.simulationRunId;
 
@@ -142,6 +146,36 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
     };
   }, [simulationRunId]);
 
+  // Load static pages from IndexedDB when projectId changes
+  useEffect(() => {
+    if (!projectId) {
+      setStaticPages([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadStaticPages() {
+      try {
+        const loadedPages = await getPublishedStaticPagesForProject(projectId!);
+        if (!cancelled) {
+          setStaticPages(loadedPages);
+        }
+      } catch (err) {
+        console.error('[WikiExplorer] Failed to load static pages:', err);
+        if (!cancelled) {
+          setStaticPages([]);
+        }
+      }
+    }
+
+    loadStaticPages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
   // Sync hash changes to state (for back/forward buttons)
   useEffect(() => {
     const handleHashChange = () => {
@@ -156,13 +190,13 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
 
   // Build lightweight page index (fast)
   const { pageIndex, entityIndex } = useMemo(() => {
-    const pageIndex = buildPageIndex(worldData, loreData, chronicles);
+    const pageIndex = buildPageIndex(worldData, loreData, chronicles, staticPages);
     const entityIndex = new Map<string, HardState>();
     for (const entity of worldData.hardState) {
       entityIndex.set(entity.id, entity);
     }
     return { pageIndex, entityIndex };
-  }, [worldData, loreData, chronicles]);
+  }, [worldData, loreData, chronicles, staticPages]);
 
   // Page cache - stores fully built pages by ID
   const pageCacheRef = useRef<Map<string, WikiPage>>(new Map());
@@ -170,7 +204,7 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
   // Clear cache when data changes
   useEffect(() => {
     pageCacheRef.current.clear();
-  }, [worldData, loreData, imageData, chronicles]);
+  }, [worldData, loreData, imageData, chronicles, staticPages]);
 
   // Get a page from cache or build it on-demand
   const getPage = useCallback((pageId: string): WikiPage | null => {
@@ -179,12 +213,12 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
       return cache.get(pageId)!;
     }
 
-    const page = buildPageById(pageId, worldData, loreData, imageData, pageIndex, chronicles);
+    const page = buildPageById(pageId, worldData, loreData, imageData, pageIndex, chronicles, staticPages);
     if (page) {
       cache.set(pageId, page);
     }
     return page;
-  }, [worldData, loreData, imageData, pageIndex, chronicles]);
+  }, [worldData, loreData, imageData, pageIndex, chronicles, staticPages]);
 
   // Convert index entries to minimal WikiPage objects for navigation components
   const indexAsPages = useMemo(() => {
@@ -208,15 +242,54 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
     [indexAsPages]
   );
 
+  const staticPagesAsWikiPages = useMemo(
+    () => indexAsPages.filter((page) => page.type === 'static'),
+    [indexAsPages]
+  );
+
   // Get current page
   const isChronicleIndex = currentPageId === 'chronicles'
     || currentPageId === 'chronicles-story'
     || currentPageId === 'chronicles-document';
 
+  const isPagesIndex = currentPageId === 'pages';
+
+  // Check if it's a page category (e.g., "page-category-System")
+  const isPageCategory = currentPageId?.startsWith('page-category-');
+  const pageCategoryNamespace = isPageCategory
+    ? currentPageId!.replace('page-category-', '')
+    : null;
+
   // Build current page on-demand
-  const currentPage = !isChronicleIndex && currentPageId
+  const currentPage = !isChronicleIndex && !isPagesIndex && !isPageCategory && currentPageId
     ? getPage(currentPageId)
     : null;
+
+  // Get disambiguation entries for current page (if any)
+  const currentDisambiguation = useMemo(() => {
+    if (!currentPage) return undefined;
+    // Parse namespace from title (e.g., "Cultures:Aurora Stack" -> baseName: "Aurora Stack")
+    const colonIdx = currentPage.title.indexOf(':');
+    const baseName = colonIdx > 0 && colonIdx < currentPage.title.length - 1
+      ? currentPage.title.slice(colonIdx + 1).trim().toLowerCase()
+      : currentPage.title.toLowerCase();
+    return pageIndex.byBaseName.get(baseName);
+  }, [currentPage, pageIndex.byBaseName]);
+
+  // Update page/tab title based on current page
+  useEffect(() => {
+    if (currentPage) {
+      document.title = `${currentPage.title} | The Canonry`;
+    } else if (isChronicleIndex) {
+      document.title = 'Chronicles | The Canonry';
+    } else if (isPagesIndex) {
+      document.title = 'Pages | The Canonry';
+    } else if (isPageCategory && pageCategoryNamespace) {
+      document.title = `${pageCategoryNamespace} | The Canonry`;
+    } else {
+      document.title = 'The Canonry';
+    }
+  }, [currentPage, isChronicleIndex, isPagesIndex, isPageCategory, pageCategoryNamespace]);
 
   // Handle navigation - updates hash which triggers state update via hashchange
   const handleNavigate = useCallback((pageId: string) => {
@@ -239,22 +312,26 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
     window.location.hash = '#/';
   }, []);
 
-  // Refresh index by reloading chronicles from IndexedDB
+  // Refresh index by reloading chronicles and static pages from IndexedDB
   const handleRefreshIndex = useCallback(async () => {
-    if (!simulationRunId || isRefreshing) return;
+    if (isRefreshing) return;
 
     setIsRefreshing(true);
     try {
-      const loadedChronicles = await getCompletedChroniclesForSimulation(simulationRunId);
+      const [loadedChronicles, loadedStaticPages] = await Promise.all([
+        simulationRunId ? getCompletedChroniclesForSimulation(simulationRunId) : Promise.resolve([]),
+        projectId ? getPublishedStaticPagesForProject(projectId) : Promise.resolve([]),
+      ]);
       setChronicles(loadedChronicles);
+      setStaticPages(loadedStaticPages);
       // Clear page cache so pages are rebuilt with new data
       pageCacheRef.current.clear();
     } catch (err) {
-      console.error('[WikiExplorer] Failed to refresh chronicles:', err);
+      console.error('[WikiExplorer] Failed to refresh index:', err);
     } finally {
       setIsRefreshing(false);
     }
-  }, [simulationRunId, isRefreshing]);
+  }, [simulationRunId, projectId, isRefreshing]);
 
   return (
     <div style={styles.container}>
@@ -272,6 +349,7 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
           categories={pageIndex.categories}
           pages={indexAsPages}
           chronicles={chroniclePages}
+          staticPages={staticPagesAsWikiPages}
           currentPageId={currentPageId}
           onNavigate={handleNavigate}
           onGoHome={handleGoHome}
@@ -296,6 +374,17 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
               onNavigate={handleNavigate}
               entityIndex={entityIndex}
             />
+          ) : isPagesIndex ? (
+            <PagesIndex
+              pages={staticPagesAsWikiPages}
+              onNavigate={handleNavigate}
+            />
+          ) : isPageCategory && pageCategoryNamespace ? (
+            <PageCategoryIndex
+              namespace={pageCategoryNamespace}
+              pages={staticPagesAsWikiPages}
+              onNavigate={handleNavigate}
+            />
           ) : currentPage ? (
             <WikiPageView
               page={currentPage}
@@ -303,6 +392,7 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
               entityIndex={entityIndex}
               imageData={imageData}
               imageLoader={imageLoader}
+              disambiguation={currentDisambiguation}
               onNavigate={handleNavigate}
               onNavigateToEntity={handleNavigateToEntity}
             />
@@ -310,7 +400,11 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
             <HomePage
               worldData={worldData}
               pages={indexAsPages}
+              chronicles={chroniclePages}
+              staticPages={staticPagesAsWikiPages}
               categories={pageIndex.categories}
+              imageData={imageData}
+              imageLoader={imageLoader}
               onNavigate={handleNavigate}
             />
           )}
@@ -324,175 +418,847 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
 interface HomePageProps {
   worldData: WorldState;
   pages: WikiPage[];
+  chronicles: WikiPage[];
+  staticPages: WikiPage[];
   categories: { id: string; name: string; pageCount: number }[];
+  imageData: ImageMetadata | null;
+  imageLoader?: ImageLoader;
   onNavigate: (pageId: string) => void;
 }
 
-function HomePage({ worldData, pages, categories, onNavigate }: HomePageProps) {
-  // Get notable entities (mythic/renowned)
-  const notableEntities = worldData.hardState
-    .filter(e => e.prominence === 'mythic' || e.prominence === 'renowned')
-    .slice(0, 10);
+/**
+ * Weighted random selection - higher prominence = higher weight
+ */
+function weightedRandomSelect<T extends { prominence?: string }>(
+  items: T[],
+  count: number
+): T[] {
+  if (items.length <= count) return items;
+
+  // Assign weights based on prominence
+  const weights: Record<string, number> = {
+    mythic: 10,
+    renowned: 6,
+    recognized: 3,
+    marginal: 1,
+    forgotten: 0.5,
+  };
+
+  const weighted = items.map(item => ({
+    item,
+    weight: weights[item.prominence || 'marginal'] || 1,
+  }));
+
+  const selected: T[] = [];
+  const available = [...weighted];
+
+  for (let i = 0; i < count && available.length > 0; i++) {
+    const totalWeight = available.reduce((sum, w) => sum + w.weight, 0);
+    let random = Math.random() * totalWeight;
+
+    for (let j = 0; j < available.length; j++) {
+      random -= available[j].weight;
+      if (random <= 0) {
+        selected.push(available[j].item);
+        available.splice(j, 1);
+        break;
+      }
+    }
+  }
+
+  return selected;
+}
+
+function HomePage({ worldData, chronicles, staticPages, imageLoader, onNavigate }: HomePageProps) {
+  // Find System:About This Project page
+  const aboutPage = useMemo(() => {
+    return staticPages.find(p =>
+      p.title.toLowerCase() === 'system:about this project' ||
+      p.title.toLowerCase() === 'about this project'
+    );
+  }, [staticPages]);
 
   // Get eras
-  const eras = worldData.hardState.filter(e => e.kind === 'era');
+  const eras = useMemo(() =>
+    worldData.hardState.filter(e => e.kind === 'era'),
+    [worldData.hardState]
+  );
+
+  // Calculate link counts for each entity
+  const linkStats = useMemo(() => {
+    const incomingCounts = new Map<string, number>();
+    const outgoingCounts = new Map<string, number>();
+
+    for (const rel of worldData.relationships) {
+      incomingCounts.set(rel.dst, (incomingCounts.get(rel.dst) || 0) + 1);
+      outgoingCounts.set(rel.src, (outgoingCounts.get(rel.src) || 0) + 1);
+    }
+
+    const totalLinks = new Map<string, number>();
+    for (const entity of worldData.hardState) {
+      const incoming = incomingCounts.get(entity.id) || 0;
+      const outgoing = outgoingCounts.get(entity.id) || 0;
+      totalLinks.set(entity.id, incoming + outgoing);
+    }
+
+    const sortedByLinks = [...worldData.hardState]
+      .filter(e => e.kind !== 'era')
+      .sort((a, b) => (totalLinks.get(b.id) || 0) - (totalLinks.get(a.id) || 0));
+
+    const mostLinked = sortedByLinks.slice(0, 5);
+    const leastLinked = sortedByLinks
+      .filter(e => (totalLinks.get(e.id) || 0) > 0)
+      .slice(-5)
+      .reverse();
+
+    const isolated = worldData.hardState.filter(e =>
+      e.kind !== 'era' && (totalLinks.get(e.id) || 0) === 0
+    );
+
+    return { totalLinks, mostLinked, leastLinked, isolated };
+  }, [worldData]);
+
+  // Featured article - single prominent entity with image and full summary
+  const featuredArticle = useMemo(() => {
+    // Find entities with images and summaries, prefer mythic/renowned
+    const candidates = worldData.hardState.filter(e =>
+      e.kind !== 'era' &&
+      e.summary &&
+      e.enrichment?.image?.imageId
+    );
+    if (candidates.length === 0) {
+      // Fallback to any entity with a summary
+      const withSummary = worldData.hardState.filter(e => e.kind !== 'era' && e.summary);
+      if (withSummary.length === 0) return null;
+      return weightedRandomSelect(withSummary, 1)[0];
+    }
+    return weightedRandomSelect(candidates, 1)[0];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load featured article image
+  const [featuredImageUrl, setFeaturedImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!featuredArticle?.enrichment?.image?.imageId || !imageLoader) {
+      setFeaturedImageUrl(null);
+      return;
+    }
+    let cancelled = false;
+    imageLoader(featuredArticle.enrichment.image.imageId).then(url => {
+      if (!cancelled) setFeaturedImageUrl(url);
+    });
+    return () => { cancelled = true; };
+  }, [featuredArticle, imageLoader]);
+
+  // "Did you know" - 5 random relationships as interesting facts
+  const didYouKnow = useMemo(() => {
+    if (worldData.relationships.length === 0) return [];
+    const entityMap = new Map(worldData.hardState.map(e => [e.id, e]));
+
+    // Shuffle and pick 5 interesting relationships
+    const shuffled = [...worldData.relationships]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 20); // Get more, then filter for good ones
+
+    const facts: Array<{
+      srcEntity: typeof worldData.hardState[0];
+      dstEntity: typeof worldData.hardState[0];
+      kind: string;
+    }> = [];
+
+    for (const rel of shuffled) {
+      if (facts.length >= 5) break;
+      const src = entityMap.get(rel.src);
+      const dst = entityMap.get(rel.dst);
+      // Skip era relationships and self-references
+      if (!src || !dst || src.kind === 'era' || dst.kind === 'era' || src.id === dst.id) continue;
+      facts.push({ srcEntity: src, dstEntity: dst, kind: rel.kind });
+    }
+    return facts;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Entity kind distribution
+  const kindDistribution = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const entity of worldData.hardState) {
+      if (entity.kind !== 'era') {
+        counts.set(entity.kind, (counts.get(entity.kind) || 0) + 1);
+      }
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+  }, [worldData.hardState]);
+
+  const sectionStyle = {
+    marginBottom: '24px',
+    padding: '20px',
+    backgroundColor: colors.bgSecondary,
+    borderRadius: '8px',
+    border: `1px solid ${colors.border}`,
+  };
+
+  const sectionTitleStyle = {
+    fontSize: '14px',
+    fontWeight: 600,
+    marginBottom: '16px',
+    color: colors.accent,
+    borderBottom: `1px solid ${colors.border}`,
+    paddingBottom: '8px',
+  };
+
+  // Format relationship kind for display
+  const formatRelKind = (kind: string) => {
+    return kind.replace(/_/g, ' ');
+  };
+
+  // Truncate summary to max length
+  const truncateSummary = (text: string, maxLen: number) => {
+    if (text.length <= maxLen) return text;
+    return text.slice(0, maxLen).replace(/\s+\S*$/, '') + '...';
+  };
+
+  return (
+    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+      {/* Header with stats */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '24px',
+        paddingBottom: '16px',
+        borderBottom: `1px solid ${colors.border}`,
+      }}>
+        <h1 style={{
+          fontSize: '28px',
+          fontWeight: 600,
+          color: colors.textPrimary,
+          margin: 0,
+        }}>
+          World Chronicle
+        </h1>
+        <div style={{ fontSize: '13px', color: colors.textMuted }}>
+          {worldData.hardState.filter(e => e.kind !== 'era').length} entities
+          {' · '}
+          {worldData.relationships.length} relationships
+          {eras.length > 0 && <> · {eras.length} eras</>}
+        </div>
+      </div>
+
+      {/* About This Project banner - if exists */}
+      {aboutPage && (
+        <div style={{
+          marginBottom: '24px',
+          padding: '16px 20px',
+          backgroundColor: 'rgba(16, 185, 129, 0.08)',
+          borderRadius: '8px',
+          borderLeft: `4px solid ${colors.accent}`,
+        }}>
+          <div style={{
+            fontSize: '14px',
+            color: colors.textSecondary,
+            lineHeight: 1.6,
+            marginBottom: '12px',
+          }}>
+            {aboutPage.content.summary || 'Learn about this world and its lore.'}
+          </div>
+          <button
+            onClick={() => onNavigate(aboutPage.id)}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: 'transparent',
+              border: `1px solid ${colors.accent}`,
+              borderRadius: '4px',
+              color: colors.accent,
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            Read more →
+          </button>
+        </div>
+      )}
+
+      {/* Two-column layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px' }}>
+        {/* Left column */}
+        <div>
+          {/* Featured Article - Wikipedia style */}
+          {featuredArticle && (
+            <div style={sectionStyle}>
+              <h2 style={sectionTitleStyle}>Featured Article</h2>
+              <div style={{ display: 'flex', gap: '16px' }}>
+                {featuredImageUrl && (
+                  <div style={{
+                    width: '140px',
+                    height: '140px',
+                    flexShrink: 0,
+                    borderRadius: '6px',
+                    overflow: 'hidden',
+                    backgroundColor: colors.bgTertiary,
+                  }}>
+                    <img
+                      src={featuredImageUrl}
+                      alt={featuredArticle.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <button
+                    onClick={() => onNavigate(featuredArticle.id)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <h3 style={{
+                      fontSize: '18px',
+                      fontWeight: 600,
+                      color: colors.textPrimary,
+                      marginBottom: '4px',
+                    }}>
+                      {featuredArticle.name}
+                    </h3>
+                  </button>
+                  <div style={{
+                    fontSize: '11px',
+                    color: colors.textMuted,
+                    marginBottom: '8px',
+                    textTransform: 'capitalize',
+                  }}>
+                    {featuredArticle.kind}
+                    {featuredArticle.subtype && featuredArticle.subtype !== featuredArticle.kind && (
+                      <> · {featuredArticle.subtype}</>
+                    )}
+                    {featuredArticle.culture && <> · {featuredArticle.culture}</>}
+                  </div>
+                  <p style={{
+                    fontSize: '13px',
+                    color: colors.textSecondary,
+                    lineHeight: 1.6,
+                    margin: 0,
+                  }}>
+                    {truncateSummary(featuredArticle.summary || '', 280)}
+                    {' '}
+                    <button
+                      onClick={() => onNavigate(featuredArticle.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        color: colors.accent,
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                      }}
+                    >
+                      (Full article...)
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Did You Know - Wikipedia style */}
+          {didYouKnow.length > 0 && (
+            <div style={sectionStyle}>
+              <h2 style={sectionTitleStyle}>Did you know...</h2>
+              <ul style={{
+                margin: 0,
+                paddingLeft: '20px',
+                listStyle: 'disc',
+              }}>
+                {didYouKnow.map((fact, idx) => (
+                  <li key={idx} style={{
+                    fontSize: '13px',
+                    color: colors.textSecondary,
+                    lineHeight: 1.7,
+                    marginBottom: '8px',
+                  }}>
+                    ...that{' '}
+                    <button
+                      onClick={() => onNavigate(fact.srcEntity.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        color: colors.accent,
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {fact.srcEntity.name}
+                    </button>
+                    {' '}has a <em>{formatRelKind(fact.kind)}</em> relationship with{' '}
+                    <button
+                      onClick={() => onNavigate(fact.dstEntity.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        color: colors.accent,
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {fact.dstEntity.name}
+                    </button>
+                    ?
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Eras */}
+          {eras.length > 0 && (
+            <div style={sectionStyle}>
+              <h2 style={sectionTitleStyle}>Eras of History</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {eras.map((era, idx) => (
+                  <button
+                    key={era.id}
+                    onClick={() => onNavigate(era.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      textAlign: 'left',
+                      padding: '8px 12px',
+                      backgroundColor: colors.bgTertiary,
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: colors.textPrimary,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      backgroundColor: colors.accent,
+                      color: colors.bgPrimary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      flexShrink: 0,
+                    }}>
+                      {idx + 1}
+                    </span>
+                    <span style={{ fontSize: '13px', fontWeight: 500 }}>{era.name}</span>
+                    {era.summary && (
+                      <span style={{ fontSize: '11px', color: colors.textMuted, marginLeft: 'auto' }}>
+                        {truncateSummary(era.summary, 40)}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right column */}
+        <div>
+          {/* Most Connected - with more context */}
+          <div style={sectionStyle}>
+            <h2 style={sectionTitleStyle}>Most Connected</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {linkStats.mostLinked.map(entity => {
+                const linkCount = linkStats.totalLinks.get(entity.id) || 0;
+                return (
+                  <button
+                    key={entity.id}
+                    onClick={() => onNavigate(entity.id)}
+                    style={{
+                      display: 'block',
+                      textAlign: 'left',
+                      padding: '10px 12px',
+                      backgroundColor: colors.bgTertiary,
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: colors.textPrimary,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 500, fontSize: '13px' }}>{entity.name}</span>
+                      <span style={{
+                        fontSize: '11px',
+                        color: colors.textMuted,
+                        backgroundColor: colors.bgSecondary,
+                        padding: '2px 6px',
+                        borderRadius: '8px',
+                      }}>
+                        {linkCount} links
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '11px', color: colors.textMuted, textTransform: 'capitalize' }}>
+                      {entity.kind}
+                      {entity.culture && <> · {entity.culture}</>}
+                    </div>
+                    {entity.summary && (
+                      <div style={{ fontSize: '12px', color: colors.textSecondary, marginTop: '6px', lineHeight: 1.5 }}>
+                        {truncateSummary(entity.summary, 80)}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Hidden Gems - with more context */}
+          <div style={sectionStyle}>
+            <h2 style={sectionTitleStyle}>Hidden Gems</h2>
+            <p style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '12px', marginTop: 0 }}>
+              Lesser-known entities worth exploring
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {linkStats.leastLinked.map(entity => {
+                const linkCount = linkStats.totalLinks.get(entity.id) || 0;
+                return (
+                  <button
+                    key={entity.id}
+                    onClick={() => onNavigate(entity.id)}
+                    style={{
+                      display: 'block',
+                      textAlign: 'left',
+                      padding: '10px 12px',
+                      backgroundColor: colors.bgTertiary,
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: colors.textPrimary,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 500, fontSize: '13px' }}>{entity.name}</span>
+                      <span style={{
+                        fontSize: '11px',
+                        color: colors.textMuted,
+                        backgroundColor: colors.bgSecondary,
+                        padding: '2px 6px',
+                        borderRadius: '8px',
+                      }}>
+                        {linkCount} links
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '11px', color: colors.textMuted, textTransform: 'capitalize' }}>
+                      {entity.kind}
+                      {entity.culture && <> · {entity.culture}</>}
+                    </div>
+                    {entity.summary && (
+                      <div style={{ fontSize: '12px', color: colors.textSecondary, marginTop: '6px', lineHeight: 1.5 }}>
+                        {truncateSummary(entity.summary, 80)}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {linkStats.isolated.length > 0 && (
+              <div style={{ marginTop: '12px', fontSize: '11px', color: colors.textMuted }}>
+                + {linkStats.isolated.length} isolated entities with no connections
+              </div>
+            )}
+          </div>
+
+          {/* Browse by Type */}
+          <div style={sectionStyle}>
+            <h2 style={sectionTitleStyle}>Browse by Type</h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {kindDistribution.map(([kind, count]) => (
+                <button
+                  key={kind}
+                  onClick={() => onNavigate(`category-kind-${kind}`)}
+                  style={{
+                    padding: '6px 10px',
+                    backgroundColor: colors.bgTertiary,
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: colors.textSecondary,
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {kind} <span style={{ color: colors.textMuted }}>({count})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Chronicles */}
+          {chronicles.length > 0 && (
+            <div style={sectionStyle}>
+              <h2 style={sectionTitleStyle}>Chronicles</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {chronicles.slice(0, 4).map(chronicle => (
+                  <button
+                    key={chronicle.id}
+                    onClick={() => onNavigate(chronicle.id)}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      textAlign: 'left',
+                      padding: '8px 10px',
+                      backgroundColor: colors.bgTertiary,
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: colors.textPrimary,
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                    }}
+                  >
+                    <span>{chronicle.title}</span>
+                    <span style={{ fontSize: '10px', color: colors.textMuted }}>
+                      {chronicle.chronicle?.format === 'story' ? 'Story' : 'Document'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {chronicles.length > 4 && (
+                <button
+                  onClick={() => onNavigate('chronicles')}
+                  style={{
+                    marginTop: '10px',
+                    padding: '6px 10px',
+                    backgroundColor: 'transparent',
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: '4px',
+                    color: colors.textMuted,
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    width: '100%',
+                  }}
+                >
+                  View all {chronicles.length} chronicles →
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+// Pages Index component
+interface PagesIndexProps {
+  pages: WikiPage[];
+  onNavigate: (pageId: string) => void;
+}
+
+function PagesIndex({ pages, onNavigate }: PagesIndexProps) {
+  // Group pages by namespace
+  const pagesByNamespace = useMemo(() => {
+    const grouped = new Map<string, WikiPage[]>();
+    for (const page of pages) {
+      const colonIndex = page.title.indexOf(':');
+      const namespace = colonIndex > 0 ? page.title.slice(0, colonIndex) : 'General';
+      if (!grouped.has(namespace)) {
+        grouped.set(namespace, []);
+      }
+      grouped.get(namespace)!.push(page);
+    }
+    // Sort namespaces, keeping General at end
+    return Array.from(grouped.entries()).sort((a, b) => {
+      if (a[0] === 'General') return 1;
+      if (b[0] === 'General') return -1;
+      return a[0].localeCompare(b[0]);
+    });
+  }, [pages]);
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
       <h1 style={{
-        fontSize: '32px',
+        fontSize: '28px',
         fontWeight: 600,
         marginBottom: '8px',
         color: colors.textPrimary,
       }}>
-        World Chronicle
+        Pages
       </h1>
       <p style={{
-        fontSize: '16px',
+        fontSize: '14px',
         color: colors.textSecondary,
-        marginBottom: '32px',
+        marginBottom: '24px',
         lineHeight: 1.6,
       }}>
-        Explore the history, legends, and lore of this world. Browse by era, entity type,
-        or search for specific topics.
+        User-authored pages providing additional world context, cultural overviews, and lore articles.
       </p>
 
-      {/* Stats */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '16px',
-        marginBottom: '32px',
-      }}>
-        <StatCard label="Entities" value={worldData.hardState.length} />
-        <StatCard label="Relationships" value={worldData.relationships.length} />
-        <StatCard label="Eras" value={eras.length} />
-        <StatCard label="Wiki Pages" value={pages.length} />
-      </div>
-
-      {/* Eras section */}
-      {eras.length > 0 && (
-        <section style={{ marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: colors.accent }}>
-            Eras
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {eras.map(era => {
-              const page = pages.find(p => p.id === era.id);
-              const summary = page?.content.summary;
-              return (
-                <button
-                  key={era.id}
-                  onClick={() => page && onNavigate(page.id)}
-                  style={{
-                    display: 'block',
-                    textAlign: 'left',
-                    padding: '12px 16px',
-                    backgroundColor: colors.bgSecondary,
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: '6px',
-                    color: colors.textPrimary,
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                  }}
-                >
-                  <span style={{ fontWeight: 500 }}>{era.name}</span>
-                  {summary && (
-                    <span style={{ color: colors.textMuted, marginLeft: '12px' }}>
-                      {summary.slice(0, 100)}...
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+      {pages.length === 0 ? (
+        <div style={{
+          padding: '48px 24px',
+          textAlign: 'center',
+          backgroundColor: colors.bgSecondary,
+          borderRadius: '8px',
+          border: `1px solid ${colors.border}`,
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+          <div style={{ fontSize: '16px', color: colors.textSecondary, marginBottom: '8px' }}>
+            No pages yet
           </div>
-        </section>
-      )}
-
-      {/* Notable Entities */}
-      {notableEntities.length > 0 && (
-        <section style={{ marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: colors.accent }}>
-            Notable Figures & Places
-          </h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {notableEntities.map(entity => {
-              const page = pages.find(p => p.id === entity.id);
-              return (
-                <button
-                  key={entity.id}
-                  onClick={() => page && onNavigate(page.id)}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: colors.bgSecondary,
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: '16px',
-                    color: colors.textPrimary,
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                  }}
-                >
-                  {entity.name}
-                  <span style={{
-                    marginLeft: '8px',
-                    color: colors.textMuted,
-                    fontSize: '11px',
-                  }}>
-                    {entity.kind}
-                  </span>
-                </button>
-              );
-            })}
+          <div style={{ fontSize: '13px', color: colors.textMuted }}>
+            Create and publish pages in Illuminator to see them here.
           </div>
-        </section>
-      )}
-
-      {/* Categories */}
-      {categories.length > 0 && (
-        <section>
-          <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: colors.accent }}>
-            Browse by Category
-          </h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {categories.slice(0, 20).map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => onNavigate(`category-${cat.id}`)}
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: '4px',
-                  color: colors.textSecondary,
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                }}
-              >
-                {cat.name} ({cat.pageCount})
-              </button>
-            ))}
-          </div>
-        </section>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {pagesByNamespace.map(([namespace, pagesInNs]) => (
+            <div key={namespace}>
+              <h2 style={{
+                fontSize: '16px',
+                fontWeight: 600,
+                color: colors.accent,
+                marginBottom: '12px',
+                paddingBottom: '8px',
+                borderBottom: `1px solid ${colors.border}`,
+              }}>
+                {namespace}
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {pagesInNs.map(page => (
+                  <button
+                    key={page.id}
+                    onClick={() => onNavigate(page.id)}
+                    style={{
+                      display: 'block',
+                      textAlign: 'left',
+                      padding: '12px 16px',
+                      backgroundColor: colors.bgSecondary,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '6px',
+                      color: colors.textPrimary,
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {page.title}
+                    {page.content.summary && (
+                      <div style={{
+                        fontSize: '12px',
+                        color: colors.textMuted,
+                        marginTop: '4px',
+                        fontWeight: 400,
+                      }}>
+                        {page.content.summary}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+// Page Category Index - shows pages filtered by namespace
+interface PageCategoryIndexProps {
+  namespace: string;
+  pages: WikiPage[];
+  onNavigate: (pageId: string) => void;
+}
+
+function PageCategoryIndex({ namespace, pages, onNavigate }: PageCategoryIndexProps) {
+  // Filter pages to this namespace
+  const filteredPages = useMemo(() => {
+    return pages.filter(page => {
+      const colonIndex = page.title.indexOf(':');
+      const pageNamespace = colonIndex > 0 ? page.title.slice(0, colonIndex) : 'General';
+      return pageNamespace === namespace;
+    });
+  }, [pages, namespace]);
+
   return (
-    <div style={{
-      padding: '16px',
-      backgroundColor: colors.bgSecondary,
-      borderRadius: '8px',
-      border: `1px solid ${colors.border}`,
-      textAlign: 'center',
-    }}>
-      <div style={{ fontSize: '24px', fontWeight: 600, color: colors.accent }}>
-        {value.toLocaleString()}
-      </div>
-      <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px' }}>
-        {label}
-      </div>
+    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <h1 style={{
+        fontSize: '28px',
+        fontWeight: 600,
+        marginBottom: '8px',
+        color: colors.textPrimary,
+      }}>
+        {namespace} Pages
+      </h1>
+      <p style={{
+        fontSize: '14px',
+        color: colors.textSecondary,
+        marginBottom: '24px',
+        lineHeight: 1.6,
+      }}>
+        {namespace === 'General'
+          ? 'Pages without a namespace prefix.'
+          : `Pages in the ${namespace} namespace.`}
+      </p>
+
+      {filteredPages.length === 0 ? (
+        <div style={{
+          padding: '48px 24px',
+          textAlign: 'center',
+          backgroundColor: colors.bgSecondary,
+          borderRadius: '8px',
+          border: `1px solid ${colors.border}`,
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+          <div style={{ fontSize: '16px', color: colors.textSecondary, marginBottom: '8px' }}>
+            No pages in this category
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {filteredPages.map(page => (
+            <button
+              key={page.id}
+              onClick={() => onNavigate(page.id)}
+              style={{
+                display: 'block',
+                textAlign: 'left',
+                padding: '16px 20px',
+                backgroundColor: colors.bgSecondary,
+                border: `1px solid ${colors.border}`,
+                borderRadius: '6px',
+                color: colors.textPrimary,
+                cursor: 'pointer',
+                fontSize: '15px',
+                fontWeight: 500,
+              }}
+            >
+              {page.title}
+              {page.content.summary && (
+                <div style={{
+                  fontSize: '13px',
+                  color: colors.textMuted,
+                  marginTop: '4px',
+                  fontWeight: 400,
+                }}>
+                  {page.content.summary}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

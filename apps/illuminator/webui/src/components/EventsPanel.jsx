@@ -5,7 +5,11 @@
  * with filtering by era, kind, significance, and tags.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+
+// Display limit for performance - loading 7000+ events causes UI freeze
+const DEFAULT_DISPLAY_LIMIT = 500;
+const LOAD_MORE_INCREMENT = 250;
 
 // Event kind colors
 const EVENT_KIND_COLORS = {
@@ -239,6 +243,7 @@ export default function EventsPanel({ worldData, entityMap }) {
   const [eraFilter, setEraFilter] = useState('all');
   const [tagFilter, setTagFilter] = useState('');
   const [expandedEvents, setExpandedEvents] = useState(new Set());
+  const [displayLimit, setDisplayLimit] = useState(DEFAULT_DISPLAY_LIMIT);
 
   const events = worldData?.narrativeHistory || [];
   const simulationRunId = worldData?.metadata?.simulationRunId;
@@ -279,6 +284,22 @@ export default function EventsPanel({ worldData, entityMap }) {
   const sortedEvents = useMemo(() => {
     return [...filteredEvents].sort((a, b) => b.significance - a.significance);
   }, [filteredEvents]);
+
+  // Limit displayed events for performance
+  const displayedEvents = useMemo(() => {
+    return sortedEvents.slice(0, displayLimit);
+  }, [sortedEvents, displayLimit]);
+
+  const hasMoreEvents = sortedEvents.length > displayLimit;
+
+  const handleLoadMore = () => {
+    setDisplayLimit((prev) => prev + LOAD_MORE_INCREMENT);
+  };
+
+  // Reset display limit when filters change
+  useEffect(() => {
+    setDisplayLimit(DEFAULT_DISPLAY_LIMIT);
+  }, [significanceFilter, kindFilter, eraFilter, tagFilter]);
 
   const toggleExpanded = (eventId) => {
     setExpandedEvents((prev) => {
@@ -355,7 +376,9 @@ export default function EventsPanel({ worldData, entityMap }) {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <div style={{ fontSize: '14px', fontWeight: 500 }}>
-            {filteredEvents.length} of {events.length} events
+            {displayedEvents.length === filteredEvents.length
+              ? `${filteredEvents.length} of ${events.length} events`
+              : `Showing ${displayedEvents.length} of ${filteredEvents.length} filtered (${events.length} total)`}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -495,15 +518,40 @@ export default function EventsPanel({ worldData, entityMap }) {
             No events match the current filters
           </div>
         ) : (
-          sortedEvents.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              entityMap={entityMap}
-              expanded={expandedEvents.has(event.id)}
-              onToggle={() => toggleExpanded(event.id)}
-            />
-          ))
+          <>
+            {displayedEvents.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                entityMap={entityMap}
+                expanded={expandedEvents.has(event.id)}
+                onToggle={() => toggleExpanded(event.id)}
+              />
+            ))}
+
+            {/* Load more button */}
+            {hasMoreEvents && (
+              <div style={{ textAlign: 'center', padding: '16px' }}>
+                <button
+                  onClick={handleLoadMore}
+                  style={{
+                    padding: '10px 24px',
+                    fontSize: '13px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  Load {Math.min(LOAD_MORE_INCREMENT, sortedEvents.length - displayLimit)} more
+                  <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>
+                    ({sortedEvents.length - displayLimit} remaining)
+                  </span>
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

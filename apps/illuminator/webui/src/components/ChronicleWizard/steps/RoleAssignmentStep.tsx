@@ -1,20 +1,29 @@
 /**
  * RoleAssignmentStep - Step 3: Assign entities to roles
  *
- * Two-column layout: available entities on left, roles on right.
- * Features metrics display, sort/filter controls for diversity.
+ * Features the Ensemble Constellation visualization:
+ * - Graph showing candidates around entry point
+ * - Role slots for click-to-assign workflow
+ * - Entity detail card for selected entity
+ * - Ensemble health bar showing diversity
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { StoryNarrativeStyle, DocumentNarrativeStyle, RoleDefinition } from '@canonry/world-schema';
 import { useWizard } from '../WizardContext';
 import {
   validateRoleAssignments,
+  findEraForTick,
   type EntitySelectionMetrics,
 } from '../../../lib/chronicle/selectionWizard';
 import { getEntityUsageStats } from '../../../lib/chronicleStorage';
-
-type SortOption = 'recommended' | 'distance' | 'least-used' | 'strength';
+import {
+  EnsembleConstellation,
+  RoleSlot,
+  EntityDetailCard,
+  EnsembleHealthBar,
+  FilterChips,
+} from '../visualizations';
 
 /** Get roles from either story or document style */
 function getRoles(style: { format: string } | null | undefined): RoleDefinition[] {
@@ -22,7 +31,6 @@ function getRoles(style: { format: string } | null | undefined): RoleDefinition[
   if (style.format === 'story') {
     return (style as StoryNarrativeStyle).roles || [];
   }
-  // Document styles have roles directly on the style object
   const docStyle = style as DocumentNarrativeStyle;
   return docStyle.roles || [];
 }
@@ -30,6 +38,7 @@ function getRoles(style: { format: string } | null | undefined): RoleDefinition[
 export default function RoleAssignmentStep() {
   const {
     state,
+    eras,
     autoFillRoles,
     addRoleAssignment,
     removeRoleAssignment,
@@ -38,12 +47,10 @@ export default function RoleAssignmentStep() {
   } = useWizard();
 
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
-  const [searchText, setSearchText] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('recommended');
-  const [hideOverused, setHideOverused] = useState(false);
-  const [directOnly, setDirectOnly] = useState(false);
   const [usageStats, setUsageStats] = useState<Map<string, { usageCount: number }>>(new Map());
   const [metricsMap, setMetricsMap] = useState<Map<string, EntitySelectionMetrics>>(new Map());
+  const [selectedKinds, setSelectedKinds] = useState<Set<string>>(new Set());
+  const [connectionFilter, setConnectionFilter] = useState<string | null>(null);
 
   const style = state.narrativeStyle;
   const roles = getRoles(style);
@@ -70,60 +77,6 @@ export default function RoleAssignmentStep() {
     }
   }, [state.candidates, state.entryPointId, usageStats, state.roleAssignments, computeMetrics]);
 
-  // Filter and sort candidates
-  const filteredCandidates = useMemo(() => {
-    let filtered = state.candidates;
-
-    // Apply search filter
-    if (searchText.trim()) {
-      const search = searchText.toLowerCase();
-      filtered = filtered.filter(e =>
-        e.name.toLowerCase().includes(search) ||
-        e.kind.toLowerCase().includes(search)
-      );
-    }
-
-    // Apply overused filter
-    if (hideOverused) {
-      filtered = filtered.filter(e => {
-        const metrics = metricsMap.get(e.id);
-        return !metrics || metrics.usageCount < 5;
-      });
-    }
-
-    // Apply direct-only filter
-    if (directOnly) {
-      filtered = filtered.filter(e => {
-        const metrics = metricsMap.get(e.id);
-        return metrics && metrics.distance <= 1;
-      });
-    }
-
-    // Sort
-    filtered = [...filtered].sort((a, b) => {
-      const metricsA = metricsMap.get(a.id);
-      const metricsB = metricsMap.get(b.id);
-
-      switch (sortBy) {
-        case 'distance':
-          return (metricsA?.distance ?? 99) - (metricsB?.distance ?? 99);
-        case 'least-used':
-          return (metricsA?.usageCount ?? 0) - (metricsB?.usageCount ?? 0);
-        case 'strength':
-          return (metricsB?.avgStrength ?? 0) - (metricsA?.avgStrength ?? 0);
-        case 'recommended':
-        default:
-          // By category novelty first, then by least used
-          const noveltyA = metricsA?.addsNewCategory ? 1 : 0;
-          const noveltyB = metricsB?.addsNewCategory ? 1 : 0;
-          if (noveltyA !== noveltyB) return noveltyB - noveltyA;
-          return (metricsA?.usageCount ?? 0) - (metricsB?.usageCount ?? 0);
-      }
-    });
-
-    return filtered;
-  }, [state.candidates, searchText, hideOverused, directOnly, sortBy, metricsMap]);
-
   // Get assigned entity IDs
   const assignedEntityIds = useMemo(() => {
     return new Set(state.roleAssignments.map(a => a.entityId));
@@ -135,45 +88,140 @@ export default function RoleAssignmentStep() {
     return validateRoleAssignments(state.roleAssignments, roles, maxCastSize);
   }, [state.roleAssignments, roles, maxCastSize]);
 
-  // Handle entity click - toggle selection
-  const handleEntityClick = (entityId: string) => {
-    setSelectedEntityId(prev => prev === entityId ? null : entityId);
-  };
+  // Get selected entity details
+  const selectedEntity = useMemo(() => {
+    if (!selectedEntityId) return null;
+    return state.candidates.find(e => e.id === selectedEntityId) || null;
+  }, [selectedEntityId, state.candidates]);
 
-  // Handle role click - assign selected entity to role
-  const handleRoleClick = (roleId: string) => {
+  const selectedMetrics = useMemo(() => {
+    if (!selectedEntityId) return undefined;
+    return metricsMap.get(selectedEntityId);
+  }, [selectedEntityId, metricsMap]);
+
+  // Get era name for selected entity
+  const selectedEntityEra = useMemo(() => {
+    if (!selectedEntity || eras.length === 0) return undefined;
+    const era = findEraForTick(selectedEntity.createdAt, eras);
+    return era?.name;
+  }, [selectedEntity, eras]);
+
+  // Handle role assignment
+  const handleAssignToRole = useCallback((roleId: string) => {
     if (!selectedEntityId) return;
 
     const entity = state.candidates.find(e => e.id === selectedEntityId);
     if (!entity) return;
 
-    // Check if already assigned to this role
-    const existing = state.roleAssignments.find(
-      a => a.entityId === selectedEntityId && a.role === roleId
-    );
-    if (existing) {
-      removeRoleAssignment(selectedEntityId, roleId);
-    } else {
-      addRoleAssignment({
-        role: roleId,
-        entityId: entity.id,
-        entityName: entity.name,
-        entityKind: entity.kind,
-        isPrimary: false,
+    addRoleAssignment({
+      role: roleId,
+      entityId: entity.id,
+      entityName: entity.name,
+      entityKind: entity.kind,
+      isPrimary: false,
+    });
+
+    setSelectedEntityId(null);
+  }, [selectedEntityId, state.candidates, addRoleAssignment]);
+
+  // Handle remove from role
+  const handleRemoveFromRole = useCallback((entityId: string, roleId: string) => {
+    removeRoleAssignment(entityId, roleId);
+  }, [removeRoleAssignment]);
+
+  // Build kind-to-category map
+  const kindToCategory = useMemo(() => {
+    const map = new Map<string, string>();
+    // Simple mapping - could be domain-specific
+    for (const candidate of state.candidates) {
+      map.set(candidate.kind, candidate.kind);
+    }
+    return map;
+  }, [state.candidates]);
+
+  // Get available kinds for filter chips
+  const availableKinds = useMemo(() => {
+    const kinds = new Set<string>();
+    for (const candidate of state.candidates) {
+      kinds.add(candidate.kind);
+    }
+    return Array.from(kinds).sort();
+  }, [state.candidates]);
+
+  // Build connection maps for filtering
+  const connectionMaps = useMemo(() => {
+    // Map entity ID -> set of assigned entity IDs it connects to
+    const connectedToAssigned = new Map<string, Set<string>>();
+
+    for (const rel of state.candidateRelationships) {
+      const srcAssigned = assignedEntityIds.has(rel.src);
+      const dstAssigned = assignedEntityIds.has(rel.dst);
+
+      if (srcAssigned && !dstAssigned) {
+        if (!connectedToAssigned.has(rel.dst)) connectedToAssigned.set(rel.dst, new Set());
+        connectedToAssigned.get(rel.dst)!.add(rel.src);
+      }
+      if (dstAssigned && !srcAssigned) {
+        if (!connectedToAssigned.has(rel.src)) connectedToAssigned.set(rel.src, new Set());
+        connectedToAssigned.get(rel.src)!.add(rel.dst);
+      }
+    }
+
+    return { connectedToAssigned };
+  }, [state.candidateRelationships, assignedEntityIds]);
+
+  // Filter candidates by selected kinds and connection filter (always include assigned entities)
+  const filteredCandidates = useMemo(() => {
+    let candidates = state.candidates;
+
+    // Apply kind filter
+    if (selectedKinds.size > 0) {
+      candidates = candidates.filter(c =>
+        selectedKinds.has(c.kind) || assignedEntityIds.has(c.id)
+      );
+    }
+
+    // Apply connection filter
+    if (connectionFilter && assignedEntityIds.size > 0) {
+      candidates = candidates.filter(c => {
+        // Always include assigned entities
+        if (assignedEntityIds.has(c.id)) return true;
+
+        const connectedTo = connectionMaps.connectedToAssigned.get(c.id);
+        const connectionCount = connectedTo?.size ?? 0;
+
+        switch (connectionFilter) {
+          case 'linked':
+            // Connected to at least one assigned entity
+            return connectionCount > 0;
+          case 'bridges':
+            // Connected to 2+ assigned entities (bridges/connectors)
+            return connectionCount >= 2;
+          default:
+            return true;
+        }
       });
     }
 
-    setSelectedEntityId(null);
-  };
+    return candidates;
+  }, [state.candidates, selectedKinds, assignedEntityIds, connectionFilter, connectionMaps]);
+
+  // Filter relationships to only include those between filtered candidates
+  const filteredRelationships = useMemo(() => {
+    const filteredIds = new Set(filteredCandidates.map(c => c.id));
+    return state.candidateRelationships.filter(
+      r => filteredIds.has(r.src) && filteredIds.has(r.dst)
+    );
+  }, [state.candidateRelationships, filteredCandidates]);
 
   return (
     <div>
       {/* Header */}
       <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h4 style={{ margin: '0 0 8px 0' }}>Assign Roles</h4>
+          <h4 style={{ margin: '0 0 8px 0' }}>Build Your Ensemble</h4>
           <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '13px' }}>
-            Select an entity, then click a role to assign it. Toggle "Primary" for key characters.
+            Click entities in the constellation to select, then click a role to assign.
           </p>
         </div>
         <button
@@ -186,407 +234,147 @@ export default function RoleAssignmentStep() {
       </div>
 
       {/* Validation Messages */}
-      {(validation.errors.length > 0 || validation.warnings.length > 0) && (
-        <div style={{ marginBottom: '16px' }}>
+      {validation.errors.length > 0 && (
+        <div style={{ marginBottom: '12px' }}>
           {validation.errors.map((error, i) => (
             <div key={i} style={{
               padding: '8px 12px',
               background: 'rgba(239, 68, 68, 0.1)',
               borderLeft: '3px solid var(--error)',
               marginBottom: '4px',
-              fontSize: '12px',
+              fontSize: '11px',
               color: 'var(--error)',
             }}>
               {error}
             </div>
           ))}
-          {validation.warnings.map((warning, i) => (
-            <div key={i} style={{
-              padding: '8px 12px',
-              background: 'rgba(245, 158, 11, 0.1)',
-              borderLeft: '3px solid var(--warning)',
-              marginBottom: '4px',
-              fontSize: '12px',
-              color: 'var(--warning)',
-            }}>
-              {warning}
-            </div>
-          ))}
         </div>
       )}
 
-      {/* Two Column Layout */}
-      <div style={{ display: 'flex', gap: '20px', height: '400px' }}>
-        {/* Left: Available Entities */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          {/* Header and filters */}
-          <div style={{
-            marginBottom: '8px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '8px',
-          }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Available Entities ({filteredCandidates.length})
-            </span>
-            <input
-              type="text"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search..."
-              className="illuminator-input"
-              style={{ width: '120px', padding: '4px 8px', fontSize: '11px' }}
+      {/* Main layout: Left (constellation + health) | Right (roles + detail) */}
+      <div style={{ display: 'flex', gap: '16px' }}>
+        {/* Left: Constellation + Ensemble Health */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Kind filter chips */}
+          <div style={{ marginBottom: '6px' }}>
+            <FilterChips
+              options={availableKinds}
+              selected={selectedKinds}
+              onSelectionChange={setSelectedKinds}
+              label="Filter by Kind"
             />
           </div>
-          {/* Sort and diversity filters */}
+          {/* Connection filter */}
           <div style={{
-            marginBottom: '8px',
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
+            gap: '6px',
+            marginBottom: '8px',
             fontSize: '10px',
           }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
-              Sort:
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="illuminator-select"
-                style={{ padding: '2px 6px', fontSize: '10px' }}
+            <span style={{ color: 'var(--text-muted)' }}>Show:</span>
+            {[
+              { id: null, label: 'All' },
+              { id: 'linked', label: 'Linked to ensemble' },
+              { id: 'bridges', label: 'Bridges (2+ links)' },
+            ].map(opt => (
+              <button
+                key={opt.id ?? 'all'}
+                onClick={() => setConnectionFilter(opt.id)}
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '10px',
+                  background: connectionFilter === opt.id ? 'var(--accent-color)' : 'var(--bg-tertiary)',
+                  color: connectionFilter === opt.id ? 'white' : 'var(--text-muted)',
+                  border: '1px solid',
+                  borderColor: connectionFilter === opt.id ? 'var(--accent-color)' : 'var(--border-color)',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
               >
-                <option value="recommended">Recommended</option>
-                <option value="distance">Closest</option>
-                <option value="least-used">Least Used</option>
-                <option value="strength">Strongest Link</option>
-              </select>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={directOnly}
-                onChange={(e) => setDirectOnly(e.target.checked)}
-                style={{ margin: 0 }}
-              />
-              Direct links only
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={hideOverused}
-                onChange={(e) => setHideOverused(e.target.checked)}
-                style={{ margin: 0 }}
-              />
-              Hide overused (5+)
-            </label>
+                {opt.label}
+              </button>
+            ))}
           </div>
-
-          <div style={{
-            flex: 1,
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
-            overflow: 'auto',
-          }}>
-            {filteredCandidates.map(entity => {
-              const isAssigned = assignedEntityIds.has(entity.id);
-              const isSelected = selectedEntityId === entity.id;
-              const isEntryPoint = entity.id === state.entryPointId;
-              const metrics = metricsMap.get(entity.id);
-
-              return (
-                <div
-                  key={entity.id}
-                  onClick={() => handleEntityClick(entity.id)}
-                  style={{
-                    padding: '8px 12px',
-                    borderBottom: '1px solid var(--border-color)',
-                    cursor: 'pointer',
-                    background: isSelected
-                      ? 'var(--accent-color)'
-                      : isAssigned
-                      ? 'var(--bg-tertiary)'
-                      : 'transparent',
-                    color: isSelected ? 'white' : 'inherit',
-                    opacity: isAssigned && !isSelected ? 0.6 : 1,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 500, fontSize: '12px' }}>
-                      {entity.name}
-                    </span>
-                    {isEntryPoint && (
-                      <span style={{
-                        padding: '1px 4px',
-                        background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--accent-color)',
-                        color: 'white',
-                        borderRadius: '3px',
-                        fontSize: '8px',
-                        textTransform: 'uppercase',
-                      }}>
-                        Entry
-                      </span>
-                    )}
-                    {isAssigned && !isSelected && (
-                      <span style={{
-                        padding: '1px 4px',
-                        background: 'var(--success)',
-                        color: 'white',
-                        borderRadius: '3px',
-                        fontSize: '8px',
-                      }}>
-                        Assigned
-                      </span>
-                    )}
-                  </div>
-                  {/* Entity kind and metrics row */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '10px',
-                    color: isSelected ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)',
-                    marginTop: '2px',
-                  }}>
-                    <span>{entity.kind}</span>
-                    {metrics && (
-                      <>
-                        {/* Distance indicator */}
-                        <span
-                          title={`${metrics.distance === 0 ? 'Entry point' : metrics.distance === 1 ? 'Direct link (1 hop)' : `${metrics.distance} hops away`}`}
-                          style={{
-                            padding: '0 3px',
-                            background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)',
-                            borderRadius: '2px',
-                            fontSize: '9px',
-                          }}
-                        >
-                          {metrics.distance === 0 ? '★' : `${metrics.distance}h`}
-                        </span>
-                        {/* Usage count */}
-                        {metrics.usageCount > 0 && (
-                          <span
-                            title={`Used in ${metrics.usageCount} chronicle${metrics.usageCount > 1 ? 's' : ''}`}
-                            style={{
-                              padding: '0 3px',
-                              background: metrics.usageCount >= 5
-                                ? (isSelected ? 'rgba(239,68,68,0.4)' : 'rgba(239,68,68,0.2)')
-                                : metrics.usageCount >= 2
-                                ? (isSelected ? 'rgba(245,158,11,0.4)' : 'rgba(245,158,11,0.2)')
-                                : (isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)'),
-                              color: metrics.usageCount >= 5 ? 'var(--error)' : metrics.usageCount >= 2 ? 'var(--warning)' : 'inherit',
-                              borderRadius: '2px',
-                              fontSize: '9px',
-                            }}
-                          >
-                            {metrics.usageCount}×
-                          </span>
-                        )}
-                        {/* Relationship strength */}
-                        {metrics.avgStrength > 0 && (
-                          <span
-                            title={`Link strength: ${(metrics.avgStrength * 100).toFixed(0)}%`}
-                            style={{
-                              padding: '0 3px',
-                              background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)',
-                              borderRadius: '2px',
-                              fontSize: '9px',
-                            }}
-                          >
-                            {'●'.repeat(Math.min(3, Math.ceil(metrics.avgStrength * 3)))}
-                          </span>
-                        )}
-                        {/* Era aligned indicator */}
-                        {metrics.eraAligned && (
-                          <span
-                            title="Active in same era"
-                            style={{
-                              padding: '0 3px',
-                              background: isSelected ? 'rgba(34,197,94,0.4)' : 'rgba(34,197,94,0.2)',
-                              color: isSelected ? 'white' : 'var(--success)',
-                              borderRadius: '2px',
-                              fontSize: '9px',
-                            }}
-                          >
-                            ⏰
-                          </span>
-                        )}
-                        {/* Category novelty indicator */}
-                        {metrics.addsNewCategory && (
-                          <span
-                            title="Adds a new entity category to the cast"
-                            style={{
-                              padding: '0 3px',
-                              background: isSelected ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.2)',
-                              color: isSelected ? 'white' : 'var(--accent-color)',
-                              borderRadius: '2px',
-                              fontSize: '9px',
-                            }}
-                          >
-                            +cat
-                          </span>
-                        )}
-                        {/* New relationship types */}
-                        {metrics.newRelTypes > 0 && (
-                          <span
-                            title={`Adds ${metrics.newRelTypes} new relationship type${metrics.newRelTypes > 1 ? 's' : ''} to the narrative`}
-                            style={{
-                              padding: '0 3px',
-                              background: isSelected ? 'rgba(139,92,246,0.4)' : 'rgba(139,92,246,0.2)',
-                              borderRadius: '2px',
-                              fontSize: '9px',
-                            }}
-                          >
-                            +{metrics.newRelTypes}rel
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+          <EnsembleConstellation
+            entryPointId={state.entryPointId || ''}
+            candidates={filteredCandidates}
+            relationships={filteredRelationships}
+            assignedEntityIds={assignedEntityIds}
+            metricsMap={metricsMap}
+            selectedEntityId={selectedEntityId}
+            onSelectEntity={setSelectedEntityId}
+            width={400}
+            height={300}
+          />
+          {/* Ensemble Health Bar */}
+          <div style={{ marginTop: '8px' }}>
+            <EnsembleHealthBar
+              assignments={state.roleAssignments}
+              candidates={state.candidates}
+              kindToCategory={kindToCategory}
+            />
           </div>
         </div>
 
-        {/* Right: Roles */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+        {/* Right: Roles + Entity Detail */}
+        <div style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Roles header */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
               Roles
             </span>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              {state.roleAssignments.length} / {maxCastSize} max
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+              {state.roleAssignments.length}/{maxCastSize}
             </span>
           </div>
 
+          {/* Role slots */}
           <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
             flex: 1,
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
-            overflow: 'auto',
-            padding: '12px',
+            overflowY: 'auto',
+            minHeight: 0,
           }}>
             {roles.map(role => {
               const assignments = state.roleAssignments.filter(a => a.role === role.role);
-              const count = assignments.length;
-              const isUnderMin = count < role.count.min;
-              const isAtMax = count >= role.count.max;
+              const isUnderMin = assignments.length < role.count.min;
+              const isAtMax = assignments.length >= role.count.max;
 
               return (
-                <div
+                <RoleSlot
                   key={role.role}
-                  style={{
-                    marginBottom: '16px',
-                    padding: '12px',
-                    background: 'var(--bg-secondary)',
-                    borderRadius: '8px',
-                    border: isUnderMin ? '1px solid var(--error)' : '1px solid transparent',
-                  }}
-                >
-                  {/* Role Header */}
-                  <div
-                    onClick={() => !isAtMax && handleRoleClick(role.role)}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: assignments.length > 0 ? '8px' : 0,
-                      cursor: selectedEntityId && !isAtMax ? 'pointer' : 'default',
-                      padding: '4px',
-                      borderRadius: '4px',
-                      background: selectedEntityId && !isAtMax ? 'var(--bg-tertiary)' : 'transparent',
-                    }}
-                  >
-                    <div>
-                      <span style={{ fontWeight: 500, fontSize: '12px' }}>{role.role}</span>
-                      <span style={{
-                        marginLeft: '8px',
-                        fontSize: '10px',
-                        color: isUnderMin ? 'var(--error)' : 'var(--text-muted)',
-                      }}>
-                        {count}/{role.count.min}-{role.count.max}
-                      </span>
-                    </div>
-                    {selectedEntityId && !isAtMax && (
-                      <span style={{
-                        padding: '2px 6px',
-                        background: 'var(--accent-color)',
-                        color: 'white',
-                        borderRadius: '4px',
-                        fontSize: '9px',
-                      }}>
-                        Click to assign
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Role Description */}
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                    {role.description}
-                  </div>
-
-                  {/* Assigned Entities */}
-                  {assignments.map(assignment => (
-                    <div
-                      key={assignment.entityId}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '6px 8px',
-                        background: 'var(--bg-tertiary)',
-                        borderRadius: '4px',
-                        marginTop: '4px',
-                      }}
-                    >
-                      <span style={{ flex: 1, fontSize: '11px' }}>
-                        {assignment.entityName}
-                        <span style={{ color: 'var(--text-muted)', marginLeft: '4px' }}>
-                          ({assignment.entityKind})
-                        </span>
-                      </span>
-
-                      {/* Primary Toggle */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          togglePrimary(assignment.entityId, assignment.role);
-                        }}
-                        style={{
-                          padding: '2px 6px',
-                          background: assignment.isPrimary ? 'var(--accent-color)' : 'var(--bg-secondary)',
-                          color: assignment.isPrimary ? 'white' : 'var(--text-muted)',
-                          border: 'none',
-                          borderRadius: '3px',
-                          fontSize: '9px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {assignment.isPrimary ? 'PRIMARY' : 'Supporting'}
-                      </button>
-
-                      {/* Remove Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeRoleAssignment(assignment.entityId, assignment.role);
-                        }}
-                        style={{
-                          padding: '2px 6px',
-                          background: 'transparent',
-                          color: 'var(--error)',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                        }}
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                  role={role}
+                  assignments={assignments}
+                  hasSelection={selectedEntityId !== null && !assignedEntityIds.has(selectedEntityId)}
+                  isAtMax={isAtMax}
+                  isUnderMin={isUnderMin}
+                  onAssign={() => handleAssignToRole(role.role)}
+                  onRemove={(entityId) => handleRemoveFromRole(entityId, role.role)}
+                  onTogglePrimary={(entityId) => togglePrimary(entityId, role.role)}
+                />
               );
             })}
+          </div>
+
+          {/* Entity detail - always visible */}
+          <div style={{ marginTop: '4px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+              Selected
+            </div>
+            <EntityDetailCard
+              entity={selectedEntity}
+              metrics={selectedMetrics}
+              eraName={selectedEntityEra}
+              isEntryPoint={selectedEntity?.id === state.entryPointId}
+              isAssigned={selectedEntity ? assignedEntityIds.has(selectedEntity.id) : false}
+            />
           </div>
         </div>
       </div>

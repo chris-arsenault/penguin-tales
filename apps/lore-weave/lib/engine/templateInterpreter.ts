@@ -609,8 +609,14 @@ export class TemplateInterpreter {
       const derivedTags = placementResult.derivedTags || {};
       const mergedTags = { ...(rule.tags || {}), ...derivedTags };
 
-      // Build naming context from rule spec
-      const namingContext = this.buildNamingContext(rule.namingContext, context);
+      // Build naming context from rule spec, including region info for context:region support
+      const namingContext = this.buildNamingContext(
+        rule.namingContext,
+        context,
+        rule.kind,
+        placementResult.regionId,
+        placementResult.debug?.emergentRegionCreated?.label
+      );
 
       const entity: Partial<HardState> & { namingContext?: Record<string, string> } = {
         kind: rule.kind,
@@ -621,6 +627,8 @@ export class TemplateInterpreter {
         description,
         tags: mergedTags,
         coordinates: placementResult.coordinates,
+        regionId: placementResult.regionId,
+        allRegionIds: placementResult.allRegionIds,
         namingContext
       };
 
@@ -738,10 +746,14 @@ export class TemplateInterpreter {
    * Build naming context for name generation.
    * Resolves entity refs to their names for use in context: slots.
    * Also automatically includes $selected and $target if available.
+   * If regionId is provided, looks up the region label and adds it as "region".
    */
   private buildNamingContext(
     spec: Record<string, string> | undefined,
-    context: ExecutionContext
+    context: ExecutionContext,
+    entityKind?: string,
+    regionId?: string | null,
+    emergentRegionLabel?: string
   ): Record<string, string> | undefined {
     const result: Record<string, string> = {};
 
@@ -763,6 +775,17 @@ export class TemplateInterpreter {
         if (entity?.name) {
           result[key] = entity.name;
         }
+      }
+    }
+
+    // Add region label if available
+    // First check for emergent region (newly created), then look up existing region
+    if (emergentRegionLabel) {
+      result['region'] = emergentRegionLabel;
+    } else if (regionId && entityKind) {
+      const region = context.graphView.getRegion(entityKind, regionId);
+      if (region?.label) {
+        result['region'] = region.label;
       }
     }
 

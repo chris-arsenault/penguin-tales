@@ -80,6 +80,11 @@ export const GRAMMAR_MODIFIERS = {
     { code: '~ed', desc: 'Past tense: curse → cursed, slay → slain' },
     { code: '~poss', desc: "Possessive: storm → storm's, darkness → darkness'" },
   ],
+  truncation: [
+    { code: '~chopL', desc: 'Chop left: silent → ent (remove 1-3 chars from start)' },
+    { code: '~chopR', desc: 'Chop right: shadow → sha (remove 1-3 chars from end)' },
+    { code: '~chop', desc: 'Random chop: truncate from either start or end' },
+  ],
   capitalization: [
     { code: '~cap', desc: 'Capitalize first letter' },
     { code: '~lower', desc: 'Force lowercase' },

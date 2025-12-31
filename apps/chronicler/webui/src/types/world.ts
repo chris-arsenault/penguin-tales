@@ -4,6 +4,7 @@ import type {
   DistributionMetrics,
   EntityKindDefinition,
   HistoryEvent,
+  NarrativeEvent,
   Prominence as CanonryProminence,
   SemanticCoordinates,
   SemanticRegion,
@@ -18,6 +19,13 @@ export type HardState = CanonryWorldEntity & {
   enrichment?: {
     image?: {
       imageId?: string;
+    };
+    text?: {
+      aliases?: string[];
+      visualThesis?: string;
+      visualTraits?: string[];
+      generatedAt?: number;
+      model?: string;
     };
   };
 };
@@ -111,15 +119,35 @@ export interface PageIndexEntry {
   chronicle?: {
     format: 'story' | 'document';
     entrypointId?: string;
+    narrativeStyleId?: string;
+    roleAssignments?: ChronicleRoleAssignment[];
+    selectedEventIds?: string[];
+    selectedRelationshipIds?: string[];
   };
   // For entity pages
   entityKind?: string;
   entitySubtype?: string;
   prominence?: string;
   culture?: string;
+  // For static pages
+  static?: {
+    pageId: string;
+    status: 'draft' | 'published';
+  };
   // For link resolution
   linkedEntities: string[];
   lastUpdated: number;
+}
+
+/**
+ * Disambiguation entry for pages sharing a base name
+ */
+export interface DisambiguationEntry {
+  pageId: string;
+  title: string;
+  namespace?: string;  // e.g., "Cultures", "Names", or undefined for no namespace
+  type: WikiPage['type'];
+  entityKind?: string;  // For entity pages
 }
 
 /**
@@ -132,6 +160,8 @@ export interface WikiPageIndex {
   byName: Map<string, string>; // lowercase name -> id
   byAlias: Map<string, string>; // lowercase alias -> id
   categories: WikiCategory[];
+  // Disambiguation: baseName (lowercase) -> pages sharing that base name
+  byBaseName: Map<string, DisambiguationEntry[]>;
 }
 
 // Wiki-specific types
@@ -148,7 +178,7 @@ export interface WikiPage {
   id: string;
   slug: string;
   title: string;
-  type: 'entity' | 'era' | 'category' | 'relationship' | 'chronicle';
+  type: 'entity' | 'era' | 'category' | 'relationship' | 'chronicle' | 'static' | 'region';
   chronicle?: {
     format: 'story' | 'document';
     entrypointId?: string;
@@ -157,6 +187,10 @@ export interface WikiPage {
     roleAssignments?: ChronicleRoleAssignment[];
     selectedEventIds?: string[];
     selectedRelationshipIds?: string[];
+  };
+  static?: {
+    pageId: string;
+    status: 'draft' | 'published';
   };
   aliases?: string[];
   content: WikiContent;
@@ -236,5 +270,6 @@ export type {
   DistributionMetrics,
   EntityKindDefinition,
   HistoryEvent,
+  NarrativeEvent,
   Validation,
 };

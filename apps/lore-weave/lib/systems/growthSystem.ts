@@ -9,6 +9,7 @@ import { initializeCatalystSmart } from '../systems/catalystHelpers';
 import { StatisticsCollector } from '../statistics/statisticsCollector';
 import type { HardState, Relationship } from '../core/worldTypes';
 import type { DiscretePressureModification, ISimulationEmitter, PressureModificationSource } from '../observer/types';
+import type { StateChangeTracker, RelationshipSummary } from '../narrative/stateChangeTracker';
 
 export interface GrowthSystemConfig {
   id: string;
@@ -36,6 +37,7 @@ export interface GrowthSystemDependencies {
   maxRunsPerTemplate: number;
   statisticsCollector: StatisticsCollector;
   emitter: ISimulationEmitter;
+  stateChangeTracker: StateChangeTracker;
   getPendingPressureModifications: () => DiscretePressureModification[];
   trackPressureModification: (pressureId: string, delta: number, source: PressureModificationSource) => void;
   calculateGrowthTarget: () => number;
@@ -197,6 +199,33 @@ export function createGrowthSystem(
         relationshipsCreated: result.relationships as Relationship[],
         entitiesModified: []
       });
+
+      // Record creation batch for narrative event generation
+      if (newIds.length > 0) {
+        // Summarize relationships by kind
+        const relationshipCounts = new Map<string, number>();
+        for (const rel of result.relationships) {
+          relationshipCounts.set(rel.kind, (relationshipCounts.get(rel.kind) || 0) + 1);
+        }
+        const relationshipSummary: RelationshipSummary[] = [];
+        for (const [kind, count] of relationshipCounts) {
+          relationshipSummary.push({ kind, count });
+        }
+
+        // Use description from first creation item if available
+        const declTemplate = deps.declarativeTemplates.get(template.id);
+        const rawDescription = declTemplate?.creation?.[0]?.description;
+        // DescriptionSpec can be string or { template, replacements } - extract string if possible
+        const primaryDescription = typeof rawDescription === 'string' ? rawDescription : undefined;
+
+        deps.stateChangeTracker.recordCreationBatch(
+          template.id,
+          template.name || template.id,
+          newIds,
+          relationshipSummary,
+          primaryDescription || result.description
+        );
+      }
 
       const templatePressureMods = deps.getPendingPressureModifications().slice(pressureModsBefore);
       const pressureChanges: Record<string, number> = {};

@@ -13,6 +13,12 @@ import {
 } from './db.js';
 import { loadLastProjectId, saveLastProjectId } from './uiState.js';
 import { loadWorldStore, saveWorldStore } from './worldStore.js';
+import {
+  getStaticPagesForProject,
+  importStaticPages,
+  deleteStaticPagesForProject,
+  loadAndImportSeedPages,
+} from './staticPageStorage.js';
 
 /**
  * Default project ID - used to identify the default project for reload functionality
@@ -101,6 +107,7 @@ async function fetchDefaultProject() {
  * @param {Object} project - The project data
  * @param {Object} options - Optional config
  * @param {Object} options.illuminatorConfig - Illuminator settings to include
+ * @param {Array} options.staticPages - Static pages to include
  */
 async function createProjectZip(project, options = {}) {
   const { default: JSZip } = await import('jszip');
@@ -161,9 +168,14 @@ async function createProjectZip(project, options = {}) {
   }
 
   // Add Illuminator configuration if provided
-  const { illuminatorConfig } = options;
+  const { illuminatorConfig, staticPages } = options;
   if (illuminatorConfig) {
     zip.file('illuminatorConfig.json', JSON.stringify(illuminatorConfig, null, 2));
+  }
+
+  // Add static pages if provided
+  if (staticPages && staticPages.length > 0) {
+    zip.file('staticPages.json', JSON.stringify(staticPages, null, 2));
   }
 
   return zip.generateAsync({ type: 'blob' });
@@ -171,7 +183,7 @@ async function createProjectZip(project, options = {}) {
 
 /**
  * Extract project data from a zip file
- * Returns { project, illuminatorConfig }
+ * Returns { project, illuminatorConfig, staticPages }
  */
 async function extractProjectZip(zipBlob) {
   const { default: JSZip } = await import('jszip');
@@ -227,7 +239,14 @@ async function extractProjectZip(zipBlob) {
     illuminatorConfig = JSON.parse(await illuminatorFile.async('string'));
   }
 
-  return { project, illuminatorConfig };
+  // Load static pages if present
+  let staticPages = [];
+  const staticPagesFile = zip.file('staticPages.json');
+  if (staticPagesFile) {
+    staticPages = JSON.parse(await staticPagesFile.async('string'));
+  }
+
+  return { project, illuminatorConfig, staticPages };
 }
 
 export function useProjectStorage() {
@@ -253,7 +272,6 @@ export function useProjectStorage() {
             // Store illuminatorConfig in worldStore if present
             if (defaultData.illuminatorConfig) {
               const worldStoreData = {
-                slots: {},
                 activeSlotIndex: 0,
                 ...defaultData.illuminatorConfig,
               };
@@ -419,7 +437,7 @@ export function useProjectStorage() {
   );
 
   // Export project as a zip file (Blob)
-  // Includes Illuminator configuration from worldStore
+  // Includes Illuminator configuration from worldStore and static pages
   const exportProject = useCallback(
     async (project = currentProject) => {
       if (!project) return null;
@@ -443,7 +461,10 @@ export function useProjectStorage() {
           }
         }
 
-        const zipBlob = await createProjectZip(project, { illuminatorConfig });
+        // Load static pages from IndexedDB
+        const staticPages = await getStaticPagesForProject(project.id);
+
+        const zipBlob = await createProjectZip(project, { illuminatorConfig, staticPages });
         return zipBlob;
       } catch (err) {
         setError(err.message);
@@ -454,7 +475,7 @@ export function useProjectStorage() {
   );
 
   // Import project from zip file (Blob or File)
-  // Restores Illuminator configuration to worldStore
+  // Restores Illuminator configuration to worldStore and imports static pages
   const importProject = useCallback(
     async (input) => {
       try {
@@ -467,7 +488,7 @@ export function useProjectStorage() {
           throw new Error('Invalid import format: expected zip file');
         }
 
-        const { project: data, illuminatorConfig } = extractedData;
+        const { project: data, illuminatorConfig, staticPages } = extractedData;
 
         // Generate new ID to avoid conflicts
         let project = {
@@ -482,11 +503,15 @@ export function useProjectStorage() {
         // Restore Illuminator configuration to worldStore
         if (illuminatorConfig) {
           const worldStoreData = {
-            slots: {},
             activeSlotIndex: 0,
             ...illuminatorConfig,
           };
           await saveWorldStore(project.id, worldStoreData);
+        }
+
+        // Import static pages if present
+        if (staticPages && staticPages.length > 0) {
+          await importStaticPages(project.id, staticPages);
         }
 
         await refreshList();
@@ -532,12 +557,14 @@ export function useProjectStorage() {
         // Reload illuminatorConfig to worldStore if present
         if (defaultData.illuminatorConfig) {
           const worldStoreData = {
-            slots: {},
             activeSlotIndex: 0,
             ...defaultData.illuminatorConfig,
           };
           await saveWorldStore(currentProject.id, worldStoreData);
         }
+
+        // Reload static pages from default staticPages.json
+        await loadAndImportSeedPages(currentProject.id);
 
         await refreshList();
         setCurrentProject(reloaded);

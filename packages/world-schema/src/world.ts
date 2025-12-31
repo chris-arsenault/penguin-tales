@@ -28,6 +28,28 @@ export interface SemanticCoordinates {
 export type EntityTags = Record<string, string | boolean>;
 
 /**
+ * Execution context for lineage tracking.
+ *
+ * Every mutation (entity creation, relationship creation, tag change, field change)
+ * happens within an execution context. This enables:
+ * - Deduplication: "This relationship was already counted in creation_batch"
+ * - Causality: "This tag change was caused by system X"
+ * - Debugging: "Why does this entity have this tag?"
+ *
+ * See: apps/lore-weave/lib/narrative/LINEAGE.md for full design.
+ */
+export type ExecutionSource = 'template' | 'system' | 'action' | 'pressure' | 'seed' | 'framework';
+
+export interface ExecutionContext {
+  /** Tick when this execution occurred */
+  tick: number;
+  /** What kind of thing triggered this execution */
+  source: ExecutionSource;
+  /** Identifier for the specific template/system/action (e.g., "hero_emergence") */
+  sourceId: string;
+}
+
+/**
  * World entity (current or historical)
  */
 export interface WorldEntity {
@@ -59,6 +81,12 @@ export interface WorldEntity {
   summary?: string;
   /** If true, the summary field should not be overwritten by enrichment */
   lockedSummary?: boolean;
+  /**
+   * Lineage: what created this entity.
+   * Part of the unified lineage system - see LINEAGE.md.
+   * Persistent on entities for debugging and causal queries.
+   */
+  createdBy?: ExecutionContext;
 }
 
 /**
@@ -75,6 +103,12 @@ export interface WorldRelationship {
   catalyzedBy?: string;
   status?: 'active' | 'historical';
   archivedAt?: number;
+  /**
+   * Lineage: what created this relationship.
+   * Part of the unified lineage system - see LINEAGE.md.
+   * Persistent on relationships for debugging and causal queries.
+   */
+  createdBy?: ExecutionContext;
 }
 
 /**
@@ -110,6 +144,7 @@ export type NarrativeEventKind =
   | 'reconciliation'         // Negative relationship dissolved
   | 'rivalry_formed'         // Negative relationship created between known entities
   | 'alliance_formed'        // Multiple positive relationships formed in same tick
+  | 'relationship_formed'    // Single relationship created by system (not template)
   // === Status polarity events (require status polarity metadata) ===
   | 'downfall'               // Status changed to negative polarity
   | 'triumph'                // Status changed to positive polarity
@@ -119,7 +154,12 @@ export type NarrativeEventKind =
   | 'war_started'            // Negative-polarity component formed (multi-entity)
   | 'war_ended'              // Negative-polarity component dissolved (multi-entity)
   // === Authority events (require isAuthority subtype metadata) ===
-  | 'power_vacuum';          // Authority entity ended with no clear successor
+  | 'power_vacuum'           // Authority entity ended with no clear successor
+  // === Tag events ===
+  | 'tag_gained'             // Entity gained a tag during simulation
+  | 'tag_lost'               // Entity lost a tag during simulation
+  // === Creation events ===
+  | 'creation_batch';        // Template created entities and relationships
 
 /**
  * Entity reference for narrative events
@@ -214,6 +254,14 @@ export interface GraphMetrics {
   isolatedNodeRatio: number;
 }
 
+/**
+ * Reachability metrics (pure connectivity, no clustering thresholds)
+ */
+export interface ReachabilityMetrics {
+  connectedComponents: number;
+  fullyConnectedTick?: number | null;
+}
+
 export interface DistributionMetrics {
   entityKindRatios?: Record<string, number>;
   prominenceRatios?: Record<string, number>;
@@ -251,6 +299,7 @@ export interface WorldMetadata {
     formations: Array<Record<string, unknown>>;
     comment?: string;
   };
+  reachability?: ReachabilityMetrics;
   enrichmentTriggers?: Record<string, unknown>;
 }
 

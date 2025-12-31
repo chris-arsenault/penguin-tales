@@ -10,11 +10,14 @@ import type {
   NarrativeEventKind,
   NarrativeEntityRef,
   NarrativeStateChange,
+  Polarity,
+  TagDefinition,
 } from '@canonry/world-schema';
 import type { HardState } from '../core/worldTypes.js';
 import { generateEventId } from '../core/idGeneration.js';
-import { calculateSignificance, getProminenceValue } from './significanceCalculator.js';
+import { calculateSignificance, getProminenceValue, calculateTagSignificance, calculateCreationBatchSignificance, calculateRelationshipFormationSignificance } from './significanceCalculator.js';
 import { generateNarrativeTags } from './narrativeTagGenerator.js';
+import type { RelationshipSummary } from './stateChangeTracker.js';
 
 export interface NarrativeContext {
   tick: number;
@@ -238,7 +241,7 @@ export class NarrativeEventBuilder {
       subject: this.buildEntityRef(currentEra),
       action: 'ended',
       object: this.buildEntityRef(nextEra),
-      headline: `The ${currentEra.name} ends. The ${nextEra.name} begins.`,
+      headline: `${currentEra.name} ends. ${nextEra.name} begins.`,
       description: `${reason}. The world enters a new era.`,
       stateChanges: [stateChange],
       narrativeTags: ['era', 'transition', 'historical', 'temporal'],
@@ -595,6 +598,89 @@ export class NarrativeEventBuilder {
   }
 
   /**
+   * Build a relationship formed event (single relationship created by system)
+   */
+  buildRelationshipFormedEvent(
+    sourceEntity: HardState,
+    targetEntity: HardState,
+    relationshipKind: string,
+    polarity: Polarity | undefined,
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const headline = this.generateRelationshipHeadline(sourceEntity, targetEntity, relationshipKind, polarity);
+
+    const significance = calculateRelationshipFormationSignificance(
+      sourceEntity,
+      targetEntity,
+      polarity
+    );
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'relationship_formed',
+      significance,
+      subject: this.buildEntityRef(sourceEntity),
+      action: `formed_${relationshipKind}`,
+      object: this.buildEntityRef(targetEntity),
+      participants: this.buildParticipantRefs([sourceEntity, targetEntity]),
+      headline,
+      description: `${sourceEntity.name} and ${targetEntity.name} have formed a ${relationshipKind} relationship.`,
+      stateChanges: [],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: generateNarrativeTags(
+        'relationship_formed',
+        this.buildEntityRef(sourceEntity),
+        this.buildEntityRef(targetEntity),
+        [],
+        'relationship',
+        { entityKinds: new Set() }
+      ),
+    };
+  }
+
+  /**
+   * Generate headline for relationship formed events
+   */
+  private generateRelationshipHeadline(
+    source: HardState,
+    target: HardState,
+    kind: string,
+    polarity: Polarity | undefined
+  ): string {
+    // Relationship-kind specific headlines
+    const kindHeadlines: Record<string, string> = {
+      ally_of: `${source.name} allies with ${target.name}`,
+      enemy_of: `${source.name} becomes enemies with ${target.name}`,
+      trades_with: `${source.name} begins trade with ${target.name}`,
+      friend_of: `${source.name} befriends ${target.name}`,
+      mentor_of: `${source.name} mentors ${target.name}`,
+      member_of: `${source.name} joins ${target.name}`,
+      serves: `${source.name} enters service to ${target.name}`,
+      resides_in: `${source.name} settles in ${target.name}`,
+      rules: `${source.name} begins ruling ${target.name}`,
+    };
+
+    if (kindHeadlines[kind]) {
+      return kindHeadlines[kind];
+    }
+
+    // Polarity-based fallback
+    if (polarity === 'positive') {
+      return `${source.name} forms a bond with ${target.name}`;
+    } else if (polarity === 'negative') {
+      return `${source.name} comes into conflict with ${target.name}`;
+    }
+
+    // Generic fallback
+    return `${source.name} connects with ${target.name}`;
+  }
+
+  /**
    * Build a downfall event (status changed to negative polarity)
    */
   buildDownfallEvent(
@@ -904,5 +990,287 @@ export class NarrativeEventBuilder {
         { entityKinds: new Set() }
       ),
     };
+  }
+
+  /**
+   * Build a tag gained event
+   */
+  buildTagGainedEvent(
+    entity: HardState,
+    tag: string,
+    value: string | boolean | undefined,
+    tagMetadata: TagDefinition | undefined,
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const headline = this.generateTagHeadline(entity, tag, 'gained', tagMetadata);
+    const significance = calculateTagSignificance(tag, tagMetadata, entity, 'added');
+
+    const stateChange: NarrativeStateChange = {
+      entityId: entity.id,
+      entityName: entity.name,
+      entityKind: entity.kind,
+      field: 'tags',
+      previousValue: undefined,
+      newValue: value ?? true,
+    };
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'tag_gained',
+      significance,
+      subject: this.buildEntityRef(entity),
+      action: `gained_${tag}`,
+      headline,
+      description: tagMetadata?.description
+        ? `${entity.name} ${tagMetadata.description.toLowerCase()}.`
+        : `${entity.name} gained the ${tag.replace(/_/g, ' ')} trait.`,
+      stateChanges: [stateChange],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: [tag, tagMetadata?.category || 'trait', entity.kind, 'tag_change'],
+    };
+  }
+
+  /**
+   * Build a tag lost event
+   */
+  buildTagLostEvent(
+    entity: HardState,
+    tag: string,
+    tagMetadata: TagDefinition | undefined,
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const headline = this.generateTagHeadline(entity, tag, 'lost', tagMetadata);
+    const significance = calculateTagSignificance(tag, tagMetadata, entity, 'removed');
+
+    const stateChange: NarrativeStateChange = {
+      entityId: entity.id,
+      entityName: entity.name,
+      entityKind: entity.kind,
+      field: 'tags',
+      previousValue: true,
+      newValue: undefined,
+    };
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'tag_lost',
+      significance,
+      subject: this.buildEntityRef(entity),
+      action: `lost_${tag}`,
+      headline,
+      description: `${entity.name} is no longer ${tag.replace(/_/g, ' ')}.`,
+      stateChanges: [stateChange],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: [tag, tagMetadata?.category || 'trait', entity.kind, 'tag_change'],
+    };
+  }
+
+  /**
+   * Generate headline for tag change events
+   */
+  private generateTagHeadline(
+    entity: HardState,
+    tag: string,
+    type: 'gained' | 'lost',
+    metadata?: TagDefinition
+  ): string {
+    // Special cases for common simulation tags
+    const specialHeadlines: Record<string, Record<string, string>> = {
+      wounded: {
+        gained: `${entity.name} is wounded`,
+        lost: `${entity.name} recovers from wounds`,
+      },
+      maimed: {
+        gained: `${entity.name} is maimed`,
+        lost: `${entity.name} heals from their injuries`,
+      },
+      corrupted: {
+        gained: `${entity.name} becomes corrupted`,
+        lost: `${entity.name} is purified`,
+      },
+      legendary: {
+        gained: `${entity.name} becomes legendary`,
+        lost: `${entity.name}'s legend fades`,
+      },
+      hostile: {
+        gained: `${entity.name} turns hostile`,
+        lost: `${entity.name} becomes peaceful`,
+      },
+      leader: {
+        gained: `${entity.name} rises to leadership`,
+        lost: `${entity.name} steps down from leadership`,
+      },
+      war_leader: {
+        gained: `${entity.name} becomes a war leader`,
+        lost: `${entity.name} is no longer a war leader`,
+      },
+      armed_raider: {
+        gained: `${entity.name} takes up arms`,
+        lost: `${entity.name} disarms`,
+      },
+      crisis: {
+        gained: `${entity.name} enters crisis`,
+        lost: `${entity.name} emerges from crisis`,
+      },
+      discovered: {
+        gained: `${entity.name} is discovered`,
+        lost: `${entity.name} is forgotten`,
+      },
+    };
+
+    if (specialHeadlines[tag]?.[type]) {
+      return specialHeadlines[tag][type];
+    }
+
+    // Generic fallback using tag description or formatted name
+    const displayTag = metadata?.description || tag.replace(/_/g, ' ');
+    return type === 'gained'
+      ? `${entity.name} becomes ${displayTag}`
+      : `${entity.name} is no longer ${displayTag}`;
+  }
+
+  /**
+   * Build a creation batch event from template execution
+   */
+  buildCreationBatchEvent(
+    entities: HardState[],
+    relationships: RelationshipSummary[],
+    templateId: string,
+    templateName: string,
+    description?: string
+  ): NarrativeEvent {
+    if (entities.length === 0) {
+      throw new Error('Cannot build creation batch event with no entities');
+    }
+
+    // Primary entity is the first one (typically the "main" creation)
+    const primaryEntity = entities[0];
+    const participants = entities.slice(1);
+    const totalRelationships = relationships.reduce((sum, r) => sum + r.count, 0);
+
+    const headline = this.generateCreationHeadline(entities, templateName);
+    const significance = calculateCreationBatchSignificance(entities, totalRelationships);
+
+    // Build narrative description
+    const eventDescription = description || this.generateCreationDescription(entities, relationships, templateName);
+
+    // Collect entity kinds for narrative tags
+    const entityKinds = new Set(entities.map(e => e.kind));
+    const narrativeTags = ['creation', ...entityKinds];
+    if (relationships.length > 0) {
+      narrativeTags.push('relationship_formation');
+    }
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'creation_batch',
+      significance,
+      subject: this.buildEntityRef(primaryEntity),
+      action: 'created',
+      participants: participants.map(e => this.buildEntityRef(e)),
+      headline,
+      description: eventDescription,
+      stateChanges: [],
+      causedBy: {
+        entityId: templateId,
+        actionType: templateName,
+      },
+      narrativeTags,
+    };
+  }
+
+  /**
+   * Generate headline for creation batch events
+   */
+  private generateCreationHeadline(entities: HardState[], templateName: string): string {
+    if (entities.length === 0) return templateName;
+
+    const primary = entities[0];
+    const others = entities.slice(1);
+
+    // If there's just one entity, use its name
+    if (others.length === 0) {
+      return `${primary.name} ${this.getCreationVerb(primary.kind)}`;
+    }
+
+    // Group other entities by kind/subtype
+    const subtypeCounts = new Map<string, number>();
+    for (const e of others) {
+      const key = e.subtype || e.kind;
+      subtypeCounts.set(key, (subtypeCounts.get(key) || 0) + 1);
+    }
+
+    // Build participant description
+    const participantParts: string[] = [];
+    for (const [subtype, count] of subtypeCounts) {
+      if (count === 1) {
+        participantParts.push(`1 ${subtype}`);
+      } else {
+        participantParts.push(`${count} ${subtype}s`);
+      }
+    }
+
+    const participantText = participantParts.join(', ');
+
+    // Primary entity with participants
+    return `${primary.name} ${this.getCreationVerb(primary.kind)} with ${participantText}`;
+  }
+
+  /**
+   * Get creation verb based on entity kind
+   */
+  private getCreationVerb(kind: string): string {
+    const verbs: Record<string, string> = {
+      location: 'founded',
+      npc: 'emerges',
+      faction: 'formed',
+      artifact: 'created',
+      occurrence: 'begins',
+      era: 'dawns',
+    };
+    return verbs[kind] || 'created';
+  }
+
+  /**
+   * Generate description for creation batch events
+   */
+  private generateCreationDescription(
+    entities: HardState[],
+    relationships: RelationshipSummary[],
+    templateName: string
+  ): string {
+    const parts: string[] = [];
+
+    // Entity summary
+    const kindCounts = new Map<string, number>();
+    for (const e of entities) {
+      kindCounts.set(e.kind, (kindCounts.get(e.kind) || 0) + 1);
+    }
+
+    const entityParts: string[] = [];
+    for (const [kind, count] of kindCounts) {
+      entityParts.push(`${count} ${kind}${count > 1 ? 's' : ''}`);
+    }
+    parts.push(`${templateName} created ${entityParts.join(', ')}`);
+
+    // Relationship summary
+    if (relationships.length > 0) {
+      const relParts = relationships.map(r => `${r.count} ${r.kind}`);
+      parts.push(`establishing ${relParts.join(', ')} relationship${relationships.reduce((s, r) => s + r.count, 0) > 1 ? 's' : ''}`);
+    }
+
+    return parts.join(', ') + '.';
   }
 }

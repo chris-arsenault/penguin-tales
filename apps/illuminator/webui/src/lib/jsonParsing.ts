@@ -51,12 +51,26 @@ export function extractFirstJsonObject(text: string): string | null {
 export function parseJsonValue<T>(text: string, label?: string): T {
   const cleaned = stripLeadingWrapper(text);
   const candidate = extractFirstJsonObject(cleaned) || cleaned;
+  const labelName = label || 'json';
 
   try {
-    return JSON.parse(candidate) as T;
+    const parsed = JSON.parse(candidate) as T;
+    console.log('[Parser] Parsed JSON', {
+      label: labelName,
+      inputChars: text.length,
+      candidateChars: candidate.length,
+    });
+    return parsed;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     const prefix = label ? `Failed to parse ${label}: ` : 'Failed to parse JSON: ';
+    console.warn('[Parser] JSON parse failed', {
+      label: labelName,
+      inputChars: text.length,
+      candidateChars: candidate.length,
+      error: message,
+      snippet: candidate.slice(0, 240),
+    });
     throw new Error(`${prefix}${message}`);
   }
 }
@@ -65,6 +79,10 @@ export function parseJsonObject<T extends Record<string, unknown>>(text: string,
   const parsed = parseJsonValue<T>(text, label);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     const name = label ? ` for ${label}` : '';
+    console.warn('[Parser] JSON parse failed - expected object', {
+      label: label || 'json',
+      parsedType: Array.isArray(parsed) ? 'array' : typeof parsed,
+    });
     throw new Error(`Expected JSON object${name}`);
   }
   return parsed;

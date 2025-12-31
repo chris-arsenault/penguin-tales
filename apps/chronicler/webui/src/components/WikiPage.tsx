@@ -9,8 +9,10 @@
  */
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, ImageLoader, PageIndexEntry } from '../types/world.ts';
+import MDEditor from '@uiw/react-md-editor';
+import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, ImageLoader, DisambiguationEntry } from '../types/world.ts';
 import { SeedModal, type ChronicleSeedData } from './ChronicleSeedViewer.tsx';
+import { applyWikiLinks } from '../lib/wikiBuilder.ts';
 
 const colors = {
   bgPrimary: '#0a1929',
@@ -226,6 +228,25 @@ const styles = {
     color: colors.textSecondary,
     cursor: 'pointer',
     border: 'none',
+  },
+  // Disambiguation notice (Wikipedia-style hatnote)
+  disambiguationNotice: {
+    marginBottom: '16px',
+    padding: '10px 14px',
+    fontSize: '13px',
+    fontStyle: 'italic' as const,
+    color: colors.textMuted,
+    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    borderRadius: '4px',
+    borderLeft: `3px solid ${colors.accent}`,
+    lineHeight: 1.5,
+  },
+  disambiguationLink: {
+    color: colors.accent,
+    cursor: 'pointer',
+    marginLeft: '4px',
+    fontStyle: 'normal' as const,
+    fontWeight: 500,
   },
   // Chronicle inline image styles - Wikipedia-style thumb frames
   sectionWithImages: {
@@ -516,19 +537,35 @@ function SectionWithImages({
   section,
   imageData,
   imageLoader,
-  renderContent,
+  entityNameMap,
+  aliasMap,
+  linkableNames,
+  onNavigate,
+  onHoverEnter,
+  onHoverLeave,
 }: {
   section: WikiSection;
   imageData: ImageMetadata | null;
   imageLoader?: ImageLoader;
-  renderContent: (text: string) => React.ReactNode;
+  entityNameMap: Map<string, string>;
+  aliasMap: Map<string, string>;
+  linkableNames: Array<{ name: string; id: string }>;
+  onNavigate: (pageId: string) => void;
+  onHoverEnter?: (pageId: string, e: React.MouseEvent) => void;
+  onHoverLeave?: () => void;
 }) {
   const images = section.images || [];
   if (images.length === 0) {
     return (
-      <div style={styles.paragraph}>
-        {renderContent(section.content)}
-      </div>
+      <MarkdownSection
+        content={section.content}
+        entityNameMap={entityNameMap}
+        aliasMap={aliasMap}
+        linkableNames={linkableNames}
+        onNavigate={onNavigate}
+        onHoverEnter={onHoverEnter}
+        onHoverLeave={onHoverLeave}
+      />
     );
   }
 
@@ -607,9 +644,16 @@ function SectionWithImages({
           }
         } else {
           return (
-            <div key={`text-${i}`} style={styles.paragraph}>
-              {renderContent(fragment.content)}
-            </div>
+            <MarkdownSection
+              key={`text-${i}`}
+              content={fragment.content}
+              entityNameMap={entityNameMap}
+              aliasMap={aliasMap}
+              linkableNames={linkableNames}
+              onNavigate={onNavigate}
+              onHoverEnter={onHoverEnter}
+              onHoverLeave={onHoverLeave}
+            />
           );
         }
       })}
@@ -692,12 +736,189 @@ function EntityPreviewCard({ entity, summary, position, imageUrl }: EntityPrevie
   );
 }
 
+/**
+ * MarkdownSection - Renders content with markdown support and entity linking
+ * Unified renderer for all page types (entity, chronicle, static, era)
+ * Supports: markdown tables, wiki links, click navigation, hover previews
+ */
+function MarkdownSection({
+  content,
+  entityNameMap,
+  aliasMap,
+  linkableNames,
+  onNavigate,
+  onHoverEnter,
+  onHoverLeave,
+}: {
+  content: string;
+  entityNameMap: Map<string, string>;
+  aliasMap: Map<string, string>;
+  linkableNames: Array<{ name: string; id: string }>;
+  onNavigate: (pageId: string) => void;
+  onHoverEnter?: (pageId: string, e: React.MouseEvent) => void;
+  onHoverLeave?: () => void;
+}) {
+  // Pre-process content:
+  // 1. Apply wiki links to wrap entity names with [[...]]
+  // 2. Convert [[Entity Name]] to markdown links with proper URLs
+  const processedContent = useMemo(() => {
+    // First apply wiki links to detect entity names
+    const linkedContent = applyWikiLinks(content, linkableNames);
+    // Then convert [[Entity Name]] to markdown-friendly link format with proper URLs
+    return linkedContent.replace(/\[\[([^\]]+)\]\]/g, (match, name) => {
+      const normalized = name.toLowerCase().trim();
+      const pageId = entityNameMap.get(normalized) || aliasMap.get(normalized);
+      if (pageId) {
+        // Use #/page/{pageId} format that matches the router
+        return `[${name}](#/page/${encodeURIComponent(pageId)})`;
+      }
+      // Keep as-is if page not found
+      return match;
+    });
+  }, [content, entityNameMap, aliasMap, linkableNames]);
+
+  // Handle clicks on page links within the markdown
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'A') {
+      const href = target.getAttribute('href');
+      // Handle #/page/{pageId} format
+      if (href?.startsWith('#/page/')) {
+        e.preventDefault();
+        const pageId = decodeURIComponent(href.slice(7)); // Remove '#/page/'
+        onNavigate(pageId);
+      }
+    }
+  }, [onNavigate]);
+
+  // Handle hover on page links
+  const handleMouseOver = useCallback((e: React.MouseEvent) => {
+    if (!onHoverEnter) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'A') {
+      const href = target.getAttribute('href');
+      // Handle #/page/{pageId} format
+      if (href?.startsWith('#/page/')) {
+        const pageId = decodeURIComponent(href.slice(7));
+        onHoverEnter(pageId, e);
+      }
+    }
+  }, [onHoverEnter]);
+
+  const handleMouseOut = useCallback((e: React.MouseEvent) => {
+    if (!onHoverLeave) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'A') {
+      const href = target.getAttribute('href');
+      if (href?.startsWith('#/page/')) {
+        onHoverLeave();
+      }
+    }
+  }, [onHoverLeave]);
+
+  return (
+    <div
+      data-color-mode="dark"
+      onClick={handleClick}
+      onMouseOver={handleMouseOver}
+      onMouseOut={handleMouseOut}
+      style={{
+        fontSize: '14px',
+        lineHeight: 1.7,
+        color: colors.textSecondary,
+      }}
+    >
+      <MDEditor.Markdown
+        source={processedContent}
+        style={{
+          backgroundColor: 'transparent',
+          color: colors.textSecondary,
+        }}
+      />
+      <style>{`
+        .wmde-markdown {
+          background: transparent !important;
+          color: ${colors.textSecondary} !important;
+          font-size: 14px !important;
+          line-height: 1.7 !important;
+        }
+        .wmde-markdown h1,
+        .wmde-markdown h2,
+        .wmde-markdown h3,
+        .wmde-markdown h4 {
+          color: ${colors.textPrimary} !important;
+          border-bottom: none !important;
+          margin-top: 1.5em !important;
+          margin-bottom: 0.5em !important;
+        }
+        .wmde-markdown a {
+          color: ${colors.accent} !important;
+          text-decoration: none !important;
+          border-bottom: 1px dotted ${colors.accent};
+        }
+        .wmde-markdown a:hover {
+          opacity: 0.8;
+        }
+        .wmde-markdown code {
+          background: ${colors.bgTertiary} !important;
+          color: ${colors.textSecondary} !important;
+          padding: 2px 6px !important;
+          border-radius: 4px !important;
+        }
+        .wmde-markdown pre {
+          background: ${colors.bgSecondary} !important;
+          border: 1px solid ${colors.border} !important;
+          border-radius: 6px !important;
+        }
+        .wmde-markdown pre code {
+          background: transparent !important;
+          padding: 0 !important;
+        }
+        .wmde-markdown blockquote {
+          border-left: 3px solid ${colors.accent} !important;
+          color: ${colors.textMuted} !important;
+          background: rgba(16, 185, 129, 0.08) !important;
+          padding: 8px 16px !important;
+          margin: 16px 0 !important;
+          border-radius: 0 4px 4px 0 !important;
+        }
+        .wmde-markdown ul,
+        .wmde-markdown ol {
+          padding-left: 24px !important;
+        }
+        .wmde-markdown li {
+          margin-bottom: 4px !important;
+        }
+        .wmde-markdown table {
+          border-collapse: collapse !important;
+        }
+        .wmde-markdown th,
+        .wmde-markdown td {
+          border: 1px solid ${colors.border} !important;
+          padding: 8px 12px !important;
+        }
+        .wmde-markdown th {
+          background: ${colors.bgSecondary} !important;
+        }
+        .wmde-markdown hr {
+          border-color: ${colors.border} !important;
+        }
+        .wmde-markdown strong {
+          color: ${colors.textPrimary} !important;
+        }
+      `}</style>
+    </div>
+  );
+}
+
 interface WikiPageViewProps {
   page: WikiPage;
   pages: WikiPage[];
   entityIndex: Map<string, HardState>;
   imageData: ImageMetadata | null;
   imageLoader?: ImageLoader;
+  /** Other pages that share this page's base name (for disambiguation) */
+  disambiguation?: DisambiguationEntry[];
   onNavigate: (pageId: string) => void;
   onNavigateToEntity: (entityId: string) => void;
 }
@@ -708,6 +929,7 @@ export default function WikiPageView({
   entityIndex,
   imageData,
   imageLoader,
+  disambiguation,
   onNavigate,
   onNavigateToEntity,
 }: WikiPageViewProps) {
@@ -840,18 +1062,36 @@ export default function WikiPageView({
     return pages.filter(p =>
       p.id !== page.id &&
       p.type !== 'chronicle' &&
+      p.type !== 'category' &&
       p.linkedEntities.includes(page.id)
     );
   }, [pages, page.id]);
 
-  // Build entity name to ID map for link resolution
+  // Build name to ID map for link resolution (entities + static pages)
   const entityNameMap = useMemo(() => {
     const map = new Map<string, string>();
+    // Add entity names
     for (const [id, entity] of entityIndex) {
       map.set(entity.name.toLowerCase(), id);
     }
+    // Add static page titles (full title and base name without namespace)
+    for (const p of pages) {
+      if (p.type !== 'static') continue;
+      const titleLower = p.title.toLowerCase();
+      if (!map.has(titleLower)) {
+        map.set(titleLower, p.id);
+      }
+      // Also add base name (e.g., "The Berg" from "World:The Berg")
+      const colonIdx = p.title.indexOf(':');
+      if (colonIdx > 0 && colonIdx < p.title.length - 1) {
+        const baseName = p.title.slice(colonIdx + 1).trim().toLowerCase();
+        if (baseName && !map.has(baseName)) {
+          map.set(baseName, p.id);
+        }
+      }
+    }
     return map;
-  }, [entityIndex]);
+  }, [entityIndex, pages]);
 
   const aliasMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -868,60 +1108,36 @@ export default function WikiPageView({
     return map;
   }, [pages, entityNameMap]);
 
-  // Parse content and resolve [[Entity Name]] links
-  const parseContent = (text: string) => {
-    const parts: (string | { type: 'link'; name: string; entityId: string })[] = [];
-    let lastIndex = 0;
-    const regex = /\[\[([^\]]+)\]\]/g;
-    let match;
-
-    while ((match = regex.exec(text)) !== null) {
-      // Add text before the match
-      if (match.index > lastIndex) {
-        parts.push(text.slice(lastIndex, match.index));
-      }
-
-      const name = match[1];
-      const normalized = name.toLowerCase().trim();
-      const entityId = entityNameMap.get(normalized) || aliasMap.get(normalized);
-
-      if (entityId) {
-        parts.push({ type: 'link', name, entityId });
-      } else {
-        parts.push(`[[${name}]]`); // Keep as-is if entity not found
-      }
-
-      lastIndex = match.index + match[0].length;
+  // Build linkable names for auto-linking (used by applyWikiLinks)
+  const linkableNames = useMemo(() => {
+    const names: Array<{ name: string; id: string }> = [];
+    // Add entity names
+    for (const [id, entity] of entityIndex) {
+      names.push({ name: entity.name, id });
     }
-
-    // Add remaining text
-    if (lastIndex < text.length) {
-      parts.push(text.slice(lastIndex));
-    }
-
-    return parts;
-  };
-
-  // Render content with links (with hover preview)
-  const renderContent = (text: string) => {
-    const parts = parseContent(text);
-    return parts.map((part, i) => {
-      if (typeof part === 'string') {
-        return <span key={i}>{part}</span>;
+    // Add entity aliases
+    for (const candidate of pages) {
+      if (candidate.type !== 'entity' || !candidate.aliases?.length) continue;
+      for (const alias of candidate.aliases) {
+        if (alias.length >= 3) {
+          names.push({ name: alias, id: candidate.id });
+        }
       }
-      return (
-        <span
-          key={i}
-          style={styles.entityLink}
-          onClick={() => handleEntityClick(part.entityId)}
-          onMouseEnter={(e) => handleEntityHoverEnter(part.entityId, e)}
-          onMouseLeave={handleEntityHoverLeave}
-        >
-          {part.name}
-        </span>
-      );
-    });
-  };
+    }
+    // Add static page names (full title and base name)
+    for (const p of pages) {
+      if (p.type !== 'static') continue;
+      names.push({ name: p.title, id: p.id });
+      const colonIdx = p.title.indexOf(':');
+      if (colonIdx > 0 && colonIdx < p.title.length - 1) {
+        const baseName = p.title.slice(colonIdx + 1).trim();
+        if (baseName && baseName !== p.title) {
+          names.push({ name: baseName, id: p.id });
+        }
+      }
+    }
+    return names;
+  }, [entityIndex, pages]);
 
   // Get image for infobox
   const infoboxImage = page.content.infobox?.image?.path || page.images[0]?.path;
@@ -949,6 +1165,34 @@ export default function WikiPageView({
           <span style={{ color: colors.textSecondary }}>{page.title}</span>
         </div>
         <h1 style={styles.title}>{page.title}</h1>
+
+        {/* Disambiguation notice - Wikipedia-style hatnote */}
+        {disambiguation && disambiguation.length > 0 && (
+          <div style={styles.disambiguationNotice}>
+            This page is about the {
+              page.type === 'entity' || page.type === 'era'
+                ? (entityIndex.get(page.id)?.kind || page.type)
+                : page.type === 'static'
+                  ? (page.title.includes(':') ? page.title.split(':')[0].toLowerCase() : 'page')
+                  : page.type
+            }.
+            {' '}See also:
+            {disambiguation
+              .filter(d => d.pageId !== page.id)
+              .map((d, i, arr) => (
+                <span key={d.pageId}>
+                  <span
+                    style={styles.disambiguationLink}
+                    onClick={() => onNavigate(d.pageId)}
+                  >
+                    {d.title}
+                  </span>
+                  {i < arr.length - 1 && ','}
+                </span>
+              ))}
+          </div>
+        )}
+
         {page.content.summary && (
           <div style={styles.summary}>{page.content.summary}</div>
         )}
@@ -991,18 +1235,17 @@ export default function WikiPageView({
           {page.content.sections.map(section => (
             <div key={section.id} id={section.id} style={styles.section}>
               <h2 style={styles.sectionHeading}>{section.heading}</h2>
-              {section.images && section.images.length > 0 ? (
-                <SectionWithImages
-                  section={section}
-                  imageData={imageData}
-                  imageLoader={imageLoader}
-                  renderContent={renderContent}
-                />
-              ) : (
-                <div style={styles.paragraph}>
-                  {renderContent(section.content)}
-                </div>
-              )}
+              <SectionWithImages
+                section={section}
+                imageData={imageData}
+                imageLoader={imageLoader}
+                entityNameMap={entityNameMap}
+                aliasMap={aliasMap}
+                linkableNames={linkableNames}
+                onNavigate={handleEntityClick}
+                onHoverEnter={handleEntityHoverEnter}
+                onHoverLeave={handleEntityHoverLeave}
+              />
             </div>
           ))}
 

@@ -1,19 +1,32 @@
 /**
  * EventResolutionStep - Step 4: Select events and relationships to include
  *
- * Shows checkboxes for relationships between assigned entities and relevant events.
- * Features temporal metrics display and filtering for era alignment.
+ * Features the Narrative Arc Timeline visualization:
+ * - Intensity sparkline showing narrative pacing
+ * - Era swim lanes with event cards
+ * - Range brush for bulk selection
+ * - Compact relationship list with visual strength indicators
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useWizard } from '../WizardContext';
 import {
   getRelevantRelationships,
   getRelevantEvents,
+  collapseBidirectionalRelationships,
+  makeRelationshipId,
+  MAX_CHRONICLE_EVENTS,
   type EventSelectionMetrics,
+  type CollapsedRelationship,
 } from '../../../lib/chronicle/selectionWizard';
-
-type EventSortOption = 'recommended' | 'tick' | 'significance' | 'era';
+import {
+  getEraRanges,
+  prepareTimelineEvents,
+  computeIntensityCurve,
+  getTimelineExtent,
+  getEventsInRange,
+} from '../../../lib/chronicle/timelineUtils';
+import { IntensitySparkline, TimelineBrush, NarrativeTimeline } from '../visualizations';
 
 export default function EventResolutionStep() {
   const {
@@ -32,10 +45,8 @@ export default function EventResolutionStep() {
     autoFillEvents,
   } = useWizard();
 
-  // Sort and filter state
-  const [eventSortBy, setEventSortBy] = useState<EventSortOption>('recommended');
-  const [focalEraOnly, setFocalEraOnly] = useState(false);
   const [eventMetrics, setEventMetrics] = useState<Map<string, EventSelectionMetrics>>(new Map());
+  const [brushSelection, setBrushSelection] = useState<[number, number] | null>(null);
 
   // Compute event metrics when data changes
   useEffect(() => {
@@ -48,64 +59,52 @@ export default function EventResolutionStep() {
     return getRelevantRelationships(state.roleAssignments, state.candidateRelationships);
   }, [state.roleAssignments, state.candidateRelationships]);
 
-  // Get relevant events (involving assigned entities) with filtering and sorting
+  // Get relevant events (involving assigned entities)
   const relevantEvents = useMemo(() => {
-    let events = getRelevantEvents(
+    return getRelevantEvents(
       state.roleAssignments,
       state.candidateEvents,
       state.narrativeStyle?.eventRules
     );
+  }, [state.roleAssignments, state.candidateEvents, state.narrativeStyle]);
 
-    // Apply focal era filter
-    if (focalEraOnly && temporalContext) {
-      events = events.filter(e => {
-        const metrics = eventMetrics.get(e.id);
-        return metrics?.inFocalEra;
-      });
-    }
+  // Get era ranges directly from era definitions
+  const eraRanges = useMemo(() => {
+    return getEraRanges(eras);
+  }, [eras]);
 
-    // Sort events
-    events = [...events].sort((a, b) => {
-      const metricsA = eventMetrics.get(a.id);
-      const metricsB = eventMetrics.get(b.id);
+  const assignedEntityIds = useMemo(() => {
+    return new Set(state.roleAssignments.map(a => a.entityId));
+  }, [state.roleAssignments]);
 
-      switch (eventSortBy) {
-        case 'tick':
-          return (metricsA?.tick ?? 0) - (metricsB?.tick ?? 0);
-        case 'significance':
-          return (metricsB?.significance ?? 0) - (metricsA?.significance ?? 0);
-        case 'era':
-          // Sort by era, then by tick within era
-          if (metricsA?.eraId !== metricsB?.eraId) {
-            // Focal era first
-            if (metricsA?.inFocalEra && !metricsB?.inFocalEra) return -1;
-            if (!metricsA?.inFocalEra && metricsB?.inFocalEra) return 1;
-            return (metricsA?.eraId ?? '').localeCompare(metricsB?.eraId ?? '');
-          }
-          return (metricsA?.tick ?? 0) - (metricsB?.tick ?? 0);
-        case 'recommended':
-        default:
-          // Entry point involvement first, then significance
-          if (metricsA?.involvesEntryPoint !== metricsB?.involvesEntryPoint) {
-            return metricsA?.involvesEntryPoint ? -1 : 1;
-          }
-          if (metricsA?.inFocalEra !== metricsB?.inFocalEra) {
-            return metricsA?.inFocalEra ? -1 : 1;
-          }
-          return (metricsB?.significance ?? 0) - (metricsA?.significance ?? 0);
-      }
-    });
+  const timelineEvents = useMemo(() => {
+    return prepareTimelineEvents(
+      relevantEvents,
+      state.entryPointId,
+      assignedEntityIds,
+      state.selectedEventIds
+    );
+  }, [relevantEvents, state.entryPointId, assignedEntityIds, state.selectedEventIds]);
 
-    return events;
-  }, [state.roleAssignments, state.candidateEvents, state.narrativeStyle, focalEraOnly, temporalContext, eventSortBy, eventMetrics]);
+  const intensityCurve = useMemo(() => {
+    return computeIntensityCurve(relevantEvents);
+  }, [relevantEvents]);
 
-  // Create relationship ID
-  const getRelationshipId = (r: { src: string; dst: string; kind: string }) => `${r.src}:${r.dst}:${r.kind}`;
+  // Get timeline extent directly from era definitions
+  const timelineExtent = useMemo(() => {
+    return getTimelineExtent(eras);
+  }, [eras]);
 
-  // Get IDs for the relevant items (what's shown in the UI)
-  const relevantRelationshipIds = useMemo(() =>
-    relevantRelationships.map(r => getRelationshipId(r)),
+  // Collapse bidirectional relationships for display
+  const collapsedRelationships = useMemo(() =>
+    collapseBidirectionalRelationships(relevantRelationships),
     [relevantRelationships]
+  );
+
+  // Get all relationship IDs (flattened from collapsed)
+  const relevantRelationshipIds = useMemo(() =>
+    collapsedRelationships.flatMap(cr => cr.relationshipIds),
+    [collapsedRelationships]
   );
 
   const relevantEventIds = useMemo(() =>
@@ -121,19 +120,41 @@ export default function EventResolutionStep() {
     }
   }, [state.acceptDefaults, state.selectedRelationshipIds.size, state.selectedEventIds.size, selectAllRelationships, selectAllEvents, relevantRelationshipIds, relevantEventIds]);
 
+  // Handle brush selection change - select events in range
+  const handleBrushChange = useCallback((range: [number, number] | null) => {
+    setBrushSelection(range);
+    if (range) {
+      const eventsInRange = getEventsInRange(timelineEvents, range[0], range[1]);
+      const idsInRange = eventsInRange.map(e => e.id);
+      // Select only events in range, deselect others
+      const newSelectedIds = new Set(idsInRange);
+      // Update selection
+      for (const id of relevantEventIds) {
+        if (newSelectedIds.has(id) && !state.selectedEventIds.has(id)) {
+          toggleEvent(id);
+        } else if (!newSelectedIds.has(id) && state.selectedEventIds.has(id)) {
+          toggleEvent(id);
+        }
+      }
+    }
+  }, [timelineEvents, relevantEventIds, state.selectedEventIds, toggleEvent]);
+
+  // Effective focal era
+  const effectiveFocalEraId = state.focalEraOverride || detectedFocalEra?.id || null;
+
   return (
     <div>
       {/* Header */}
       <div style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
           <div>
-            <h4 style={{ margin: '0 0 8px 0' }}>Select Events & Relationships</h4>
+            <h4 style={{ margin: '0 0 8px 0' }}>Compose Narrative Arc</h4>
             <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '13px' }}>
-              Choose which events and relationships to include in your chronicle. These provide context for the narrative.
+              Select events from the timeline to build your narrative. Use the brush to select time ranges.
             </p>
           </div>
           <button
-            onClick={() => autoFillEvents(!focalEraOnly)}
+            onClick={() => autoFillEvents(true)}
             className="illuminator-btn"
             style={{ fontSize: '12px' }}
           >
@@ -141,26 +162,23 @@ export default function EventResolutionStep() {
           </button>
         </div>
 
-        {/* Temporal Context Summary */}
+        {/* Temporal Context - Compact */}
         {temporalContext && (
           <div style={{
-            padding: '10px 12px',
+            padding: '8px 12px',
             background: 'var(--bg-tertiary)',
             borderRadius: '6px',
-            fontSize: '12px',
+            fontSize: '11px',
             display: 'flex',
             flexWrap: 'wrap',
             gap: '12px',
             alignItems: 'center',
           }}>
-            <span style={{ fontWeight: 500 }}>
-              Temporal Focus:
-            </span>
+            <span style={{ fontWeight: 500 }}>Focal Era:</span>
             <select
               value={state.focalEraOverride || temporalContext.focalEra.id}
               onChange={(e) => {
                 const selectedId = e.target.value;
-                // If selecting the detected era, clear override
                 if (detectedFocalEra && selectedId === detectedFocalEra.id) {
                   setFocalEraOverride(null);
                 } else {
@@ -168,7 +186,7 @@ export default function EventResolutionStep() {
                 }
               }}
               className="illuminator-select"
-              style={{ padding: '2px 8px', fontSize: '11px', minWidth: '140px' }}
+              style={{ padding: '2px 8px', fontSize: '10px', minWidth: '120px' }}
             >
               {eras.map(era => (
                 <option key={era.id} value={era.id}>
@@ -180,8 +198,7 @@ export default function EventResolutionStep() {
               <button
                 onClick={() => setFocalEraOverride(null)}
                 className="illuminator-btn"
-                style={{ padding: '2px 6px', fontSize: '10px' }}
-                title="Reset to detected era"
+                style={{ padding: '2px 6px', fontSize: '9px' }}
               >
                 Reset
               </button>
@@ -190,303 +207,303 @@ export default function EventResolutionStep() {
         )}
       </div>
 
-      {/* Two Column Layout */}
-      <div style={{ display: 'flex', gap: '20px' }}>
-        {/* Relationships */}
-        <div style={{ flex: 1 }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '8px',
-          }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Relationships ({state.selectedRelationshipIds.size}/{relevantRelationships.length})
-            </span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => selectAllRelationships(relevantRelationshipIds)}
-                className="illuminator-btn"
-                style={{ padding: '2px 8px', fontSize: '10px' }}
-              >
-                All
-              </button>
-              <button
-                onClick={deselectAllRelationships}
-                className="illuminator-btn"
-                style={{ padding: '2px 8px', fontSize: '10px' }}
-              >
-                None
-              </button>
-            </div>
-          </div>
+      {/* Timeline Visualization */}
+      <div style={{ marginBottom: '20px' }}>
+        {/* Intensity Sparkline */}
+        <IntensitySparkline
+          points={intensityCurve}
+          width={700}
+          height={40}
+          extent={timelineExtent}
+          selectedRange={brushSelection}
+        />
 
-          <div style={{
-            maxHeight: '350px',
-            overflowY: 'auto',
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
+        {/* Narrative Timeline with Era Lanes - compact overview */}
+        <div style={{ marginTop: '8px' }}>
+          <NarrativeTimeline
+            events={timelineEvents}
+            eraRanges={eraRanges}
+            width={700}
+            height={120}
+            onToggleEvent={toggleEvent}
+            focalEraId={effectiveFocalEraId}
+            extent={timelineExtent}
+          />
+        </div>
+
+        {/* Timeline Brush */}
+        <div style={{ marginTop: '8px' }}>
+          <TimelineBrush
+            width={700}
+            height={36}
+            extent={timelineExtent}
+            selection={brushSelection}
+            onSelectionChange={handleBrushChange}
+          />
+        </div>
+
+        {/* Quick actions */}
+        <div style={{
+          marginTop: '12px',
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center',
+        }}>
+          <button
+            onClick={() => selectAllEvents(relevantEventIds)}
+            className="illuminator-btn"
+            style={{ padding: '4px 10px', fontSize: '11px' }}
+          >
+            Select All Events
+          </button>
+          <button
+            onClick={() => {
+              deselectAllEvents();
+              setBrushSelection(null);
+            }}
+            className="illuminator-btn"
+            style={{ padding: '4px 10px', fontSize: '11px' }}
+          >
+            Clear Selection
+          </button>
+          <span style={{
+            marginLeft: 'auto',
+            fontSize: '12px',
+            color: state.selectedEventIds.size > MAX_CHRONICLE_EVENTS ? 'var(--error)' : 'var(--text-muted)',
           }}>
-            {relevantRelationships.length === 0 ? (
-              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
-                No relationships between assigned entities.
+            {state.selectedEventIds.size} of {relevantEvents.length} events selected
+            {state.selectedEventIds.size > MAX_CHRONICLE_EVENTS && ` (max ${MAX_CHRONICLE_EVENTS})`}
+          </span>
+        </div>
+      </div>
+
+      {/* Event List - scrollable for many events */}
+      <div style={{
+        marginBottom: '16px',
+        border: '1px solid var(--border-color)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          padding: '8px 12px',
+          background: 'var(--bg-tertiary)',
+          borderBottom: '1px solid var(--border-color)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <span style={{ fontSize: '11px', fontWeight: 500 }}>
+            Events {brushSelection ? '(filtered by brush)' : ''}
+          </span>
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+            {brushSelection
+              ? `${getEventsInRange(timelineEvents, brushSelection[0], brushSelection[1]).length} in range`
+              : `${relevantEvents.length} total`}
+          </span>
+        </div>
+        <div style={{
+          maxHeight: '200px',
+          overflowY: 'auto',
+          padding: '4px',
+        }}>
+          {(brushSelection
+            ? getEventsInRange(timelineEvents, brushSelection[0], brushSelection[1])
+            : timelineEvents
+          ).sort((a, b) => a.tick - b.tick).map(event => {
+            const isSelected = state.selectedEventIds.has(event.id);
+            return (
+              <div
+                key={event.id}
+                onClick={() => toggleEvent(event.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 8px',
+                  marginBottom: '2px',
+                  background: isSelected ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => {}}
+                  style={{ margin: 0, cursor: 'pointer' }}
+                />
+                <span style={{
+                  width: '40px',
+                  flexShrink: 0,
+                  color: 'var(--text-muted)',
+                  fontSize: '10px',
+                }}>
+                  t:{event.tick}
+                </span>
+                <span style={{
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {event.headline}
+                </span>
+                <span style={{
+                  padding: '1px 4px',
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: '3px',
+                  fontSize: '9px',
+                  color: 'var(--text-muted)',
+                }}>
+                  {event.eventKind}
+                </span>
+                {event.involvesEntryPoint && (
+                  <span style={{
+                    padding: '1px 4px',
+                    background: 'var(--accent-color)',
+                    color: 'white',
+                    borderRadius: '3px',
+                    fontSize: '9px',
+                  }}>
+                    Entry
+                  </span>
+                )}
               </div>
-            ) : (
-              relevantRelationships.map(rel => {
-                const relId = getRelationshipId(rel);
-                const isSelected = state.selectedRelationshipIds.has(relId);
+            );
+          })}
+          {relevantEvents.length === 0 && (
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+              No events involve assigned entities
+            </div>
+          )}
+        </div>
+      </div>
 
-                return (
-                  <div
-                    key={relId}
-                    onClick={() => toggleRelationship(relId)}
-                    style={{
-                      padding: '10px 12px',
-                      borderBottom: '1px solid var(--border-color)',
-                      cursor: 'pointer',
-                      background: isSelected ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '10px',
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => {}}
-                      style={{ marginTop: '2px' }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '12px' }}>
-                        <span style={{ fontWeight: 500 }}>{rel.sourceName}</span>
-                        <span style={{ color: 'var(--text-muted)', margin: '0 6px' }}>→</span>
-                        <span style={{ fontWeight: 500 }}>{rel.targetName}</span>
-                      </div>
-                      <div style={{
-                        display: 'flex',
-                        gap: '8px',
-                        marginTop: '4px',
-                        fontSize: '10px',
-                        color: 'var(--text-muted)',
-                      }}>
-                        <span style={{
-                          padding: '1px 4px',
-                          background: 'var(--bg-tertiary)',
-                          borderRadius: '3px',
-                        }}>
-                          {rel.kind}
-                        </span>
-                        {rel.strength !== undefined && (
-                          <span>strength: {rel.strength.toFixed(2)}</span>
-                        )}
-                      </div>
-                      {rel.backstory && (
-                        <div style={{
-                          marginTop: '6px',
-                          fontSize: '11px',
-                          color: 'var(--text-muted)',
-                          fontStyle: 'italic',
-                        }}>
-                          {rel.backstory.length > 100
-                            ? rel.backstory.slice(0, 100) + '...'
-                            : rel.backstory}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
+      {/* Relationships Section - Compact */}
+      <div style={{
+        borderTop: '1px solid var(--border-color)',
+        paddingTop: '16px',
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '12px',
+        }}>
+          <span style={{ fontSize: '12px', fontWeight: 500 }}>
+            Relationships ({collapsedRelationships.length})
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => selectAllRelationships(relevantRelationshipIds)}
+              className="illuminator-btn"
+              style={{ padding: '3px 8px', fontSize: '10px' }}
+            >
+              All
+            </button>
+            <button
+              onClick={deselectAllRelationships}
+              className="illuminator-btn"
+              style={{ padding: '3px 8px', fontSize: '10px' }}
+            >
+              None
+            </button>
           </div>
         </div>
 
-        {/* Events */}
-        <div style={{ flex: 1 }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '8px',
-          }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Events ({state.selectedEventIds.size}/{relevantEvents.length})
-            </span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => selectAllEvents(relevantEventIds)}
-                className="illuminator-btn"
-                style={{ padding: '2px 8px', fontSize: '10px' }}
-              >
-                All
-              </button>
-              <button
-                onClick={deselectAllEvents}
-                className="illuminator-btn"
-                style={{ padding: '2px 8px', fontSize: '10px' }}
-              >
-                None
-              </button>
+        {/* Relationship visual list */}
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '8px',
+          maxHeight: '120px',
+          overflowY: 'auto',
+          padding: '4px',
+        }}>
+          {collapsedRelationships.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+              No relationships between assigned entities.
             </div>
-          </div>
-          {/* Event sort and filter controls */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '8px',
-            fontSize: '10px',
-          }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
-              Sort:
-              <select
-                value={eventSortBy}
-                onChange={(e) => setEventSortBy(e.target.value as EventSortOption)}
-                className="illuminator-select"
-                style={{ padding: '2px 6px', fontSize: '10px' }}
-              >
-                <option value="recommended">Recommended</option>
-                <option value="tick">Timeline</option>
-                <option value="significance">Significance</option>
-                <option value="era">By Era</option>
-              </select>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={focalEraOnly}
-                onChange={(e) => setFocalEraOnly(e.target.checked)}
-                style={{ margin: 0 }}
-              />
-              Focal era only
-            </label>
-          </div>
+          ) : (
+            collapsedRelationships.map(collapsed => {
+              const rel = collapsed.primary;
+              const key = collapsed.relationshipIds.join('|');
+              // Selected if ALL relationship IDs in the group are selected
+              const isSelected = collapsed.relationshipIds.every(id => state.selectedRelationshipIds.has(id));
+              const strengthPct = collapsed.strength * 100;
 
-          <div style={{
-            maxHeight: '350px',
-            overflowY: 'auto',
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
-          }}>
-            {relevantEvents.length === 0 ? (
-              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
-                No events involving assigned entities.
-              </div>
-            ) : (
-              relevantEvents.map(event => {
-                const isSelected = state.selectedEventIds.has(event.id);
-                const metrics = eventMetrics.get(event.id);
+              // Toggle all IDs in the collapsed group
+              const handleToggle = () => {
+                for (const relId of collapsed.relationshipIds) {
+                  toggleRelationship(relId);
+                }
+              };
 
-                return (
+              return (
+                <div
+                  key={key}
+                  onClick={handleToggle}
+                  title={rel.backstory || (collapsed.isBidirectional
+                    ? `${rel.sourceName} ↔ ${rel.targetName} (mutual)`
+                    : `${rel.sourceName} → ${rel.targetName}`)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 10px',
+                    background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'var(--bg-tertiary)',
+                    border: isSelected ? '1px solid var(--accent-color)' : '1px solid transparent',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {/* Strength indicator bar */}
                   <div
-                    key={event.id}
-                    onClick={() => toggleEvent(event.id)}
                     style={{
-                      padding: '10px 12px',
-                      borderBottom: '1px solid var(--border-color)',
-                      cursor: 'pointer',
-                      background: isSelected ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '10px',
+                      width: '4px',
+                      height: '20px',
+                      background: 'var(--bg-secondary)',
+                      borderRadius: '2px',
+                      overflow: 'hidden',
+                      position: 'relative',
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => {}}
-                      style={{ marginTop: '2px' }}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        width: '100%',
+                        height: `${strengthPct}%`,
+                        background: isSelected ? 'var(--accent-color)' : 'var(--text-muted)',
+                        borderRadius: '2px',
+                      }}
                     />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 500 }}>
-                          {event.headline}
-                        </span>
-                        {/* Temporal badges */}
-                        {metrics?.involvesEntryPoint && (
-                          <span
-                            title="Involves entry point entity"
-                            style={{
-                              padding: '1px 4px',
-                              background: 'var(--accent-color)',
-                              color: 'white',
-                              borderRadius: '3px',
-                              fontSize: '8px',
-                              fontWeight: 600,
-                            }}
-                          >
-                            Entry
-                          </span>
-                        )}
-                        {metrics?.inFocalEra && (
-                          <span
-                            title="In focal era"
-                            style={{
-                              padding: '1px 4px',
-                              background: 'rgba(34, 197, 94, 0.2)',
-                              color: 'var(--success)',
-                              borderRadius: '3px',
-                              fontSize: '8px',
-                            }}
-                          >
-                            ✓ Era
-                          </span>
-                        )}
-                        {metrics && !metrics.inFocalEra && (
-                          <span
-                            title={`In ${metrics.eraName} (not focal era)`}
-                            style={{
-                              padding: '1px 4px',
-                              background: 'rgba(245, 158, 11, 0.2)',
-                              color: 'var(--warning)',
-                              borderRadius: '3px',
-                              fontSize: '8px',
-                            }}
-                          >
-                            ⚠ {metrics.eraName}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{
-                        display: 'flex',
-                        gap: '8px',
-                        marginTop: '4px',
-                        fontSize: '10px',
-                        color: 'var(--text-muted)',
-                      }}>
-                        <span style={{
-                          padding: '1px 4px',
-                          background: 'var(--bg-tertiary)',
-                          borderRadius: '3px',
-                        }}>
-                          {event.eventKind}
-                        </span>
-                        <span>
-                          {(event.significance * 100).toFixed(0)}% sig
-                        </span>
-                        <span>tick {event.tick}</span>
-                        {metrics && metrics.tickDistance > 0 && (
-                          <span title="Distance from entry point creation">
-                            Δ{metrics.tickDistance}
-                          </span>
-                        )}
-                      </div>
-                      {event.description && (
-                        <div style={{
-                          marginTop: '6px',
-                          fontSize: '11px',
-                          color: 'var(--text-muted)',
-                        }}>
-                          {event.description.length > 100
-                            ? event.description.slice(0, 100) + '...'
-                            : event.description}
-                        </div>
-                      )}
-                    </div>
                   </div>
-                );
-              })
-            )}
-          </div>
+
+                  {/* Names with directional indicator */}
+                  <span style={{ fontWeight: 500 }}>{rel.sourceName}</span>
+                  <span style={{ color: collapsed.isBidirectional ? 'var(--success)' : 'var(--text-muted)' }}>
+                    {collapsed.isBidirectional ? '↔' : '→'}
+                  </span>
+                  <span style={{ fontWeight: 500 }}>{rel.targetName}</span>
+
+                  {/* Kind badge */}
+                  <span style={{
+                    padding: '1px 4px',
+                    background: isSelected ? 'var(--accent-color)' : 'var(--bg-secondary)',
+                    color: isSelected ? 'white' : 'var(--text-muted)',
+                    borderRadius: '3px',
+                    fontSize: '9px',
+                  }}>
+                    {rel.kind}
+                  </span>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -505,11 +522,12 @@ export default function EventResolutionStep() {
         gap: '8px',
       }}>
         <span>
-          Selected: {state.selectedRelationshipIds.size} relationships, {state.selectedEventIds.size} events
+          <strong style={{ color: 'var(--text-primary)' }}>{state.selectedEventIds.size}</strong> events, {' '}
+          <strong style={{ color: 'var(--text-primary)' }}>{state.selectedRelationshipIds.size}</strong> relationships
         </span>
         {temporalContext && state.selectedEventIds.size > 0 && (
           <span>
-            Tick range: {temporalContext.chronicleTickRange[0]}–{temporalContext.chronicleTickRange[1]}
+            Ticks {temporalContext.chronicleTickRange[0]}–{temporalContext.chronicleTickRange[1]}
             {temporalContext.isMultiEra && (
               <span style={{ marginLeft: '8px', color: 'var(--warning)' }}>
                 (spans {temporalContext.touchedEraIds.length} eras)

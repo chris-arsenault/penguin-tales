@@ -99,6 +99,14 @@
             "orca",
             "external"
           ]
+        },
+        {
+          "type": "tag_count",
+          "coefficient": 1.2,
+          "tags": [
+            "armed_raider",
+            "war_leader"
+          ]
         }
       ]
     },

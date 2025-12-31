@@ -44,7 +44,7 @@ export default function FilterPanel({
   const entityKindSchemas = worldData.schema.entityKinds;
   const entityKinds: EntityKind[] = entityKindSchemas.map(ek => ek.kind);
 
-  const prominenceLevels: Prominence[] = getProminenceLevels(worldData.schema) as Prominence[];
+  const prominenceLevels: Prominence[] = getProminenceLevels(worldData.schema);
 
   // Build a map from kind to display name (from schema if available, otherwise use kind as-is)
   const kindDisplayNames = Object.fromEntries(

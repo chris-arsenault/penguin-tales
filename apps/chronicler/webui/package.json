@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@canonry/world-schema": "file:../../../packages/world-schema",
+    "@uiw/react-md-editor": "^4.0.11",
     "fuse.js": "^7.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

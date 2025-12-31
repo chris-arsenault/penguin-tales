@@ -32,6 +32,7 @@ export interface EnrichmentRecord {
 const ENRICHMENT_DB_NAME = 'canonry-enrichment';
 const ENRICHMENT_DB_VERSION = 1;
 const ENRICHMENT_STORE_NAME = 'results';
+const LOG_PREFIX = '[EnrichmentStorage]';
 
 // ============================================================================
 // Database Connection
@@ -88,8 +89,23 @@ export async function saveEnrichmentResult(
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(ENRICHMENT_STORE_NAME, 'readwrite');
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to save enrichment result'));
+    tx.oncomplete = () => {
+      console.log(`${LOG_PREFIX} Save complete`, {
+        id,
+        projectId: record.projectId,
+        simulationRunId: record.simulationRunId,
+        entityId: record.entityId,
+        type: record.type,
+      });
+      resolve();
+    };
+    tx.onerror = () => {
+      console.error(`${LOG_PREFIX} Save failed`, {
+        id,
+        error: tx.error || new Error('Failed to save enrichment result'),
+      });
+      reject(tx.error || new Error('Failed to save enrichment result'));
+    };
 
     const savedAt = record.savedAt ?? Date.now();
     const payload: EnrichmentRecord = {
@@ -98,6 +114,13 @@ export async function saveEnrichmentResult(
       savedAt,
     } as EnrichmentRecord;
 
+    console.log(`${LOG_PREFIX} Save start`, {
+      id,
+      projectId: record.projectId,
+      simulationRunId: record.simulationRunId,
+      entityId: record.entityId,
+      type: record.type,
+    });
     tx.objectStore(ENRICHMENT_STORE_NAME).put(payload);
   });
 }

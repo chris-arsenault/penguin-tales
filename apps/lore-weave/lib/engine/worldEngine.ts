@@ -128,6 +128,9 @@ export class WorldEngine {
   // Narrative event tracking (captures state changes for story generation)
   private stateChangeTracker: StateChangeTracker;
 
+  private reachabilityComponents: number | null = null;
+  private fullyConnectedTick: number | null = null;
+
   constructor(
     config: EngineConfig,
     initialState: HardState[]
@@ -283,6 +286,7 @@ export class WorldEngine {
     this.stateChangeTracker.setSchema({
       relationshipKinds: config.schema.relationshipKinds,
       entityKinds: config.schema.entityKinds,
+      tagRegistry: config.schema.tagRegistry,
     });
     if (narrativeConfig.enabled) {
       this.emitter.log('info', 'Narrative event tracking enabled', {
@@ -340,6 +344,7 @@ export class WorldEngine {
       maxRunsPerTemplate: this.maxRunsPerTemplate,
       statisticsCollector: this.statisticsCollector,
       emitter: this.emitter,
+      stateChangeTracker: this.stateChangeTracker,
       getPendingPressureModifications: () => this.pendingPressureModifications,
       trackPressureModification: this.trackPressureModification.bind(this),
       calculateGrowthTarget: () => this.calculateGrowthTarget(),
@@ -450,6 +455,15 @@ export class WorldEngine {
       // Pass graph for domain-specific action domain mapping
       initializeCatalystSmart(loadedEntity);
 
+      // Assign region for seed entities (consistent with template-generated entities)
+      if (loadedEntity.coordinates && !loadedEntity.regionId) {
+        const lookup = this.runtime.lookupRegion(loadedEntity.kind, loadedEntity.coordinates);
+        if (lookup.primary) {
+          loadedEntity.regionId = lookup.primary.id;
+          loadedEntity.allRegionIds = lookup.all.map(r => r.id);
+        }
+      }
+
       this.graph._loadEntity(id, loadedEntity);
     });
 
@@ -534,6 +548,7 @@ export class WorldEngine {
     // Ensure first era entity exists BEFORE any growth phase runs
     // This is critical so entities created in the first growth phase can have ORIGINATED_IN relationships
     this.ensureFirstEraExists();
+    this.updateReachabilityMetrics();
 
     // Reset coordinate statistics for this run
     coordinateStats.reset();
@@ -548,18 +563,34 @@ export class WorldEngine {
    * relationships can be created for all template-generated entities.
    */
   private ensureFirstEraExists(): void {
-    // Check if any era entities already exist
-    const existingEras = this.graph.findEntities({ kind: FRAMEWORK_ENTITY_KINDS.ERA });
-
-    if (existingEras.length > 0) {
-      // Era already exists - nothing to do
-      return;
-    }
-
     // Get first era from config
     const configEras = this.config.eras;
     if (!configEras || configEras.length === 0) {
       this.emitter.log('warn', 'No eras defined in config - entities will not have ORIGINATED_IN relationships');
+      return;
+    }
+
+    // Check if any era entities already exist
+    const existingEras = this.graph.findEntities({
+      kind: FRAMEWORK_ENTITY_KINDS.ERA,
+      includeHistorical: true
+    });
+
+    if (existingEras.length > 0) {
+      const firstEraConfig = configEras[0];
+      const firstEraEntity = existingEras.find(era =>
+        era.id === firstEraConfig.id ||
+        era.subtype === firstEraConfig.id ||
+        era.name === firstEraConfig.name
+      );
+      if (firstEraEntity && firstEraEntity.temporal?.startTick == null) {
+        firstEraEntity.temporal = {
+          startTick: 0,
+          endTick: firstEraEntity.temporal?.endTick ?? null
+        };
+        firstEraEntity.updatedAt = this.graph.tick;
+      }
+      // Era already exists - nothing else to do
       return;
     }
 
@@ -597,6 +628,85 @@ export class WorldEngine {
       entityCount: this.graph.getEntityCount(),
       relationshipCount: this.graph.getRelationshipCount()
     });
+  }
+
+  private computeReachabilityComponents(): { components: number; entityCount: number } {
+    const excludedKinds = new Set([
+      FRAMEWORK_ENTITY_KINDS.ERA,
+      FRAMEWORK_ENTITY_KINDS.OCCURRENCE
+    ]);
+    // Exclude framework meta nodes so they don't collapse connectivity paths.
+    const entities = this.graph.getEntities().filter(entity => !excludedKinds.has(entity.kind));
+    const entityCount = entities.length;
+
+    if (entityCount === 0) {
+      return { components: 0, entityCount };
+    }
+
+    const adjacency = new Map<string, Set<string>>();
+    for (const entity of entities) {
+      adjacency.set(entity.id, new Set());
+    }
+
+    for (const rel of this.graph.getRelationships()) {
+      if (!adjacency.has(rel.src) || !adjacency.has(rel.dst)) continue;
+      adjacency.get(rel.src)?.add(rel.dst);
+      adjacency.get(rel.dst)?.add(rel.src);
+    }
+
+    const visited = new Set<string>();
+    let components = 0;
+
+    for (const nodeId of adjacency.keys()) {
+      if (visited.has(nodeId)) continue;
+      components += 1;
+      const stack = [nodeId];
+      while (stack.length > 0) {
+        const current = stack.pop();
+        if (!current || visited.has(current)) continue;
+        visited.add(current);
+        const neighbors = adjacency.get(current);
+        if (!neighbors) continue;
+        for (const neighbor of neighbors) {
+          if (!visited.has(neighbor)) {
+            stack.push(neighbor);
+          }
+        }
+      }
+    }
+
+    return { components, entityCount };
+  }
+
+  private updateReachabilityMetrics(): void {
+    const { components, entityCount } = this.computeReachabilityComponents();
+    this.reachabilityComponents = components;
+    if (this.fullyConnectedTick === null && entityCount > 0 && components === 1) {
+      this.fullyConnectedTick = this.graph.tick;
+    }
+  }
+
+  private getReachabilityMetrics(): { connectedComponents: number; fullyConnectedTick: number | null } {
+    this.updateReachabilityMetrics();
+    return {
+      connectedComponents: this.reachabilityComponents ?? 0,
+      fullyConnectedTick: this.fullyConnectedTick
+    };
+  }
+
+  private finalizeCurrentEraTemporal(): void {
+    const currentEraEntity = this.graph.findEntities({
+      kind: FRAMEWORK_ENTITY_KINDS.ERA,
+      status: FRAMEWORK_STATUS.CURRENT
+    })[0];
+    if (!currentEraEntity) return;
+
+    const startTick = currentEraEntity.temporal?.startTick ?? currentEraEntity.createdAt ?? 0;
+    currentEraEntity.temporal = {
+      startTick,
+      endTick: this.graph.tick
+    };
+    currentEraEntity.updatedAt = this.graph.tick;
   }
 
   /**
@@ -641,6 +751,8 @@ export class WorldEngine {
     }
 
     this.simulationComplete = true;
+
+    this.finalizeCurrentEraTemporal();
 
     // Link final era to prominent entities (since it never "ends")
     this.linkFinalEra();
@@ -702,6 +814,8 @@ export class WorldEngine {
     this.metaEntitiesFormed = [];
     this.lastRelationshipCount = 0;
     this.lastGrowthSummary = null;
+    this.reachabilityComponents = null;
+    this.fullyConnectedTick = null;
     this.growthSystem?.reset();
 
     // Reset coordinate statistics
@@ -750,6 +864,16 @@ export class WorldEngine {
       };
 
       initializeCatalystSmart(loadedEntity);
+
+      // Assign region for seed entities (consistent with template-generated entities)
+      if (loadedEntity.coordinates && !loadedEntity.regionId) {
+        const lookup = this.runtime.lookupRegion(loadedEntity.kind, loadedEntity.coordinates);
+        if (lookup.primary) {
+          loadedEntity.regionId = lookup.primary.id;
+          loadedEntity.allRegionIds = lookup.all.map(r => r.id);
+        }
+      }
+
       this.graph._loadEntity(id, loadedEntity);
     });
 
@@ -783,6 +907,8 @@ export class WorldEngine {
       relationshipsCreated: initialRelationships,
       entitiesModified: []
     });
+
+    this.updateReachabilityMetrics();
 
     this.emitter.log('info', 'Simulation reset to initial state');
     this.emitter.progress({
@@ -929,6 +1055,7 @@ export class WorldEngine {
       // Update pressures (calculates feedback, emits pressure_update with all mods from this tick)
       this.updatePressures(era);
       this.graph.tick++;
+      this.updateReachabilityMetrics();
 
       // Emit progress every few ticks
       if (i % 5 === 0) {
@@ -1407,6 +1534,7 @@ export class WorldEngine {
         relationshipCount: relationships.length,
         historyEventCount: this.graph.history.length,
         durationMs,
+        reachability: this.getReachabilityMetrics(),
         enrichmentTriggers: {}
       },
       hardState: entities,
@@ -1660,6 +1788,39 @@ export class WorldEngine {
               entityId: system.id,
               actionType: system.name,
             });
+
+            // Track tag changes for narrative events
+            if (changes.tags) {
+              const oldTags = entity.tags || {};
+              const newTags = changes.tags;
+              const catalyst = { entityId: system.id, actionType: system.name };
+
+              // Find added tags
+              for (const [tag, value] of Object.entries(newTags)) {
+                if (!(tag in oldTags) && value !== undefined) {
+                  this.stateChangeTracker.recordTagChange(
+                    mod.id,
+                    tag,
+                    'added',
+                    value as string | boolean,
+                    catalyst
+                  );
+                }
+              }
+
+              // Find removed tags
+              for (const tag of Object.keys(oldTags)) {
+                if (!(tag in newTags) || newTags[tag] === undefined) {
+                  this.stateChangeTracker.recordTagChange(
+                    mod.id,
+                    tag,
+                    'removed',
+                    undefined,
+                    catalyst
+                  );
+                }
+              }
+            }
           }
 
           updateEntity(this.graph, mod.id, changes);
@@ -1702,7 +1863,7 @@ export class WorldEngine {
             const eraEvent = eventBuilder.buildEraTransitionEvent(
               oldEra,
               newEra,
-              `The ${oldEra.name} has run its course`
+              `${oldEra.name} has run its course`
             );
             this.graph.narrativeHistory.push(eraEvent);
           }
@@ -2050,6 +2211,7 @@ export class WorldEngine {
           formations: this.metaEntitiesFormed,
           comment: 'Meta-entities are abilities/rules that emerged from clustering, marked with meta-entity tag'
         },
+        reachability: this.getReachabilityMetrics(),
         enrichmentTriggers: {}
       },
       hardState: entities,

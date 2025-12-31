@@ -13,6 +13,10 @@ import type {
   ChronicleTemporalContext,
   EraTemporalInfo,
 } from '../chronicleTypes';
+import {
+  collapseBidirectionalRelationships,
+  type CollapsedRelationship,
+} from '../selectionWizard';
 import type {
   NarrativeStyle,
   StoryNarrativeStyle,
@@ -60,10 +64,14 @@ ${desc}`;
 }
 
 /**
- * Format a relationship.
+ * Format a collapsed relationship (potentially bidirectional).
  */
-function formatRelationship(r: RelationshipContext): string {
-  return `- ${r.sourceName} --[${r.kind}]--> ${r.targetName}`;
+function formatCollapsedRelationship(collapsed: CollapsedRelationship): string {
+  const { primary, isBidirectional } = collapsed;
+  if (isBidirectional) {
+    return `- ${primary.sourceName} <--[${primary.kind}]--> ${primary.targetName} (mutual)`;
+  }
+  return `- ${primary.sourceName} --[${primary.kind}]--> ${primary.targetName}`;
 }
 
 /**
@@ -109,14 +117,16 @@ function buildWorldSection(context: ChronicleGenerationContext): string {
 
 /**
  * Build the data section (relationships + events).
+ * Collapses bidirectional relationships into single entries with (mutual) indicator.
  */
 function buildDataSection(selection: V2SelectionResult): string {
   const lines: string[] = [];
 
   if (selection.relationships.length > 0) {
+    const collapsed = collapseBidirectionalRelationships(selection.relationships);
     lines.push('# Relationships');
-    for (const rel of selection.relationships) {
-      lines.push(formatRelationship(rel));
+    for (const rel of collapsed) {
+      lines.push(formatCollapsedRelationship(rel));
     }
   }
 

@@ -177,7 +177,7 @@ function PressureGauge({ name, value, detail, discreteModifications, tickCount }
   );
 }
 
-export default function EpochTimeline({ epochStats, currentEpoch, pressures, pressureDetails }) {
+export default function EpochTimeline({ epochStats, currentEpoch, pressures, pressureDetails, reachability }) {
   const recentEpochs = epochStats.slice(-5).reverse();
 
   // Build a map of pressure details by ID for easy lookup
@@ -187,6 +187,28 @@ export default function EpochTimeline({ epochStats, currentEpoch, pressures, pre
       detailsMap.set(p.id, p);
     }
   }
+
+  const connectedComponents = reachability?.connectedComponents;
+  const fullyConnectedTick = reachability?.fullyConnectedTick ?? null;
+  const disconnectedClustersValue = typeof connectedComponents === 'number'
+    ? connectedComponents.toLocaleString()
+    : '--';
+  const fullyConnectedValue = reachability
+    ? (fullyConnectedTick === null ? 'never' : fullyConnectedTick.toLocaleString())
+    : '--';
+  const metricRowStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontSize: '13px',
+    color: 'var(--lw-text-primary)'
+  };
+  const clusterValueStyle = {
+    fontWeight: 600,
+    color: typeof connectedComponents === 'number' && connectedComponents > 1
+      ? 'var(--lw-danger)'
+      : 'var(--lw-text-primary)'
+  };
 
   return (
     <div className="lw-panel">
@@ -254,6 +276,22 @@ export default function EpochTimeline({ epochStats, currentEpoch, pressures, pre
                 </div>
               </div>
             )}
+
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--lw-text-muted)', marginBottom: '8px' }}>
+                Graph Connectivity
+              </div>
+              <div className="lw-flex-col lw-gap-sm">
+                <div style={metricRowStyle}>
+                  <span>Disconnected clusters</span>
+                  <span style={clusterValueStyle}>{disconnectedClustersValue}</span>
+                </div>
+                <div style={metricRowStyle}>
+                  <span>Fully connected tick</span>
+                  <span style={{ fontWeight: 600 }}>{fullyConnectedValue}</span>
+                </div>
+              </div>
+            </div>
           </>
         )}
       </div>

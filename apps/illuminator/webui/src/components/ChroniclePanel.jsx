@@ -499,11 +499,11 @@ export default function ChroniclePanel({
     return null;
   }, [selectedItem, worldData, worldContext, nameBank, entityGuidance, cultureIdentities, selectedNarrativeStyle]);
 
-  // Handle accept chronicle - saves to IndexedDB (no entity enrichment copy needed)
+  // Handle accept chronicle - saves to IndexedDB (wiki links applied at render time in Chronicler)
   const handleAcceptChronicle = useCallback(async () => {
-    if (!selectedItem || !entities || entities.length === 0) return;
-    await acceptChronicle(selectedItem.chronicleId, entities);
-  }, [selectedItem, entities, acceptChronicle]);
+    if (!selectedItem) return;
+    await acceptChronicle(selectedItem.chronicleId);
+  }, [selectedItem, acceptChronicle]);
 
   const handleCorrectSuggestions = useCallback(() => {
     if (!selectedItem || !generationContext) return;
@@ -633,41 +633,39 @@ export default function ChroniclePanel({
     return events;
   }, [worldData]);
 
-  // Build era temporal info from era entities and history events
+  // Build era temporal info from era entities
+  // NOTE: Era boundaries come directly from entity.temporal.startTick/endTick.
+  // Do NOT compute boundaries from events - this causes overlap bugs and is incorrect.
+  // Eras define their own authoritative tick ranges.
   const wizardEras = useMemo(() => {
-    if (!entities || !worldData?.history) return [];
+    if (!entities) return [];
 
-    // Get era entities
-    const eraEntities = entities.filter((e) => e.kind === 'era');
+    // Get era entities that have temporal data
+    const eraEntities = entities.filter((e) => e.kind === 'era' && e.temporal);
     if (eraEntities.length === 0) return [];
 
-    // Sort by createdAt to determine order
-    const sortedEras = [...eraEntities].sort((a, b) => a.createdAt - b.createdAt);
+    // Sort by startTick to determine order
+    const sortedEras = [...eraEntities].sort(
+      (a, b) => a.temporal.startTick - b.temporal.startTick
+    );
 
-    // Build tick ranges from history events
-    const eraTickRanges = new Map();
-    for (const event of worldData.history) {
-      const eraId = event.era;
-      if (!eraId) continue;
-      const range = eraTickRanges.get(eraId) || { min: Infinity, max: -Infinity };
-      range.min = Math.min(range.min, event.tick);
-      range.max = Math.max(range.max, event.tick);
-      eraTickRanges.set(eraId, range);
-    }
-
+    // Map directly from era entity temporal data - no computation
     return sortedEras.map((era, index) => {
-      const range = eraTickRanges.get(era.id) || { min: era.createdAt, max: era.createdAt };
+      const startTick = era.temporal.startTick;
+      // TODO: Get actual max tick from simulation config or world data
+      // Last era may not have endTick defined yet (ongoing era)
+      const endTick = era.temporal.endTick ?? 150;
       return {
         id: era.id,
         name: era.name,
         summary: era.summary || '',
         order: index,
-        startTick: range.min,
-        endTick: range.max + 1, // exclusive
-        duration: range.max - range.min + 1,
+        startTick,
+        endTick,
+        duration: endTick - startTick,
       };
     });
-  }, [entities, worldData]);
+  }, [entities]);
 
   // Handle wizard completion
   const handleWizardGenerate = useCallback(async (wizardConfig) => {

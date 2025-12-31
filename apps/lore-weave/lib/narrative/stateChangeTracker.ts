@@ -13,8 +13,8 @@
  * - Polarity-based events (betrayal, reconciliation, rivalry, alliance, downfall, triumph, power_vacuum)
  */
 
-import type { NarrativeEvent, NarrativeStateChange, Polarity, RelationshipKindDefinition, EntityKindDefinition } from '@canonry/world-schema';
-import { FRAMEWORK_RELATIONSHIP_KINDS } from '@canonry/world-schema';
+import type { NarrativeEvent, NarrativeStateChange, Polarity, RelationshipKindDefinition, EntityKindDefinition, TagDefinition } from '@canonry/world-schema';
+import { FRAMEWORK_RELATIONSHIP_KINDS, FRAMEWORK_TAGS } from '@canonry/world-schema';
 import type { HardState } from '../core/worldTypes.js';
 import type { Graph, NarrativeConfig } from '../engine/types.js';
 import { NarrativeEventBuilder, type NarrativeContext } from './narrativeEventBuilder.js';
@@ -50,11 +50,42 @@ interface PartOfSnapshot {
 }
 
 /**
+ * Pending tag change accumulated during a tick
+ */
+interface PendingTagChange {
+  entityId: string;
+  tag: string;
+  changeType: 'added' | 'removed';
+  value?: string | boolean;
+  catalyst?: { entityId: string; actionType: string };
+}
+
+/**
+ * Relationship summary for creation batch events
+ */
+export interface RelationshipSummary {
+  kind: string;
+  count: number;
+}
+
+/**
+ * Pending creation batch from template execution
+ */
+interface PendingCreationBatch {
+  templateId: string;
+  templateName: string;
+  entityIds: string[];
+  relationships: RelationshipSummary[];
+  description?: string;
+}
+
+/**
  * Schema slice needed for polarity lookups
  */
 export interface NarrativeSchemaSlice {
   relationshipKinds: RelationshipKindDefinition[];
   entityKinds: EntityKindDefinition[];
+  tagRegistry?: TagDefinition[];
 }
 
 /**
@@ -77,6 +108,14 @@ export class StateChangeTracker {
   private relationshipPolarityCache: Map<string, Polarity | undefined> = new Map();
   private statusPolarityCache: Map<string, Polarity | undefined> = new Map();
   private authoritySubtypeCache: Set<string> = new Set();
+
+  // Tag tracking
+  private pendingTagChanges: Map<string, PendingTagChange[]> = new Map();
+  private tagRegistry: Map<string, TagDefinition> = new Map();
+  private frameworkTagSet: Set<string> = new Set(Object.values(FRAMEWORK_TAGS));
+
+  // Creation batch tracking
+  private pendingCreationBatches: PendingCreationBatch[] = [];
 
   constructor(config: NarrativeConfig) {
     this.config = config;
@@ -114,6 +153,13 @@ export class StateChangeTracker {
       }
     }
 
+    // Build tag registry cache
+    this.tagRegistry.clear();
+    if (schema.tagRegistry) {
+      for (const tag of schema.tagRegistry) {
+        this.tagRegistry.set(tag.tag, tag);
+      }
+    }
   }
 
   /**
@@ -153,6 +199,8 @@ export class StateChangeTracker {
     this.graph = graph;
     this.currentTick = tick;
     this.pendingChanges.clear();
+    this.pendingTagChanges.clear();
+    this.pendingCreationBatches = [];
 
     // Snapshot active relationships at tick start (for dissolution detection)
     this.relationshipSnapshotAtTickStart.clear();
@@ -271,6 +319,72 @@ export class StateChangeTracker {
   }
 
   /**
+   * Record a tag change for narrative event generation.
+   * Call this when a tag is added or removed during simulation.
+   *
+   * @param entityId - The entity whose tag changed
+   * @param tag - The tag that was added or removed
+   * @param changeType - Whether the tag was 'added' or 'removed'
+   * @param value - The tag value (for added tags)
+   * @param catalyst - What caused the change (system/action)
+   */
+  recordTagChange(
+    entityId: string,
+    tag: string,
+    changeType: 'added' | 'removed',
+    value: string | boolean | undefined,
+    catalyst?: { entityId: string; actionType: string }
+  ): void {
+    if (!this.config.enabled) return;
+
+    // Skip framework tags (internal machinery, not narratively interesting)
+    if (this.frameworkTagSet.has(tag)) return;
+
+    // Skip system tags (prefixed with sys_)
+    if (tag.startsWith('sys_')) return;
+
+    const pending: PendingTagChange = {
+      entityId,
+      tag,
+      changeType,
+      value,
+      catalyst,
+    };
+
+    const existing = this.pendingTagChanges.get(entityId) || [];
+    existing.push(pending);
+    this.pendingTagChanges.set(entityId, existing);
+  }
+
+  /**
+   * Record a creation batch from template execution.
+   * Call this after a template successfully creates entities/relationships.
+   *
+   * @param templateId - The template's ID
+   * @param templateName - The template's display name
+   * @param entityIds - IDs of all entities created by this template
+   * @param relationships - Summary of relationship kinds created
+   * @param description - Optional description from the template's first creation item
+   */
+  recordCreationBatch(
+    templateId: string,
+    templateName: string,
+    entityIds: string[],
+    relationships: RelationshipSummary[],
+    description?: string
+  ): void {
+    if (!this.config.enabled) return;
+
+    this.pendingCreationBatches.push({
+      templateId,
+      templateName,
+      entityIds,
+      relationships,
+      description,
+    });
+  }
+
+  /**
    * Flush pending changes and generate narrative events
    * Call this at the end of each tick
    * @returns Array of generated narrative events above the significance threshold
@@ -321,7 +435,15 @@ export class StateChangeTracker {
     // 7. Generate coalescence events (new part_of relationships)
     events.push(...this.generateCoalescenceEvents(coalescenceChanges));
 
+    // 8. Generate tag change events
+    events.push(...this.generateTagChangeEvents());
+
+    // 9. Generate creation batch events (from template executions)
+    events.push(...this.generateCreationBatchEvents());
+
     this.pendingChanges.clear();
+    this.pendingTagChanges.clear();
+    this.pendingCreationBatches = [];
     return events;
   }
 
@@ -612,7 +734,7 @@ export class StateChangeTracker {
         .filter((e): e is HardState => Boolean(e));
       if (participants.length < 2) return;
 
-      const event = this.eventBuilder.buildWarEvent('war_started', participants);
+      const event = this.eventBuilder!.buildWarEvent('war_started', participants);
       if (event.significance >= this.config.minSignificance) {
         events.push(event);
       }
@@ -626,7 +748,7 @@ export class StateChangeTracker {
         .filter((e): e is HardState => Boolean(e));
       if (participants.length < 2) return;
 
-      const event = this.eventBuilder.buildWarEvent('war_ended', participants);
+      const event = this.eventBuilder!.buildWarEvent('war_ended', participants);
       if (event.significance >= this.config.minSignificance) {
         events.push(event);
       }
@@ -736,9 +858,10 @@ export class StateChangeTracker {
   }
 
   /**
-   * Generate rivalry and alliance events for new relationships
-   * Rivalry: negative relationship created between entities that previously knew each other
-   * Alliance: multiple positive relationships formed in same tick
+   * Generate events for new relationships
+   * - Rivalry: negative relationship created between entities that previously knew each other
+   * - Alliance: multiple positive relationships formed in same tick
+   * - Relationship formed: all other new relationships
    */
   private generateRivalryAndAllianceEvents(): NarrativeEvent[] {
     if (!this.eventBuilder || !this.graph) return [];
@@ -746,7 +869,9 @@ export class StateChangeTracker {
     const events: NarrativeEvent[] = [];
 
     // Track new positive relationships for alliance detection
-    const newPositiveRelsByEntity: Map<string, { entity: HardState; kind: string }[]> = new Map();
+    const newPositiveRelsByEntity: Map<string, { src: HardState; dst: HardState; kind: string }[]> = new Map();
+    // Track all new relationships for fallback relationship_formed events
+    const processedPositiveRels = new Set<string>();
 
     // Find relationships that exist now but didn't at tick start
     for (const rel of this.graph.getRelationships({ includeHistorical: false })) {
@@ -766,10 +891,21 @@ export class StateChangeTracker {
 
           if (hadPriorRelationship) {
             // Rivalry formed between previously connected entities
-            const event = this.eventBuilder.buildRivalryFormedEvent(
+            const event = this.eventBuilder!.buildRivalryFormedEvent(
               srcEntity,
               dstEntity,
               rel.kind
+            );
+            if (event.significance >= this.config.minSignificance) {
+              events.push(event);
+            }
+          } else {
+            // Negative relationship without prior connection - emit relationship_formed
+            const event = this.eventBuilder!.buildRelationshipFormedEvent(
+              srcEntity,
+              dstEntity,
+              rel.kind,
+              polarity
             );
             if (event.significance >= this.config.minSignificance) {
               events.push(event);
@@ -780,20 +916,53 @@ export class StateChangeTracker {
           if (!newPositiveRelsByEntity.has(rel.src)) {
             newPositiveRelsByEntity.set(rel.src, []);
           }
-          newPositiveRelsByEntity.get(rel.src)!.push({ entity: dstEntity, kind: rel.kind });
+          newPositiveRelsByEntity.get(rel.src)!.push({ src: srcEntity, dst: dstEntity, kind: rel.kind });
+        } else {
+          // Neutral or undefined polarity - emit relationship_formed
+          const event = this.eventBuilder!.buildRelationshipFormedEvent(
+            srcEntity,
+            dstEntity,
+            rel.kind,
+            polarity
+          );
+          if (event.significance >= this.config.minSignificance) {
+            events.push(event);
+          }
         }
       }
     }
 
     // Check for alliances (2+ positive relationships formed by same entity in same tick)
-    for (const [srcId, targets] of newPositiveRelsByEntity) {
-      if (targets.length >= 2) {
+    for (const [srcId, rels] of newPositiveRelsByEntity) {
+      if (rels.length >= 2) {
         const srcEntity = this.graph.getEntity(srcId);
         if (srcEntity) {
-          const allEntities = [srcEntity, ...targets.map(t => t.entity)];
-          const event = this.eventBuilder.buildAllianceFormedEvent(
+          const allEntities = [srcEntity, ...rels.map(r => r.dst)];
+          const event = this.eventBuilder!.buildAllianceFormedEvent(
             allEntities,
-            targets[0].kind
+            rels[0].kind
+          );
+          if (event.significance >= this.config.minSignificance) {
+            events.push(event);
+          }
+          // Mark these as processed
+          for (const r of rels) {
+            processedPositiveRels.add(this.relationshipKey(r.src.id, r.dst.id, r.kind));
+          }
+        }
+      }
+    }
+
+    // Emit relationship_formed for single positive relationships that weren't part of an alliance
+    for (const [_srcId, rels] of newPositiveRelsByEntity) {
+      for (const r of rels) {
+        const key = this.relationshipKey(r.src.id, r.dst.id, r.kind);
+        if (!processedPositiveRels.has(key)) {
+          const event = this.eventBuilder!.buildRelationshipFormedEvent(
+            r.src,
+            r.dst,
+            r.kind,
+            'positive'
           );
           if (event.significance >= this.config.minSignificance) {
             events.push(event);
@@ -909,6 +1078,84 @@ export class StateChangeTracker {
       const event = this.eventBuilder.buildCoalescenceEvent(
         containerEntity,
         newMemberEntities
+      );
+
+      if (event.significance >= this.config.minSignificance) {
+        events.push(event);
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * Generate events for tag changes during simulation
+   */
+  private generateTagChangeEvents(): NarrativeEvent[] {
+    if (!this.eventBuilder || !this.graph) return [];
+
+    const events: NarrativeEvent[] = [];
+
+    for (const [entityId, tagChanges] of this.pendingTagChanges) {
+      const entity = this.graph.getEntity(entityId);
+      if (!entity) continue;
+
+      for (const change of tagChanges) {
+        const tagMetadata = this.tagRegistry.get(change.tag);
+
+        let event: NarrativeEvent;
+        if (change.changeType === 'added') {
+          event = this.eventBuilder.buildTagGainedEvent(
+            entity,
+            change.tag,
+            change.value,
+            tagMetadata,
+            change.catalyst
+          );
+        } else {
+          event = this.eventBuilder.buildTagLostEvent(
+            entity,
+            change.tag,
+            tagMetadata,
+            change.catalyst
+          );
+        }
+
+        if (event.significance >= this.config.minSignificance) {
+          events.push(event);
+        }
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * Generate events for creation batches from template executions
+   */
+  private generateCreationBatchEvents(): NarrativeEvent[] {
+    if (!this.eventBuilder || !this.graph) return [];
+
+    const events: NarrativeEvent[] = [];
+
+    for (const batch of this.pendingCreationBatches) {
+      // Get the created entities
+      const entities: HardState[] = [];
+      for (const id of batch.entityIds) {
+        const entity = this.graph.getEntity(id);
+        if (entity) {
+          entities.push(entity);
+        }
+      }
+
+      if (entities.length === 0) continue;
+
+      const event = this.eventBuilder.buildCreationBatchEvent(
+        entities,
+        batch.relationships,
+        batch.templateId,
+        batch.templateName,
+        batch.description
       );
 
       if (event.significance >= this.config.minSignificance) {

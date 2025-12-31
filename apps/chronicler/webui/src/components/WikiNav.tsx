@@ -65,6 +65,7 @@ interface WikiNavProps {
   categories: WikiCategory[];
   pages: WikiPage[];
   chronicles: WikiPage[];
+  staticPages: WikiPage[];
   currentPageId: string | null;
   onNavigate: (pageId: string) => void;
   onGoHome: () => void;
@@ -76,6 +77,7 @@ export default function WikiNav({
   categories,
   pages,
   chronicles,
+  staticPages,
   currentPageId,
   onNavigate,
   onGoHome,
@@ -248,6 +250,80 @@ export default function WikiNav({
           )}
         </div>
       )}
+
+      {/* Static Pages - show by namespace category */}
+      {staticPages.length > 0 && (() => {
+        // Group pages by namespace prefix (e.g., "System:", "Cultures:", "Names:")
+        const pagesByNamespace = new Map<string, WikiPage[]>();
+        for (const page of staticPages) {
+          const colonIndex = page.title.indexOf(':');
+          const namespace = colonIndex > 0 ? page.title.slice(0, colonIndex) : 'General';
+          if (!pagesByNamespace.has(namespace)) {
+            pagesByNamespace.set(namespace, []);
+          }
+          pagesByNamespace.get(namespace)!.push(page);
+        }
+
+        // Sort namespaces alphabetically, but keep "General" at the end
+        const sortedNamespaces = Array.from(pagesByNamespace.keys()).sort((a, b) => {
+          if (a === 'General') return 1;
+          if (b === 'General') return -1;
+          return a.localeCompare(b);
+        });
+
+        return (
+          <div style={styles.section}>
+            <div style={styles.sectionTitle}>Pages</div>
+            <button
+              style={{
+                ...styles.navItem,
+                ...(currentPageId === 'pages' ? styles.navItemActive : {}),
+              }}
+              onClick={() => onNavigate('pages')}
+              onMouseEnter={(e) => {
+                if (currentPageId !== 'pages') {
+                  e.currentTarget.style.backgroundColor = colors.hoverBg;
+                  e.currentTarget.style.color = colors.accent;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentPageId !== 'pages') {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = colors.textSecondary;
+                }
+              }}
+            >
+              All Pages
+              <span style={styles.badge}>({staticPages.length})</span>
+            </button>
+            {sortedNamespaces.map(namespace => (
+              <button
+                key={namespace}
+                style={{
+                  ...styles.navItem,
+                  ...(currentPageId === `page-category-${namespace}` ? styles.navItemActive : {}),
+                }}
+                onClick={() => onNavigate(`page-category-${namespace}`)}
+                onMouseEnter={(e) => {
+                  if (currentPageId !== `page-category-${namespace}`) {
+                    e.currentTarget.style.backgroundColor = colors.hoverBg;
+                    e.currentTarget.style.color = colors.accent;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPageId !== `page-category-${namespace}`) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = colors.textSecondary;
+                  }
+                }}
+              >
+                {namespace}
+                <span style={styles.badge}>({pagesByNamespace.get(namespace)!.length})</span>
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* All Categories */}
       <div style={styles.section}>

@@ -36,6 +36,18 @@ export default defineConfig({
   build: {
     target: 'esnext',
     minify: false,
+    rollupOptions: {
+      onwarn(warning, warn) {
+        const isModuleFederationEval =
+          warning.code === 'EVAL' &&
+          (warning.id?.includes('@module-federation/sdk') ||
+            warning.message.includes('@module-federation/sdk'));
+        if (isModuleFederationEval) {
+          return;
+        }
+        warn(warning);
+      },
+    },
   },
   server: {
     port: 5002,

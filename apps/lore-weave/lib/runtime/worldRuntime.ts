@@ -655,7 +655,9 @@ export class WorldRuntime implements Graph {
       culture: partial.culture,
       temporal: partial.temporal,
       source: resolvedSource,
-      placementStrategy: resolvedPlacementStrategy
+      placementStrategy: resolvedPlacementStrategy,
+      regionId: partial.regionId,
+      allRegionIds: partial.allRegionIds
     });
 
     if (partial.kind !== FRAMEWORK_ENTITY_KINDS.ERA) {
@@ -1215,63 +1217,6 @@ export class WorldRuntime implements Graph {
       primary: containing[0] ?? null,
       all: containing
     };
-  }
-
-  /**
-   * Get the region an entity is in based on its coordinates and kind.
-   * Returns the primary (most specific) region, or null if not in any region.
-   */
-  getEntityRegion(entity: HardState): Region | null {
-    if (!entity.coordinates) {
-      throw new Error(`getEntityRegion: entity "${entity.name}" has no coordinates.`);
-    }
-    const result = this.lookupRegion(entity.kind, entity.coordinates);
-    return result.primary;
-  }
-
-  /**
-   * Find all entities within a specific region.
-   * @param entityKind - Entity kind whose regions to search
-   * @param regionId - Region ID to search within
-   */
-  findEntitiesInRegion(entityKind: string, regionId: string): HardState[] {
-    const region = this.coordinateContext.getRegion(entityKind, regionId);
-    if (!region) return [];
-
-    const results: HardState[] = [];
-    for (const entity of this.graph.getEntities()) {
-      if (entity.kind !== entityKind) continue;
-      if (this.pointInRegion(entity.coordinates, region)) {
-        results.push(entity);
-      }
-    }
-    return results;
-  }
-
-  /**
-   * Get tags that should be applied to an entity at a point.
-   * Includes region-specific auto-tags as key-value pairs.
-   */
-  getRegionTags(entityKind: string, point: Point): EntityTags {
-    const regions = this.coordinateContext.getRegions(entityKind);
-    const tags: EntityTags = {};
-
-    for (const region of regions) {
-      if (this.pointInRegion(point, region)) {
-        tags.region = region.id;
-        if (region.tags) {
-          for (const tag of region.tags) {
-            tags[tag] = true;
-          }
-        }
-        if (region.culture) {
-          tags.culture = region.culture;
-        }
-        break; // Use first matching region
-      }
-    }
-
-    return tags;
   }
 
   /**

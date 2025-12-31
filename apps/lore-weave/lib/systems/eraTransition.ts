@@ -72,10 +72,11 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
       }
 
       // Initialize temporal tracking if missing
-      if (!currentEraEntity.temporal?.startTick) {
+      if (currentEraEntity.temporal?.startTick == null) {
+        const startTick = currentEraEntity.createdAt ?? graphView.tick;
         currentEraEntity.temporal = {
-          startTick: currentEraEntity.createdAt,
-          endTick: null
+          startTick,
+          endTick: currentEraEntity.temporal?.endTick ?? null
         };
       }
 
@@ -254,7 +255,7 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
         tick: graphView.tick,
         era: nextEraConfig.id,
         type: 'special',
-        description: `The ${currentEraEntity.name} ends. The ${nextEraEntity.name} begins.`,
+        description: `${currentEraEntity.name} ends. ${nextEraEntity.name} begins.`,
         entitiesCreated: [nextEraEntity.id],
         relationshipsCreated: relationshipsAdded,
         entitiesModified: [currentEraEntity.id]

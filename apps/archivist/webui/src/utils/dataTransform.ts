@@ -1,20 +1,32 @@
 import type { HardState, Prominence, WorldState, Filters, Schema } from '../types/world.ts';
 
+const VALID_PROMINENCE_LEVELS: ReadonlySet<Prominence> = new Set([
+  'forgotten',
+  'marginal',
+  'recognized',
+  'renowned',
+  'mythic',
+]);
+
 // Helper to get tags as array (canonical KVP format)
 export function getTagsArray(tags: Record<string, string | boolean>): string[] {
   return Object.keys(tags);
 }
 
 // Get prominence levels from schema (no fallbacks)
-export function getProminenceLevels(schema?: Schema): string[] {
+export function getProminenceLevels(schema?: Schema): Prominence[] {
   const levels = schema?.uiConfig?.prominenceLevels;
   if (!levels || levels.length === 0) {
     throw new Error('Archivist: schema.uiConfig.prominenceLevels is required.');
   }
-  return levels;
+  const invalidLevels = levels.filter(level => !VALID_PROMINENCE_LEVELS.has(level as Prominence));
+  if (invalidLevels.length > 0) {
+    throw new Error(`Archivist: unsupported prominence levels: ${invalidLevels.join(', ')}.`);
+  }
+  return levels as Prominence[];
 }
 
-export function getProminenceColor(prominence: string, schema?: Schema): string {
+export function getProminenceColor(prominence: Prominence, schema?: Schema): string {
   const colors = schema?.uiConfig?.prominenceColors;
   if (!colors) {
     throw new Error('Archivist: schema.uiConfig.prominenceColors is required.');

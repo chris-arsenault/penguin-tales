@@ -24,6 +24,7 @@ Core procedural generation engine that creates knowledge graphs of entities with
 ### [apps/name-forge/](./apps/name-forge/) - Procedural Name Generation
 
 Domain-aware name generation system with phonological rules, grammars, and Markov chains.
+The current naming system shows significant structural homogeneity across cultures that undermines cultural distinctiveness. While lexeme differentiation exists, the grammatical patterns are nearly identical, creating what linguists call "lexical substitution without morphosyntactic variation" - the hallmark of artificially generated names.
 
 ### [apps/canonry/](./apps/canonry/) - Shell Application
 

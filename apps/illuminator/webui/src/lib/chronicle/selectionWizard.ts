@@ -70,6 +70,8 @@ export interface WizardSelectionContext {
   candidates: EntityContext[];
   candidateRelationships: RelationshipContext[];
   candidateEvents: NarrativeEventContext[];
+  /** Distance map from entry point (preserves paths through non-candidate entities like eras) */
+  distances: Map<string, number>;
 }
 
 // =============================================================================
@@ -290,7 +292,13 @@ export function computeTemporalScope(tickRange: [number, number], isMultiEra: bo
  * Find which era a tick belongs to.
  */
 export function findEraForTick(tick: number, eras: EraTemporalInfo[]): EraTemporalInfo | undefined {
-  return eras.find(era => tick >= era.startTick && tick < era.endTick);
+  // Handle null endTick (ongoing era) and use <= for boundaries
+  return eras.find(era => {
+    if (tick < era.startTick) return false;
+    // null/undefined endTick means ongoing era - matches all ticks >= startTick
+    if (era.endTick == null) return true;
+    return tick <= era.endTick;
+  });
 }
 
 /**
@@ -855,43 +863,122 @@ export function getRelevantRelationships(
   );
 }
 
+/**
+ * Collapsed relationship entry - may represent one or two underlying relationships.
+ */
+export interface CollapsedRelationship {
+  /** Primary relationship (A→B) */
+  primary: RelationshipContext;
+  /** Reverse relationship if bidirectional (B→A) */
+  reverse?: RelationshipContext;
+  /** Whether this is a mutual/bidirectional relationship */
+  isBidirectional: boolean;
+  /** Combined relationship IDs for selection (always includes primary, may include reverse) */
+  relationshipIds: string[];
+  /** Display strength (average if bidirectional) */
+  strength: number;
+}
+
+/**
+ * Create relationship ID from components.
+ */
+export function makeRelationshipId(src: string, dst: string, kind: string): string {
+  return `${src}:${dst}:${kind}`;
+}
+
+/**
+ * Collapse bidirectional relationships into single entries.
+ * A↔B shown once instead of A→B and B→A separately.
+ */
+export function collapseBidirectionalRelationships(
+  relationships: RelationshipContext[]
+): CollapsedRelationship[] {
+  const result: CollapsedRelationship[] = [];
+  const processed = new Set<string>();
+
+  // Index relationships by normalized key (sorted src/dst + kind)
+  const byNormalizedKey = new Map<string, RelationshipContext[]>();
+  for (const rel of relationships) {
+    const normalizedKey = [rel.src, rel.dst].sort().join(':') + ':' + rel.kind;
+    const existing = byNormalizedKey.get(normalizedKey) || [];
+    existing.push(rel);
+    byNormalizedKey.set(normalizedKey, existing);
+  }
+
+  for (const rel of relationships) {
+    const relId = makeRelationshipId(rel.src, rel.dst, rel.kind);
+    if (processed.has(relId)) continue;
+    processed.add(relId);
+
+    // Check for reverse relationship
+    const reverseId = makeRelationshipId(rel.dst, rel.src, rel.kind);
+    const reverseRel = relationships.find(
+      r => r.src === rel.dst && r.dst === rel.src && r.kind === rel.kind
+    );
+
+    if (reverseRel && !processed.has(reverseId)) {
+      // Bidirectional - collapse into one entry
+      processed.add(reverseId);
+      const avgStrength = ((rel.strength ?? 0.5) + (reverseRel.strength ?? 0.5)) / 2;
+      result.push({
+        primary: rel,
+        reverse: reverseRel,
+        isBidirectional: true,
+        relationshipIds: [relId, reverseId],
+        strength: avgStrength,
+      });
+    } else {
+      // Unidirectional
+      result.push({
+        primary: rel,
+        reverse: undefined,
+        isBidirectional: false,
+        relationshipIds: [relId],
+        strength: rel.strength ?? 0.5,
+      });
+    }
+  }
+
+  return result;
+}
+
+/** Maximum events allowed in final chronicle selection */
+export const MAX_CHRONICLE_EVENTS = 20;
+
 export interface GetRelevantEventsOptions {
-  /** Skip the maxEvents limit (for focal era computation) */
+  /** @deprecated No longer used - UI shows all events, selection is limited separately */
   skipLimit?: boolean;
 }
 
 /**
  * Get events involving assigned entities.
+ * Returns ALL matching events - UI is responsible for limiting final selection.
  */
 export function getRelevantEvents(
   assignments: ChronicleRoleAssignment[],
   allEvents: NarrativeEventContext[],
   _eventRules?: unknown, // Deprecated - event selection rules removed
-  options?: GetRelevantEventsOptions
+  _options?: GetRelevantEventsOptions
 ): NarrativeEventContext[] {
   const assignedIds = new Set(assignments.map(a => a.entityId));
 
-  let filtered = allEvents.filter(e =>
+  // Return all events involving assigned entities - no artificial limit
+  // Final selection is limited to MAX_CHRONICLE_EVENTS in the UI
+  return allEvents.filter(e =>
     (e.subjectId && assignedIds.has(e.subjectId)) ||
     (e.objectId && assignedIds.has(e.objectId))
   );
-
-  // Apply max events limit (unless skipLimit is set)
-  if (!options?.skipLimit) {
-    const maxEvents = 20;
-    if (filtered.length > maxEvents) {
-      // Sort by significance descending
-      filtered.sort((a, b) => b.significance - a.significance);
-      filtered = filtered.slice(0, maxEvents);
-    }
-  }
-
-  return filtered;
 }
 
 // =============================================================================
 // Wizard Selection Context Builder
 // =============================================================================
+
+/** Options for building wizard selection context */
+export interface SelectionContextOptions {
+  /** Include era nodes in 2-hop traversal. Default false. */
+  includeErasInNeighborhood?: boolean;
+}
 
 /**
  * Build the selection context for the wizard given an entry point.
@@ -902,10 +989,23 @@ export function buildWizardSelectionContext(
   allEntities: EntityContext[],
   allRelationships: RelationshipContext[],
   allEvents: NarrativeEventContext[],
-  style: NarrativeStyle
+  style: NarrativeStyle,
+  options: SelectionContextOptions = {}
 ): WizardSelectionContext {
+  const { includeErasInNeighborhood = false } = options;
+
+  // Build set of era entity IDs for filtering
+  const eraEntityIds = new Set(
+    allEntities.filter(e => e.kind === 'era').map(e => e.id)
+  );
+
+  // Filter relationships for graph traversal - exclude those involving era nodes
+  const graphRelationships = includeErasInNeighborhood
+    ? allRelationships
+    : allRelationships.filter(r => !eraEntityIds.has(r.src) && !eraEntityIds.has(r.dst));
+
   // Build 2-hop neighborhood
-  const neighborGraph = buildNeighborGraph(allRelationships, entryPoint.id, 2);
+  const neighborGraph = buildNeighborGraph(graphRelationships, entryPoint.id, 2);
 
   // Filter entities to those in the neighborhood
   const neighborEntities = allEntities.filter(e => neighborGraph.ids.has(e.id));
@@ -938,5 +1038,6 @@ export function buildWizardSelectionContext(
     candidates,
     candidateRelationships,
     candidateEvents,
+    distances: neighborGraph.distances,
   };
 }

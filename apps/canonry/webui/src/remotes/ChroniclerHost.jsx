@@ -37,11 +37,12 @@ const styles = {
   },
 };
 
-export default function ChroniclerHost({ worldData, loreData, imageData, imageLoader }) {
+export default function ChroniclerHost({ projectId, worldData, loreData, imageData, imageLoader }) {
   return (
     <div style={styles.container}>
       <Suspense fallback={<div style={styles.loading}>Loading Chronicler...</div>}>
         <ChroniclerRemote
+          projectId={projectId}
           worldData={worldData}
           loreData={loreData}
           imageData={imageData}

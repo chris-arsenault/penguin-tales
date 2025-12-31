@@ -176,6 +176,7 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
     relationshipBreakdown,
     notableEntities,
     sampleHistory,
+    result,
     logs
   } = simState;
 
@@ -190,6 +191,8 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
     () => aggregatePressureUpdates(pressureUpdates, currentEpochNumber),
     [pressureUpdates, currentEpochNumber]
   );
+
+  const reachability = result?.metadata?.reachability;
 
   // Show final diagnostics when simulation is complete or we have diagnostic data
   const showFinalDiagnostics = status === 'complete' ||
@@ -208,6 +211,7 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
           currentEpoch={currentEpoch}
           pressures={pressures}
           pressureDetails={aggregatedPressureUpdate}
+          reachability={reachability}
         />
 
         {/* Right Panel - stacked */}

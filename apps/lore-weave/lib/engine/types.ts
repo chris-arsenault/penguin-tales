@@ -168,6 +168,8 @@ export interface CreateEntitySettings {
   source?: string;  // Optional - for debugging (e.g., template ID, system ID)
   placementStrategy?: string;  // Optional - for debugging (e.g., 'near_entity', 'in_culture_region')
   namingContext?: Record<string, string>;  // Optional - context for name generation (e.g., { instigator: "King Gorban" })
+  regionId?: string | null;  // Primary region containing this entity
+  allRegionIds?: string[];   // All regions containing this entity (for overlapping regions)
 }
 
 // Graph data representation (world state + mutations)
@@ -858,6 +860,8 @@ export class GraphStore implements Graph {
       tags,
       coordinates: settings.coordinates,
       temporal: settings.temporal,
+      regionId: settings.regionId,
+      allRegionIds: settings.allRegionIds,
       createdAt: this.tick,
       updatedAt: this.tick
     };

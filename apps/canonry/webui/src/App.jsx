@@ -20,6 +20,7 @@ import {
   saveEnrichmentConfig,
   saveStyleSelection,
   getSlots,
+  getSlot,
   getActiveSlotIndex,
   setActiveSlotIndex as persistActiveSlotIndex,
   saveSlot,
@@ -57,6 +58,10 @@ import { colors, typography, spacing } from './theme';
 /**
  * Extract loreData from enriched entities
  * Converts entity.enrichment into LoreRecord format for Chronicler
+ *
+ * Note: Summary and description are now stored directly on entity (entity.summary, entity.description).
+ * The enrichment.text object contains metadata (aliases, visual traits, etc.).
+ * Description lore records are no longer created - Chronicler reads entity.summary/description directly.
  */
 function extractLoreDataFromEntities(worldData) {
   if (!worldData?.hardState) return null;
@@ -66,23 +71,7 @@ function extractLoreDataFromEntities(worldData) {
     const enrichment = entity.enrichment;
     if (!enrichment) continue;
 
-    // Extract description as LoreRecord
-    if (enrichment.description?.summary && enrichment.description?.description) {
-      records.push({
-        id: `desc_${entity.id}`,
-        type: 'description',
-        targetId: entity.id,
-        text: enrichment.description.description,
-        metadata: {
-          generatedAt: enrichment.description.generatedAt,
-          model: enrichment.description.model,
-          summary: enrichment.description.summary,
-          aliases: enrichment.description.aliases || [],
-        },
-      });
-    }
-
-    // Extract era narrative as LoreRecord
+    // Extract era narrative as LoreRecord (still uses lore record format)
     if (enrichment.eraNarrative?.text) {
       records.push({
         id: `era_${entity.id}`,
@@ -456,13 +445,15 @@ export default function App() {
     setSlots({});
     setActiveSlotIndex(0);
 
-    // Load full world store (includes slots)
-    loadWorldStore(currentProject.id).then((store) => {
+    // Load world store and run slots
+    Promise.all([
+      loadWorldStore(currentProject.id),
+      getSlots(currentProject.id),
+    ]).then(([store, loadedSlots]) => {
       if (cancelled) return;
       simulationOwnerRef.current = currentProject.id;
 
       // Set slots and active index
-      const loadedSlots = store?.slots || {};
       const loadedActiveIndex = store?.activeSlotIndex ?? 0;
       setSlots(loadedSlots);
       setActiveSlotIndex(loadedActiveIndex);
@@ -536,10 +527,7 @@ export default function App() {
     let cancelled = false;
 
     const persist = async () => {
-      const store = await loadWorldStore(currentProject.id);
-      if (cancelled) return;
-
-      const existingSlot = store?.slots?.[0] ?? {};
+      const existingSlot = await getSlot(currentProject.id, 0) || {};
       let title = existingSlot.title || 'Scratch';
       let createdAt = existingSlot.createdAt || now;
 
@@ -804,13 +792,13 @@ export default function App() {
       setActiveSlotIndex(slotIndex);
 
       // Load data from storage to ensure we have the latest
-      const store = await loadWorldStore(currentProject.id);
-      const storedSlot = store?.slots?.[slotIndex];
+      const [storedSlot, loadedSlots] = await Promise.all([
+        getSlot(currentProject.id, slotIndex),
+        getSlots(currentProject.id),
+      ]);
 
       // Update local slots state with data from storage
-      if (store?.slots) {
-        setSlots(store.slots);
-      }
+      setSlots(loadedSlots);
 
       // Mark that we're loading from a saved slot (skip auto-save effect)
       isLoadingSlotRef.current = true;
@@ -850,14 +838,12 @@ export default function App() {
       await saveToSlot(currentProject.id, targetSlotIndex);
 
       // Reload slots from storage to ensure consistency
-      const store = await loadWorldStore(currentProject.id);
-      if (store?.slots) {
-        setSlots(store.slots);
-      }
+      const loadedSlots = await getSlots(currentProject.id);
+      setSlots(loadedSlots);
       setActiveSlotIndex(targetSlotIndex);
 
       // Update the ref to match the saved slot's data (now in targetSlotIndex)
-      const savedSlot = store?.slots?.[targetSlotIndex];
+      const savedSlot = loadedSlots?.[targetSlotIndex];
       lastSavedResultsRef.current = savedSlot?.simulationResults || null;
     } catch (err) {
       console.error('Failed to save to slot:', err);
@@ -888,8 +874,7 @@ export default function App() {
       await clearSlot(currentProject.id, slotIndex);
 
       // Reload slots from storage
-      const store = await loadWorldStore(currentProject.id);
-      const loadedSlots = store?.slots || {};
+      const loadedSlots = await getSlots(currentProject.id);
       setSlots(loadedSlots);
 
       // If we cleared the active slot, reset state
@@ -1391,6 +1376,7 @@ export default function App() {
             </div>
             <div style={{ display: activeTab === 'chronicler' ? 'contents' : 'none' }}>
               <ChroniclerHost
+                projectId={currentProject?.id}
                 worldData={archivistData?.worldData}
                 loreData={archivistData?.loreData}
                 imageData={archivistData?.imageData}

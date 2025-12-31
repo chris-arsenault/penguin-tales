@@ -165,6 +165,7 @@ export function useEnrichmentQueue(
   // Refs for accessing latest values in callbacks (avoid stale closures)
   const queueRef = useRef<QueueItem[]>([]);
   const onEntityUpdateRef = useRef(onEntityUpdate);
+  const initializeRef = useRef<((config: WorkerConfig) => void) | null>(null);
 
   // Keep refs in sync
   useEffect(() => {
@@ -318,6 +319,16 @@ export function useEnrichmentQueue(
             )
           );
 
+          if (message.error?.includes('Worker not initialized')) {
+            if (workerState) {
+              workerState.isReady = false;
+            }
+            const config = configRef.current;
+            if (config) {
+              initializeRef.current?.(config);
+            }
+          }
+
           // Process next task for this worker
           setTimeout(() => processNextForWorker(workerId), 0);
           break;
@@ -384,7 +395,24 @@ export function useEnrichmentQueue(
 
         worker.onerror = (error) => {
           console.error(`Worker ${i} error:`, error);
+          const failedTaskId = workerState.currentTaskId;
+          if (failedTaskId) {
+            taskWorkerMapRef.current.delete(failedTaskId);
+            setQueue((prev) =>
+              prev.map((item) =>
+                item.id === failedTaskId
+                  ? {
+                      ...item,
+                      status: 'error' as const,
+                      completedAt: Date.now(),
+                      error: error.message || 'Worker error',
+                    }
+                  : item
+              )
+            );
+          }
           workerState.currentTaskId = null;
+          setTimeout(() => processNextForWorker(workerState.workerId), 0);
         };
 
         workersRef.current.push(workerState);
@@ -393,6 +421,10 @@ export function useEnrichmentQueue(
     },
     [handleMessage]
   );
+
+  useEffect(() => {
+    initializeRef.current = initialize;
+  }, [initialize]);
 
   // Enqueue items - distribute to workers based on estimated workload
   const enqueue = useCallback(

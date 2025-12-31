@@ -5,15 +5,19 @@
  *
  * Stores per-project:
  * - activeSlotIndex: Currently active slot (0=scratch, 1-4=saved)
- * - slots: Object mapping slot index to slot data
- *   - Each slot contains: title, simulationResults, simulationState, worldData, createdAt
  * - worldContext: Illuminator's world context (name, description, canon facts, tone)
  * - enrichmentConfig: Illuminator's saved settings (shared across slots)
  *
- * Slot behavior:
- * - Slot 0 (scratch): Where new simulations write, working area
- * - Slots 1-4: Save slots, data moved from scratch via saveToSlot()
+ * Run slots are persisted in a separate IndexedDB store (canonry-runs).
  */
+
+import {
+  getRunSlots,
+  getRunSlot,
+  saveRunSlot,
+  deleteRunSlot,
+  deleteRunSlotsForProject
+} from './runStore.js';
 
 const DB_NAME = 'canonry-world';
 const DB_VERSION = 2;
@@ -111,15 +115,12 @@ function lsDelete(projectId) {
   }
 }
 
-function assertSlotStore(record) {
+function normalizeWorldStore(record) {
   if (!record) return null;
-  if (!record.slots || typeof record.slots !== 'object') {
-    throw new Error('Unsupported world store format: expected slot-based storage.');
-  }
-  if (record.activeSlotIndex === undefined) {
-    throw new Error('Unsupported world store format: missing activeSlotIndex.');
-  }
-  return record;
+  return {
+    ...record,
+    activeSlotIndex: typeof record.activeSlotIndex === 'number' ? record.activeSlotIndex : 0
+  };
 }
 
 // =============================================================================
@@ -139,7 +140,7 @@ export async function loadWorldStore(projectId) {
     record = lsGet(projectId);
   }
   if (!record) record = lsGet(projectId);
-  return assertSlotStore(record);
+  return normalizeWorldStore(record);
 }
 
 /**
@@ -154,14 +155,17 @@ export async function saveWorldStore(projectId, data) {
     existing = null;
   }
 
-  const merged = { ...(assertSlotStore(existing) || { slots: {}, activeSlotIndex: 0 }), ...data };
+  const merged = { ...(normalizeWorldStore(existing) || { activeSlotIndex: 0 }), ...data };
   delete merged.projectId;
+  delete merged.slots;
 
   try {
     await idbSet(projectId, merged);
   } catch {
-    const localExisting = assertSlotStore(lsGet(projectId)) || { slots: {}, activeSlotIndex: 0 };
-    lsSet(projectId, { ...localExisting, ...data });
+    const localExisting = normalizeWorldStore(lsGet(projectId)) || { activeSlotIndex: 0 };
+    const localMerged = { ...localExisting, ...data };
+    delete localMerged.slots;
+    lsSet(projectId, localMerged);
   }
 }
 
@@ -176,6 +180,7 @@ export async function clearWorldStore(projectId) {
     // Ignore
   }
   lsDelete(projectId);
+  await deleteRunSlotsForProject(projectId);
 }
 
 // =============================================================================
@@ -201,46 +206,41 @@ export async function setActiveSlotIndex(projectId, slotIndex) {
  * Get all slots for a project
  */
 export async function getSlots(projectId) {
-  const store = await loadWorldStore(projectId);
-  return store?.slots ?? {};
+  await loadWorldStore(projectId);
+  return getRunSlots(projectId);
 }
 
 /**
  * Get data for a specific slot
  */
 export async function getSlot(projectId, slotIndex) {
-  const store = await loadWorldStore(projectId);
-  return store?.slots?.[slotIndex] ?? null;
+  await loadWorldStore(projectId);
+  return getRunSlot(projectId, slotIndex);
 }
 
 /**
  * Get data for the currently active slot
  */
 export async function getActiveSlot(projectId) {
-  const store = await loadWorldStore(projectId);
-  const activeIndex = store?.activeSlotIndex ?? 0;
-  return store?.slots?.[activeIndex] ?? null;
+  const activeIndex = await getActiveSlotIndex(projectId);
+  return getSlot(projectId, activeIndex);
 }
 
 /**
  * Save data to a specific slot
  */
 export async function saveSlot(projectId, slotIndex, slotData) {
-  const store = await loadWorldStore(projectId) || { slots: {}, activeSlotIndex: 0 };
-  const slots = { ...store.slots, [slotIndex]: slotData };
-  await saveWorldStore(projectId, { slots });
+  await saveRunSlot(projectId, slotIndex, slotData);
 }
 
 /**
  * Save data to the currently active slot (merges with existing slot data)
  */
 export async function saveToActiveSlot(projectId, slotData) {
-  const store = await loadWorldStore(projectId) || { slots: {}, activeSlotIndex: 0 };
-  const activeIndex = store.activeSlotIndex ?? 0;
-  const existingSlot = store.slots?.[activeIndex] ?? {};
+  const activeIndex = await getActiveSlotIndex(projectId);
+  const existingSlot = await getSlot(projectId, activeIndex) || {};
   const updatedSlot = { ...existingSlot, ...slotData };
-  const slots = { ...store.slots, [activeIndex]: updatedSlot };
-  await saveWorldStore(projectId, { slots });
+  await saveRunSlot(projectId, activeIndex, updatedSlot);
 }
 
 /**
@@ -252,8 +252,7 @@ export async function saveToSlot(projectId, targetSlotIndex) {
     throw new Error(`Invalid save slot: ${targetSlotIndex}. Must be 1-${MAX_SAVE_SLOTS}`);
   }
 
-  const store = await loadWorldStore(projectId) || { slots: {}, activeSlotIndex: 0 };
-  const scratchData = store.slots?.[0];
+  const scratchData = await getSlot(projectId, 0);
 
   if (!scratchData || !scratchData.simulationResults) {
     throw new Error('No data in scratch slot to save');
@@ -265,19 +264,9 @@ export async function saveToSlot(projectId, targetSlotIndex) {
     : generateSlotTitle(targetSlotIndex);
 
   // Move data to target slot
-  const slots = {
-    ...store.slots,
-    [targetSlotIndex]: { ...scratchData, title, savedAt: Date.now() },
-    0: null, // Clear scratch
-  };
-
-  // Clean up null slot
-  delete slots[0];
-
-  await saveWorldStore(projectId, {
-    slots,
-    activeSlotIndex: targetSlotIndex
-  });
+  await saveRunSlot(projectId, targetSlotIndex, { ...scratchData, title, savedAt: Date.now() });
+  await deleteRunSlot(projectId, 0);
+  await saveWorldStore(projectId, { activeSlotIndex: targetSlotIndex });
 
   return targetSlotIndex;
 }
@@ -286,8 +275,8 @@ export async function saveToSlot(projectId, targetSlotIndex) {
  * Load a saved slot by switching active index
  */
 export async function loadSlot(projectId, slotIndex) {
-  const store = await loadWorldStore(projectId);
-  if (!store?.slots?.[slotIndex]) {
+  const slot = await getSlot(projectId, slotIndex);
+  if (!slot) {
     throw new Error(`Slot ${slotIndex} is empty`);
   }
   await saveWorldStore(projectId, { activeSlotIndex: slotIndex });
@@ -298,13 +287,14 @@ export async function loadSlot(projectId, slotIndex) {
  * Clear a specific slot
  */
 export async function clearSlot(projectId, slotIndex) {
-  const store = await loadWorldStore(projectId) || { slots: {}, activeSlotIndex: 0 };
-  const slots = { ...store.slots };
-  delete slots[slotIndex];
+  const store = await loadWorldStore(projectId) || { activeSlotIndex: 0 };
+  await deleteRunSlot(projectId, slotIndex);
+
+  const slots = await getSlots(projectId);
 
   // Determine new active slot index
-  let newActiveSlotIndex = store.activeSlotIndex;
-  if (store.activeSlotIndex === slotIndex) {
+  let newActiveSlotIndex = store.activeSlotIndex ?? 0;
+  if (newActiveSlotIndex === slotIndex) {
     // If clearing the active slot:
     // - If it's slot 0 (scratch), stay on 0 (scratch is conceptually always available)
     // - Otherwise, switch to scratch (0) or first available slot
@@ -317,28 +307,25 @@ export async function clearSlot(projectId, slotIndex) {
     }
   }
 
-  await saveWorldStore(projectId, { slots, activeSlotIndex: newActiveSlotIndex });
+  await saveWorldStore(projectId, { activeSlotIndex: newActiveSlotIndex });
 }
 
 /**
  * Update the title of a slot
  */
 export async function updateSlotTitle(projectId, slotIndex, title) {
-  const store = await loadWorldStore(projectId) || { slots: {}, activeSlotIndex: 0 };
-  const slot = store.slots?.[slotIndex];
+  const slot = await getSlot(projectId, slotIndex);
   if (!slot) {
     throw new Error(`Slot ${slotIndex} does not exist`);
   }
-  const slots = { ...store.slots, [slotIndex]: { ...slot, title } };
-  await saveWorldStore(projectId, { slots });
+  await saveRunSlot(projectId, slotIndex, { ...slot, title });
 }
 
 /**
  * Get the next available save slot (1-4), or null if all full
  */
 export async function getNextAvailableSlot(projectId) {
-  const store = await loadWorldStore(projectId);
-  const slots = store?.slots ?? {};
+  const slots = await getSlots(projectId);
   for (let i = 1; i <= MAX_SAVE_SLOTS; i++) {
     if (!slots[i]) return i;
   }
@@ -369,15 +356,10 @@ export function generateSlotTitle(slotIndex, timestamp = Date.now()) {
  */
 export async function saveSimulationData(projectId, { simulationResults, simulationState }) {
   // Always write new simulations to scratch (slot 0)
-  const store = await loadWorldStore(projectId) || { slots: {}, activeSlotIndex: 0 };
-  const existingSlot = store.slots?.[0] ?? {};
-  const updatedSlot = {
-    ...existingSlot,
-    simulationResults,
-    simulationState,
-  };
-  const slots = { ...store.slots, 0: updatedSlot };
-  await saveWorldStore(projectId, { slots, activeSlotIndex: 0 });
+  const existingSlot = await getSlot(projectId, 0) || {};
+  const updatedSlot = { ...existingSlot, simulationResults, simulationState };
+  await saveRunSlot(projectId, 0, updatedSlot);
+  await saveWorldStore(projectId, { activeSlotIndex: 0 });
 }
 
 /**

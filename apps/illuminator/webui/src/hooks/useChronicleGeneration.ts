@@ -27,8 +27,6 @@ import {
   acceptChronicle as acceptChronicleInDb,
   type ChronicleRecord,
 } from '../lib/chronicleStorage';
-import type { WikiLinkEntity } from '../lib/wikiLinkService';
-import { applyWikiLinks } from '../lib/wikiLinkService';
 
 // ============================================================================
 // Types
@@ -92,7 +90,7 @@ export interface UseChronicleGenerationReturn {
   generateSummary: (chronicleId: string, context: ChronicleGenerationContext) => void;
   generateImageRefs: (chronicleId: string, context: ChronicleGenerationContext) => void;
   revalidateChronicle: (chronicleId: string, context: ChronicleGenerationContext) => void;
-  acceptChronicle: (chronicleId: string, entities: WikiLinkEntity[]) => Promise<AcceptedChronicle | null>;
+  acceptChronicle: (chronicleId: string) => Promise<AcceptedChronicle | null>;
   restartChronicle: (chronicleId: string) => Promise<void>;
 
   // Status
@@ -438,7 +436,7 @@ export function useChronicleGeneration(
   // Accept chronicle (mark complete)
   // -------------------------------------------------------------------------
 
-  const acceptChronicle = useCallback(async (chronicleId: string, entities: WikiLinkEntity[]) => {
+  const acceptChronicle = useCallback(async (chronicleId: string) => {
     const chronicle = chronicles.get(chronicleId);
     if (!chronicle) {
       console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
@@ -448,21 +446,17 @@ export function useChronicleGeneration(
       console.error('[Chronicle] Cannot accept without assembled content');
       return null;
     }
-    if (!entities || entities.length === 0) {
-      console.error('[Chronicle] Entity dictionary required to apply backrefs on accept');
-      return null;
-    }
 
     try {
-      const linkResult = applyWikiLinks(chronicle.assembledContent, entities);
-      await acceptChronicleInDb(chronicleId, linkResult.content);
+      // Store raw content - wiki links are applied at render time in Chronicler
+      await acceptChronicleInDb(chronicleId, chronicle.assembledContent);
       await loadChronicles(); // Reload to reflect change
 
       return {
         chronicleId,
         title: chronicle.title,
         format: chronicle.format,
-        content: linkResult.content,
+        content: chronicle.assembledContent,
         summary: chronicle.summary,
         imageRefs: chronicle.imageRefs,
         entrypointId: chronicle.entrypointId,

@@ -5,7 +5,6 @@
  * Used in chronicler wiki pages via modal.
  */
 
-import React from 'react';
 
 export interface ChronicleRoleAssignment {
   role: string;
