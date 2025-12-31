@@ -6,7 +6,7 @@
  */
 
 import type { WorldEntity, WorldRelationship } from './world.js';
-export type { Prominence, SemanticCoordinates } from './world.js';
+export type { ProminenceLabel, SemanticCoordinates } from './world.js';
 
 /**
  * Seed entities and relationships are initial world state.

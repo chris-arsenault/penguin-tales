@@ -55,6 +55,12 @@ function kindMatchesCategories(
   return targetCategories.includes(entityCategory);
 }
 
+function resolveEntityEraId(entity: EntityContext | undefined): string | undefined {
+  if (!entity) return undefined;
+  if (typeof entity.eraId === 'string' && entity.eraId) return entity.eraId;
+  return undefined;
+}
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -182,14 +188,9 @@ export function computeEntityMetrics(
   const usageCount = usage?.usageCount ?? 0;
 
   // Era alignment - check if entity shares any era with entry point
-  // Check both created_during (origin) and active_during (ongoing association)
-  const entityEras = new Set(
-    relationships
-      .filter(r => (r.kind === 'created_during' || r.kind === 'active_during') && r.src === entity.id)
-      .map(r => r.dst)
-  );
+  const entityEraId = resolveEntityEraId(entity);
   const eraAligned = entryPointEras.size === 0 ||
-    [...entityEras].some(era => entryPointEras.has(era));
+    (entityEraId !== undefined && entryPointEras.has(entityEraId));
 
   // Category novelty
   const entityCategory = kindToCategory.get(entity.kind);
@@ -226,12 +227,10 @@ export function computeAllEntityMetrics(
   currentAssignments: ChronicleRoleAssignment[],
   kindToCategory: Map<string, EntityCategory>
 ): Map<string, EntitySelectionMetrics> {
-  // Get entry point's eras (check both created_during and active_during)
-  const entryPointEras = new Set(
-    relationships
-      .filter(r => (r.kind === 'created_during' || r.kind === 'active_during') && r.src === entryPointId)
-      .map(r => r.dst)
+  const entryPointEraId = resolveEntityEraId(
+    candidates.find(e => e.id === entryPointId)
   );
+  const entryPointEras = new Set(entryPointEraId ? [entryPointEraId] : []);
 
   // Get current cast's categories and relationship types
   const assignedIds = new Set(currentAssignments.map(a => a.entityId));
@@ -289,32 +288,18 @@ export function computeTemporalScope(tickRange: [number, number], isMultiEra: bo
 }
 
 /**
- * Find which era a tick belongs to.
- */
-export function findEraForTick(tick: number, eras: EraTemporalInfo[]): EraTemporalInfo | undefined {
-  // Handle null endTick (ongoing era) and use <= for boundaries
-  return eras.find(era => {
-    if (tick < era.startTick) return false;
-    // null/undefined endTick means ongoing era - matches all ticks >= startTick
-    if (era.endTick == null) return true;
-    return tick <= era.endTick;
-  });
-}
-
-/**
- * Find era for an event - by direct ID match or tick-based fallback.
+ * Find era for an event - by direct ID match.
  */
 export function findEraForEvent(
   event: { tick: number; era?: string },
   eras: EraTemporalInfo[]
 ): EraTemporalInfo | undefined {
-  // Direct ID match (preferred - event.era should match era.id)
+  // Direct ID match (event.era should match era.id)
   if (event.era) {
     const byId = eras.find(e => e.id === event.era);
     if (byId) return byId;
   }
-  // Fall back to tick-based matching
-  return findEraForTick(event.tick, eras);
+  return undefined;
 }
 
 /**
@@ -381,7 +366,7 @@ export function computeTemporalContext(
 
   const chronicleTickRange: [number, number] = [minTick, maxTick];
 
-  // Find touched eras (using tick-first, then name-based fallback)
+  // Find touched eras by event era IDs
   const touchedEraIds = new Set<string>();
   for (const event of events) {
     const era = findEraForEvent(event, eras);
@@ -482,7 +467,7 @@ export function computeEventMetrics(
   eras: EraTemporalInfo[],
   assignedEntityIds: Set<string>
 ): EventSelectionMetrics {
-  // Use tick-first, then name-based fallback
+  // Use event era ID and resolve name from eras when possible
   const eventEra = findEraForEvent(event, eras);
   const eraId = eventEra?.id || event.era;
   const eraName = eventEra?.name || event.era;

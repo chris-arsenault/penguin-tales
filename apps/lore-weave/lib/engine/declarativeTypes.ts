@@ -6,7 +6,7 @@
  * that the TemplateInterpreter executes.
  */
 
-import type { Prominence } from '../core/worldTypes';
+import type { ProminenceLabel } from '../rules/types';
 
 // Import types from rules/ (single source of truth)
 import type {
@@ -200,7 +200,7 @@ export interface CreationRule {
 
   // Attributes
   status: string;
-  prominence: Prominence;
+  prominence: ProminenceLabel;  // Template uses label; interpreter converts to numeric
   culture: CultureSpec;
   description?: DescriptionSpec;
   tags?: Record<string, boolean>;

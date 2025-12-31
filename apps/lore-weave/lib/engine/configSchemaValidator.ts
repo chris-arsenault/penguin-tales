@@ -27,6 +27,7 @@ import pressureSchema from '../schemas/pressure.schema.json';
 import systemSchema from '../schemas/system.schema.json';
 import eraSchema from '../schemas/era.schema.json';
 import actionSchema from '../schemas/action.schema.json';
+import entitySchema from '../schemas/entity.schema.json';
 
 // =============================================================================
 // TYPES
@@ -64,6 +65,7 @@ const validatePressure = ajv.compile(pressureSchema);
 const validateSystem = ajv.compile(systemSchema);
 const validateEra = ajv.compile(eraSchema);
 const validateAction = ajv.compile(actionSchema);
+const validateEntity = ajv.compile(entitySchema);
 
 // =============================================================================
 // ERROR FORMATTING
@@ -314,6 +316,39 @@ export function validateActions(actions: unknown): SchemaValidationResult {
 }
 
 /**
+ * Validate world entities from simulation output or persisted data.
+ * Use this when loading saved simulation data from IndexedDB.
+ */
+export function validateEntities(entities: unknown): SchemaValidationResult {
+  const errors: SchemaError[] = [];
+  const warnings: SchemaError[] = [];
+
+  if (!Array.isArray(entities)) {
+    errors.push({
+      path: 'entities',
+      message: 'Expected array',
+      value: entities,
+      expected: 'array',
+    });
+    return { valid: false, errors, warnings };
+  }
+
+  entities.forEach((entity, index) => {
+    const itemId = getItemId(entity) || `[${index}]`;
+
+    if (!validateEntity(entity)) {
+      errors.push(...formatAjvErrors(validateEntity.errors, itemId));
+    }
+  });
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
  * Validate all configuration files at once
  */
 export function validateAllConfigs(config: {
@@ -322,6 +357,7 @@ export function validateAllConfigs(config: {
   systems?: unknown;
   eras?: unknown;
   actions?: unknown;
+  seedEntities?: unknown;
   schema?: {
     cultures?: string[];
     entityKinds?: string[];
@@ -357,6 +393,12 @@ export function validateAllConfigs(config: {
 
   if (config.actions !== undefined) {
     const result = validateActions(config.actions);
+    allErrors.push(...result.errors);
+    allWarnings.push(...result.warnings);
+  }
+
+  if (config.seedEntities !== undefined) {
+    const result = validateEntities(config.seedEntities);
     allErrors.push(...result.errors);
     allWarnings.push(...result.warnings);
   }

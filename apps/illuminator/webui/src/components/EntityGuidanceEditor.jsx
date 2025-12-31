@@ -64,7 +64,17 @@ const VISUAL_STEP_SECTIONS = [
   { key: 'visualTraits.framing', label: 'Visual Traits Framing', description: 'Context prepended to traits prompt', rows: 2 },
 ];
 
-const NOTABLE_PROMINENCE = new Set(['mythic', 'renowned', 'recognized']);
+// Notable prominence threshold: recognized (2.0) or higher
+const NOTABLE_PROMINENCE_THRESHOLD = 2.0;
+
+// Convert numeric prominence to display label
+function prominenceLabel(value) {
+  if (value < 1) return 'forgotten';
+  if (value < 2) return 'marginal';
+  if (value < 3) return 'recognized';
+  if (value < 4) return 'renowned';
+  return 'mythic';
+}
 
 function calculateEntityAge(entity, simulationMetadata) {
   const currentTick = simulationMetadata?.currentTick || 100;
@@ -117,7 +127,8 @@ function findFactionMembers(entity, entityById, relationshipsByEntity) {
   for (const link of links) {
     if (link.kind !== 'member_of' || link.dst !== entity.id) continue;
     const member = entityById.get(link.src);
-    if (member && ['mythic', 'renowned'].includes(member.prominence)) {
+    // Prominence >= 3.0 = renowned or mythic
+    if (member && member.prominence >= 3.0) {
       members.push(member.name);
     }
   }
@@ -141,7 +152,7 @@ function buildEntityContext(
       name: entity?.name || '[Entity Name]',
       kind: entity?.kind || '[kind]',
       subtype: entity?.subtype || '[subtype]',
-      prominence: entity?.prominence || 'recognized',
+      prominence: entity?.prominence ?? 2.0,
       culture: entity?.culture || '',
       status: entity?.status || 'active',
       summary: entity?.summary || '',
@@ -288,7 +299,7 @@ export default function EntityGuidanceEditor({
     const map = new Map();
     for (const entity of entities) {
       if (!entity.culture) continue;
-      if (!NOTABLE_PROMINENCE.has(entity.prominence)) continue;
+      if (entity.prominence < NOTABLE_PROMINENCE_THRESHOLD) continue;
       const entry = { id: entity.id, name: entity.name };
       const existing = map.get(entity.culture);
       if (existing) {
@@ -540,7 +551,7 @@ export default function EntityGuidanceEditor({
           <>
             <div className="illuminator-preview-entity-info">
               <span className="illuminator-preview-entity-badge">{selectedEntity.kind}/{selectedEntity.subtype}</span>
-              <span className="illuminator-preview-entity-badge">{selectedEntity.prominence}</span>
+              <span className="illuminator-preview-entity-badge">{prominenceLabel(selectedEntity.prominence)}</span>
               <span className="illuminator-preview-entity-badge">{selectedEntity.culture || 'no culture'}</span>
               <span className="illuminator-preview-entity-badge">{calculateEntityAge(selectedEntity, simulationMetadata)}</span>
             </div>

@@ -63,9 +63,8 @@ export function archiveEntity(
     status = FRAMEWORK_STATUS.HISTORICAL
   } = options;
 
-  // Mark entity as historical
-  entity.status = status;
-  entity.updatedAt = graph.tick;
+  // Mark entity as historical (use updateEntity to trigger mutation tracking)
+  graph.updateEntity(entityId, { status });
 
   // Archive relationships if requested
   if (shouldArchiveRels) {

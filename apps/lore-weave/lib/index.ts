@@ -18,7 +18,7 @@ export { WorldEngine } from './engine/worldEngine';
 export type {
   HardState,
   Relationship,
-  Prominence,
+  ProminenceLabel,
   EntityTags,
   CatalystProperties,
   CatalyzedEvent
@@ -92,8 +92,6 @@ export {
   addRelationship,
   canFormRelationship,
   recordRelationshipFormation,
-  getProminenceValue,
-  adjustProminence,
   getConnectionWeight
 } from './utils';
 
@@ -292,11 +290,13 @@ export type {
   CoordinateContextConfig,
   EntityKindConfig,
   CultureConfig,
-  SemanticPlane,
   KindAxisBiases,
   PlacementContext,
   PlacementResult
 } from './coordinates/coordinateContext';
+
+// SemanticPlane is from world-schema, re-exported here for convenience
+export type { SemanticPlane } from '@canonry/world-schema';
 
 // =============================================================================
 // COORDINATE STATISTICS (Diagnostics)

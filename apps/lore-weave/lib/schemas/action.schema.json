@@ -770,12 +770,12 @@
 
     "AdjustProminenceMutation": {
       "type": "object",
-      "required": ["type", "entity", "direction"],
+      "required": ["type", "entity", "delta"],
       "additionalProperties": false,
       "properties": {
         "type": { "const": "adjust_prominence" },
         "entity": { "$ref": "#/$defs/NonEmptyString" },
-        "direction": { "enum": ["up", "down"] }
+        "delta": { "type": "number", "description": "Amount to adjust prominence by (positive or negative)" }
       }
     },
 
@@ -817,8 +817,14 @@
       "properties": {
         "mutations": { "type": "array", "items": { "$ref": "#/$defs/Mutation" } },
         "descriptionTemplate": { "$ref": "#/$defs/NonEmptyString" },
-        "applyProminenceToActor": { "type": "boolean" },
-        "applyProminenceToInstigator": { "type": "boolean" }
+        "actorProminenceDelta": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "onSuccess": { "type": "number", "description": "Delta to apply to actor prominence on success" },
+            "onFailure": { "type": "number", "description": "Delta to apply to actor prominence on failure" }
+          }
+        }
       }
     },
 

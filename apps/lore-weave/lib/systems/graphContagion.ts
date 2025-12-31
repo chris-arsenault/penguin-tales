@@ -506,7 +506,8 @@ function applySingleSourceContagion(
     for (const rel of allRelationships) {
       if (rel.kind !== vector.relationshipKind) continue;
       const minStrength = vector.minStrength ?? 0;
-      if (rel.strength < minStrength) continue;
+      const strength = rel.strength ?? 0;
+      if (strength < minStrength) continue;
 
       // Only include edges between entities in our population
       if (entityIds.has(rel.src) && entityIds.has(rel.dst)) {
@@ -514,7 +515,7 @@ function applySingleSourceContagion(
           source: rel.src,
           target: rel.dst,
           kind: rel.kind,
-          strength: rel.strength,
+          strength,
         });
       }
     }
@@ -748,7 +749,7 @@ function applyMultiSourceContagion(
     const tagKeys = Object.keys(tags);
     if (tagKeys.length > 10) {
       const excessCount = tagKeys.length - 10;
-      const frameworkTags = new Set(FRAMEWORK_TAG_VALUES);
+      const frameworkTags: Set<string> = new Set(FRAMEWORK_TAG_VALUES);
       const removable = tagKeys.filter(tag => !frameworkTags.has(tag));
       const protectedTags = tagKeys.filter(tag => frameworkTags.has(tag));
       const removalOrder = removable.length >= excessCount
@@ -782,14 +783,15 @@ function applyMultiSourceContagion(
     for (const rel of allRelationships) {
       if (rel.kind !== vector.relationshipKind) continue;
       const minStrength = vector.minStrength ?? 0;
-      if (rel.strength < minStrength) continue;
+      const strength = rel.strength ?? 0;
+      if (strength < minStrength) continue;
 
       if (entityIds.has(rel.src) && entityIds.has(rel.dst)) {
         vectorEdges.push({
           source: rel.src,
           target: rel.dst,
           kind: rel.kind,
-          strength: rel.strength,
+          strength,
         });
       }
     }

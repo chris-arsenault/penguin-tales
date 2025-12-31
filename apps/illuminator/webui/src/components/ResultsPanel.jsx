@@ -11,6 +11,18 @@
 
 import { useState, useMemo } from 'react';
 
+// Convert numeric prominence to display label
+function prominenceLabel(value) {
+  if (typeof value !== 'number') {
+    throw new Error(`prominenceLabel: expected number, got ${typeof value}: ${JSON.stringify(value)}`);
+  }
+  if (value < 1) return 'forgotten';
+  if (value < 2) return 'marginal';
+  if (value < 3) return 'recognized';
+  if (value < 4) return 'renowned';
+  return 'mythic';
+}
+
 function EntityResultCard({
   entity,
   tasks,
@@ -58,7 +70,7 @@ function EntityResultCard({
       <div className="illuminator-entity-details">
         <div className="illuminator-entity-name">{entity.name}</div>
         <div className="illuminator-entity-kind">
-          {entity.kind}/{entity.subtype} - {entity.prominence}
+          {entity.kind}/{entity.subtype} - {prominenceLabel(entity.prominence)}
         </div>
         {(descriptionTask?.result?.summary || descriptionTask?.result?.description) && (
           <div className="illuminator-entity-description">

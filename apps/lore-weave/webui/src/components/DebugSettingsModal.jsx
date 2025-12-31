@@ -20,6 +20,7 @@ const DEBUG_CATEGORIES = [
   { id: 'entities', label: 'Entities', description: 'Entity creation and state changes' },
   { id: 'pressures', label: 'Pressures', description: 'Pressure changes and thresholds' },
   { id: 'naming', label: 'Naming', description: 'Name generation' },
+  { id: 'prominence', label: 'Prominence', description: 'Prominence mutations and state tracking' },
 ];
 
 export default function DebugSettingsModal({ isOpen, onClose, debugConfig, onDebugConfigChange }) {

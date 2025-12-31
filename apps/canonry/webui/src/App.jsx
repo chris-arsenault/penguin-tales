@@ -1148,6 +1148,7 @@ export default function App() {
       systems: currentProject.systems || [],
       eras: currentProject.eras || [],
       actions: currentProject.actions || [],
+      seedEntities: currentProject.seedEntities || [],
       schema: {
         cultures,
         entityKinds,
@@ -1160,6 +1161,7 @@ export default function App() {
     currentProject?.systems,
     currentProject?.eras,
     currentProject?.actions,
+    currentProject?.seedEntities,
     schema,
   ]);
 

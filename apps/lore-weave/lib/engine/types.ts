@@ -1,10 +1,12 @@
 import { HardState, Relationship, EntityTags } from '../core/worldTypes';
 import { FRAMEWORK_STATUS } from '@canonry/world-schema';
+import { prominenceThreshold, prominenceLabel, type ProminenceLabel } from '../rules/types';
 import { DistributionTargets } from '../statistics/types';
 import type { ISimulationEmitter } from '../observer/types';
 import type { Condition } from '../rules/conditions/types';
 import type { ModifyPressureMutation } from '../rules/mutations/types';
 import type { CanonrySchemaSlice, HistoryEvent as CanonryHistoryEvent, NarrativeEvent } from '@canonry/world-schema';
+import type { MutationTracker } from '../narrative/mutationTracker.js';
 
 export type HistoryEvent = CanonryHistoryEvent;
 
@@ -26,7 +28,8 @@ export type DebugCategory =
   | 'eras'           // Era transitions and epoch events
   | 'entities'       // Entity creation and state changes
   | 'pressures'      // Pressure changes and thresholds
-  | 'naming';        // Name generation
+  | 'naming'         // Name generation
+  | 'prominence';    // Prominence mutations and state tracking
 
 /**
  * Debug configuration for controlling debug output.
@@ -59,7 +62,8 @@ export const DEBUG_CATEGORY_INFO: Record<DebugCategory, { label: string; descrip
   eras: { label: 'Eras', description: 'Era transitions and epoch events' },
   entities: { label: 'Entities', description: 'Entity creation and state changes' },
   pressures: { label: 'Pressures', description: 'Pressure changes and thresholds' },
-  naming: { label: 'Naming', description: 'Name generation' }
+  naming: { label: 'Naming', description: 'Name generation' },
+  prominence: { label: 'Prominence', description: 'Prominence mutations and state tracking' }
 };
 
 // LLM types moved to @illuminator
@@ -159,10 +163,11 @@ export interface CreateEntitySettings {
   subtype: string;
   coordinates: import('../coordinates/types').Point;  // REQUIRED - simple 2D+z coordinates
   tags?: EntityTags;  // Optional - defaults to {}
+  eraId?: string;  // Optional - era identifier for the entity
   name?: string;  // Optional - runtime may auto-generate if not provided
   description?: string;
   status: string;
-  prominence: import('../core/worldTypes').Prominence;
+  prominence: number;  // 0.0-5.0 numeric scale
   culture: string;
   temporal?: { startTick: number; endTick: number | null };
   source?: string;  // Optional - for debugging (e.g., template ID, system ID)
@@ -272,6 +277,14 @@ export interface Graph {
     tick: number;
     violations: Array<{ kind: string; strength: number }>;
   }>;
+
+  /**
+   * Mutation tracker for lineage tracking.
+   * Part of the unified lineage system - see LINEAGE.md.
+   * When set, entity and relationship creation will stamp createdBy from current context.
+   * Set by WorldEngine after graph creation.
+   */
+  mutationTracker?: MutationTracker;
 }
 
 // Criteria for finding entities
@@ -279,7 +292,7 @@ export interface EntityCriteria {
   kind?: string;
   subtype?: string;
   status?: string;
-  prominence?: string;
+  prominence?: ProminenceLabel;  // Filter by prominence label (matches that level)
   culture?: string;
   tag?: string;  // Check if entity has this tag key
   exclude?: string[];  // Entity IDs to exclude
@@ -363,17 +376,34 @@ export interface SimulationSystem<TState = unknown> {
   apply: (graphView: import('../runtime/worldRuntime').WorldRuntime, modifier: number) => Promise<SystemResult> | SystemResult;
 }
 
+/**
+ * Action context for attribution in narrative events.
+ * Used by systems like universalCatalyst to attribute modifications
+ * to specific actions rather than the generic system.
+ */
+export interface ActionContext {
+  source: import('@canonry/world-schema').ExecutionSource;
+  sourceId: string;
+}
+
 export interface SystemResult {
-  relationshipsAdded: Relationship[];
+  relationshipsAdded: Array<Relationship & {
+    /** Action context for narrative attribution (e.g., action:raid instead of system:universal_catalyst) */
+    actionContext?: ActionContext;
+  }>;
   relationshipsAdjusted?: Array<{
     kind: string;
     src: string;
     dst: string;
     delta: number;
+    /** Action context for narrative attribution */
+    actionContext?: ActionContext;
   }>;
   entitiesModified: Array<{
     id: string;
     changes: Partial<HardState>;
+    /** Action context for narrative attribution */
+    actionContext?: ActionContext;
   }>;
   pressureChanges: Record<string, number>;
   description: string;
@@ -679,6 +709,13 @@ export class GraphStore implements Graph {
     violations: Array<{ kind: string; strength: number }>;
   }>;
 
+  /**
+   * Mutation tracker for lineage tracking.
+   * Part of the unified lineage system - see LINEAGE.md.
+   * When set, entity and relationship creation will stamp createdBy from current context.
+   */
+  mutationTracker?: MutationTracker;
+
   // ===========================================================================
   // ENTITY READ METHODS
   // ===========================================================================
@@ -738,7 +775,7 @@ export class GraphStore implements Graph {
       if (criteria.kind && criteria.kind !== 'any' && entity.kind !== criteria.kind) continue;
       if (criteria.subtype && entity.subtype !== criteria.subtype) continue;
       if (criteria.status && entity.status !== criteria.status) continue;
-      if (criteria.prominence && entity.prominence !== criteria.prominence) continue;
+      if (criteria.prominence && prominenceLabel(entity.prominence) !== criteria.prominence) continue;
       if (criteria.culture && entity.culture !== criteria.culture) continue;
       if (criteria.tag && !(criteria.tag in entity.tags)) continue;
       results.push(entity);
@@ -840,14 +877,14 @@ export class GraphStore implements Graph {
         `Entity kind: ${settings.kind}, subtype: ${settings.subtype}.`
       );
     }
-    if (!settings.prominence) {
+    if (settings.prominence == null) {
       throw new Error(
         `createEntity: prominence is required for all entities. ` +
         `Entity kind: ${settings.kind}, subtype: ${settings.subtype}.`
       );
     }
 
-    // Build the full entity
+    // Build the full entity with lineage if mutation tracker has context
     const entity: HardState = {
       id,
       kind: settings.kind,
@@ -858,22 +895,93 @@ export class GraphStore implements Graph {
       prominence: settings.prominence,
       culture: settings.culture,
       tags,
+      eraId: settings.eraId,
       coordinates: settings.coordinates,
       temporal: settings.temporal,
       regionId: settings.regionId,
       allRegionIds: settings.allRegionIds,
       createdAt: this.tick,
-      updatedAt: this.tick
+      updatedAt: this.tick,
+      // Lineage: stamp createdBy from current execution context (see LINEAGE.md)
+      createdBy: this.mutationTracker?.getCurrentContext() ?? undefined,
     };
 
     this.#entities.set(id, entity);
 
+    // Record entity creation for context-based event generation
+    this.mutationTracker?.recordEntityCreated({
+      entityId: id,
+      kind: entity.kind,
+      subtype: entity.subtype,
+      name: entity.name,
+      culture: entity.culture,
+      prominence: prominenceLabel(entity.prominence),
+      status: entity.status,
+      tags: entity.tags,
+    });
+
     return id;
   }
+
+  // Debug flag for tracing prominence mutations - set to true to enable logging
+  static DEBUG_PROMINENCE = false;
 
   updateEntity(id: string, changes: Partial<HardState>): boolean {
     const entity = this.#entities.get(id);
     if (!entity) return false;
+
+    // Debug logging for prominence changes
+    if (GraphStore.DEBUG_PROMINENCE && 'prominence' in changes) {
+      const oldProm = entity.prominence;
+      const newProm = changes.prominence!;
+      if (oldProm !== newProm) {
+        const oldLabel = prominenceLabel(oldProm);
+        const newLabel = prominenceLabel(newProm);
+        console.log(`[PROMINENCE] tick=${this.tick} entity=${entity.name} (${id}): ${oldLabel} (${oldProm.toFixed(2)}) -> ${newLabel} (${newProm.toFixed(2)})`);
+      } else {
+        console.log(`[PROMINENCE-NOOP] tick=${this.tick} entity=${entity.name} (${id}): ${oldProm.toFixed(2)} (no change)`);
+      }
+    }
+
+    // Record field changes to MutationTracker for context-based event generation
+    if (this.mutationTracker) {
+      // Track tag changes - only PRESENCE changes, not value updates
+      // System tracking tags (like "temperature=45") update values every tick,
+      // which is not narratively interesting. We only care when tags are added/removed.
+      if (changes.tags !== undefined) {
+        const oldTags = entity.tags || {};
+        const newTags = changes.tags || {};
+
+        // Find truly NEW tags (tag didn't exist before)
+        for (const [tag, value] of Object.entries(newTags)) {
+          if (!(tag in oldTags)) {
+            this.mutationTracker.recordTagAdded(id, tag, value);
+          }
+          // Value changes on existing tags are not tracked - not narratively interesting
+        }
+
+        // Find removed tags
+        for (const tag of Object.keys(oldTags)) {
+          if (!(tag in newTags)) {
+            this.mutationTracker.recordTagRemoved(id, tag);
+          }
+        }
+      }
+
+      // Track other field changes (status, prominence, etc.)
+      const trackedFields = ['status', 'prominence', 'culture', 'description'] as const;
+      for (const field of trackedFields) {
+        if (field in changes && changes[field] !== entity[field]) {
+          this.mutationTracker.recordFieldChanged(
+            id,
+            field,
+            entity[field],
+            changes[field]
+          );
+        }
+      }
+    }
+
     Object.assign(entity, changes, { updatedAt: this.tick });
     return true;
   }
@@ -977,7 +1085,7 @@ export class GraphStore implements Graph {
       distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
-    // Build relationship
+    // Build relationship with lineage if mutation tracker has context
     const relationship: Relationship = {
       kind,
       src: srcId,
@@ -985,10 +1093,21 @@ export class GraphStore implements Graph {
       strength: strength ?? 0.5,
       distance,
       category,
-      status: 'active'
+      status: 'active',
+      createdAt: this.tick,
+      // Lineage: stamp createdBy from current execution context (see LINEAGE.md)
+      createdBy: this.mutationTracker?.getCurrentContext() ?? undefined,
     };
 
     this.#relationships.push(relationship);
+
+    // Record relationship creation for context-based event generation
+    this.mutationTracker?.recordRelationshipCreated({
+      srcId,
+      dstId,
+      kind,
+      strength: relationship.strength,
+    });
 
     srcEntity.updatedAt = this.tick;
     dstEntity.updatedAt = this.tick;

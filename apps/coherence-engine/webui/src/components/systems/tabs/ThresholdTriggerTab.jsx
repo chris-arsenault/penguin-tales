@@ -2,13 +2,86 @@
  * ThresholdTriggerTab - Configuration for threshold trigger systems
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { CLUSTER_MODES } from '../constants';
 import { ReferenceDropdown, NumberInput } from '../../shared';
+import VariableSelectionEditor from '../../shared/VariableSelectionEditor';
 import { ApplicabilityRuleCard } from '../../generators/applicability/ApplicabilityRuleCard';
 import { AddRuleButton } from '../../generators/applicability/AddRuleButton';
 import { createNewRule } from '../../generators/applicability/createNewRule';
 import MutationCard, { DEFAULT_MUTATION_TYPES } from '../../shared/MutationCard';
+
+// ============================================================================
+// VariableCard - Individual variable editor card (reused pattern from generators)
+// ============================================================================
+
+function VariableCard({ name, config, onChange, onRemove, schema, availableRefs = [] }) {
+  const [expanded, setExpanded] = useState(false);
+  const [hovering, setHovering] = useState(false);
+
+  const selectConfig = config.select || {};
+  const isRequired = config.required || false;
+
+  const updateRequired = (value) => {
+    onChange({ ...config, required: value });
+  };
+
+  const displayMode = selectConfig.from && typeof selectConfig.from === 'object' ? 'Related entities' : (selectConfig.kind || 'Not configured');
+  const displayStrategy = selectConfig.pickStrategy || 'Not set';
+  const filterCount = (selectConfig.filters || []).length;
+
+  return (
+    <div className="item-card">
+      <div
+        className={`item-card-header ${hovering ? 'item-card-header-hover' : ''}`}
+        onClick={() => setExpanded(!expanded)}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+      >
+        <div className="item-card-icon item-card-icon-variable">📦</div>
+        <div className="item-card-info">
+          <div className="item-card-title">
+            <span className="variable-ref">{name}</span>
+            {isRequired && <span className="badge badge-warning" style={{ marginLeft: '8px', fontSize: '10px' }}>Required</span>}
+          </div>
+          <div className="item-card-subtitle">
+            {displayMode} • {displayStrategy}
+            {filterCount > 0 && <span style={{ marginLeft: '4px' }}>• {filterCount} filter{filterCount > 1 ? 's' : ''}</span>}
+          </div>
+        </div>
+        <div className="item-card-actions">
+          <button className="btn-icon">{expanded ? '▲' : '▼'}</button>
+          <button className="btn-icon btn-icon-danger" onClick={(e) => { e.stopPropagation(); onRemove(); }}>×</button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="item-card-body">
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={isRequired}
+                onChange={(e) => updateRequired(e.target.checked)}
+              />
+              <span className="label" style={{ margin: 0 }}>Required</span>
+              <span className="text-muted" style={{ fontSize: '11px' }}>
+                (Entity is skipped if this variable can't be resolved)
+              </span>
+            </label>
+          </div>
+
+          <VariableSelectionEditor
+            value={selectConfig}
+            onChange={(updated) => onChange({ ...config, select: updated })}
+            schema={schema}
+            availableRefs={availableRefs}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 const TRIGGER_MUTATION_TYPES = DEFAULT_MUTATION_TYPES;
 
@@ -21,6 +94,8 @@ const TRIGGER_MUTATION_TYPES = DEFAULT_MUTATION_TYPES;
  */
 export function ThresholdTriggerTab({ system, onChange, schema, pressures }) {
   const config = system.config;
+  const [newVarName, setNewVarName] = useState('');
+  const [showAddVarForm, setShowAddVarForm] = useState(false);
 
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
     value: rk.kind,
@@ -49,6 +124,46 @@ export function ThresholdTriggerTab({ system, onChange, schema, pressures }) {
   const removeCondition = (index) => {
     updateConfig('conditions', conditions.filter((_, i) => i !== index));
   };
+
+  // Variables
+  const variables = config.variables || {};
+
+  const buildAvailableRefs = (excludeVar) => {
+    const refs = ['$self'];
+    Object.keys(variables).forEach((v) => {
+      if (v !== excludeVar) refs.push(v);
+    });
+    return refs;
+  };
+
+  const handleAddVariable = () => {
+    if (!newVarName.trim()) return;
+    const name = newVarName.startsWith('$') ? newVarName : `$${newVarName}`;
+    updateConfig('variables', {
+      ...variables,
+      [name]: { select: { from: 'graph', kind: '', pickStrategy: 'random' } },
+    });
+    setNewVarName('');
+    setShowAddVarForm(false);
+  };
+
+  const updateVariable = (name, config) => {
+    updateConfig('variables', { ...variables, [name]: config });
+  };
+
+  const removeVariable = (name) => {
+    const newVars = { ...variables };
+    delete newVars[name];
+    updateConfig('variables', newVars);
+  };
+
+  // Build entity options for actions (include defined variables)
+  const entityOptions = [
+    { value: '$self', label: '$self' },
+    { value: '$member', label: '$member' },
+    { value: '$member2', label: '$member2' },
+    ...Object.keys(variables).map(v => ({ value: v, label: v })),
+  ];
 
   // Actions (mutations)
   const actions = config.actions || [];
@@ -119,6 +234,58 @@ export function ThresholdTriggerTab({ system, onChange, schema, pressures }) {
       </div>
 
       <div className="section">
+        <div className="section-title">Variables ({Object.keys(variables).length})</div>
+        <div className="section-desc">
+          Variables select additional entities from the graph to use in actions.
+          Referenced as <code className="inline-code">$varName</code> in action entity fields.
+        </div>
+
+        {Object.keys(variables).length === 0 && !showAddVarForm ? (
+          <div className="empty-state-compact">No variables defined.</div>
+        ) : (
+          Object.entries(variables).map(([name, varConfig]) => (
+            <VariableCard
+              key={name}
+              name={name}
+              config={varConfig}
+              onChange={(updated) => updateVariable(name, updated)}
+              onRemove={() => removeVariable(name)}
+              schema={schema}
+              availableRefs={buildAvailableRefs(name)}
+            />
+          ))
+        )}
+
+        {showAddVarForm ? (
+          <div className="item-card add-form">
+            <div className="add-form-fields">
+              <div style={{ flex: 1 }}>
+                <label className="label">Variable Name</label>
+                <input
+                  type="text"
+                  value={newVarName}
+                  onChange={(e) => setNewVarName(e.target.value.replace(/[^a-zA-Z0-9_$]/g, ''))}
+                  className="input"
+                  placeholder="$myVariable"
+                  autoFocus
+                />
+              </div>
+              <button className="btn btn-primary" onClick={handleAddVariable} disabled={!newVarName.trim()}>
+                Add
+              </button>
+              <button className="btn btn-secondary" onClick={() => { setShowAddVarForm(false); setNewVarName(''); }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button className="btn-add" onClick={() => setShowAddVarForm(true)}>
+            + Add Variable
+          </button>
+        )}
+      </div>
+
+      <div className="section">
         <div className="section-title">Actions ({actions.length})</div>
         <div className="section-desc">
           Mutations applied to each matching entity (or clusters when configured).
@@ -132,11 +299,7 @@ export function ThresholdTriggerTab({ system, onChange, schema, pressures }) {
               onRemove={() => removeAction(index)}
               schema={schema}
               pressures={pressures}
-              entityOptions={[
-                { value: '$self', label: '$self' },
-                { value: '$member', label: '$member' },
-                { value: '$member2', label: '$member2' },
-              ]}
+              entityOptions={entityOptions}
               typeOptions={TRIGGER_MUTATION_TYPES}
               createMutation={createAction}
               titlePrefix="Action"

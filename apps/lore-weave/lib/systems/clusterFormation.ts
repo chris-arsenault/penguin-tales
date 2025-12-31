@@ -12,7 +12,7 @@
  */
 
 import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
-import { HardState, Relationship, Prominence } from '../core/worldTypes';
+import { HardState, Relationship } from '../core/worldTypes';
 import { WorldRuntime } from '../runtime/worldRuntime';
 import {
   ClusterConfig,
@@ -170,15 +170,16 @@ function getMajority<T>(counts: Map<T, number>, defaultValue: T): T {
 }
 
 /**
- * Determine prominence based on cluster size
+ * Determine prominence based on cluster size.
+ * Returns numeric prominence value (2=recognized, 3=renowned, 1=marginal).
  */
 function getProminence(
   size: number,
   thresholds: { marginal: number; recognized: number; renowned: number }
-): Prominence {
-  if (size >= thresholds.renowned) return 'renowned';
-  if (size >= thresholds.recognized) return 'recognized';
-  return 'marginal';
+): number {
+  if (size >= thresholds.renowned) return 3.5; // renowned
+  if (size >= thresholds.recognized) return 2.5; // recognized
+  return 1.5; // marginal
 }
 
 /**

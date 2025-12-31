@@ -16,7 +16,7 @@ import type { EraTransitionConfig } from '../engine/systemInterpreter';
 import { createEraEntity } from './eraSpawner';
 import { createSystemContext, evaluateCondition, prepareMutation } from '../rules';
 import type { ConditionResult } from '../rules';
-import { PROMINENCE_ORDER } from '../rules/types';
+import { prominenceThreshold, ProminenceLabel } from '../rules/types';
 import { hasTag } from '../utils';
 
 /**
@@ -209,8 +209,9 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
       }];
 
       // Create active_during relationships for prominent entities in the ending era
+      // Prominence >= 2.0 = recognized or higher
       const prominentEntities = graphView.getEntities().filter(e =>
-        (e.prominence === 'recognized' || e.prominence === 'renowned' || e.prominence === 'mythic') &&
+        e.prominence >= 2.0 &&
         e.kind !== FRAMEWORK_ENTITY_KINDS.ERA &&
         e.createdAt >= currentEraEntity.temporal!.startTick &&
         e.createdAt < graphView.tick
@@ -233,18 +234,18 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
 
       if (snapshotConfig?.enabled) {
         const minProminence = snapshotConfig.minProminence ?? 'renowned';
-        const minIndex = PROMINENCE_ORDER.indexOf(minProminence);
-        if (minIndex >= 0) {
+        const minThreshold = prominenceThreshold(minProminence as ProminenceLabel);
+        if (minThreshold >= 0) {
           const entitiesToLock = graphView.getEntities().filter(e =>
             e.kind !== FRAMEWORK_ENTITY_KINDS.ERA &&
-            PROMINENCE_ORDER.indexOf(e.prominence as typeof PROMINENCE_ORDER[number]) >= minIndex &&
+            e.prominence >= minThreshold &&
             !hasTag(e.tags, FRAMEWORK_TAGS.PROMINENCE_LOCKED)
           );
 
           entitiesToLock.forEach(entity => {
-            entity.tags = { ...(entity.tags ?? {}), [FRAMEWORK_TAGS.PROMINENCE_LOCKED]: currentEraConfig.id };
-            entity.updatedAt = graphView.tick;
-            snapshotModifications.push({ id: entity.id, changes: { tags: entity.tags } });
+            const newTags = { ...(entity.tags ?? {}), [FRAMEWORK_TAGS.PROMINENCE_LOCKED]: currentEraConfig.id };
+            graphView.updateEntity(entity.id, { tags: newTags });
+            snapshotModifications.push({ id: entity.id, changes: { tags: newTags } });
           });
           snapshotLockedCount = entitiesToLock.length;
         }

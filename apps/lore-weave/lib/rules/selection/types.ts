@@ -4,7 +4,7 @@
  * Shared selection rule types used across templates, actions, and systems.
  */
 
-import type { Prominence } from '../../core/worldTypes';
+import type { ProminenceLabel } from '../../core/worldTypes';
 import type { Direction } from '../types';
 import type { SelectionFilter } from '../filters/types';
 
@@ -53,7 +53,7 @@ export interface SelectionRule {
   maxDistance?: number;
 
   // For by_prominence strategy
-  minProminence?: Prominence;
+  minProminence?: ProminenceLabel;
 
   // Post-selection filters
   filters?: SelectionFilter[];

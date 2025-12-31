@@ -99,6 +99,12 @@ const normalizeEnrichmentConfig = (config) => {
   return { ...DEFAULT_CONFIG, ...rest };
 };
 
+const resolveEntityEraId = (entity) => {
+  if (!entity) return undefined;
+  if (typeof entity.eraId === 'string' && entity.eraId) return entity.eraId;
+  return undefined;
+};
+
 const shouldApplyPersistedResult = (enrichment, type, result) => {
   if (!result?.generatedAt) return true;
   if (type === 'description') {
@@ -563,88 +569,64 @@ export default function IlluminatorRemote({
   );
 
   // Build era temporal info for description prompts (same format as chronicle wizard)
+  // NOTE: Use era entity temporal data directly - do not compute ranges from history or ticks.
   const eraTemporalInfo = useMemo(() => {
-    if (!entities || !worldData?.history) return [];
+    if (!entities?.length) return [];
 
-    // Get era entities
-    const eraEntities = entities.filter((e) => e.kind === 'era');
+    const eraEntities = entities.filter((e) => e.kind === 'era' && e.temporal?.startTick != null);
     if (eraEntities.length === 0) return [];
 
-    // Sort by createdAt to determine order
-    const sortedEras = [...eraEntities].sort((a, b) => a.createdAt - b.createdAt);
-
-    // Build tick ranges from history events
-    // Note: event.era contains the era NAME (e.g. 'expansion'), not the era ID
-    const eraTickRangesByName = new Map();
-    for (const event of worldData.history) {
-      const eraName = event.era;
-      if (!eraName) continue;
-      const range = eraTickRangesByName.get(eraName) || { min: Infinity, max: -Infinity };
-      range.min = Math.min(range.min, event.tick);
-      range.max = Math.max(range.max, event.tick);
-      eraTickRangesByName.set(eraName, range);
-    }
-
-    // Helper to find range by era name (case-insensitive, handles "The X" prefix)
-    const findRangeForEra = (era) => {
-      // Try exact name match
-      if (eraTickRangesByName.has(era.name)) {
-        return eraTickRangesByName.get(era.name);
-      }
-      // Try without "The " prefix
-      const nameWithoutThe = era.name.replace(/^The\s+/i, '');
-      if (eraTickRangesByName.has(nameWithoutThe)) {
-        return eraTickRangesByName.get(nameWithoutThe);
-      }
-      // Try lowercase match
-      const lowerName = era.name.toLowerCase();
-      for (const [key, range] of eraTickRangesByName) {
-        if (key.toLowerCase() === lowerName || key.toLowerCase() === nameWithoutThe.toLowerCase()) {
-          return range;
-        }
-      }
-      return null;
-    };
+    const sortedEras = [...eraEntities].sort(
+      (a, b) => a.temporal.startTick - b.temporal.startTick
+    );
 
     const result = sortedEras.map((era, index) => {
-      const range = findRangeForEra(era) || { min: era.createdAt, max: era.createdAt };
+      const startTick = era.temporal.startTick;
+      const endTick = era.temporal.endTick ?? startTick;
+      const eraId = resolveEntityEraId(era) || era.id;
       return {
-        id: era.id,
+        id: eraId,
         name: era.name,
         summary: era.summary || '',
         order: index,
-        startTick: range.min,
-        endTick: range.max + 1, // exclusive
-        duration: range.max - range.min + 1,
+        startTick,
+        endTick,
+        duration: endTick - startTick,
       };
     });
 
     console.log('[IlluminatorRemote] eraTemporalInfo built:', {
       eraCount: result.length,
-      historyEventCount: worldData.history.length,
-      eraNameKeysInHistory: Array.from(eraTickRangesByName.keys()),
       eraRanges: result.map(e => ({ id: e.id, name: e.name, start: e.startTick, end: e.endTick })),
     });
 
     return result;
-  }, [entities, worldData]);
+  }, [entities]);
 
-  // Find the focal era for an entity based on its creation tick
-  const findFocalEra = useCallback((createdAt) => {
-    if (!eraTemporalInfo.length) return undefined;
-    // Find era that contains this tick
-    const focalEra = eraTemporalInfo.find(
-      (era) => createdAt >= era.startTick && createdAt < era.endTick
-    );
-    // Fall back to last era if entity was created after all era ranges
-    return focalEra || eraTemporalInfo[eraTemporalInfo.length - 1];
-  }, [eraTemporalInfo]);
+  const eraTemporalInfoByKey = useMemo(() => {
+    if (!eraTemporalInfo.length || !entities?.length) return new Map();
+
+    const byId = new Map(eraTemporalInfo.map((era) => [era.id, era]));
+    const map = new Map(byId);
+
+    for (const entity of entities) {
+      if (entity.kind !== 'era') continue;
+      const eraInfo = byId.get(entity.id);
+      if (!eraInfo) continue;
+      if (typeof entity.eraId === 'string' && entity.eraId) {
+        map.set(entity.eraId, eraInfo);
+      }
+    }
+
+    return map;
+  }, [entities, eraTemporalInfo]);
 
   const prominentByCulture = useMemo(() => {
     const map = new Map();
     for (const entity of entities) {
       if (!entity.culture) continue;
-      if (!['mythic', 'renowned'].includes(entity.prominence)) continue;
+      // Prominence >= 3.0 = renowned or mythic
+      if (entity.prominence < 3.0) continue;
       const existing = map.get(entity.culture);
       if (existing) {
         existing.push(entity);
@@ -857,16 +839,8 @@ export default function IlluminatorRemote({
     (entity) => {
       const visualConfig = getVisualConfigFromGuidance(entityGuidance, entity.kind);
 
-      // Find entity's era via created_during relationship (origin era)
-      // Falls back to active_during if no created_during exists
-      const entityRels = relationshipsByEntity.get(entity.id) || [];
-      const eraRel = entityRels.find(r =>
-        (r.kind === 'created_during' || r.kind === 'active_during') && r.src === entity.id
-      );
-      const entityEraId = eraRel?.dst;
-
-      // Get focal era and all eras for description timeline
-      const entityFocalEra = findFocalEra(entity.createdAt || 0);
+      const entityEraId = resolveEntityEraId(entity);
+      const entityFocalEra = entityEraId ? eraTemporalInfoByKey.get(entityEraId) : undefined;
       const entityAllEras = eraTemporalInfo.length > 0 ? eraTemporalInfo : undefined;
 
       return {
@@ -876,7 +850,7 @@ export default function IlluminatorRemote({
         entityAllEras,
       };
     },
-    [entityGuidance, relationshipsByEntity, findFocalEra, eraTemporalInfo]
+    [entityGuidance, eraTemporalInfo, eraTemporalInfoByKey]
   );
 
   // Build prompt for entity using EntityGuidance and CultureIdentities directly

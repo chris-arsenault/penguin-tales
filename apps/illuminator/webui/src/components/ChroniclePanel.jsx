@@ -585,6 +585,7 @@ export default function ChroniclePanel({
         culture: e.culture,
         status: e.status,
         tags: e.tags || {},
+        eraId: e.eraId,
         summary: e.summary,
         description: e.description,
         aliases: e.enrichment?.text?.aliases || [],
@@ -655,8 +656,9 @@ export default function ChroniclePanel({
       // TODO: Get actual max tick from simulation config or world data
       // Last era may not have endTick defined yet (ongoing era)
       const endTick = era.temporal.endTick ?? 150;
+      const eraId = era.eraId || era.id;
       return {
-        id: era.id,
+        id: eraId,
         name: era.name,
         summary: era.summary || '',
         order: index,

@@ -12,6 +12,30 @@ import { useState, useMemo } from 'react';
 
 const PROMINENCE_LEVELS = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
 
+// Convert numeric prominence to display label
+function prominenceLabel(value) {
+  if (typeof value !== 'number') {
+    throw new Error(`prominenceLabel: expected number, got ${typeof value}: ${JSON.stringify(value)}`);
+  }
+  if (value < 1) return 'forgotten';
+  if (value < 2) return 'marginal';
+  if (value < 3) return 'recognized';
+  if (value < 4) return 'renowned';
+  return 'mythic';
+}
+
+// Convert prominence label to numeric threshold
+function prominenceThreshold(label) {
+  switch (label) {
+    case 'forgotten': return 0;
+    case 'marginal': return 1;
+    case 'recognized': return 2;
+    case 'renowned': return 3;
+    case 'mythic': return 4;
+    default: return 0;
+  }
+}
+
 function TaskStatusBadge({ status }) {
   const statusClass = `illuminator-status-${status}`;
   const labels = {
@@ -76,7 +100,7 @@ function EntityTaskGroup({
         <span style={{ flex: 1 }}>
           <span style={{ fontWeight: 500 }}>{entityName}</span>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>
-            {entityKind}/{entitySubtype} - {prominence}
+            {entityKind}/{entitySubtype} - {prominenceLabel(prominence)}
           </span>
         </span>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -174,9 +198,10 @@ export default function EnrichmentQueue({
     return groupedTasks.filter((group) => {
       if (filterKind !== 'all' && group.entityKind !== filterKind) return false;
       if (filterProminence !== 'all') {
-        const promIdx = PROMINENCE_LEVELS.indexOf(group.prominence);
-        const filterIdx = PROMINENCE_LEVELS.indexOf(filterProminence);
-        if (promIdx < filterIdx) return false;
+        // Filter to entities with at least the selected prominence level
+        const entityProminence = typeof group.prominence === 'number' ? group.prominence : 0;
+        const filterThreshold = prominenceThreshold(filterProminence);
+        if (entityProminence < filterThreshold) return false;
       }
       if (filterStatus !== 'all') {
         const hasMatchingTask = group.tasks.some((t) => t.status === filterStatus);

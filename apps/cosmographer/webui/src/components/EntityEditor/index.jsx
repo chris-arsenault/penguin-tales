@@ -534,14 +534,14 @@ export default function EntityEditor({ project, onSave, onAddTag, schemaUsage = 
               <label style={styles.label}>Prominence</label>
               <select
                 style={styles.select}
-                value={selectedEntity.prominence || 'recognized'}
-                onChange={(e) => updateEntity({ prominence: e.target.value })}
+                value={selectedEntity.prominence ?? 2.0}
+                onChange={(e) => updateEntity({ prominence: parseFloat(e.target.value) })}
               >
-                <option value="forgotten">Forgotten</option>
-                <option value="marginal">Marginal</option>
-                <option value="recognized">Recognized</option>
-                <option value="renowned">Renowned</option>
-                <option value="mythic">Mythic</option>
+                <option value="0.5">Forgotten</option>
+                <option value="1.5">Marginal</option>
+                <option value="2.5">Recognized</option>
+                <option value="3.5">Renowned</option>
+                <option value="4.5">Mythic</option>
               </select>
             </div>
 

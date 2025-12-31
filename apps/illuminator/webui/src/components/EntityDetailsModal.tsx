@@ -34,7 +34,7 @@ interface Entity {
   name: string;
   kind: string;
   subtype: string;
-  prominence: string;
+  prominence: number;
   culture?: string;
   status: string;
   summary?: string;
@@ -42,6 +42,15 @@ interface Entity {
   createdAt?: number;
   updatedAt?: number;
   enrichment?: EntityEnrichment;
+}
+
+// Convert numeric prominence to display label
+function prominenceLabel(value: number): string {
+  if (value < 1) return 'forgotten';
+  if (value < 2) return 'marginal';
+  if (value < 3) return 'recognized';
+  if (value < 4) return 'renowned';
+  return 'mythic';
 }
 
 interface EntityDetailsModalProps {
@@ -311,7 +320,7 @@ export default function EntityDetailsModal({
         <div>
           <h3 style={{ margin: 0, color: 'white', fontSize: '18px' }}>{entity.name}</h3>
           <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px' }}>
-            {entity.kind}/{entity.subtype} · {entity.prominence}
+            {entity.kind}/{entity.subtype} · {prominenceLabel(entity.prominence)}
             {entity.culture && ` · ${entity.culture}`}
           </div>
         </div>

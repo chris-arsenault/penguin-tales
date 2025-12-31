@@ -51,10 +51,22 @@ export interface ActionOutcomeConfig {
   mutations?: Mutation[];
   /** Description template (supports {actor.name}, {target.name}, etc.). */
   descriptionTemplate: string;
-  /** Apply system-level prominence changes to actor on success/failure. */
-  applyProminenceToActor?: boolean;
-  /** Apply system-level prominence changes to instigator on success/failure. */
-  applyProminenceToInstigator?: boolean;
+  /**
+   * Delta to apply to actor prominence on success/failure.
+   * Example: { onSuccess: 1.0, onFailure: -0.5 }
+   */
+  actorProminenceDelta?: {
+    onSuccess?: number;
+    onFailure?: number;
+  };
+  /**
+   * Delta to apply to target prominence on success/failure.
+   * Example: { onSuccess: 0.5, onFailure: -0.2 }
+   */
+  targetProminenceDelta?: {
+    onSuccess?: number;
+    onFailure?: number;
+  };
 }
 
 /**
@@ -115,10 +127,20 @@ export interface ExecutableAction {
   pressureModifiers: PressureModifier[];
   /** Actor configuration for filtering valid actors */
   actorConfig: ActionActorConfig;
-  /** Apply system-level prominence changes to actor on success/failure */
-  applyProminenceToActor: boolean;
-  /** Apply system-level prominence changes to instigator on success/failure */
-  applyProminenceToInstigator: boolean;
+  /**
+   * Delta to apply to actor prominence on success/failure.
+   */
+  actorProminenceDelta: {
+    onSuccess: number;
+    onFailure: number;
+  };
+  /**
+   * Delta to apply to target prominence on success/failure.
+   */
+  targetProminenceDelta: {
+    onSuccess: number;
+    onFailure: number;
+  };
   handler: (graph: WorldRuntime, actor: HardState) => ActionResult;
 }
 
@@ -372,8 +394,14 @@ export function createExecutableAction(action: DeclarativeAction): ExecutableAct
     baseWeight: action.probability.baseWeight,
     pressureModifiers: action.probability.pressureModifiers || [],
     actorConfig: action.actor,
-    applyProminenceToActor: action.outcome.applyProminenceToActor ?? false,
-    applyProminenceToInstigator: action.outcome.applyProminenceToInstigator ?? false,
+    actorProminenceDelta: {
+      onSuccess: action.outcome.actorProminenceDelta?.onSuccess ?? 0,
+      onFailure: action.outcome.actorProminenceDelta?.onFailure ?? 0,
+    },
+    targetProminenceDelta: {
+      onSuccess: action.outcome.targetProminenceDelta?.onSuccess ?? 0,
+      onFailure: action.outcome.targetProminenceDelta?.onFailure ?? 0,
+    },
     handler: createActionHandler(action)
   };
 }

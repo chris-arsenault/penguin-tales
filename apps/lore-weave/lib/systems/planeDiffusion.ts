@@ -549,7 +549,7 @@ export function createPlaneDiffusionSystem(
           const tagKeys = Object.keys(newTags);
           if (tagKeys.length > 10) {
             const excessCount = tagKeys.length - 10;
-            const frameworkTags = new Set(FRAMEWORK_TAG_VALUES);
+            const frameworkTags: Set<string> = new Set(FRAMEWORK_TAG_VALUES);
             const removable = tagKeys.filter(tag => !frameworkTags.has(tag));
             const protectedTags = tagKeys.filter(tag => frameworkTags.has(tag));
             const removalOrder = removable.length >= excessCount

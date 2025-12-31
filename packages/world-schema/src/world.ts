@@ -9,9 +9,9 @@ import type { CanonrySchemaSlice } from './mfeContracts.js';
 import type { SemanticRegion } from './entityKind.js';
 
 /**
- * Prominence level for entities
+ * Prominence label for display (derived from numeric value)
  */
-export type Prominence = 'forgotten' | 'marginal' | 'recognized' | 'renowned' | 'mythic';
+export type ProminenceLabel = 'forgotten' | 'marginal' | 'recognized' | 'renowned' | 'mythic';
 
 /**
  * 3D coordinates in semantic space
@@ -59,9 +59,11 @@ export interface WorldEntity {
   name: string;
   description: string;
   status: string;
-  prominence: Prominence;
+  prominence: number;  // 0.0-5.0 numeric scale
   culture: string;
   tags: EntityTags;
+  /** Era identifier for the entity's creation era */
+  eraId?: string;
   createdAt: number;
   updatedAt: number;
   coordinates: SemanticCoordinates;
@@ -172,16 +174,66 @@ export interface NarrativeEntityRef {
 }
 
 /**
- * State change captured during simulation
+ * Effect type for individual changes to an entity
  */
-export interface NarrativeStateChange {
-  entityId: string;
-  entityName: string;
-  entityKind: string;
-  field: string;
-  previousValue: unknown;
-  newValue: unknown;
-  reason?: string;
+export type EntityEffectType =
+  | 'created'              // Entity was created
+  | 'ended'                // Entity status became historical/dissolved
+  | 'relationship_formed'  // New relationship with another entity
+  | 'relationship_ended'   // Relationship dissolved
+  | 'tag_gained'           // Entity gained a tag
+  | 'tag_lost'             // Entity lost a tag
+  | 'field_changed';       // A field value changed (prominence, status, etc.)
+
+/**
+ * Semantic interpretation of an effect, derived from schema polarity metadata.
+ * Adds narrative meaning to raw mutation data.
+ */
+export type SemanticEffectKind =
+  | 'betrayal'        // Positive relationship ended (polarity: positive → ended)
+  | 'reconciliation'  // Negative relationship ended (polarity: negative → ended)
+  | 'alliance'        // Positive relationship formed
+  | 'rivalry'         // Negative relationship formed
+  | 'triumph'         // Status changed to positive polarity
+  | 'downfall';       // Status changed to negative polarity
+
+/**
+ * A single effect that happened to an entity during an event.
+ * Used to provide granular detail about what changed for each participant.
+ */
+export interface EntityEffect {
+  type: EntityEffectType;
+
+  // For relationship effects
+  relationshipKind?: string;
+  relatedEntity?: NarrativeEntityRef;
+
+  // For tag effects
+  tag?: string;
+
+  // For field effects (including status, prominence)
+  field?: string;
+  previousValue?: unknown;
+  newValue?: unknown;
+
+  /**
+   * Semantic interpretation derived from schema polarity metadata.
+   * Only present when the effect has narrative significance beyond the raw change.
+   */
+  semanticKind?: SemanticEffectKind;
+
+  // Human-readable description of this specific effect
+  // e.g., "joined Lotakik Spire", "became a practitioner of Frigid-Chill"
+  description: string;
+}
+
+/**
+ * An entity's participation in an event, with all effects that happened to them.
+ * Every entity involved in an event gets a ParticipantEffect entry.
+ */
+export interface ParticipantEffect {
+  entity: NarrativeEntityRef;
+  effects: EntityEffect[];
 }
 
 /**
@@ -189,32 +241,43 @@ export interface NarrativeStateChange {
  *
  * Captures semantically meaningful world changes with causality
  * for feeding into long-form narrative generation.
+ *
+ * Every entity involved in the event is listed in participantEffects
+ * with granular details about what happened to them.
  */
 export interface NarrativeEvent {
   id: string;
   tick: number;
   era: string;
   eventKind: NarrativeEventKind;
+
   /** Significance score 0.0-1.0 (higher = more narratively important) */
   significance: number;
+
+  /** Primary entity for headline generation */
   subject: NarrativeEntityRef;
   action: string;
-  object?: NarrativeEntityRef;
-  /** Multi-entity participation for group events */
-  participants?: NarrativeEntityRef[];
-  /** Short description: "King Aldric dies in battle" */
-  headline: string;
-  /** Longer narrative description */
+
+  /**
+   * All entities involved with their individual effects.
+   * Includes the subject, plus any other affected entities.
+   * Each participant has an array of effects describing what happened to them.
+   */
+  participantEffects: ParticipantEffect[];
+
+  /**
+   * Natural language summary of the event.
+   * Example: "Lotakik Spire formed with 1 ideology, 2 outlaws, recruiting Ledger-Warden Eninook"
+   */
   description: string;
-  stateChanges: NarrativeStateChange[];
+
   causedBy?: {
     eventId?: string;
     entityId?: string;
     actionType?: string;
   };
-  /** Child event IDs (populated by downstream events) */
-  consequences?: string[];
-  /** Tags for filtering: ['death', 'war', 'royal'] */
+
+  /** Tags for filtering: ['death', 'war', 'royal', 'recruitment'] */
   narrativeTags: string[];
 }
 

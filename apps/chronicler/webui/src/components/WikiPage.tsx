@@ -13,6 +13,21 @@ import MDEditor from '@uiw/react-md-editor';
 import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, ImageLoader, DisambiguationEntry } from '../types/world.ts';
 import { SeedModal, type ChronicleSeedData } from './ChronicleSeedViewer.tsx';
 import { applyWikiLinks } from '../lib/wikiBuilder.ts';
+import EntityTimeline from './EntityTimeline.tsx';
+
+// Convert numeric prominence (0-5) to display label
+function prominenceLabel(value: number): string {
+  if (typeof value !== 'number') {
+    throw new Error(
+      `prominenceLabel: expected number (0-5), got ${typeof value}: ${JSON.stringify(value)}`
+    );
+  }
+  if (value < 1) return 'forgotten';
+  if (value < 2) return 'marginal';
+  if (value < 3) return 'recognized';
+  if (value < 4) return 'renowned';
+  return 'mythic';
+}
 
 const colors = {
   bgPrimary: '#0a1929',
@@ -721,7 +736,7 @@ function EntityPreviewCard({ entity, summary, position, imageUrl }: EntityPrevie
           <span style={{ ...styles.previewBadge, ...styles.previewBadgeStatus }}>
             {entity.status}
           </span>
-          <span style={styles.previewBadge}>{entity.prominence}</span>
+          <span style={styles.previewBadge}>{prominenceLabel(entity.prominence)}</span>
           {entity.culture && (
             <span style={styles.previewBadge}>{entity.culture}</span>
           )}
@@ -1235,17 +1250,26 @@ export default function WikiPageView({
           {page.content.sections.map(section => (
             <div key={section.id} id={section.id} style={styles.section}>
               <h2 style={styles.sectionHeading}>{section.heading}</h2>
-              <SectionWithImages
-                section={section}
-                imageData={imageData}
-                imageLoader={imageLoader}
-                entityNameMap={entityNameMap}
-                aliasMap={aliasMap}
-                linkableNames={linkableNames}
-                onNavigate={handleEntityClick}
-                onHoverEnter={handleEntityHoverEnter}
-                onHoverLeave={handleEntityHoverLeave}
-              />
+              {section.heading === 'Timeline' && page.timelineEvents && page.timelineEvents.length > 0 ? (
+                <EntityTimeline
+                  events={page.timelineEvents}
+                  entityId={page.id}
+                  entityIndex={entityIndex}
+                  onNavigate={handleEntityClick}
+                />
+              ) : (
+                <SectionWithImages
+                  section={section}
+                  imageData={imageData}
+                  imageLoader={imageLoader}
+                  entityNameMap={entityNameMap}
+                  aliasMap={aliasMap}
+                  linkableNames={linkableNames}
+                  onNavigate={handleEntityClick}
+                  onHoverEnter={handleEntityHoverEnter}
+                  onHoverLeave={handleEntityHoverLeave}
+                />
+              )}
             </div>
           ))}
 

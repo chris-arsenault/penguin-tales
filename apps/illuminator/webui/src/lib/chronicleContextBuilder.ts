@@ -30,6 +30,7 @@ interface WorldData {
     culture?: string;
     status: string;
     tags?: Record<string, string>;
+    eraId?: string;
     summary?: string;
     description?: string;
     coordinates?: { x: number; y: number };
@@ -88,6 +89,7 @@ function buildEntityContext(entity: WorldData['hardState'][0]): EntityContext {
     culture: entity.culture,
     status: entity.status,
     tags: entity.tags || {},
+    eraId: entity.eraId,
     summary: entity.summary,
     description: entity.description,
     aliases: entity.enrichment?.text?.aliases || [],
@@ -121,12 +123,32 @@ function buildRelationshipContext(
   };
 }
 
+function resolveEntityEraId(entity: WorldData['hardState'][0] | undefined): string | undefined {
+  if (!entity) return undefined;
+  if (typeof entity.eraId === 'string' && entity.eraId) return entity.eraId;
+  return undefined;
+}
+
+function buildEraLookup(
+  entities: WorldData['hardState']
+): Map<string, WorldData['hardState'][0]> {
+  const map = new Map<string, WorldData['hardState'][0]>();
+  for (const entity of entities) {
+    if (entity.kind !== 'era') continue;
+    map.set(entity.id, entity);
+    if (typeof entity.eraId === 'string' && entity.eraId) {
+      map.set(entity.eraId, entity);
+    }
+  }
+  return map;
+}
+
 /**
  * Build era context from entity data
  */
 function buildEraContext(entity: WorldData['hardState'][0]): EraContext {
   return {
-    id: entity.id,
+    id: entity.eraId || entity.id,
     name: entity.name,
     description: entity.description,
   };
@@ -268,14 +290,13 @@ export function buildChronicleContext(
     .sort((a, b) => b.significance - a.significance)
     .map(buildEventContext);
 
-  // Find era from first primary entity (prefer created_during, fall back to active_during)
+  const eraLookup = buildEraLookup(worldData.hardState);
+
+  // Find era from first primary entity (use entity eraId attribute directly)
   const primaryEntityId = focus.primaryEntityIds[0];
-  const eraRel = primaryEntityId
-    ? worldData.relationships.find(
-        (r) => r.src === primaryEntityId && (r.kind === 'created_during' || r.kind === 'active_during')
-      )
-    : undefined;
-  const era = eraRel ? entityMap.get(eraRel.dst) : undefined;
+  const primaryEntity = primaryEntityId ? entityMap.get(primaryEntityId) : undefined;
+  const primaryEraId = resolveEntityEraId(primaryEntity);
+  const era = primaryEraId ? eraLookup.get(primaryEraId) : undefined;
 
   return {
     worldName: worldContext.name || 'The World',
@@ -356,7 +377,7 @@ export function summarizeContext(context: ChronicleGenerationContext): {
   highSignificanceEvents: string[];
 } {
   const prominentEntities = context.entities
-    .filter((e) => e.prominence === 'mythic' || e.prominence === 'renowned')
+    .filter((e) => e.prominence >= 3.0)  // renowned (3.0-3.99) and mythic (4.0-5.0)
     .map((e) => e.name)
     .slice(0, 10);
 

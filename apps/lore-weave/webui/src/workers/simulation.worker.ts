@@ -41,7 +41,7 @@ function createWorkerEmitter(): SimulationEmitter {
  * Validate configuration before starting simulation.
  * Returns true if valid, false if invalid (error already emitted).
  */
-function validateConfigBeforeRun(config: EngineConfig, workerEmitter: SimulationEmitter): boolean {
+function validateConfigBeforeRun(config: EngineConfig, seedEntities: HardState[], workerEmitter: SimulationEmitter): boolean {
   // Extract schema identifiers from canonical schema
   const cultures = config.schema?.cultures?.map(c => c.id);
   const entityKinds = config.schema?.entityKinds?.map(k => k.kind);
@@ -52,6 +52,7 @@ function validateConfigBeforeRun(config: EngineConfig, workerEmitter: Simulation
     pressures: config.pressures,
     systems: config.systems,
     eras: config.eras,
+    seedEntities: seedEntities,
     schema: {
       cultures,
       entityKinds,
@@ -129,7 +130,7 @@ async function runSimulation(config: EngineConfig, state: HardState[]): Promise<
   engineMaxTicks = config.maxTicks;
 
   // Validate configuration before starting
-  if (!validateConfigBeforeRun(config, emitter)) {
+  if (!validateConfigBeforeRun(config, state, emitter)) {
     return; // Error already emitted
   }
 
@@ -167,7 +168,7 @@ async function initializeForStepping(config: EngineConfig, state: HardState[]): 
   engineMaxTicks = config.maxTicks;
 
   // Validate configuration before starting
-  if (!validateConfigBeforeRun(config, emitter)) {
+  if (!validateConfigBeforeRun(config, state, emitter)) {
     return; // Error already emitted
   }
 

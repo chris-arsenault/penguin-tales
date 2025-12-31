@@ -11,15 +11,25 @@
  * - <0.3 = Noise (filtered out by default)
  */
 
-import type { NarrativeEventKind, NarrativeStateChange, Polarity, Prominence, TagDefinition } from '@canonry/world-schema';
+import type { NarrativeEventKind, Polarity, ProminenceLabel, TagDefinition } from '@canonry/world-schema';
 import type { HardState } from '../core/worldTypes.js';
+import { prominenceLabel } from '../rules/types.js';
 
 export interface SignificanceContext {
   getEntity: (id: string) => HardState | undefined;
   getEntityRelationships: (id: string) => { kind: string; src: string; dst: string }[];
 }
 
-const PROMINENCE_VALUES: Record<Prominence, number> = {
+/**
+ * State change data for significance calculation (subset of legacy NarrativeStateChange)
+ */
+interface StateChangeData {
+  field: string;
+  previousValue: unknown;
+  newValue: unknown;
+}
+
+const PROMINENCE_VALUES: Record<ProminenceLabel, number> = {
   mythic: 5,
   renowned: 4,
   recognized: 3,
@@ -28,12 +38,26 @@ const PROMINENCE_VALUES: Record<Prominence, number> = {
 };
 
 /**
+ * Get prominence multiplier with interpolation for numeric prominence values.
+ * Maps 0-5 numeric prominence to a multiplier for significance calculations.
+ */
+function getProminenceMultiplier(prominence: number): number {
+  const MULTIPLIERS = [0.5, 0.9, 1.1, 1.3, 1.5]; // forgotten -> mythic
+  const clamped = Math.max(0, Math.min(5, prominence));
+  const level = Math.min(4, Math.floor(clamped));
+  const fraction = clamped - level;
+  const current = MULTIPLIERS[level];
+  const next = MULTIPLIERS[Math.min(level + 1, 4)];
+  return current + (next - current) * fraction;
+}
+
+/**
  * Calculate significance score for a narrative event
  */
 export function calculateSignificance(
   eventKind: NarrativeEventKind,
   subjectId: string,
-  stateChanges: NarrativeStateChange[],
+  stateChanges: StateChangeData[],
   context: SignificanceContext
 ): number {
   let score = 0.0;
@@ -73,18 +97,9 @@ export function calculateSignificance(
   score += kindScores[eventKind] || 0.2;
 
   // Prominence multiplier - mythic entities = more significant
-  const prominenceMultipliers: Record<Prominence, number> = {
-    mythic: 1.5,
-    renowned: 1.3,
-    recognized: 1.1,
-    marginal: 0.9,
-    forgotten: 0.5,
-  };
-
   const entity = context.getEntity(subjectId);
   if (entity) {
-    const multiplier = prominenceMultipliers[entity.prominence as Prominence] || 1.0;
-    score *= multiplier;
+    score *= getProminenceMultiplier(entity.prominence);
   }
 
   // Status change severity
@@ -97,12 +112,17 @@ export function calculateSignificance(
       }
     }
 
-    // Prominence changes
+    // Prominence changes (now using numeric values)
     if (change.field === 'prominence') {
-      const oldProminence = PROMINENCE_VALUES[change.previousValue as Prominence] || 0;
-      const newProminence = PROMINENCE_VALUES[change.newValue as Prominence] || 0;
-      const delta = Math.abs(newProminence - oldProminence);
-      score += delta * 0.1; // Each level of prominence change adds significance
+      const oldValue = change.previousValue as number;
+      const newValue = change.newValue as number;
+      const delta = Math.abs(newValue - oldValue);
+      score += delta * 0.1; // Each 1.0 of prominence change adds significance
+
+      // Bonus for crossing level boundaries
+      if (prominenceLabel(oldValue) !== prominenceLabel(newValue)) {
+        score += 0.15;
+      }
     }
   }
 
@@ -117,10 +137,20 @@ export function calculateSignificance(
 }
 
 /**
- * Get prominence value for comparison
+ * Get prominence value for comparison.
+ * Handles both numeric values (new format) and string labels (legacy format).
  */
-export function getProminenceValue(prominence: string): number {
-  return PROMINENCE_VALUES[prominence as Prominence] || 0;
+export function getProminenceValue(prominence: string | number): number {
+  if (typeof prominence === 'number') {
+    return prominence;
+  }
+  // Try parsing as number first (handles "2.5" etc)
+  const parsed = parseFloat(prominence);
+  if (!isNaN(parsed)) {
+    return parsed;
+  }
+  // Fall back to label lookup for legacy data
+  return PROMINENCE_VALUES[prominence as ProminenceLabel] || 0;
 }
 
 /**
@@ -182,15 +212,8 @@ export function calculateTagSignificance(
   const rarity = tagMetadata?.rarity || 'common';
   base *= TAG_RARITY_MULTIPLIERS[rarity] ?? 1.0;
 
-  // Entity prominence modifier
-  const prominenceMultipliers: Record<Prominence, number> = {
-    mythic: 1.5,
-    renowned: 1.3,
-    recognized: 1.1,
-    marginal: 0.9,
-    forgotten: 0.5,
-  };
-  base *= prominenceMultipliers[entity.prominence as Prominence] ?? 1.0;
+  // Entity prominence modifier - interpolate based on numeric value
+  base *= getProminenceMultiplier(entity.prominence);
 
   // High-value tag bonus
   if (HIGH_VALUE_TAGS.has(tag)) {
@@ -234,15 +257,7 @@ export function calculateCreationBatchSignificance(
 
   // Primary entity prominence multiplier (first entity is the "subject")
   const primaryEntity = entities[0];
-  const prominenceMultipliers: Record<Prominence, number> = {
-    mythic: 1.5,
-    renowned: 1.3,
-    recognized: 1.1,
-    marginal: 0.9,
-    forgotten: 0.5,
-  };
-  const prominenceMultiplier = prominenceMultipliers[primaryEntity.prominence as Prominence] ?? 1.0;
-  base *= prominenceMultiplier;
+  base *= getProminenceMultiplier(primaryEntity.prominence);
 
   return Math.min(1.0, base);
 }
@@ -274,18 +289,10 @@ export function calculateRelationshipFormationSignificance(
   }
   // Neutral relationships stay at base
 
-  // Average prominence multiplier (use higher of the two)
-  const prominenceMultipliers: Record<Prominence, number> = {
-    mythic: 1.5,
-    renowned: 1.3,
-    recognized: 1.1,
-    marginal: 0.9,
-    forgotten: 0.5,
-  };
-  const srcMult = prominenceMultipliers[srcEntity.prominence as Prominence] ?? 1.0;
-  const dstMult = prominenceMultipliers[dstEntity.prominence as Prominence] ?? 1.0;
-  const prominenceMultiplier = Math.max(srcMult, dstMult);
-  base *= prominenceMultiplier;
+  // Prominence multiplier (use higher of the two)
+  const srcMult = getProminenceMultiplier(srcEntity.prominence);
+  const dstMult = getProminenceMultiplier(dstEntity.prominence);
+  base *= Math.max(srcMult, dstMult);
 
   return Math.min(1.0, base);
 }

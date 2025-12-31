@@ -32,8 +32,8 @@
       "influenceGain": 0.1,
       "influenceLoss": 0.05,
       "pressureMultiplier": 1.1,
-      "prominenceUpChanceOnSuccess": 0.2,
-      "prominenceDownChanceOnFailure": 0.4
+      "prominenceUpChanceOnSuccess": 1.0,
+      "prominenceDownChanceOnFailure": 1.0
     },
     "enabled": true
   },
@@ -159,7 +159,7 @@
           "probability": 0.1,
           "action": {
             "type": "adjust_prominence",
-            "direction": "up",
+            "delta": 0.2,
             "entity": "$self"
           }
         },
@@ -171,7 +171,7 @@
           "probability": 0.35,
           "action": {
             "type": "adjust_prominence",
-            "direction": "down",
+            "delta": -0.15,
             "entity": "$self"
           }
         }
@@ -180,55 +180,6 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "any"
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "war_brewing_detector",
-      "name": "Conflict Escalation",
-      "description": "Detects factions engaged in warfare and marks them as hostile and in conflict",
-      "conditions": [
-        {
-          "type": "relationship_count",
-          "relationshipKind": "at_war_with",
-          "direction": "both",
-          "min": 1
-        }
-      ],
-      "actions": [
-        {
-          "type": "set_tag",
-          "tag": "conflict",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "hostile",
-          "value": true,
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "by_relationship",
-      "clusterRelationshipKind": "at_war_with",
-      "minClusterSize": 2,
-      "throttleChance": 0.4,
-      "cooldownTag": "conflict_cooldown",
-      "pressureChanges": {
-        "harmony": -3
-      },
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "filters": [
-          {
-            "type": "lacks_tag",
-            "tag": "conflict"
-          }
-        ]
       }
     },
     "enabled": true
@@ -437,7 +388,7 @@
             },
             {
               "type": "adjust_prominence",
-              "direction": "up",
+              "delta": 0.4,
               "entity": "$related"
             }
           ]
@@ -777,62 +728,6 @@
           {
             "type": "lacks_tag",
             "tag": "power_vacuum"
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "legend_ripe_detector",
-      "name": "Legend Formation",
-      "description": "Detects historical heroes and influential NPCs ready to become legends",
-      "conditions": [
-        {
-          "type": "time_elapsed",
-          "minTicks": 50
-        }
-      ],
-      "actions": [
-        {
-          "type": "set_tag",
-          "tag": "legendary",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "cultural",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "adjust_prominence",
-          "direction": "up",
-          "entity": "$self"
-        },
-        {
-          "type": "adjust_prominence",
-          "direction": "up",
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.35,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "npc",
-        "statusFilter": "historical",
-        "subtypes": [
-          "hero",
-          "mayor"
-        ],
-        "filters": [
-          {
-            "type": "lacks_tag",
-            "tag": "legendary"
           }
         ]
       }
@@ -1217,138 +1112,6 @@
     "enabled": true
   },
   {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "thermal_stress_detector",
-      "name": "Environmental Stress",
-      "description": "Detects colonies in dangerous zones and marks them as stressed",
-      "conditions": [],
-      "actions": [
-        {
-          "type": "set_tag",
-          "tag": "stressed",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "crisis",
-          "value": true,
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.3,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "location",
-        "subtypes": [
-          "colony"
-        ],
-        "statusFilter": "thriving",
-        "filters": [
-          {
-            "type": "has_tag",
-            "tag": "dangerous"
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "thermal_recovery_detector",
-      "name": "Recovery Opportunity",
-      "description": "Detects waning colonies in safe zones ready to recover",
-      "conditions": [
-        {
-          "type": "tag_absent",
-          "tag": "stressed"
-        }
-      ],
-      "actions": [
-        {
-          "type": "set_tag",
-          "tag": "thriving",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "emergent",
-          "value": true,
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.3,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "location",
-        "subtypes": [
-          "colony"
-        ],
-        "statusFilter": "waning",
-        "filters": [
-          {
-            "type": "has_tag",
-            "tag": "safe"
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "discovery_candidate_detector",
-      "name": "Discovery Opportunity",
-      "description": "Detects hidden or dangerous locations with potential for discovery",
-      "conditions": [
-        {
-          "type": "relationship_count",
-          "relationshipKind": "manifests_at",
-          "direction": "dst",
-          "max": 2
-        }
-      ],
-      "actions": [
-        {
-          "type": "set_tag",
-          "tag": "discovered",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "emergent",
-          "value": true,
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.5,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "location",
-        "filters": [
-          {
-            "type": "has_tag",
-            "tag": "hidden"
-          },
-          {
-            "type": "lacks_tag",
-            "tag": "discovered"
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
     "systemType": "planeDiffusion",
     "config": {
       "id": "resource_diffusion",
@@ -1390,119 +1153,6 @@
     "enabled": true
   },
   {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "economic_stress_detector",
-      "name": "Resource Scarcity Crisis",
-      "description": "Detects crowded colonies with resource stress",
-      "conditions": [
-        {
-          "type": "relationship_count",
-          "relationshipKind": "resident_of",
-          "direction": "dst",
-          "min": 2
-        }
-      ],
-      "actions": [
-        {
-          "type": "set_tag",
-          "tag": "crisis",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "conflict",
-          "value": true,
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.3,
-      "pressureChanges": {
-        "resource_availibility": -15,
-        "harmony": -5
-      },
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "location",
-        "subtypes": [
-          "colony"
-        ],
-        "statusFilter": "thriving",
-        "filters": [
-          {
-            "type": "has_tag",
-            "tag": "stressed"
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "economic_prosperity_detector",
-      "name": "Economic Recovery",
-      "description": "Detects thriving trade locations becoming prosperous",
-      "conditions": [
-        {
-          "type": "tag_absent",
-          "tag": "stressed"
-        },
-        {
-          "type": "or",
-          "conditions": [
-            {
-              "type": "tag_exists",
-              "tag": "trade"
-            },
-            {
-              "type": "tag_exists",
-              "tag": "resource"
-            }
-          ]
-        }
-      ],
-      "actions": [
-        {
-          "type": "set_tag",
-          "tag": "influential",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "central",
-          "value": true,
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.3,
-      "pressureChanges": {
-        "resource_availibility": 5,
-        "security": 5
-      },
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "location",
-        "subtypes": [
-          "colony"
-        ],
-        "statusFilter": "thriving",
-        "filters": [
-          {
-            "type": "lacks_tag",
-            "tag": "stressed"
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
     "systemType": "connectionEvolution",
     "config": {
       "id": "merchant_prosperity",
@@ -1524,7 +1174,7 @@
           "probability": 0.12,
           "action": {
             "type": "adjust_prominence",
-            "direction": "up",
+            "delta": 0.2,
             "entity": "$self"
           }
         },
@@ -1536,7 +1186,7 @@
           "probability": 0.4,
           "action": {
             "type": "adjust_prominence",
-            "direction": "down",
+            "delta": -0.15,
             "entity": "$self"
           }
         }
@@ -1547,99 +1197,6 @@
         "kind": "faction",
         "subtypes": [
           "company"
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "guild_trade_expansion",
-      "name": "Tradition Amplification",
-      "description": "Abilities with many practitioners become renowned traditions",
-      "conditions": [
-        {
-          "type": "relationship_count",
-          "relationshipKind": "practitioner_of",
-          "direction": "dst",
-          "min": 3
-        },
-        {
-          "type": "time_elapsed",
-          "minTicks": 15,
-          "since": "created"
-        },
-        {
-          "type": "random_chance",
-          "chance": 0.2
-        }
-      ],
-      "actions": [
-        {
-          "type": "adjust_prominence",
-          "direction": "up",
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.25,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "abilities",
-        "statuses": [
-          "active",
-          "discovered",
-          "emergent"
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "cult_mystical_influence",
-      "name": "Mythic Resonance",
-      "description": "Abilities tied to major events resonate into myth",
-      "conditions": [
-        {
-          "type": "relationship_count",
-          "relationshipKind": "derived_from",
-          "direction": "src",
-          "min": 2
-        },
-        {
-          "type": "time_elapsed",
-          "minTicks": 20,
-          "since": "created"
-        },
-        {
-          "type": "random_chance",
-          "chance": 0.2
-        }
-      ],
-      "actions": [
-        {
-          "type": "adjust_prominence",
-          "direction": "up",
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.25,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "abilities",
-        "subtypes": [
-          "magic",
-          "combat",
-          "technology"
-        ],
-        "statuses": [
-          "active",
-          "discovered",
-          "emergent"
         ]
       }
     },
@@ -1671,7 +1228,7 @@
       "actions": [
         {
           "type": "adjust_prominence",
-          "direction": "down",
+          "delta": -0.15,
           "entity": "$self"
         }
       ],
@@ -1684,56 +1241,6 @@
           "active",
           "discovered",
           "emergent"
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "orca_raider_hostility",
-      "name": "Orca Raider Aggression",
-      "description": "Orca-tagged entities become hostile and raiders",
-      "conditions": [],
-      "actions": [
-        {
-          "type": "set_tag",
-          "tag": "hostile",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "raider",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "external",
-          "value": true,
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.1,
-      "pressureChanges": {
-        "security": -20
-      },
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "npc",
-        "statusFilter": "alive",
-        "filters": [
-          {
-            "type": "has_tag",
-            "tag": "orca"
-          },
-          {
-            "type": "lacks_tag",
-            "tag": "hostile"
-          }
         ]
       }
     },
@@ -1806,245 +1313,6 @@
     "enabled": true
   },
   {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "artifact_legendary_status",
-      "name": "Legendary Artifact Recognition",
-      "description": "Well-known artifacts gain legendary prominence",
-      "conditions": [
-        {
-          "type": "relationship_count",
-          "relationshipKind": "owned_by",
-          "direction": "src",
-          "min": 1
-        },
-        {
-          "type": "time_elapsed",
-          "minTicks": 20
-        }
-      ],
-      "actions": [
-        {
-          "type": "set_tag",
-          "tag": "legendary",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "adjust_prominence",
-          "direction": "up",
-          "entity": "$self"
-        },
-        {
-          "type": "adjust_prominence",
-          "direction": "up",
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.5,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "artifact",
-        "statusFilter": "intact",
-        "filters": [
-          {
-            "type": "lacks_tag",
-            "tag": "legendary"
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "artifact_prominence_maintenance",
-      "name": "Artifact Notability",
-      "description": "Artifacts are inherently notable objects that resist being forgotten",
-      "conditions": [
-        {
-          "type": "prominence",
-          "max": "marginal"
-        }
-      ],
-      "actions": [
-        {
-          "type": "adjust_prominence",
-          "direction": "up",
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.6,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "artifact"
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "hero_mayor_prominence",
-      "name": "Hero & Mayor Renown",
-      "description": "Heroes and mayors are notable figures that gain prominence through their deeds and leadership",
-      "conditions": [
-        {
-          "type": "or",
-          "conditions": [
-            {
-              "type": "relationship_count",
-              "relationshipKind": "leader_of",
-              "direction": "src",
-              "min": 1
-            },
-            {
-              "type": "relationship_count",
-              "relationshipKind": "member_of",
-              "direction": "src",
-              "min": 1
-            },
-            {
-              "type": "relationship_count",
-              "relationshipKind": "owned_by",
-              "direction": "dst",
-              "min": 1
-            }
-          ]
-        },
-        {
-          "type": "time_elapsed",
-          "minTicks": 15
-        }
-      ],
-      "actions": [
-        {
-          "type": "adjust_prominence",
-          "direction": "up",
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.4,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "npc",
-        "statusFilter": "alive",
-        "subtypes": [
-          "hero",
-          "mayor"
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "faction_prominence",
-      "name": "Political Influence",
-      "description": "Organized political factions and influential groups gain prominence over time",
-      "conditions": [
-        {
-          "type": "time_elapsed",
-          "minTicks": 20
-        }
-      ],
-      "actions": [
-        {
-          "type": "adjust_prominence",
-          "direction": "up",
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.45,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "filters": [
-          {
-            "type": "has_any_tag",
-            "tags": ["political", "organized", "influential"]
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "cultural_event_prominence",
-      "name": "Cultural Memory",
-      "description": "Cultural events like festivals and ceremonies are remembered by the community",
-      "conditions": [
-        {
-          "type": "time_elapsed",
-          "minTicks": 10
-        }
-      ],
-      "actions": [
-        {
-          "type": "adjust_prominence",
-          "direction": "up",
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.5,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "occurrence",
-        "filters": [
-          {
-            "type": "has_any_tag",
-            "tags": ["cultural", "orca_ritual", "war_ceremony"]
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "memorial_preservation",
-      "name": "Memorial Preservation",
-      "description": "Memorials and cultural traditions resist being forgotten",
-      "conditions": [
-        {
-          "type": "prominence",
-          "max": "recognized"
-        }
-      ],
-      "actions": [
-        {
-          "type": "adjust_prominence",
-          "direction": "up",
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.5,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "rules",
-        "subtypes": ["memorial"],
-        "filters": [
-          {
-            "type": "has_tag",
-            "tag": "cultural"
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
     "systemType": "graphContagion",
     "config": {
       "id": "artifact_corruption_spread",
@@ -2084,6 +1352,760 @@
           }
         ]
       }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "armed_hero_detector",
+      "name": "Armed Hero Detection",
+      "description": "Heroes who own weapons are tagged as armed, enabling them to hunt orcas",
+      "conditions": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "owned_by",
+                "direction": "in",
+                "targetKind": "artifact",
+                "targetSubtype": "weapon"
+              }
+            ]
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "armed",
+          "value": true,
+          "entity": "$self"
+        },
+        {
+          "type": "adjust_prominence",
+          "delta": 0.3,
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.1,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "subtypes": ["hero"],
+        "statusFilter": "alive",
+        "filters": [
+          {
+            "type": "lacks_tag",
+            "tag": "armed"
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "devout_believer_detector",
+      "name": "Devout Believer Detection",
+      "description": "Factions with strong belief relationships are marked as devout",
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "believer_of",
+          "direction": "src",
+          "min": 1
+        },
+        {
+          "type": "tag_absent",
+          "tag": "devout"
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "devout",
+          "value": true,
+          "entity": "$self"
+        },
+        {
+          "type": "adjust_prominence",
+          "delta": 0.25,
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.2,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "statusFilter": "active"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "heresy_war_trigger",
+      "name": "Heresy War",
+      "description": "Devout factions are more likely to declare war on factions with apostate or different beliefs",
+      "conditions": [
+        {
+          "type": "tag_exists",
+          "tag": "devout"
+        },
+        {
+          "type": "relationship_count",
+          "relationshipKind": "at_war_with",
+          "direction": "both",
+          "max": 0
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.12
+        }
+      ],
+      "variables": {
+        "$heretic": {
+          "select": {
+            "from": "graph",
+            "kind": "faction",
+            "filters": [
+              {
+                "type": "has_tag",
+                "tag": "apostate"
+              },
+              {
+                "type": "lacks_relationship",
+                "kind": "at_war_with",
+                "with": "$self"
+              },
+              {
+                "type": "lacks_relationship",
+                "kind": "allied_with",
+                "with": "$self"
+              }
+            ],
+            "pickStrategy": "random"
+          },
+          "required": true
+        }
+      },
+      "actions": [
+        {
+          "type": "create_relationship",
+          "kind": "at_war_with",
+          "src": "$self",
+          "dst": "$heretic",
+          "strength": 0.7,
+          "bidirectional": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "conflict",
+          "value": true,
+          "entity": "$self"
+        },
+        {
+          "type": "set_tag",
+          "tag": "religious_war",
+          "value": true,
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "pressureChanges": {
+        "harmony": -5
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "statusFilter": "active"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "control_collapse",
+      "name": "Control Collapse",
+      "description": "When a faction's control over a location weakens below threshold, they lose control entirely",
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "controls",
+          "direction": "src",
+          "min": 1
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.25
+        }
+      ],
+      "variables": {
+        "$weak_territory": {
+          "select": {
+            "from": {
+              "relatedTo": "$self",
+              "relationship": "controls",
+              "direction": "src"
+            },
+            "kind": "location",
+            "pickStrategy": "random"
+          },
+          "required": true
+        }
+      },
+      "actions": [
+        {
+          "type": "archive_relationship",
+          "entity": "$self",
+          "relationshipKind": "controls",
+          "with": "$weak_territory"
+        },
+        {
+          "type": "set_tag",
+          "tag": "contested",
+          "value": true,
+          "entity": "$weak_territory"
+        },
+        {
+          "type": "set_tag",
+          "tag": "crisis",
+          "value": true,
+          "entity": "$weak_territory"
+        },
+        {
+          "type": "adjust_prominence",
+          "delta": -0.25,
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "pressureChanges": {
+        "security": -3
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "statusFilter": "active"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "alliance_defense_call",
+      "name": "Alliance Defense Call",
+      "description": "When an allied faction is at war, allies consider joining the fight to honor their pact",
+      "conditions": [
+        {
+          "type": "relationship_exists",
+          "relationshipKind": "allied_with",
+          "direction": "both"
+        },
+        {
+          "type": "relationship_count",
+          "relationshipKind": "at_war_with",
+          "direction": "both",
+          "max": 0
+        },
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "allied_with",
+                "direction": "any",
+                "targetKind": "faction",
+                "targetSubtype": "any"
+              },
+              {
+                "via": "at_war_with",
+                "direction": "any",
+                "targetKind": "faction",
+                "targetSubtype": "any"
+              }
+            ]
+          }
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.25
+        }
+      ],
+      "variables": {
+        "$ally": {
+          "select": {
+            "from": {
+              "relatedTo": "$self",
+              "relationship": "allied_with",
+              "direction": "both"
+            },
+            "kind": "faction",
+            "filters": [
+              {
+                "type": "has_relationship",
+                "kind": "at_war_with",
+                "direction": "both"
+              }
+            ],
+            "pickStrategy": "random"
+          },
+          "required": true
+        },
+        "$ally_enemy": {
+          "select": {
+            "from": {
+              "relatedTo": "$ally",
+              "relationship": "at_war_with",
+              "direction": "both"
+            },
+            "kind": "faction",
+            "pickStrategy": "random"
+          },
+          "required": true
+        }
+      },
+      "actions": [
+        {
+          "type": "create_relationship",
+          "kind": "at_war_with",
+          "src": "$self",
+          "dst": "$ally_enemy",
+          "strength": 0.6,
+          "bidirectional": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "honor_bound",
+          "value": true,
+          "entity": "$self"
+        },
+        {
+          "type": "set_tag",
+          "tag": "conflict",
+          "value": true,
+          "entity": "$self"
+        },
+        {
+          "type": "adjust_prominence",
+          "delta": 0.25,
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.4,
+      "pressureChanges": {
+        "harmony": -3
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "statusFilter": "active"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "oath_breaker_detector",
+      "name": "Oath Breaker Detection",
+      "description": "Allied factions that don't join wars are marked as oath breakers and lose reputation",
+      "conditions": [
+        {
+          "type": "relationship_exists",
+          "relationshipKind": "allied_with",
+          "direction": "both"
+        },
+        {
+          "type": "tag_absent",
+          "tag": "honor_bound"
+        },
+        {
+          "type": "tag_absent",
+          "tag": "oath_breaker"
+        },
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "allied_with",
+                "direction": "any",
+                "targetKind": "faction",
+                "targetSubtype": "any"
+              },
+              {
+                "via": "at_war_with",
+                "direction": "any",
+                "targetKind": "faction",
+                "targetSubtype": "any"
+              }
+            ]
+          }
+        },
+        {
+          "type": "time_elapsed",
+          "minTicks": 10
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.15
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "oath_breaker",
+          "value": true,
+          "entity": "$self"
+        },
+        {
+          "type": "adjust_prominence",
+          "delta": -0.25,
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "pressureChanges": {
+        "harmony": -2
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "statusFilter": "active"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "oath_breaker_consequences",
+      "name": "Oath Breaker Consequences",
+      "description": "Oath breakers suffer ongoing reputation damage and weakened alliances",
+      "conditions": [
+        {
+          "type": "tag_exists",
+          "tag": "oath_breaker"
+        },
+        {
+          "type": "time_elapsed",
+          "minTicks": 5
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.2
+        }
+      ],
+      "actions": [
+        {
+          "type": "adjust_prominence",
+          "delta": -0.15,
+          "entity": "$self"
+        },
+        {
+          "type": "for_each_related",
+          "relationship": "allied_with",
+          "direction": "both",
+          "targetKind": "faction",
+          "actions": [
+            {
+              "type": "adjust_relationship_strength",
+              "kind": "allied_with",
+              "src": "$self",
+              "dst": "$related",
+              "delta": -0.15
+            }
+          ]
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.4,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "statusFilter": "active"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "corruption_harm",
+      "name": "Corruption Harm",
+      "description": "NPCs residing in corrupted locations are harmed by the corruption - first corrupted, then killed",
+      "conditions": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "resident_of",
+                "direction": "out",
+                "targetKind": "location",
+                "targetSubtype": "any"
+              }
+            ]
+          }
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.08
+        }
+      ],
+      "variables": {
+        "$home": {
+          "select": {
+            "from": {
+              "relatedTo": "$self",
+              "relationship": "resident_of",
+              "direction": "src"
+            },
+            "kind": "location",
+            "filters": [
+              {
+                "type": "has_tag",
+                "tag": "corrupted"
+              }
+            ]
+          },
+          "required": true
+        }
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "tag_exists",
+            "tag": "cursed"
+          },
+          "thenActions": [
+            {
+              "type": "change_status",
+              "entity": "$self",
+              "newStatus": "historical"
+            }
+          ],
+          "elseActions": [
+            {
+              "type": "conditional",
+              "condition": {
+                "type": "tag_exists",
+                "tag": "corrupted"
+              },
+              "thenActions": [
+                {
+                  "type": "set_tag",
+                  "tag": "cursed",
+                  "value": true,
+                  "entity": "$self"
+                },
+                {
+                  "type": "archive_all_relationships",
+                  "entity": "$self",
+                  "relationshipKind": "owned_by",
+                  "direction": "dst"
+                }
+              ],
+              "elseActions": [
+                {
+                  "type": "set_tag",
+                  "tag": "corrupted",
+                  "value": true,
+                  "entity": "$self"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "pressureChanges": {
+        "magical_stability": -2
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "statusFilter": "alive"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "unarmed_hero_detector",
+      "name": "Unarmed Hero Detection",
+      "description": "Heroes who lose their weapons are no longer armed",
+      "conditions": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "not_exists",
+            "path": [
+              {
+                "via": "owned_by",
+                "direction": "in",
+                "targetKind": "artifact",
+                "targetSubtype": "weapon"
+              }
+            ]
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "remove_tag",
+          "tag": "armed",
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.1,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "subtypes": ["hero"],
+        "statusFilter": "alive",
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "armed"
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "corruption_crisis",
+      "name": "Corruption Crisis",
+      "description": "Severely corrupted locations trigger a crisis that kills inhabitants and spreads fear",
+      "conditions": [
+        {
+          "type": "tag_exists",
+          "tag": "corrupted"
+        },
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "count_min",
+            "path": [
+              {
+                "via": "occupies",
+                "direction": "in",
+                "targetKind": "npc",
+                "targetSubtype": "any",
+                "targetStatus": "alive"
+              }
+            ],
+            "count": 2
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "entity": "$self",
+          "tag": "crisis",
+          "value": true
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": -10
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "magical_stability",
+          "delta": -5
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.15,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "location",
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "corrupted"
+          },
+          {
+            "type": "lacks_tag",
+            "tag": "crisis"
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "ice_memory_witness",
+      "name": "The Ice Remembers",
+      "description": "The ice witnesses deeds at significant locations, annotating those present with echoes",
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "subtypes": ["hero", "merchant", "outlaw", "mayor", "orca"],
+        "statusFilter": "alive"
+      },
+      "conditions": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "resident_of",
+                "direction": "out",
+                "targetKind": "location",
+                "targetSubtype": "any"
+              }
+            ]
+          }
+        },
+        {
+          "type": "prominence",
+          "max": "marginal"
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "entity": "$self",
+          "tag": "ice_witnessed",
+          "value": true
+        },
+        {
+          "type": "adjust_prominence",
+          "entity": "$self",
+          "delta": 0.2
+        }
+      ],
+      "throttleChance": 0.3
     },
     "enabled": true
   }

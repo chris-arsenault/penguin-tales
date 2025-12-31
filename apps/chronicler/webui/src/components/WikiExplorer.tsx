@@ -18,6 +18,20 @@ import ChronicleIndex from './ChronicleIndex.tsx';
 import WikiPageView from './WikiPage.tsx';
 import WikiSearch from './WikiSearch.tsx';
 
+// Convert numeric prominence (0-5) to display label
+function prominenceLabel(value: number): string {
+  if (typeof value !== 'number') {
+    throw new Error(
+      `prominenceLabel: expected number (0-5), got ${typeof value}: ${JSON.stringify(value)}`
+    );
+  }
+  if (value < 1) return 'forgotten';
+  if (value < 2) return 'marginal';
+  if (value < 3) return 'recognized';
+  if (value < 4) return 'renowned';
+  return 'mythic';
+}
+
 /**
  * Parse page ID from URL hash
  * Hash format: #/page/{pageId} or #/ for home
@@ -188,15 +202,38 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Build lightweight page index (fast)
+  // Validate world data before building index
+  // Returns first validation error found, or null if valid
+  const dataError = useMemo((): { message: string; details: string } | null => {
+    for (const entity of worldData.hardState) {
+      // Validate prominence is numeric
+      if (typeof entity.prominence !== 'number') {
+        return {
+          message: 'Invalid entity data format',
+          details: `Entity "${entity.name}" (${entity.id}) has prominence="${entity.prominence}" (${typeof entity.prominence}). ` +
+            `Expected a number (0-5). The saved simulation data may be from an older format.`,
+        };
+      }
+    }
+    return null;
+  }, [worldData]);
+
+  // Build lightweight page index (fast) - only if data is valid
   const { pageIndex, entityIndex } = useMemo(() => {
+    if (dataError) {
+      // Return empty index when data is invalid
+      return {
+        pageIndex: { entries: [], byId: new Map(), byName: new Map(), byAlias: new Map(), categories: [], byBaseName: new Map() },
+        entityIndex: new Map<string, HardState>(),
+      };
+    }
     const pageIndex = buildPageIndex(worldData, loreData, chronicles, staticPages);
     const entityIndex = new Map<string, HardState>();
     for (const entity of worldData.hardState) {
       entityIndex.set(entity.id, entity);
     }
     return { pageIndex, entityIndex };
-  }, [worldData, loreData, chronicles, staticPages]);
+  }, [worldData, loreData, chronicles, staticPages, dataError]);
 
   // Page cache - stores fully built pages by ID
   const pageCacheRef = useRef<Map<string, WikiPage>>(new Map());
@@ -333,6 +370,44 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
     }
   }, [simulationRunId, projectId, isRefreshing]);
 
+  // Show data error UI
+  if (dataError) {
+    return (
+      <div style={styles.container}>
+        <div style={{ ...styles.main, padding: '48px', maxWidth: '600px', margin: '0 auto' }}>
+          <div style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '8px',
+            padding: '24px',
+          }}>
+            <h2 style={{ color: '#ef4444', margin: '0 0 16px 0', fontSize: '18px' }}>
+              {dataError.message}
+            </h2>
+            <p style={{ color: colors.textSecondary, margin: '0 0 16px 0', fontSize: '14px', lineHeight: 1.6 }}>
+              {dataError.details}
+            </p>
+            <div style={{
+              backgroundColor: colors.bgSecondary,
+              borderRadius: '4px',
+              padding: '12px 16px',
+              fontSize: '13px',
+              color: colors.textPrimary,
+              lineHeight: 1.6,
+            }}>
+              <strong>How to fix:</strong>
+              <ol style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                <li>In the Canonry shell, click the <strong>"Run Slots"</strong> dropdown in the top navigation bar</li>
+                <li>Click the <strong>×</strong> button next to the saved simulation slot to delete it</li>
+                <li>Re-run the simulation to generate fresh data</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
       {/* Navigation Sidebar */}
@@ -429,7 +504,7 @@ interface HomePageProps {
 /**
  * Weighted random selection - higher prominence = higher weight
  */
-function weightedRandomSelect<T extends { prominence?: string }>(
+function weightedRandomSelect<T extends { prominence?: number }>(
   items: T[],
   count: number
 ): T[] {
@@ -446,7 +521,7 @@ function weightedRandomSelect<T extends { prominence?: string }>(
 
   const weighted = items.map(item => ({
     item,
-    weight: weights[item.prominence || 'marginal'] || 1,
+    weight: item.prominence != null ? weights[prominenceLabel(item.prominence)] || 1 : 1,
   }));
 
   const selected: T[] = [];

@@ -245,6 +245,38 @@ export default function RelationshipKindEditor({
                   </div>
                 </div>
 
+                {/* Narrative Verbs */}
+                <div className="nested-section-compact">
+                  <div className="label" style={{ marginBottom: '8px' }}>Narrative Verbs</div>
+                  <div className="text-muted text-small" style={{ marginBottom: '8px' }}>
+                    Verbs used in narrative event descriptions when this relationship is formed or ended.
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <FormGroup label="Formed" style={{ flex: 1 }}>
+                      <input
+                        className="input"
+                        value={rel.verbs?.formed || ''}
+                        disabled={isFramework}
+                        onChange={(e) => updateRel(rel.kind, {
+                          verbs: { ...rel.verbs, formed: e.target.value }
+                        })}
+                        placeholder="e.g., joined, allied with"
+                      />
+                    </FormGroup>
+                    <FormGroup label="Ended" style={{ flex: 1 }}>
+                      <input
+                        className="input"
+                        value={rel.verbs?.ended || ''}
+                        disabled={isFramework}
+                        onChange={(e) => updateRel(rel.kind, {
+                          verbs: { ...rel.verbs, ended: e.target.value }
+                        })}
+                        placeholder="e.g., left, broke ties with"
+                      />
+                    </FormGroup>
+                  </div>
+                </div>
+
                 {/* Delete */}
                 <div className="danger-zone">
                   <button className="btn btn-danger" onClick={() => deleteRel(rel.kind)} disabled={isFramework}>

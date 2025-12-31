@@ -42,7 +42,7 @@ function generateNetworkFromSnapshot(snapshot) {
     id: n.id,
     label: n.name?.slice(0, 12) || n.id.slice(0, 8),
     state: n.state || 'susceptible',
-    prominence: n.prominence || 'recognized',
+    prominence: n.prominence ?? 2.0,  // Default to recognized (2.0)
     // Store normalized coordinates for initial layout hint
     initialX: ((n.x - PLANE_MIN) / PLANE_RANGE) * 400 + 50,
     initialY: ((n.y - PLANE_MIN) / PLANE_RANGE) * 300 + 50,
@@ -266,8 +266,8 @@ function ContagionGraph({ width, height, network, config, selectedTick, isPlayin
                   strokeWidth={isHovered ? 2 : 1}
                 />
 
-                {/* Label for prominent nodes */}
-                {(node.prominence === 'renowned' || node.prominence === 'mythic' || isHovered) && (
+                {/* Label for prominent nodes (renowned >= 3.0, mythic >= 4.0) */}
+                {(node.prominence >= 3.0 || isHovered) && (
                   <text
                     y={-radius - 6}
                     textAnchor="middle"

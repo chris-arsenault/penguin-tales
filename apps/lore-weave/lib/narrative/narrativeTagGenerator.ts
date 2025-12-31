@@ -5,11 +5,20 @@
  * filtering and categorization in story generation.
  */
 
-import type { NarrativeEventKind, NarrativeStateChange, NarrativeEntityRef } from '@canonry/world-schema';
+import type { NarrativeEventKind, NarrativeEntityRef } from '@canonry/world-schema';
 import { getProminenceValue } from './significanceCalculator.js';
 
 export interface TagContext {
   entityKinds: Set<string>;
+}
+
+/**
+ * State change data for tag generation (subset of legacy NarrativeStateChange)
+ */
+interface StateChangeData {
+  field: string;
+  previousValue: unknown;
+  newValue: unknown;
 }
 
 /**
@@ -19,7 +28,7 @@ export function generateNarrativeTags(
   eventKind: NarrativeEventKind,
   subject: NarrativeEntityRef,
   object: NarrativeEntityRef | undefined,
-  stateChanges: NarrativeStateChange[],
+  stateChanges: StateChangeData[],
   action: string,
   _context: TagContext
 ): string[] {
@@ -118,8 +127,8 @@ export function generateNarrativeTags(
 
     // Prominence change tags
     if (change.field === 'prominence') {
-      const oldProminence = getProminenceValue(String(change.previousValue));
-      const newProminence = getProminenceValue(String(change.newValue));
+      const oldProminence = getProminenceValue(change.previousValue as string | number);
+      const newProminence = getProminenceValue(change.newValue as string | number);
 
       if (newProminence > oldProminence) {
         tags.add('rise');

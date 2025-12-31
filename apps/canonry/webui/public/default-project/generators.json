@@ -20,6 +20,11 @@
             "type": "pressure",
             "pressureId": "resource_availibility",
             "max": -10
+          },
+          {
+            "type": "pressure",
+            "pressureId": "magical_stability",
+            "max": 5
           }
         ]
       }
@@ -76,7 +81,7 @@
         "kind": "npc",
         "subtype": "hero",
         "status": "alive",
-        "prominence": "forgotten",
+        "prominence": "marginal",
         "culture": {
           "inherit": "$target"
         },
@@ -339,7 +344,7 @@
         "kind": "npc",
         "subtype": "mayor",
         "status": "alive",
-        "prominence": "forgotten",
+        "prominence": "marginal",
         "culture": {
           "inherit": "$target"
         },
@@ -545,7 +550,7 @@
         "kind": "npc",
         "subtype": "orca",
         "status": "alive",
-        "prominence": "forgotten",
+        "prominence": "marginal",
         "culture": {
           "fixed": "orca"
         },
@@ -688,8 +693,7 @@
           ],
           "statusFilter": "alive",
           "pickStrategy": "random"
-        },
-        "required": true
+        }
       },
       "$colonyFaction": {
         "select": {
@@ -771,7 +775,7 @@
       {
         "type": "entity_count",
         "kind": "occurrence",
-        "subtype": "ceremony",
+        "subtype": "celebration",
         "max": 1
       }
     ],
@@ -786,8 +790,8 @@
       {
         "entityRef": "$ritual",
         "kind": "occurrence",
-        "subtype": "ceremony",
-        "status": "ongoing",
+        "subtype": "celebration",
+        "status": "active",
         "prominence": "recognized",
         "culture": {
           "fixed": "orca"
@@ -899,7 +903,7 @@
         "entityRef": "$offensive",
         "kind": "occurrence",
         "subtype": "war",
-        "status": "ongoing",
+        "status": "active",
         "prominence": "renowned",
         "culture": {
           "fixed": "orca"
@@ -1126,7 +1130,7 @@
         "kind": "npc",
         "subtype": "outlaw",
         "status": "alive",
-        "prominence": "forgotten",
+        "prominence": "marginal",
         "culture": {
           "inherit": "$target"
         },
@@ -1462,7 +1466,7 @@
         "kind": "npc",
         "subtype": "merchant",
         "status": "alive",
-        "prominence": "forgotten",
+        "prominence": "marginal",
         "culture": {
           "inherit": "$target"
         },
@@ -1498,7 +1502,7 @@
         "kind": "npc",
         "subtype": "merchant",
         "status": "alive",
-        "prominence": "forgotten",
+        "prominence": "marginal",
         "culture": {
           "inherit": "$target"
         },
@@ -1610,6 +1614,18 @@
         "src": "$trader2",
         "dst": "$guild",
         "strength": 0.4
+      },
+      {
+        "kind": "resident_of",
+        "src": "$trader1",
+        "dst": "$target",
+        "strength": 0.3
+      },
+      {
+        "kind": "resident_of",
+        "src": "$trader2",
+        "dst": "$target",
+        "strength": 0.3
       },
       {
         "kind": "stored_at",
@@ -1838,7 +1854,7 @@
         "kind": "npc",
         "subtype": "outlaw",
         "status": "alive",
-        "prominence": "forgotten",
+        "prominence": "marginal",
         "culture": {
           "inherit": "$target"
         },
@@ -1873,7 +1889,7 @@
         "kind": "npc",
         "subtype": "outlaw",
         "status": "alive",
-        "prominence": "forgotten",
+        "prominence": "marginal",
         "culture": {
           "inherit": "$target"
         },
@@ -2332,7 +2348,7 @@
         "kind": "npc",
         "subtype": "merchant",
         "status": "alive",
-        "prominence": "forgotten",
+        "prominence": "marginal",
         "culture": {
           "inherit": "$target"
         },
@@ -3021,6 +3037,12 @@
         "type": "set_tag",
         "entity": "$target",
         "tag": "conflict",
+        "value": true
+      },
+      {
+        "type": "set_tag",
+        "entity": "$warzone",
+        "tag": "contested",
         "value": true
       },
       {

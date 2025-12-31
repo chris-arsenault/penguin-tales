@@ -209,6 +209,7 @@ export interface EntityContext {
   culture?: string;
   status: string;
   tags: Record<string, string>;
+  eraId?: string;
   summary?: string;
   description?: string;
   aliases?: string[];

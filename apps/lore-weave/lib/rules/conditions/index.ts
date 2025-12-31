@@ -18,6 +18,8 @@ import {
   normalizeDirection,
   normalizeOperator,
   prominenceIndex,
+  prominenceThreshold,
+  prominenceLabel,
 } from '../types';
 import type { Direction } from '../types';
 import type {
@@ -531,18 +533,21 @@ function evaluateProminence(
     return { passed: false, diagnostic: 'no entity for prominence check', details: {} };
   }
 
-  const idx = prominenceIndex(self.prominence);
-  const minIdx = condition.min ? prominenceIndex(condition.min) : 0;
-  const maxIdx = condition.max ? prominenceIndex(condition.max) : 4;
+  const currentValue = self.prominence;
+  const currentLabel = prominenceLabel(currentValue);
 
-  const passed = idx >= minIdx && idx <= maxIdx;
+  // Convert string labels to thresholds
+  const minValue = condition.min ? prominenceThreshold(condition.min) : 0;
+  const maxValue = condition.max ? prominenceThreshold(condition.max) + 1 : 5; // upper bound of range
+
+  const passed = currentValue >= minValue && currentValue < maxValue;
 
   return {
     passed,
-    diagnostic: `prominence ${self.prominence} in [${condition.min ?? 'forgotten'}, ${condition.max ?? 'mythic'}]: ${passed}`,
+    diagnostic: `prominence ${currentLabel} (${currentValue.toFixed(2)}) in [${condition.min ?? 'forgotten'}, ${condition.max ?? 'mythic'}]: ${passed}`,
     details: {
-      prominence: self.prominence,
-      prominenceIndex: idx,
+      prominence: currentValue,
+      prominenceLabel: currentLabel,
       min: condition.min,
       max: condition.max,
     },

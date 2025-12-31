@@ -14,7 +14,7 @@
 
 import type { HardState, Relationship } from '../../core/worldTypes';
 import { hasTag } from '../../utils';
-import { normalizeDirection, Direction } from '../types';
+import { normalizeDirection, Direction, prominenceLabel } from '../types';
 import type {
   Metric,
   MetricResult,
@@ -119,32 +119,29 @@ export function describeMetric(metric: Metric): string {
 // PROMINENCE MULTIPLIER TABLES (consolidated from 2 duplicates)
 // =============================================================================
 
-const PROMINENCE_SUCCESS_MULTIPLIER: Record<string, number> = {
-  forgotten: 0.6,
-  marginal: 0.8,
-  recognized: 1.0,
-  renowned: 1.2,
-  mythic: 1.5,
-};
+// Multiplier arrays indexed by prominence level (0=forgotten, 4=mythic)
+const SUCCESS_MULTIPLIERS = [0.6, 0.8, 1.0, 1.2, 1.5];   // forgotten->mythic
+const ACTION_MULTIPLIERS = [0.3, 0.6, 1.0, 1.5, 2.0];    // forgotten->mythic
 
-const PROMINENCE_ACTION_MULTIPLIER: Record<string, number> = {
-  forgotten: 0.3,
-  marginal: 0.6,
-  recognized: 1.0,
-  renowned: 1.5,
-  mythic: 2.0,
-};
-
+/**
+ * Get prominence multiplier with interpolation for numeric values.
+ * Values between levels are linearly interpolated.
+ */
 export function getProminenceMultiplierValue(
-  prominence: string,
+  prominence: number,
   mode: ProminenceMultiplierMetric['mode'] = 'success_chance'
 ): number {
-  const table =
-    mode === 'action_rate'
-      ? PROMINENCE_ACTION_MULTIPLIER
-      : PROMINENCE_SUCCESS_MULTIPLIER;
+  const multipliers = mode === 'action_rate' ? ACTION_MULTIPLIERS : SUCCESS_MULTIPLIERS;
 
-  return table[prominence] ?? 1.0;
+  // Clamp to valid range
+  const clamped = Math.max(0, Math.min(5, prominence));
+  const level = Math.min(4, Math.floor(clamped));
+  const fraction = clamped - level;
+
+  const current = multipliers[level];
+  const next = multipliers[Math.min(level + 1, 4)];
+
+  return current + (next - current) * fraction;
 }
 
 // =============================================================================
@@ -340,7 +337,7 @@ function evaluateRelationshipCount(
     if (metric.relationshipKinds?.length && !metric.relationshipKinds.includes(r.kind)) {
       return false;
     }
-    if (metric.minStrength !== undefined && r.strength < metric.minStrength) {
+    if (metric.minStrength !== undefined && (r.strength ?? 0) < metric.minStrength) {
       return false;
     }
 
@@ -448,7 +445,7 @@ function evaluateConnectionCount(
     if (metric.relationshipKinds?.length && !metric.relationshipKinds.includes(link.kind)) {
       return false;
     }
-    if (metric.minStrength !== undefined && link.strength < metric.minStrength) {
+    if (metric.minStrength !== undefined && (link.strength ?? 0) < metric.minStrength) {
       return false;
     }
 
@@ -625,7 +622,7 @@ function evaluateSharedRelationship(
   const rels = ctx.graph.getAllRelationships();
   for (const link of rels) {
     if (link.kind !== metric.sharedRelationshipKind) continue;
-    if (link.strength < minStrength) continue;
+    if ((link.strength ?? 0) < minStrength) continue;
 
     if (direction === 'src' && link.src === entity.id) {
       myTargets.add(link.dst);
@@ -639,7 +636,7 @@ function evaluateSharedRelationship(
   const sharedCount = new Set<string>();
   for (const link of rels) {
     if (link.kind !== metric.sharedRelationshipKind) continue;
-    if (link.strength < minStrength) continue;
+    if ((link.strength ?? 0) < minStrength) continue;
 
     let otherId: string | null = null;
     let targetId: string | null = null;
@@ -715,12 +712,14 @@ function evaluateProminenceMultiplier(
   }
 
   const value = getProminenceMultiplierValue(entity.prominence, metric.mode);
+  const label = prominenceLabel(entity.prominence);
 
   return {
     value,
-    diagnostic: `prominence ${entity.prominence} = ${value}x`,
+    diagnostic: `prominence ${label} (${entity.prominence.toFixed(2)}) = ${value.toFixed(2)}x`,
     details: {
       prominence: entity.prominence,
+      prominenceLabel: label,
       mode: metric.mode ?? 'success_chance',
       multiplier: value,
     },

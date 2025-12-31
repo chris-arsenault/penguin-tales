@@ -10,6 +10,8 @@ import { StatisticsCollector } from '../statistics/statisticsCollector';
 import type { HardState, Relationship } from '../core/worldTypes';
 import type { DiscretePressureModification, ISimulationEmitter, PressureModificationSource } from '../observer/types';
 import type { StateChangeTracker, RelationshipSummary } from '../narrative/stateChangeTracker';
+import type { MutationTracker } from '../narrative/mutationTracker';
+import { prominenceLabel } from '../rules/types';
 
 export interface GrowthSystemConfig {
   id: string;
@@ -38,6 +40,12 @@ export interface GrowthSystemDependencies {
   statisticsCollector: StatisticsCollector;
   emitter: ISimulationEmitter;
   stateChangeTracker: StateChangeTracker;
+  /**
+   * Mutation tracker for lineage context management.
+   * Used to stamp entities/relationships with their creation source.
+   * See LINEAGE.md for design details.
+   */
+  mutationTracker?: MutationTracker;
   getPendingPressureModifications: () => DiscretePressureModification[];
   trackPressureModification: (pressureId: string, delta: number, source: PressureModificationSource) => void;
   calculateGrowthTarget: () => number;
@@ -128,7 +136,21 @@ export function createGrowthSystem(
       });
       graphView.setCurrentSource({ type: 'template', templateId: template.id });
 
-      const result = await template.expand(graphView, target);
+      // LINEAGE: Enter template context for entity/relationship stamping.
+      // All entities and relationships created will have
+      // createdBy = { tick, source: 'template', sourceId: template.id }.
+      // See LINEAGE.md for design details.
+      // NOTE: Context must stay open until AFTER addEntity/createRelationship calls below.
+      deps.mutationTracker?.enterContext('template', template.id);
+
+      let result;
+      try {
+        result = await template.expand(graphView, target);
+      } catch (error) {
+        // LINEAGE: Exit context on expand error
+        deps.mutationTracker?.exitContext();
+        throw error;
+      }
       graphView.clearCurrentSource();
 
       // Contract enforcement warnings
@@ -178,6 +200,10 @@ export function createGrowthSystem(
           graphView.createRelationship(rel.kind, srcId, dstId, rel.strength);
         }
       });
+
+      // LINEAGE: Exit template context now that entities/relationships are created.
+      // They are now stamped with createdBy = { source: 'template', sourceId: template.id }.
+      deps.mutationTracker?.exitContext();
 
       for (const entity of createdEntities) {
         const coverageCheck = deps.contractEnforcer.enforceTagCoverage(entity, graphView);
@@ -261,7 +287,7 @@ export function createGrowthSystem(
             kind: e.kind,
             subtype: e.subtype,
             culture: e.culture,
-            prominence: e.prominence,
+            prominence: prominenceLabel(e.prominence),
             tags: e.tags,
             placementStrategy: strategy,
             coordinates: e.coordinates,

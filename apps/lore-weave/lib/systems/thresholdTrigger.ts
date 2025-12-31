@@ -8,6 +8,7 @@ import {
   evaluateCondition as rulesEvaluateCondition,
   createSystemContext,
   withSelf,
+  resolveVariablesForEntity,
 } from '../rules';
 import type {
   SelectionRule,
@@ -16,6 +17,8 @@ import type {
   Condition,
   RuleContext,
   EntityModification,
+  VariableSelectionRule,
+  VariableDefinitionForResolution,
 } from '../rules';
 
 /**
@@ -93,6 +96,17 @@ export interface ThresholdTriggerConfig {
 
   /** Pressure changes when trigger fires */
   pressureChanges?: Record<string, number>;
+
+  /**
+   * Variables to resolve before applying actions.
+   * Each variable has a selection rule that finds an entity from the graph.
+   * Variables can reference $self (the matched entity) or other previously resolved variables.
+   * If a required variable cannot be resolved, the entity is skipped.
+   */
+  variables?: Record<string, {
+    select: VariableSelectionRule;
+    required?: boolean;
+  }>;
 }
 
 
@@ -260,12 +274,14 @@ function applyActions(
   relationships: Relationship[];
   relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }>;
   pressureChanges: Record<string, number>;
+  skippedMembers: number;
 } {
   const modifications: EntityModification[] = [];
   const relationships: Relationship[] = [];
   const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
   const pressureChanges: Record<string, number> = {};
   const baseCtx = createSystemContext(graphView);
+  let skippedMembers = 0;
 
   for (const [clusterId, members] of clusters) {
     const clusterCtx = {
@@ -273,11 +289,11 @@ function applyActions(
       values: { ...(baseCtx.values ?? {}), cluster_id: clusterId },
     };
 
+    // Handle cluster-level actions (modify_pressure, betweenMatching)
     for (const action of config.actions) {
       if (action.type === 'modify_pressure') {
         const result = prepareMutation(action, clusterCtx);
         mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges);
-        continue;
       }
 
       if (action.type === 'create_relationship' && action.betweenMatching && members.length >= 2) {
@@ -300,15 +316,34 @@ function applyActions(
             mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges);
           }
         }
+      }
+    }
+
+    // Handle per-member actions with variable resolution
+    for (const member of members) {
+      // Resolve variables for this member (if any are defined)
+      const resolvedVars = config.variables
+        ? resolveVariablesForEntity(config.variables, clusterCtx, member)
+        : {};
+      if (resolvedVars === null) {
+        // Required variable not found - skip this member
+        skippedMembers++;
         continue;
       }
 
-      for (const member of members) {
-        const memberCtx = {
-          ...clusterCtx,
-          self: member,
-          entities: { ...(clusterCtx.entities ?? {}), self: member },
-        };
+      // Build context with resolved variables
+      const memberCtx = {
+        ...clusterCtx,
+        self: member,
+        entities: { ...(clusterCtx.entities ?? {}), self: member, ...resolvedVars },
+      };
+
+      // Apply non-cluster-level actions
+      for (const action of config.actions) {
+        // Skip cluster-level actions (already handled above)
+        if (action.type === 'modify_pressure') continue;
+        if (action.type === 'create_relationship' && action.betweenMatching) continue;
+
         const mutation: Mutation = action;
         const result = prepareMutation(mutation, memberCtx);
         mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges);
@@ -323,7 +358,7 @@ function applyActions(
     }
   }
 
-  return { modifications, relationships, relationshipsAdjusted, pressureChanges };
+  return { modifications, relationships, relationshipsAdjusted, pressureChanges, skippedMembers };
 }
 
 // =============================================================================
@@ -389,15 +424,16 @@ export function createThresholdTriggerSystem(
       }
 
       // Apply actions
-      const { modifications, relationships, relationshipsAdjusted, pressureChanges } =
+      const { modifications, relationships, relationshipsAdjusted, pressureChanges, skippedMembers } =
         applyActions(clusters, config, graphView);
 
+      const skippedInfo = skippedMembers > 0 ? `, ${skippedMembers} skipped (missing vars)` : '';
       return {
         relationshipsAdded: relationships,
         relationshipsAdjusted,
         entitiesModified: modifications,
         pressureChanges,
-        description: `${config.name}: ${clusters.size} trigger(s), ${modifications.length} entities tagged`
+        description: `${config.name}: ${clusters.size} trigger(s), ${modifications.length} entities tagged${skippedInfo}`
       };
     }
   };

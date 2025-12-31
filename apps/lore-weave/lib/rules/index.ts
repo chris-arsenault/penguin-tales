@@ -31,9 +31,15 @@ export {
   applyOperator,
   prominenceIndex,
   compareProminence,
-  PROMINENCE_ORDER,
+  prominenceLabel,
+  prominenceThreshold,
+  clampProminence,
+  PROMINENCE_LABELS,
+  PROMINENCE_MIN,
+  PROMINENCE_MAX,
+  PROMINENCE_DEFAULT,
 } from './types';
-export type { ComparisonOperator, Direction, Prominence } from './types';
+export type { ComparisonOperator, Direction, ProminenceLabel } from './types';
 
 // Conditions
 export { evaluateCondition } from './conditions';
@@ -148,6 +154,8 @@ export type {
 export {
   selectEntities,
   selectVariableEntities,
+  resolveSingleVariable,
+  resolveVariablesForEntity,
   applyEntityCriteria,
   applyPreferFilters,
   applyPickStrategy,
@@ -158,6 +166,7 @@ export {
 export type {
   SelectionRule,
   VariableSelectionRule,
+  VariableDefinitionForResolution,
   RelatedEntitiesSpec,
   SaturationLimit,
   SelectionPickStrategy,

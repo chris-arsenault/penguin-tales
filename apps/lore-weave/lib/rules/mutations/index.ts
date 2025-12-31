@@ -13,7 +13,7 @@
 
 import { HardState } from '../../core/worldTypes';
 import { FRAMEWORK_TAGS } from '@canonry/world-schema';
-import { PROMINENCE_ORDER, normalizeDirection } from '../types';
+import { clampProminence, prominenceLabel, normalizeDirection } from '../types';
 import type { RuleContext } from '../context';
 import type {
   Mutation,
@@ -469,25 +469,22 @@ function prepareAdjustProminence(
     return result;
   }
 
-  const currentIndex = PROMINENCE_ORDER.indexOf(entity.prominence as typeof PROMINENCE_ORDER[number]);
-  let newIndex = currentIndex;
+  const currentValue = entity.prominence;
+  const newValue = clampProminence(currentValue + mutation.delta);
+  const oldLabel = prominenceLabel(currentValue);
+  const newLabel = prominenceLabel(newValue);
 
-  if (mutation.direction === 'up') {
-    newIndex = Math.min(currentIndex + 1, PROMINENCE_ORDER.length - 1);
-  } else {
-    newIndex = Math.max(currentIndex - 1, 0);
-  }
-
-  const newProminence = PROMINENCE_ORDER[newIndex];
-
-  if (newProminence !== entity.prominence) {
+  if (newValue !== currentValue) {
     result.entityModifications.push({
       id: entity.id,
-      changes: { prominence: newProminence },
+      changes: { prominence: newValue },
     });
-    result.diagnostic = `adjusted ${entity.name} prominence ${mutation.direction} to ${newProminence}`;
+
+    const levelChange = oldLabel !== newLabel ? ` (now ${newLabel})` : '';
+    const deltaStr = mutation.delta > 0 ? `+${mutation.delta.toFixed(2)}` : mutation.delta.toFixed(2);
+    result.diagnostic = `adjusted ${entity.name} prominence by ${deltaStr}${levelChange}`;
   } else {
-    result.diagnostic = `${entity.name} prominence already at ${mutation.direction === 'up' ? 'maximum' : 'minimum'}`;
+    result.diagnostic = `${entity.name} prominence at ${mutation.delta > 0 ? 'maximum' : 'minimum'}`;
   }
 
   return result;

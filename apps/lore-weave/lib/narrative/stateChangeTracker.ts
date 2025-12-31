@@ -11,13 +11,25 @@
  * - Succession events (when container entities with part_of relationships end)
  * - Coalescence events (when multiple entities join under one container)
  * - Polarity-based events (betrayal, reconciliation, rivalry, alliance, downfall, triumph, power_vacuum)
+ *
+ * ## Lineage Integration (see LINEAGE.md)
+ *
+ * This tracker integrates with the lineage system via MutationTracker:
+ * - Entities and relationships have createdBy stamped by the Graph
+ * - Tag/field changes are tracked transiently by MutationTracker
+ * - Event generation uses lineage to avoid duplicates (e.g., template-created
+ *   relationships don't also emit separate relationship_formed events)
  */
 
-import type { NarrativeEvent, NarrativeStateChange, Polarity, RelationshipKindDefinition, EntityKindDefinition, TagDefinition } from '@canonry/world-schema';
+import type { NarrativeEvent, Polarity, RelationshipKindDefinition, EntityKindDefinition, TagDefinition, ExecutionContext, NarrativeEntityRef, ParticipantEffect } from '@canonry/world-schema';
 import { FRAMEWORK_RELATIONSHIP_KINDS, FRAMEWORK_TAGS } from '@canonry/world-schema';
 import type { HardState } from '../core/worldTypes.js';
 import type { Graph, NarrativeConfig } from '../engine/types.js';
 import { NarrativeEventBuilder, type NarrativeContext } from './narrativeEventBuilder.js';
+import { SemanticEnricher, type EnrichmentContext } from './semanticEnricher.js';
+import type { MutationTracker, ContextMutationGroup, EntityCreatedData, RelationshipCreatedData, RelationshipArchivedData, FieldChangeData, TagChangeData } from './mutationTracker.js';
+import { contextKey } from './mutationTracker.js';
+import { getProminenceValue } from './significanceCalculator.js';
 
 /**
  * Pending state change accumulated during a tick
@@ -92,6 +104,9 @@ export interface NarrativeSchemaSlice {
  * Tracks state changes during simulation and generates narrative events
  */
 export class StateChangeTracker {
+  // Debug flag for tracing prominence changes - mirrors Graph.DEBUG_PROMINENCE
+  static DEBUG_PROMINENCE = false;
+
   private config: NarrativeConfig;
   private eventBuilder: NarrativeEventBuilder | null = null;
   private pendingChanges: Map<string, PendingStateChange[]> = new Map();
@@ -117,8 +132,43 @@ export class StateChangeTracker {
   // Creation batch tracking
   private pendingCreationBatches: PendingCreationBatch[] = [];
 
-  constructor(config: NarrativeConfig) {
+  /**
+   * Mutation tracker for lineage information (see LINEAGE.md).
+   * Used to determine execution context for deduplication.
+   */
+  private mutationTracker: MutationTracker | null = null;
+
+  /**
+   * Semantic enricher for pattern detection (war, coalescence, etc.)
+   */
+  private semanticEnricher: SemanticEnricher | null = null;
+
+  /**
+   * System ID to display name mapping for narrative descriptions.
+   */
+  private systemNames: Map<string, string> = new Map();
+
+  constructor(config: NarrativeConfig, mutationTracker?: MutationTracker) {
     this.config = config;
+    this.mutationTracker = mutationTracker ?? null;
+  }
+
+  /**
+   * Set system display names for narrative descriptions.
+   * Maps system IDs (e.g., "corruption_harm") to display names (e.g., "Corruption Harm").
+   */
+  setSystemNames(systems: Array<{ id: string; name: string }>): void {
+    this.systemNames.clear();
+    for (const sys of systems) {
+      this.systemNames.set(sys.id, sys.name);
+    }
+  }
+
+  /**
+   * Get display name for a system ID, falling back to ID if not found.
+   */
+  private getSystemDisplayName(sourceId: string): string {
+    return this.systemNames.get(sourceId) || sourceId;
   }
 
   /**
@@ -249,7 +299,7 @@ export class StateChangeTracker {
       if (dstIsAuthority) addAuthorityConnection(rel.src, rel.dst);
     }
 
-    // Create or update the event builder context
+    // Create or update the event builder context with polarity lookups
     const context: NarrativeContext = {
       tick,
       eraId,
@@ -261,12 +311,52 @@ export class StateChangeTracker {
           dst: r.dst,
         }));
       },
+      getRelationshipPolarity: (kind: string) => this.getRelationshipPolarity(kind),
+      getStatusPolarity: (entityKind: string, status: string) => this.getStatusPolarity(entityKind, status),
+      getRelationshipVerb: (kind: string, action: 'formed' | 'ended') => {
+        // Look up verb from schema if available
+        const relDef = this.schema?.relationshipKinds.find(r => r.kind === kind);
+        return relDef?.verbs?.[action];
+      },
     };
 
     if (!this.eventBuilder) {
       this.eventBuilder = new NarrativeEventBuilder(context);
     } else {
       this.eventBuilder.updateContext(context);
+    }
+
+    // Create or update the semantic enricher context
+    const enrichmentContext: EnrichmentContext = {
+      getEntity: (id: string) => graph.getEntity(id),
+      getEntityRelationships: (id: string) => graph.getEntityRelationships(id).map(r => ({
+        kind: r.kind,
+        src: r.src,
+        dst: r.dst,
+      })),
+      isNegativeRelationship: (kind: string) => this.getRelationshipPolarity(kind) === 'negative',
+      isAuthoritySubtype: (subtype: string) => {
+        // Check all entity kinds for this subtype being an authority
+        for (const [key] of this.authoritySubtypeCache) {
+          if (key.endsWith(`:${subtype}`)) return true;
+        }
+        return false;
+      },
+      getPartOfMembers: (entityId: string) => {
+        const members: string[] = [];
+        for (const rel of graph.getRelationships({ includeHistorical: false })) {
+          if (rel.kind === FRAMEWORK_RELATIONSHIP_KINDS.PART_OF && rel.dst === entityId) {
+            members.push(rel.src);
+          }
+        }
+        return members;
+      },
+    };
+
+    if (!this.semanticEnricher) {
+      this.semanticEnricher = new SemanticEnricher(enrichmentContext);
+    } else {
+      this.semanticEnricher.updateContext(enrichmentContext);
     }
   }
 
@@ -282,6 +372,15 @@ export class StateChangeTracker {
     catalyst?: { entityId: string; actionType: string }
   ): void {
     if (!this.config.enabled) return;
+
+    // Debug logging for prominence tracking
+    if (StateChangeTracker.DEBUG_PROMINENCE && field === 'prominence') {
+      console.log(`[PROMINENCE-TRACK] entityId=${entityId} prev=${previousValue} new=${newValue} catalyst=${catalyst?.actionType}`);
+      if (previousValue === newValue) {
+        console.log(`  SKIPPED: previousValue === newValue`);
+      }
+    }
+
     if (previousValue === newValue) return; // No actual change
 
     // Only track narratively significant fields
@@ -299,6 +398,11 @@ export class StateChangeTracker {
     const existing = this.pendingChanges.get(entityId) || [];
     existing.push(pending);
     this.pendingChanges.set(entityId, existing);
+
+    // Debug: confirm recording
+    if (StateChangeTracker.DEBUG_PROMINENCE && field === 'prominence') {
+      console.log(`  RECORDED: ${previousValue} -> ${newValue}`);
+    }
   }
 
   /**
@@ -388,135 +492,62 @@ export class StateChangeTracker {
    * Flush pending changes and generate narrative events
    * Call this at the end of each tick
    * @returns Array of generated narrative events above the significance threshold
+   *
+   * ## Context-Based Event Generation (LINEAGE system)
+   *
+   * This method now uses context-based deduplication:
+   * 1. All mutations are tracked in MutationTracker with their execution context
+   * 2. Mutations are grouped by context (template:X, system:Y, action:Z)
+   * 3. ONE rich event is generated per context instead of many small events
+   *
+   * This eliminates duplicate events where the same logical action (e.g., template
+   * creating a hero with 5 relationships) would previously generate many events.
    */
   flush(): NarrativeEvent[] {
     if (!this.config.enabled || !this.eventBuilder || !this.graph) {
       this.pendingChanges.clear();
+      this.pendingTagChanges.clear();
+      this.pendingCreationBatches = [];
       return [];
     }
 
-    const events: NarrativeEvent[] = [];
-    const endedEntityIds = this.collectEndedEntityIds();
-    const coalescenceChanges = this.detectCoalescenceChanges();
-    const coalescenceParticipantIds = new Set<string>();
-    for (const [containerId, memberIds] of coalescenceChanges) {
-      coalescenceParticipantIds.add(containerId);
-      memberIds.forEach(id => coalescenceParticipantIds.add(id));
-    }
-    // Coalescence can trigger large relationship cleanup; suppress those dissolutions.
-    const suppressedCoalescenceEntities = new Set<string>(
-      Array.from(coalescenceParticipantIds).filter(id => !endedEntityIds.has(id))
-    );
+    // Generate context-based events (one per execution context)
+    // This is the unified approach - all events come from mutation tracking
+    const events = this.generateContextBasedEvents();
 
-    // 1. Generate state change events (including downfall/triumph based on status polarity)
-    events.push(...this.generateStateChangeEvents());
-
-    // 2. Generate leadership events (first leadership on target)
-    events.push(...this.generateLeadershipEvents());
-
-    // 3. Generate war events (aggregated)
-    const warResults = this.generateWarEvents();
-    events.push(...warResults.events);
-
-    // 4. Generate relationship dissolution events (including betrayal/reconciliation)
-    events.push(...this.generateDissolutionEvents(
-      endedEntityIds,
-      warResults.suppressedRelationshipKeys,
-      suppressedCoalescenceEntities
-    ));
-
-    // 5. Generate rivalry and alliance events (new negative/positive relationships)
-    events.push(...this.generateRivalryAndAllianceEvents());
-
-    // 6. Generate succession events (container entities that became historical)
-    // Also generates power_vacuum for authority subtypes
-    events.push(...this.generateSuccessionEvents());
-
-    // 7. Generate coalescence events (new part_of relationships)
-    events.push(...this.generateCoalescenceEvents(coalescenceChanges));
-
-    // 8. Generate tag change events
-    events.push(...this.generateTagChangeEvents());
-
-    // 9. Generate creation batch events (from template executions)
-    events.push(...this.generateCreationBatchEvents());
+    // Post-process with semantic enricher to detect patterns
+    // (war, coalescence, power vacuum, succession, etc.)
+    const enrichedEvents = this.semanticEnricher
+      ? this.semanticEnricher.enrichEvents(events)
+      : events;
 
     this.pendingChanges.clear();
     this.pendingTagChanges.clear();
     this.pendingCreationBatches = [];
-    return events;
+    return enrichedEvents;
   }
 
+  // ===========================================================================
+  // CONTEXT-BASED EVENT GENERATION (new unified approach)
+  // ===========================================================================
+
   /**
-   * Generate events for entity state changes
-   * Also detects downfall/triumph events based on status polarity
+   * Generate events grouped by execution context.
+   * This is the new unified approach - ONE event per context.
+   *
+   * For each execution context (template, system, action, etc.), we generate
+   * a single rich event that captures everything that happened in that context.
    */
-  private generateStateChangeEvents(): NarrativeEvent[] {
-    if (!this.eventBuilder || !this.graph) return [];
+  private generateContextBasedEvents(): NarrativeEvent[] {
+    if (!this.eventBuilder || !this.graph || !this.mutationTracker) {
+      return [];
+    }
 
     const events: NarrativeEvent[] = [];
+    const contextGroups = this.mutationTracker.getMutationsByContext();
 
-    for (const [entityId, changes] of this.pendingChanges) {
-      const entity = this.graph.getEntity(entityId);
-      if (!entity) continue;
-
-      // Check for status polarity transitions
-      for (const change of changes) {
-        if (change.field === 'status') {
-          const prevPolarity = this.getStatusPolarity(entity.kind, String(change.previousValue));
-          const newPolarity = this.getStatusPolarity(entity.kind, String(change.newValue));
-
-          // Downfall: any status -> negative status
-          if (newPolarity === 'negative' && prevPolarity !== 'negative') {
-            const downfallEvent = this.eventBuilder.buildDownfallEvent(
-              entity,
-              String(change.previousValue),
-              String(change.newValue),
-              change.catalyst
-            );
-            if (downfallEvent.significance >= this.config.minSignificance) {
-              events.push(downfallEvent);
-              continue; // Skip regular state_change for this
-            }
-          }
-
-          // Triumph: any status -> positive status
-          if (newPolarity === 'positive' && prevPolarity !== 'positive') {
-            const triumphEvent = this.eventBuilder.buildTriumphEvent(
-              entity,
-              String(change.previousValue),
-              String(change.newValue),
-              change.catalyst
-            );
-            if (triumphEvent.significance >= this.config.minSignificance) {
-              events.push(triumphEvent);
-              continue; // Skip regular state_change for this
-            }
-          }
-        }
-      }
-
-      // Convert pending changes to NarrativeStateChange format
-      const stateChanges: NarrativeStateChange[] = changes.map(c => ({
-        entityId: c.entityId,
-        entityName: entity.name,
-        entityKind: entity.kind,
-        field: c.field,
-        previousValue: c.previousValue,
-        newValue: c.newValue,
-      }));
-
-      // Get catalyst from first change
-      const catalyst = changes[0]?.catalyst;
-
-      // Build the regular state change event
-      const event = this.eventBuilder.buildStateChangeEvent(
-        entityId,
-        stateChanges,
-        catalyst
-      );
-
-      // Filter by significance threshold
+    for (const [key, group] of contextGroups) {
+      const event = this.buildEventForContext(group);
       if (event && event.significance >= this.config.minSignificance) {
         events.push(event);
       }
@@ -526,644 +557,580 @@ export class StateChangeTracker {
   }
 
   /**
-   * Collect entities that ended this tick (death, dissolution, historical)
+   * Build a single rich event for a context mutation group.
+   * The event type and structure depends on what happened in the context.
    */
-  private collectEndedEntityIds(): Set<string> {
-    const ended = new Set<string>();
-    for (const [entityId, changes] of this.pendingChanges) {
-      const becameHistorical = changes.some(c =>
-        c.field === 'status' &&
-        (c.newValue === 'historical' || c.newValue === 'dissolved')
-      );
-      if (becameHistorical) {
-        ended.add(entityId);
-      }
+  private buildEventForContext(group: ContextMutationGroup): NarrativeEvent | null {
+    if (!this.eventBuilder || !this.graph) return null;
+
+    const { context, entitiesCreated, relationshipsCreated, relationshipsArchived, tagsAdded, tagsRemoved, fieldsChanged } = group;
+
+    // Determine the primary event type based on what happened
+    const hasEntities = entitiesCreated.length > 0;
+    const hasRelationships = relationshipsCreated.length > 0;
+    const hasArchivals = relationshipsArchived.length > 0;
+    const hasTagChanges = tagsAdded.length > 0 || tagsRemoved.length > 0;
+    const hasFieldChanges = fieldsChanged.length > 0;
+
+    // Template contexts with entity creation → creation_batch
+    if (context.source === 'template' && hasEntities) {
+      return this.buildTemplateEvent(group);
     }
-    return ended;
+
+    // System contexts with any changes → system_action
+    if (context.source === 'system') {
+      return this.buildSystemEvent(group);
+    }
+
+    // Action contexts → action_executed
+    if (context.source === 'action') {
+      return this.buildActionEvent(group);
+    }
+
+    // Framework/fallback contexts - generate individual events for significant changes
+    // These are outside normal execution flow
+    if (hasFieldChanges) {
+      return this.buildFrameworkEvent(group);
+    }
+
+    return null;
   }
 
   /**
-   * Detect coalescence changes for this tick
+   * Build an event for template execution.
+   * Templates typically create entities and their initial relationships/tags.
+   * Uses participantEffects to show what happened to each entity.
    */
-  private detectCoalescenceChanges(): Map<string, string[]> {
-    if (!this.graph) return new Map();
+  private buildTemplateEvent(group: ContextMutationGroup): NarrativeEvent | null {
+    if (!this.eventBuilder || !this.graph) return null;
 
-    const currentPartOf = new Map<string, Set<string>>();
-    for (const rel of this.graph.getRelationships({ includeHistorical: false })) {
-      if (rel.kind === FRAMEWORK_RELATIONSHIP_KINDS.PART_OF) {
-        const containerId = rel.dst;
-        let members = currentPartOf.get(containerId);
-        if (!members) {
-          members = new Set();
-          currentPartOf.set(containerId, members);
-        }
-        members.add(rel.src);
-      }
+    const { context, entitiesCreated, relationshipsCreated, tagsAdded, tagsRemoved, fieldsChanged } = group;
+
+    // If nothing happened, skip
+    if (entitiesCreated.length === 0 && relationshipsCreated.length === 0) return null;
+
+    // Build participant effects using the event builder
+    const participantEffects = this.eventBuilder.buildParticipantEffects(
+      entitiesCreated,
+      relationshipsCreated,
+      [], // templates don't typically archive relationships
+      tagsAdded,
+      tagsRemoved,
+      fieldsChanged
+    );
+
+    if (participantEffects.length === 0) return null;
+
+    // Primary entity is the first created entity, or first affected if none created
+    const primaryEntity = entitiesCreated.length > 0
+      ? participantEffects.find(p => p.effects.some(e => e.type === 'created'))?.entity
+      : participantEffects[0]?.entity;
+
+    if (!primaryEntity) return null;
+
+    // Build description summarizing what happened
+    const description = this.buildTemplateDescription(
+      entitiesCreated,
+      relationshipsCreated,
+      participantEffects,
+      context.sourceId
+    );
+
+    // Calculate significance
+    const significance = Math.min(1.0,
+      (entitiesCreated.length * 0.3) +
+      (relationshipsCreated.length * 0.1) +
+      0.2 // base significance for template execution
+    );
+
+    // Build narrative tags
+    const entityKinds = new Set(participantEffects.map(p => p.entity.kind));
+    const narrativeTags = ['creation', ...entityKinds];
+    if (participantEffects.some(p => p.effects.every(e => e.type !== 'created'))) {
+      narrativeTags.push('recruitment');
     }
 
-    const changes = new Map<string, string[]>();
-    for (const [containerId, currentMembers] of currentPartOf) {
-      const previousSnapshot = this.partOfSnapshotAtTickStart.get(containerId);
-      const previousMembers = previousSnapshot?.memberIds ?? new Set<string>();
-
-      const newMemberIds: string[] = [];
-      for (const memberId of currentMembers) {
-        if (!previousMembers.has(memberId)) {
-          newMemberIds.push(memberId);
-        }
-      }
-
-      if (newMemberIds.length >= 2) {
-        changes.set(containerId, newMemberIds);
-      }
-    }
-
-    return changes;
-  }
-
-  private undirectedEdgeKey(a: string, b: string): string {
-    return a < b ? `${a}|${b}` : `${b}|${a}`;
-  }
-
-  private getConnectedComponents(adjacency: Map<string, Set<string>>): string[][] {
-    const visited = new Set<string>();
-    const components: string[][] = [];
-
-    for (const node of adjacency.keys()) {
-      if (visited.has(node)) continue;
-      const stack = [node];
-      const component: string[] = [];
-      visited.add(node);
-
-      while (stack.length > 0) {
-        const current = stack.pop()!;
-        component.push(current);
-        const neighbors = adjacency.get(current);
-        if (!neighbors) continue;
-        for (const neighbor of neighbors) {
-          if (!visited.has(neighbor)) {
-            visited.add(neighbor);
-            stack.push(neighbor);
-          }
-        }
-      }
-
-      components.push(component);
-    }
-
-    return components;
-  }
-
-  /**
-   * Generate leadership events (first authority connection on target)
-   */
-  private generateLeadershipEvents(): NarrativeEvent[] {
-    if (!this.eventBuilder || !this.graph) return [];
-
-    const events: NarrativeEvent[] = [];
-    const currentAuthorityConnections = new Map<string, Set<string>>();
-
-    const addAuthorityConnection = (targetId: string, authorityId: string) => {
-      let authorities = currentAuthorityConnections.get(targetId);
-      if (!authorities) {
-        authorities = new Set<string>();
-        currentAuthorityConnections.set(targetId, authorities);
-      }
-      authorities.add(authorityId);
+    return {
+      id: `tpl-${context.sourceId}-${context.tick}`,
+      tick: context.tick,
+      era: this.graph.currentEra?.id || 'unknown',
+      eventKind: 'creation_batch',
+      significance,
+      subject: primaryEntity,
+      action: 'created',
+      participantEffects,
+      description,
+      causedBy: {
+        entityId: context.sourceId,
+        actionType: context.sourceId,
+      },
+      narrativeTags,
     };
-
-    for (const rel of this.graph.getRelationships({ includeHistorical: false })) {
-      const srcEntity = this.graph.getEntity(rel.src);
-      const dstEntity = this.graph.getEntity(rel.dst);
-      if (!srcEntity || !dstEntity) continue;
-
-      const srcIsAuthority = this.isAuthoritySubtype(srcEntity.kind, srcEntity.subtype);
-      const dstIsAuthority = this.isAuthoritySubtype(dstEntity.kind, dstEntity.subtype);
-
-      if (srcIsAuthority) addAuthorityConnection(rel.dst, rel.src);
-      if (dstIsAuthority) addAuthorityConnection(rel.src, rel.dst);
-    }
-
-    for (const [targetId, authorityIds] of currentAuthorityConnections) {
-      if (authorityIds.size === 0) continue;
-      const startAuthorities = this.authorityConnectionsAtTickStart.get(targetId);
-      if (startAuthorities && startAuthorities.size > 0) continue;
-
-      const targetEntity = this.graph.getEntity(targetId);
-      if (!targetEntity) continue;
-
-      const authorities: HardState[] = Array.from(authorityIds)
-        .map(id => this.graph!.getEntity(id))
-        .filter((e): e is HardState => Boolean(e));
-
-      if (authorities.length === 0) continue;
-
-      const event = this.eventBuilder.buildLeadershipEstablishedEvent(
-        targetEntity,
-        authorities
-      );
-      if (event.significance >= this.config.minSignificance) {
-        events.push(event);
-      }
-    }
-
-    return events;
   }
 
   /**
-   * Generate war events (aggregated by connected components)
+   * Build description for template events.
    */
-  private generateWarEvents(): { events: NarrativeEvent[]; suppressedRelationshipKeys: Set<string> } {
-    if (!this.eventBuilder || !this.graph) return { events: [], suppressedRelationshipKeys: new Set() };
+  private buildTemplateDescription(
+    entitiesCreated: EntityCreatedData[],
+    relationshipsCreated: RelationshipCreatedData[],
+    participantEffects: ParticipantEffect[],
+    templateId: string
+  ): string {
+    const parts: string[] = [];
 
-    const events: NarrativeEvent[] = [];
-    const suppressedRelationshipKeys = new Set<string>();
-    const currentAdjacency = new Map<string, Set<string>>();
-    const startAdjacency = new Map<string, Set<string>>();
+    // Count created entities by kind
+    const kindCounts = new Map<string, number>();
+    for (const e of entitiesCreated) {
+      kindCounts.set(e.kind, (kindCounts.get(e.kind) || 0) + 1);
+    }
 
-    const addAdjacency = (adj: Map<string, Set<string>>, src: string, dst: string) => {
-      let srcSet = adj.get(src);
-      if (!srcSet) {
-        srcSet = new Set();
-        adj.set(src, srcSet);
+    if (kindCounts.size > 0) {
+      const entityParts: string[] = [];
+      for (const [kind, count] of kindCounts) {
+        entityParts.push(`${count} ${kind}${count > 1 ? 's' : ''}`);
       }
-      srcSet.add(dst);
-      let dstSet = adj.get(dst);
-      if (!dstSet) {
-        dstSet = new Set();
-        adj.set(dst, dstSet);
+      parts.push(`${entityParts.join(', ')} created`);
+    }
+
+    // Count recruited (existing entities that got effects but weren't created)
+    const createdIds = new Set(entitiesCreated.map(e => e.entityId));
+    const recruited = participantEffects.filter(p => !createdIds.has(p.entity.id));
+    if (recruited.length > 0) {
+      if (recruited.length === 1) {
+        parts.push(`${recruited[0].entity.name} recruited`);
+      } else if (recruited.length <= 3) {
+        parts.push(`${recruited.map(r => r.entity.name).join(', ')} recruited`);
+      } else {
+        parts.push(`${recruited.length} existing entities recruited`);
       }
-      dstSet.add(src);
+    }
+
+    // Relationship summary
+    if (relationshipsCreated.length > 0) {
+      parts.push(`${relationshipsCreated.length} relationship${relationshipsCreated.length > 1 ? 's' : ''} formed`);
+    }
+
+    const templateName = this.getSystemDisplayName(templateId);
+    return parts.length > 0
+      ? `${parts.join(', ')}, due to ${templateName}.`
+      : `Template ${templateName} executed.`;
+  }
+
+  /**
+   * Build an event for system execution.
+   * Systems create relationships, modify entities, etc.
+   * Uses participantEffects to show what happened to each entity.
+   */
+  private buildSystemEvent(group: ContextMutationGroup): NarrativeEvent | null {
+    if (!this.eventBuilder || !this.graph) return null;
+
+    const { context, entitiesCreated, relationshipsCreated, relationshipsArchived, tagsAdded, tagsRemoved, fieldsChanged } = group;
+
+    // If nothing significant happened, skip
+    if (entitiesCreated.length === 0 &&
+        relationshipsCreated.length === 0 &&
+        relationshipsArchived.length === 0 &&
+        tagsAdded.length === 0 &&
+        tagsRemoved.length === 0 &&
+        fieldsChanged.length === 0) {
+      return null;
+    }
+
+    // Build participant effects using the event builder
+    const participantEffects = this.eventBuilder.buildParticipantEffects(
+      entitiesCreated,
+      relationshipsCreated,
+      relationshipsArchived,
+      tagsAdded,
+      tagsRemoved,
+      fieldsChanged
+    );
+
+    if (participantEffects.length === 0) return null;
+
+    // Primary entity is the first participant
+    const primaryEntity = participantEffects[0].entity;
+
+    // Build description summarizing what happened
+    const description = this.buildSystemDescription(
+      entitiesCreated,
+      relationshipsCreated,
+      relationshipsArchived,
+      tagsAdded,
+      tagsRemoved,
+      fieldsChanged,
+      participantEffects,
+      context.sourceId
+    );
+
+    // Calculate significance based on impact
+    const significance = Math.min(1.0,
+      (entitiesCreated.length * 0.3) +
+      (relationshipsCreated.length * 0.15) +
+      (relationshipsArchived.length * 0.1) +
+      (fieldsChanged.length * 0.2) +
+      (tagsAdded.length * 0.05) +
+      (tagsRemoved.length * 0.05)
+    );
+
+    // Collect entity kinds for narrative tags
+    const entityKinds = new Set(participantEffects.map(p => p.entity.kind));
+    const narrativeTags = ['system', context.sourceId, ...entityKinds];
+
+    return {
+      id: `sys-${context.sourceId}-${context.tick}`,
+      tick: context.tick,
+      era: this.graph.currentEra?.id || 'unknown',
+      eventKind: 'state_change',
+      significance,
+      subject: primaryEntity,
+      action: context.sourceId,
+      participantEffects,
+      description,
+      causedBy: {
+        actionType: `system:${context.sourceId}`,
+      },
+      narrativeTags,
     };
-
-    for (const rel of this.graph.getRelationships({ includeHistorical: false })) {
-      if (this.getRelationshipPolarity(rel.kind) !== 'negative') continue;
-      addAdjacency(currentAdjacency, rel.src, rel.dst);
-    }
-
-    for (const snapshot of this.relationshipSnapshotAtTickStart.values()) {
-      if (snapshot.polarity !== 'negative') continue;
-      addAdjacency(startAdjacency, snapshot.src, snapshot.dst);
-    }
-
-    const currentComponents = this.getConnectedComponents(currentAdjacency).filter(c => c.length >= 2);
-    const startComponents = this.getConnectedComponents(startAdjacency).filter(c => c.length >= 2);
-
-    const currentComponentByNode = new Map<string, number>();
-    currentComponents.forEach((component, index) => {
-      for (const node of component) currentComponentByNode.set(node, index);
-    });
-
-    const startComponentByNode = new Map<string, number>();
-    startComponents.forEach((component, index) => {
-      for (const node of component) startComponentByNode.set(node, index);
-    });
-
-    const endedComponentIndexes = new Set<number>();
-    startComponents.forEach((component, index) => {
-      const hasOverlap = component.some(node => currentComponentByNode.has(node));
-      if (!hasOverlap) endedComponentIndexes.add(index);
-    });
-
-    currentComponents.forEach(component => {
-      const hasOverlap = component.some(node => startComponentByNode.has(node));
-      if (hasOverlap) return;
-
-      const participants = component
-        .map(id => this.graph!.getEntity(id))
-        .filter((e): e is HardState => Boolean(e));
-      if (participants.length < 2) return;
-
-      const event = this.eventBuilder!.buildWarEvent('war_started', participants);
-      if (event.significance >= this.config.minSignificance) {
-        events.push(event);
-      }
-    });
-
-    startComponents.forEach((component, index) => {
-      if (!endedComponentIndexes.has(index)) return;
-
-      const participants = component
-        .map(id => this.graph!.getEntity(id))
-        .filter((e): e is HardState => Boolean(e));
-      if (participants.length < 2) return;
-
-      const event = this.eventBuilder!.buildWarEvent('war_ended', participants);
-      if (event.significance >= this.config.minSignificance) {
-        events.push(event);
-      }
-    });
-
-    for (const [key, snapshot] of this.relationshipSnapshotAtTickStart) {
-      if (snapshot.polarity !== 'negative') continue;
-      const componentIndex = startComponentByNode.get(snapshot.src);
-      if (componentIndex === undefined) continue;
-      if (startComponentByNode.get(snapshot.dst) !== componentIndex) continue;
-      if (!endedComponentIndexes.has(componentIndex)) continue;
-      suppressedRelationshipKeys.add(key);
-    }
-
-    return { events, suppressedRelationshipKeys };
   }
 
   /**
-   * Generate events for relationship dissolutions
-   * Compares relationships at tick start vs tick end to find archived ones
-   * Uses polarity to generate betrayal (positive dissolved) or reconciliation (negative dissolved)
+   * Build an event for action execution.
+   * Actions are agent-initiated behaviors with clear causation.
+   * Uses participantEffects to show what happened to each entity.
    */
-  private generateDissolutionEvents(
-    endedEntityIds: Set<string>,
-    suppressedRelationshipKeys: Set<string>,
-    suppressedEntityIds: Set<string>
-  ): NarrativeEvent[] {
-    if (!this.eventBuilder || !this.graph) return [];
+  private buildActionEvent(group: ContextMutationGroup): NarrativeEvent | null {
+    if (!this.eventBuilder || !this.graph) return null;
 
-    const events: NarrativeEvent[] = [];
+    const { context, entitiesCreated, relationshipsCreated, relationshipsArchived, tagsAdded, tagsRemoved, fieldsChanged } = group;
 
-    // Build set of currently active relationships
-    const currentActiveKeys = new Set<string>();
-    for (const rel of this.graph.getRelationships({ includeHistorical: false })) {
-      currentActiveKeys.add(this.relationshipKey(rel.src, rel.dst, rel.kind));
+    // If nothing significant happened, skip
+    if (entitiesCreated.length === 0 &&
+        relationshipsCreated.length === 0 &&
+        relationshipsArchived.length === 0 &&
+        tagsAdded.length === 0 &&
+        tagsRemoved.length === 0 &&
+        fieldsChanged.length === 0) {
+      return null;
     }
 
-    // Find relationships that were active at tick start but are no longer active
-    for (const [key, snapshot] of this.relationshipSnapshotAtTickStart) {
-      if (!currentActiveKeys.has(key)) {
-        if (suppressedRelationshipKeys.has(key)) continue;
-        if (suppressedEntityIds.has(snapshot.src) || suppressedEntityIds.has(snapshot.dst)) continue;
+    // Build participant effects using the event builder
+    const participantEffects = this.eventBuilder.buildParticipantEffects(
+      entitiesCreated,
+      relationshipsCreated,
+      relationshipsArchived,
+      tagsAdded,
+      tagsRemoved,
+      fieldsChanged
+    );
 
-        // This relationship was dissolved
-        const srcEntity = this.graph.getEntity(snapshot.src);
-        const dstEntity = this.graph.getEntity(snapshot.dst);
+    if (participantEffects.length === 0) return null;
 
-        if (srcEntity && dstEntity) {
-          const relationshipAge = this.currentTick - snapshot.createdAt;
+    // Primary entity is the first participant
+    const primaryEntity = participantEffects[0].entity;
 
-          const endedEntities: HardState[] = [];
-          if (endedEntityIds.has(srcEntity.id)) endedEntities.push(srcEntity);
-          if (endedEntityIds.has(dstEntity.id)) endedEntities.push(dstEntity);
-          if (endedEntities.length > 0) {
-            const event = this.eventBuilder.buildRelationshipEndedEvent(
-              srcEntity,
-              dstEntity,
-              snapshot.kind,
-              relationshipAge,
-              endedEntities
-            );
-            if (event.significance >= this.config.minSignificance) {
-              events.push(event);
-            }
-            continue;
-          }
+    // Build description summarizing what happened
+    const description = this.buildActionDescription(
+      entitiesCreated,
+      relationshipsCreated,
+      relationshipsArchived,
+      tagsAdded,
+      tagsRemoved,
+      fieldsChanged,
+      participantEffects,
+      context.sourceId
+    );
 
-          // Check polarity for specialized events
-          if (snapshot.polarity === 'positive') {
-            // Betrayal: positive relationship dissolved
-            const event = this.eventBuilder.buildBetrayalEvent(
-              srcEntity,
-              dstEntity,
-              snapshot.kind,
-              relationshipAge
-            );
-            if (event.significance >= this.config.minSignificance) {
-              events.push(event);
-            }
-          } else if (snapshot.polarity === 'negative') {
-            // Reconciliation: negative relationship dissolved
-            const event = this.eventBuilder.buildReconciliationEvent(
-              srcEntity,
-              dstEntity,
-              snapshot.kind
-            );
-            if (event.significance >= this.config.minSignificance) {
-              events.push(event);
-            }
-          } else {
-            // Neutral or unknown polarity: regular dissolution event
-            const event = this.eventBuilder.buildRelationshipDissolutionEvent(
-              srcEntity,
-              dstEntity,
-              snapshot.kind,
-              relationshipAge
-            );
-            if (event.significance >= this.config.minSignificance) {
-              events.push(event);
-            }
-          }
-        }
-      }
-    }
+    // Calculate significance based on impact
+    const significance = Math.min(1.0,
+      (entitiesCreated.length * 0.3) +
+      (relationshipsCreated.length * 0.15) +
+      (relationshipsArchived.length * 0.15) +
+      (fieldsChanged.length * 0.2) +
+      (tagsAdded.length * 0.05) +
+      (tagsRemoved.length * 0.05)
+    );
 
-    return events;
+    // Collect entity kinds for narrative tags
+    const entityKinds = new Set(participantEffects.map(p => p.entity.kind));
+    const narrativeTags = ['action', context.sourceId, ...entityKinds];
+
+    return {
+      id: `act-${context.sourceId}-${context.tick}`,
+      tick: context.tick,
+      era: this.graph.currentEra?.id || 'unknown',
+      eventKind: 'state_change',
+      significance,
+      subject: primaryEntity,
+      action: context.sourceId,
+      participantEffects,
+      description,
+      causedBy: {
+        actionType: `action:${context.sourceId}`,
+      },
+      narrativeTags,
+    };
   }
 
   /**
-   * Generate events for new relationships
-   * - Rivalry: negative relationship created between entities that previously knew each other
-   * - Alliance: multiple positive relationships formed in same tick
-   * - Relationship formed: all other new relationships
+   * Build an event for framework/unknown context.
+   * These are typically initialization or cleanup operations.
+   * Uses participantEffects to show what happened to each entity.
    */
-  private generateRivalryAndAllianceEvents(): NarrativeEvent[] {
-    if (!this.eventBuilder || !this.graph) return [];
+  private buildFrameworkEvent(group: ContextMutationGroup): NarrativeEvent | null {
+    // For framework events, only generate if there are significant field changes
+    if (!this.eventBuilder || !this.graph) return null;
 
-    const events: NarrativeEvent[] = [];
+    const { context, fieldsChanged, tagsAdded, tagsRemoved } = group;
+    if (fieldsChanged.length === 0 && tagsAdded.length === 0 && tagsRemoved.length === 0) return null;
 
-    // Track new positive relationships for alliance detection
-    const newPositiveRelsByEntity: Map<string, { src: HardState; dst: HardState; kind: string }[]> = new Map();
-    // Track all new relationships for fallback relationship_formed events
-    const processedPositiveRels = new Set<string>();
+    // Build participant effects using the event builder
+    const participantEffects = this.eventBuilder.buildParticipantEffects(
+      [], // no entities created in framework events
+      [], // no relationships created
+      [], // no relationships archived
+      tagsAdded,
+      tagsRemoved,
+      fieldsChanged
+    );
 
-    // Find relationships that exist now but didn't at tick start
-    for (const rel of this.graph.getRelationships({ includeHistorical: false })) {
-      const key = this.relationshipKey(rel.src, rel.dst, rel.kind);
-      if (!this.relationshipSnapshotAtTickStart.has(key)) {
-        // This is a new relationship
-        const polarity = this.getRelationshipPolarity(rel.kind);
-        const srcEntity = this.graph.getEntity(rel.src);
-        const dstEntity = this.graph.getEntity(rel.dst);
+    if (participantEffects.length === 0) return null;
 
-        if (!srcEntity || !dstEntity) continue;
+    // Primary entity is the first participant
+    const primaryEntity = participantEffects[0].entity;
 
-        if (polarity === 'negative') {
-          // Check if these entities had any prior relationship
-          const hadPriorRelationship = Array.from(this.relationshipSnapshotAtTickStart.values())
-            .some(s => (s.src === rel.src && s.dst === rel.dst) || (s.src === rel.dst && s.dst === rel.src));
+    // Build description summarizing what happened
+    const description = this.buildFrameworkDescription(
+      fieldsChanged,
+      tagsAdded,
+      tagsRemoved,
+      participantEffects,
+      context.sourceId
+    );
 
-          if (hadPriorRelationship) {
-            // Rivalry formed between previously connected entities
-            const event = this.eventBuilder!.buildRivalryFormedEvent(
-              srcEntity,
-              dstEntity,
-              rel.kind
-            );
-            if (event.significance >= this.config.minSignificance) {
-              events.push(event);
-            }
-          } else {
-            // Negative relationship without prior connection - emit relationship_formed
-            const event = this.eventBuilder!.buildRelationshipFormedEvent(
-              srcEntity,
-              dstEntity,
-              rel.kind,
-              polarity
-            );
-            if (event.significance >= this.config.minSignificance) {
-              events.push(event);
-            }
-          }
-        } else if (polarity === 'positive') {
-          // Track for alliance detection
-          if (!newPositiveRelsByEntity.has(rel.src)) {
-            newPositiveRelsByEntity.set(rel.src, []);
-          }
-          newPositiveRelsByEntity.get(rel.src)!.push({ src: srcEntity, dst: dstEntity, kind: rel.kind });
-        } else {
-          // Neutral or undefined polarity - emit relationship_formed
-          const event = this.eventBuilder!.buildRelationshipFormedEvent(
-            srcEntity,
-            dstEntity,
-            rel.kind,
-            polarity
-          );
-          if (event.significance >= this.config.minSignificance) {
-            events.push(event);
-          }
-        }
-      }
-    }
+    const sourceLabel = context.sourceId !== 'unknown' ? context.sourceId : 'framework';
+    const entityKinds = new Set(participantEffects.map(p => p.entity.kind));
+    const narrativeTags = sourceLabel === 'framework'
+      ? ['framework', ...entityKinds]
+      : ['framework', sourceLabel, ...entityKinds];
 
-    // Check for alliances (2+ positive relationships formed by same entity in same tick)
-    for (const [srcId, rels] of newPositiveRelsByEntity) {
-      if (rels.length >= 2) {
-        const srcEntity = this.graph.getEntity(srcId);
-        if (srcEntity) {
-          const allEntities = [srcEntity, ...rels.map(r => r.dst)];
-          const event = this.eventBuilder!.buildAllianceFormedEvent(
-            allEntities,
-            rels[0].kind
-          );
-          if (event.significance >= this.config.minSignificance) {
-            events.push(event);
-          }
-          // Mark these as processed
-          for (const r of rels) {
-            processedPositiveRels.add(this.relationshipKey(r.src.id, r.dst.id, r.kind));
-          }
-        }
-      }
-    }
+    return {
+      id: `fw-${context.tick}-${Math.random().toString(36).substr(2, 9)}`,
+      tick: context.tick,
+      era: this.graph.currentEra?.id || 'unknown',
+      eventKind: 'state_change',
+      significance: 0.3,
+      subject: primaryEntity,
+      action: 'framework_update',
+      participantEffects,
+      description,
+      narrativeTags,
+    };
+  }
 
-    // Emit relationship_formed for single positive relationships that weren't part of an alliance
-    for (const [_srcId, rels] of newPositiveRelsByEntity) {
-      for (const r of rels) {
-        const key = this.relationshipKey(r.src.id, r.dst.id, r.kind);
-        if (!processedPositiveRels.has(key)) {
-          const event = this.eventBuilder!.buildRelationshipFormedEvent(
-            r.src,
-            r.dst,
-            r.kind,
-            'positive'
-          );
-          if (event.significance >= this.config.minSignificance) {
-            events.push(event);
-          }
-        }
-      }
-    }
+  // ===========================================================================
+  // UNIFIED DESCRIPTION BUILDERS
+  // ===========================================================================
 
-    return events;
+  /**
+   * Build description for system events.
+   * Uses participantEffects to summarize what happened.
+   */
+  private buildSystemDescription(
+    entitiesCreated: EntityCreatedData[],
+    relationshipsCreated: RelationshipCreatedData[],
+    relationshipsArchived: RelationshipArchivedData[],
+    tagsAdded: TagChangeData[],
+    tagsRemoved: TagChangeData[],
+    fieldsChanged: FieldChangeData[],
+    participantEffects: ParticipantEffect[],
+    sourceId: string
+  ): string {
+    return this.buildUnifiedDescription(
+      entitiesCreated,
+      relationshipsCreated,
+      relationshipsArchived,
+      tagsAdded,
+      tagsRemoved,
+      fieldsChanged,
+      participantEffects,
+      sourceId,
+      'system'
+    );
   }
 
   /**
-   * Generate succession events when container entities with part_of relationships become historical
-   * Also generates power_vacuum events for authority subtypes
+   * Build description for action events.
+   * Uses participantEffects to summarize what happened.
    */
-  private generateSuccessionEvents(): NarrativeEvent[] {
-    if (!this.eventBuilder || !this.graph) return [];
-
-    const events: NarrativeEvent[] = [];
-
-    // Find entities that became historical this tick
-    for (const [entityId, changes] of this.pendingChanges) {
-      const becameHistorical = changes.some(c =>
-        c.field === 'status' &&
-        (c.newValue === 'historical' || c.newValue === 'dissolved')
-      );
-
-      if (!becameHistorical) continue;
-
-      const entity = this.graph.getEntity(entityId);
-      if (!entity) continue;
-
-      const catalyst = changes[0]?.catalyst;
-
-      // Check if this is an authority entity (power_vacuum)
-      if (this.isAuthoritySubtype(entity.kind, entity.subtype)) {
-        // Get entities that were connected to this authority
-        const affectedEntities: HardState[] = [];
-        for (const snapshot of this.relationshipSnapshotAtTickStart.values()) {
-          if (snapshot.src === entityId || snapshot.dst === entityId) {
-            const otherId = snapshot.src === entityId ? snapshot.dst : snapshot.src;
-            const other = this.graph.getEntity(otherId);
-            if (other && other.status !== 'historical') {
-              affectedEntities.push(other);
-            }
-          }
-        }
-
-        if (affectedEntities.length > 0) {
-          const event = this.eventBuilder.buildPowerVacuumEvent(
-            entity,
-            affectedEntities,
-            catalyst
-          );
-          if (event.significance >= this.config.minSignificance) {
-            events.push(event);
-          }
-        }
-      }
-
-      // Check if this entity had members (inbound part_of relationships) for succession
-      const previousMembers = this.partOfSnapshotAtTickStart.get(entityId);
-      if (!previousMembers || previousMembers.memberIds.size === 0) continue;
-
-      // Get member entities (they may still exist)
-      const memberEntities: HardState[] = [];
-      for (const memberId of previousMembers.memberIds) {
-        const member = this.graph.getEntity(memberId);
-        if (member) {
-          memberEntities.push(member);
-        }
-      }
-
-      if (memberEntities.length === 0) continue;
-
-      const event = this.eventBuilder.buildSuccessionEvent(
-        entity,
-        memberEntities,
-        catalyst
-      );
-
-      if (event.significance >= this.config.minSignificance) {
-        events.push(event);
-      }
-    }
-
-    return events;
+  private buildActionDescription(
+    entitiesCreated: EntityCreatedData[],
+    relationshipsCreated: RelationshipCreatedData[],
+    relationshipsArchived: RelationshipArchivedData[],
+    tagsAdded: TagChangeData[],
+    tagsRemoved: TagChangeData[],
+    fieldsChanged: FieldChangeData[],
+    participantEffects: ParticipantEffect[],
+    sourceId: string
+  ): string {
+    return this.buildUnifiedDescription(
+      entitiesCreated,
+      relationshipsCreated,
+      relationshipsArchived,
+      tagsAdded,
+      tagsRemoved,
+      fieldsChanged,
+      participantEffects,
+      sourceId,
+      'action'
+    );
   }
 
   /**
-   * Generate coalescence events when multiple entities join under a container
+   * Build description for framework events.
+   * Uses participantEffects to summarize what happened.
    */
-  private generateCoalescenceEvents(coalescenceChanges?: Map<string, string[]>): NarrativeEvent[] {
-    if (!this.eventBuilder || !this.graph) return [];
-
-    const events: NarrativeEvent[] = [];
-    const changes = coalescenceChanges ?? this.detectCoalescenceChanges();
-
-    for (const [containerId, newMemberIds] of changes) {
-      const containerEntity = this.graph.getEntity(containerId);
-      if (!containerEntity) continue;
-
-      const newMemberEntities: HardState[] = [];
-      for (const memberId of newMemberIds) {
-        const member = this.graph.getEntity(memberId);
-        if (member) {
-          newMemberEntities.push(member);
-        }
-      }
-
-      if (newMemberEntities.length < 2) continue;
-
-      const event = this.eventBuilder.buildCoalescenceEvent(
-        containerEntity,
-        newMemberEntities
-      );
-
-      if (event.significance >= this.config.minSignificance) {
-        events.push(event);
-      }
-    }
-
-    return events;
+  private buildFrameworkDescription(
+    fieldsChanged: FieldChangeData[],
+    tagsAdded: TagChangeData[],
+    tagsRemoved: TagChangeData[],
+    participantEffects: ParticipantEffect[],
+    sourceId: string
+  ): string {
+    return this.buildUnifiedDescription(
+      [],
+      [],
+      [],
+      tagsAdded,
+      tagsRemoved,
+      fieldsChanged,
+      participantEffects,
+      sourceId,
+      'framework'
+    );
   }
 
   /**
-   * Generate events for tag changes during simulation
+   * Build unified description for all event types.
+   * Summarizes participantEffects into natural language.
    */
-  private generateTagChangeEvents(): NarrativeEvent[] {
-    if (!this.eventBuilder || !this.graph) return [];
+  private buildUnifiedDescription(
+    entitiesCreated: EntityCreatedData[],
+    relationshipsCreated: RelationshipCreatedData[],
+    relationshipsArchived: RelationshipArchivedData[],
+    tagsAdded: TagChangeData[],
+    tagsRemoved: TagChangeData[],
+    fieldsChanged: FieldChangeData[],
+    participantEffects: ParticipantEffect[],
+    sourceId: string,
+    sourceType: 'system' | 'action' | 'framework'
+  ): string {
+    const parts: string[] = [];
 
-    const events: NarrativeEvent[] = [];
+    // Count effects by type across all participants
+    let createdCount = 0;
+    let relationshipFormedCount = 0;
+    let relationshipEndedCount = 0;
+    let tagGainedCount = 0;
+    let tagLostCount = 0;
+    let fieldChangedCount = 0;
+    let endedCount = 0;
 
-    for (const [entityId, tagChanges] of this.pendingTagChanges) {
-      const entity = this.graph.getEntity(entityId);
-      if (!entity) continue;
-
-      for (const change of tagChanges) {
-        const tagMetadata = this.tagRegistry.get(change.tag);
-
-        let event: NarrativeEvent;
-        if (change.changeType === 'added') {
-          event = this.eventBuilder.buildTagGainedEvent(
-            entity,
-            change.tag,
-            change.value,
-            tagMetadata,
-            change.catalyst
-          );
-        } else {
-          event = this.eventBuilder.buildTagLostEvent(
-            entity,
-            change.tag,
-            tagMetadata,
-            change.catalyst
-          );
-        }
-
-        if (event.significance >= this.config.minSignificance) {
-          events.push(event);
+    for (const p of participantEffects) {
+      for (const e of p.effects) {
+        switch (e.type) {
+          case 'created': createdCount++; break;
+          case 'relationship_formed': relationshipFormedCount++; break;
+          case 'relationship_ended': relationshipEndedCount++; break;
+          case 'tag_gained': tagGainedCount++; break;
+          case 'tag_lost': tagLostCount++; break;
+          case 'field_changed': fieldChangedCount++; break;
+          case 'ended': endedCount++; break;
         }
       }
     }
 
-    return events;
-  }
-
-  /**
-   * Generate events for creation batches from template executions
-   */
-  private generateCreationBatchEvents(): NarrativeEvent[] {
-    if (!this.eventBuilder || !this.graph) return [];
-
-    const events: NarrativeEvent[] = [];
-
-    for (const batch of this.pendingCreationBatches) {
-      // Get the created entities
-      const entities: HardState[] = [];
-      for (const id of batch.entityIds) {
-        const entity = this.graph.getEntity(id);
-        if (entity) {
-          entities.push(entity);
-        }
+    // Build summary parts
+    if (createdCount > 0) {
+      const kindCounts = new Map<string, number>();
+      for (const e of entitiesCreated) {
+        kindCounts.set(e.kind, (kindCounts.get(e.kind) || 0) + 1);
       }
+      const kindParts: string[] = [];
+      for (const [kind, count] of kindCounts) {
+        kindParts.push(`${count} ${kind}${count > 1 ? 's' : ''}`);
+      }
+      parts.push(`${kindParts.join(', ')} created`);
+    }
 
-      if (entities.length === 0) continue;
-
-      const event = this.eventBuilder.buildCreationBatchEvent(
-        entities,
-        batch.relationships,
-        batch.templateId,
-        batch.templateName,
-        batch.description
-      );
-
-      if (event.significance >= this.config.minSignificance) {
-        events.push(event);
+    if (relationshipFormedCount > 0) {
+      const kindCounts = new Map<string, number>();
+      for (const r of relationshipsCreated) {
+        kindCounts.set(r.kind, (kindCounts.get(r.kind) || 0) + 1);
+      }
+      if (kindCounts.size === 1) {
+        const [kind, count] = [...kindCounts.entries()][0];
+        parts.push(`${count} ${kind} relationship${count > 1 ? 's' : ''} formed`);
+      } else {
+        parts.push(`${relationshipFormedCount} relationships formed`);
       }
     }
 
-    return events;
+    if (relationshipEndedCount > 0) {
+      parts.push(`${relationshipEndedCount} relationship${relationshipEndedCount > 1 ? 's' : ''} ended`);
+    }
+
+    if (tagGainedCount > 0) {
+      const uniqueTags = [...new Set(tagsAdded.map(t => t.tag))];
+      if (uniqueTags.length <= 2) {
+        parts.push(`gained ${uniqueTags.join(', ')}`);
+      } else {
+        parts.push(`gained ${tagGainedCount} tags`);
+      }
+    }
+
+    if (tagLostCount > 0) {
+      const uniqueTags = [...new Set(tagsRemoved.map(t => t.tag))];
+      if (uniqueTags.length <= 2) {
+        parts.push(`lost ${uniqueTags.join(', ')}`);
+      } else {
+        parts.push(`lost ${tagLostCount} tags`);
+      }
+    }
+
+    if (fieldChangedCount > 0 || endedCount > 0) {
+      const prominenceChanges = fieldsChanged.filter(f => f.field === 'prominence');
+      const statusChanges = fieldsChanged.filter(f => f.field === 'status');
+
+      if (prominenceChanges.length > 0) {
+        const rising = prominenceChanges.filter(f => this.isProminenceIncrease(f.oldValue, f.newValue));
+        const falling = prominenceChanges.filter(f => !this.isProminenceIncrease(f.oldValue, f.newValue));
+        if (rising.length > 0) parts.push(`${rising.length} gained prominence`);
+        if (falling.length > 0) parts.push(`${falling.length} lost prominence`);
+      }
+
+      if (endedCount > 0) {
+        parts.push(`${endedCount} ended`);
+      }
+    }
+
+    // Format participants summary
+    const participantNames = participantEffects.slice(0, 3).map(p => p.entity.name);
+    const moreCount = participantEffects.length > 3 ? ` +${participantEffects.length - 3} others` : '';
+    const whoSummary = participantNames.length > 0
+      ? `${participantNames.join(', ')}${moreCount}`
+      : 'entities';
+
+    // Build final description
+    const sourceName = this.getSystemDisplayName(sourceId);
+    const prefix = sourceType === 'framework' ? 'Framework' : sourceName;
+
+    if (parts.length === 0) {
+      return `${prefix} affected ${whoSummary}.`;
+    }
+
+    return `${whoSummary}: ${parts.join(', ')}, due to ${prefix}.`;
   }
 
   /**
@@ -1183,6 +1150,17 @@ export class StateChangeTracker {
   isEnabled(): boolean {
     return this.config.enabled;
   }
+
+  /**
+   * Check if prominence changed upward
+   */
+  private isProminenceIncrease(oldValue: unknown, newValue: unknown): boolean {
+    // Handle numeric values directly, or convert from string/label
+    const oldNum = typeof oldValue === 'number' ? oldValue : getProminenceValue(String(oldValue));
+    const newNum = typeof newValue === 'number' ? newValue : getProminenceValue(String(newValue));
+    return newNum > oldNum;
+  }
+
 }
 
 /**

@@ -56,14 +56,13 @@ const WEIGHTS = {
   prominence: 0.15,
 };
 
-// Prominence level to numeric value
-const PROMINENCE_VALUES: Record<string, number> = {
-  forgotten: 0,
-  marginal: 0.25,
-  recognized: 0.5,
-  renowned: 0.75,
-  mythic: 1,
-};
+/**
+ * Convert numeric prominence (0-5) to normalized value (0-1) for scoring.
+ * Prominence scale: 0=forgotten, 1=marginal, 2=recognized, 3=renowned, 4-5=mythic
+ */
+function normalizeProminence(prominence: number): number {
+  return Math.min(prominence / 5, 1);
+}
 
 /**
  * Compute story potential for a single entity
@@ -133,7 +132,7 @@ export function computeStoryPotential(
     ? Math.min(eventCount / maxValues.maxEvents, 1)
     : 0;
 
-  const prominence = PROMINENCE_VALUES[entity.prominence] ?? 0.5;
+  const prominence = normalizeProminence(entity.prominence);
 
   // Compute weighted score
   const overallScore =

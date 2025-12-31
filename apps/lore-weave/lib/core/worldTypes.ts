@@ -1,11 +1,11 @@
 import type {
   EntityTags,
-  Prominence,
+  ProminenceLabel,
   WorldEntity,
   WorldRelationship
 } from '@canonry/world-schema';
 
-export type { EntityTags, Prominence };
+export type { EntityTags, ProminenceLabel };
 
 export type HardState = WorldEntity;
 

@@ -96,32 +96,6 @@ export function hasRelationship(
   );
 }
 
-// Prominence helpers
-export function getProminenceValue(prominence: HardState['prominence']): number {
-  const values = {
-    'forgotten': 0,
-    'marginal': 1,
-    'recognized': 2,
-    'renowned': 3,
-    'mythic': 4
-  };
-  return values[prominence] || 0;
-}
-
-export function adjustProminence(
-  current: HardState['prominence'],
-  delta: number
-): HardState['prominence'] {
-  const order: HardState['prominence'][] = [
-    'forgotten', 'marginal', 'recognized', 'renowned', 'mythic'
-  ];
-
-  const currentIndex = order.indexOf(current);
-  const newIndex = Math.max(0, Math.min(order.length - 1, currentIndex + delta));
-
-  return order[newIndex];
-}
-
 /**
  * Calculate relationship formation weight based on existing connection count.
  * Favors underconnected entities to balance network density and prevent hubs.

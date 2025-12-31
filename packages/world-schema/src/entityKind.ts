@@ -106,6 +106,12 @@ export interface Status {
    * - negative: exiled, imprisoned, dying
    */
   polarity?: Polarity;
+  /**
+   * Verb describing transition to this status.
+   * Used by the narrative system for natural language descriptions.
+   * Example: "was crowned", "was exiled", "ascended to"
+   */
+  transitionVerb?: string;
 }
 
 /**

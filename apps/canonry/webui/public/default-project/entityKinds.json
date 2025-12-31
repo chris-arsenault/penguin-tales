@@ -28,25 +28,29 @@
         "id": "lost",
         "name": "Lost",
         "isTerminal": true,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "was lost to time"
       },
       {
         "id": "historical",
         "name": "Historical",
         "isTerminal": true,
-        "polarity": "neutral"
+        "polarity": "neutral",
+        "transitionVerb": "faded into legend"
       },
       {
         "id": "secret",
         "name": "Secret",
         "isTerminal": false,
-        "polarity": "neutral"
+        "polarity": "neutral",
+        "transitionVerb": "was hidden away"
       },
       {
         "id": "discovered",
         "name": "Discovered",
         "isTerminal": false,
-        "polarity": "neutral"
+        "polarity": "neutral",
+        "transitionVerb": "was discovered"
       },
       {
         "id": "emergent",
@@ -147,25 +151,29 @@
         "id": "active",
         "name": "Active",
         "isTerminal": false,
-        "polarity": "neutral"
+        "polarity": "neutral",
+        "transitionVerb": "erupted"
       },
       {
         "id": "historical",
         "name": "Historical",
         "isTerminal": true,
-        "polarity": "neutral"
+        "polarity": "neutral",
+        "transitionVerb": "came to an end"
       },
       {
         "id": "brewing",
         "name": "Brewing",
         "isTerminal": false,
-        "polarity": "neutral"
+        "polarity": "neutral",
+        "transitionVerb": "began brewing"
       },
       {
         "id": "legendary",
         "name": "Legendary",
         "isTerminal": false,
-        "polarity": "neutral"
+        "polarity": "neutral",
+        "transitionVerb": "became legendary"
       }
     ],
     "semanticPlane": {
@@ -220,25 +228,29 @@
         "id": "repealed",
         "name": "Repealed",
         "isTerminal": true,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "was repealed"
       },
       {
         "id": "contested",
         "name": "Contested",
         "isTerminal": false,
-        "polarity": "neutral"
+        "polarity": "neutral",
+        "transitionVerb": "became contested"
       },
       {
         "id": "enacted",
         "name": "Enacted",
         "isTerminal": false,
-        "polarity": "neutral"
+        "polarity": "neutral",
+        "transitionVerb": "was enacted"
       },
       {
         "id": "proposed",
         "name": "Proposed",
         "isTerminal": false,
-        "polarity": "neutral"
+        "polarity": "neutral",
+        "transitionVerb": "was proposed"
       }
     ],
     "semanticPlane": {
@@ -344,19 +356,22 @@
         "id": "historical",
         "name": "Historical",
         "isTerminal": true,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "passed away"
       },
       {
         "id": "fictional",
         "name": "Fictional",
         "isTerminal": false,
-        "polarity": "neutral"
+        "polarity": "neutral",
+        "transitionVerb": "was revealed to be fictional"
       },
       {
         "id": "missing",
         "name": "Missing",
         "isTerminal": false,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "went missing"
       }
     ],
     "semanticPlane": {
@@ -462,19 +477,22 @@
         "id": "thriving",
         "name": "Thriving",
         "isTerminal": false,
-        "polarity": "positive"
+        "polarity": "positive",
+        "transitionVerb": "began thriving"
       },
       {
         "id": "waning",
         "name": "Waning",
         "isTerminal": false,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "began to wane"
       },
       {
         "id": "abandoned",
         "name": "Abandoned",
         "isTerminal": true,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "was abandoned"
       },
       {
         "id": "unspoiled",
@@ -593,25 +611,29 @@
         "id": "disbanded",
         "name": "Disbanded",
         "isTerminal": true,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "disbanded"
       },
       {
         "id": "waning",
         "name": "Waning",
         "isTerminal": false,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "began to wane"
       },
       {
         "id": "state_sanctioned",
         "name": "State Sanctioned",
         "isTerminal": false,
-        "polarity": "positive"
+        "polarity": "positive",
+        "transitionVerb": "received state sanction"
       },
       {
         "id": "illegal",
         "name": "Illegal",
         "isTerminal": false,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "was outlawed"
       }
     ],
     "semanticPlane": {
@@ -724,19 +746,22 @@
         "id": "damaged",
         "name": "Damaged",
         "isTerminal": false,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "was damaged"
       },
       {
         "id": "lost",
         "name": "Lost",
         "isTerminal": false,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "was lost"
       },
       {
         "id": "destroyed",
         "name": "Destroyed",
         "isTerminal": true,
-        "polarity": "negative"
+        "polarity": "negative",
+        "transitionVerb": "was destroyed"
       }
     ],
     "semanticPlane": {

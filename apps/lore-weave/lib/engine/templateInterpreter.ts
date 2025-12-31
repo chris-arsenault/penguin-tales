@@ -14,12 +14,13 @@ import type { Point } from '../coordinates/types';
 import {
   selectEntities as rulesSelectEntities,
   selectVariableEntities as rulesSelectVariableEntities,
-  applyPickStrategy as rulesApplyPickStrategy,
+  resolveSingleVariable,
   describeSelectionFilter as rulesDescribeSelectionFilter,
   evaluateGraphPath as sharedEvaluateGraphPath,
   evaluateCondition as rulesEvaluateCondition,
   applyMutation,
   createRuleContext,
+  prominenceThreshold,
 } from '../rules';
 import type { EntityResolver, SelectionTrace, Condition, Mutation, RuleContext } from '../rules';
 
@@ -618,11 +619,14 @@ export class TemplateInterpreter {
         placementResult.debug?.emergentRegionCreated?.label
       );
 
+      // Convert prominence label to numeric value (midpoint of range)
+      const prominenceValue = prominenceThreshold(rule.prominence) + 0.5;
+
       const entity: Partial<HardState> & { namingContext?: Record<string, string> } = {
         kind: rule.kind,
         subtype,
         status: rule.status,
-        prominence: rule.prominence,
+        prominence: prominenceValue,
         culture,
         description,
         tags: mergedTags,
@@ -1107,20 +1111,8 @@ export class TemplateInterpreter {
     def: VariableDefinition,
     context: ExecutionContext
   ): HardState | HardState[] | undefined {
-    const { select } = def;
     const ruleCtx = createRuleContext(context.graphView, context, context.target);
-    const candidates = rulesSelectVariableEntities(select, ruleCtx);
-
-    if (candidates.length === 0) {
-      return undefined;
-    }
-
-    const pickStrategy = select.pickStrategy ?? 'random';
-    const picked = rulesApplyPickStrategy(candidates, pickStrategy, select.maxResults);
-    if (pickStrategy === 'all' || (select.maxResults && select.maxResults > 1)) {
-      return picked;
-    }
-    return picked[0];
+    return resolveSingleVariable(def.select, ruleCtx);
   }
 }
 

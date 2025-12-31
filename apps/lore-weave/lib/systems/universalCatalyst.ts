@@ -1,6 +1,6 @@
 import { SimulationSystem, SystemResult } from '../engine/types';
 import { FRAMEWORK_TAGS } from '@canonry/world-schema';
-import { HardState, Relationship, Prominence } from '../core/worldTypes';
+import { HardState, Relationship } from '../core/worldTypes';
 import {
   calculateAttemptChance,
   addCatalyzedEvent
@@ -8,8 +8,8 @@ import {
 import { WorldRuntime } from '../runtime/worldRuntime';
 import type { UniversalCatalystConfig } from '../engine/systemInterpreter';
 import type { ExecutableAction } from '../engine/actionInterpreter';
-import { matchesActorConfig, getProminenceMultiplierValue } from '../rules';
-import { adjustProminence, hasTag } from '../utils';
+import { matchesActorConfig, getProminenceMultiplierValue, clampProminence, prominenceLabel } from '../rules';
+import { hasTag } from '../utils';
 import type { ActionApplicationPayload } from '../observer/types';
 
 // =============================================================================
@@ -108,9 +108,9 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
       // Find all agents (entities that can act)
       const allAgents = graphView.getEntities().filter(e => e.catalyst?.canAct === true);
 
-      const relationshipsAdded: Relationship[] = [];
-      const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
-      const entitiesModified: Array<{ id: string; changes: Partial<HardState> }> = [];
+      const relationshipsAdded: Array<Relationship & { actionContext?: { source: 'action'; sourceId: string } }> = [];
+      const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number; actionContext?: { source: 'action'; sourceId: string } }> = [];
+      const entitiesModified: Array<{ id: string; changes: Partial<HardState>; actionContext?: { source: 'action'; sourceId: string } }> = [];
       const pressureChanges: Record<string, number> = {};
       let actionsAttempted = 0;
       let actionsSucceeded = 0;
@@ -144,6 +144,10 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
         );
         if (!selectedAction) return;
 
+        // Store action context for narrative attribution
+        // WorldEngine will use this to enter/exit contexts when applying modifications
+        const actionContext = { source: 'action' as const, sourceId: selectedAction.type };
+
         // Attempt to execute action with extended outcome
         const outcome = executeActionWithContext(agent, selectedAction, graphView);
 
@@ -155,12 +159,18 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
           const historyModifiedIds = new Set<string>();
 
           if (outcome.entitiesModified && outcome.entitiesModified.length > 0) {
-            entitiesModified.push(...outcome.entitiesModified);
-            outcome.entitiesModified.forEach((mod) => historyModifiedIds.add(mod.id));
+            // Add action context to entity modifications for proper narrative attribution
+            for (const mod of outcome.entitiesModified) {
+              entitiesModified.push({ ...mod, actionContext });
+              historyModifiedIds.add(mod.id);
+            }
           }
 
           if (outcome.relationshipsAdjusted && outcome.relationshipsAdjusted.length > 0) {
-            relationshipsAdjusted.push(...outcome.relationshipsAdjusted);
+            // Add action context to relationship adjustments
+            for (const adj of outcome.relationshipsAdjusted) {
+              relationshipsAdjusted.push({ ...adj, actionContext });
+            }
           }
 
           if (outcome.pressureChanges) {
@@ -169,11 +179,11 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             }
           }
 
-          // Add created relationships with catalyst attribution
+          // Add created relationships with catalyst attribution and action context
           outcome.relationships.forEach(rel => {
             rel.catalyzedBy = agent.id;
             rel.createdAt = graphView.tick;
-            relationshipsAdded.push(rel);
+            relationshipsAdded.push({ ...rel, actionContext });
           });
 
           // Record catalyzed event
@@ -188,38 +198,47 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             changes: {
               catalyst: agent.catalyst,
               updatedAt: graphView.tick
-            }
+            },
+            actionContext,
           });
           historyModifiedIds.add(agent.id);
 
-          // Apply prominence increase on success (if action opts in)
+          // Apply prominence increase on success (if action specifies a positive delta)
+          // NOTE: Do NOT modify entity directly - let worldEngine apply changes
+          // to ensure proper state tracking and persistence
+          const successDelta = selectedAction.actorProminenceDelta.onSuccess;
           if (
-            selectedAction.applyProminenceToActor &&
+            successDelta > 0 &&
             Math.random() < prominenceUpChance &&
             !hasTag(agent.tags, FRAMEWORK_TAGS.PROMINENCE_LOCKED)
           ) {
-            agent.prominence = adjustProminence(agent.prominence, 1);
+            const newProminence = clampProminence(agent.prominence + successDelta);
             entitiesModified.push({
               id: agent.id,
-              changes: { prominence: agent.prominence }
+              changes: { prominence: newProminence },
+              actionContext,
             });
             prominenceChanges.push({ entityId: agent.id, entityName: agent.name, direction: 'up' });
             historyModifiedIds.add(agent.id);
           }
-          if (
-            selectedAction.applyProminenceToInstigator &&
-            outcome.instigatorId &&
-            Math.random() < prominenceUpChance
-          ) {
-            const instigator = graphView.getEntity(outcome.instigatorId);
-            if (instigator && !hasTag(instigator.tags, FRAMEWORK_TAGS.PROMINENCE_LOCKED)) {
-              instigator.prominence = adjustProminence(instigator.prominence, 1);
+
+          // Apply target prominence change on success (if action specifies a delta)
+          const targetSuccessDelta = selectedAction.targetProminenceDelta.onSuccess;
+          if (targetSuccessDelta !== 0 && outcome.targetId) {
+            const target = graphView.getEntity(outcome.targetId);
+            if (target && !hasTag(target.tags, FRAMEWORK_TAGS.PROMINENCE_LOCKED)) {
+              const newProminence = clampProminence(target.prominence + targetSuccessDelta);
               entitiesModified.push({
-                id: instigator.id,
-                changes: { prominence: instigator.prominence }
+                id: target.id,
+                changes: { prominence: newProminence },
+                actionContext,
               });
-              prominenceChanges.push({ entityId: instigator.id, entityName: instigator.name, direction: 'up' });
-              historyModifiedIds.add(instigator.id);
+              prominenceChanges.push({
+                entityId: target.id,
+                entityName: target.name,
+                direction: targetSuccessDelta > 0 ? 'up' : 'down'
+              });
+              historyModifiedIds.add(target.id);
             }
           }
 
@@ -234,20 +253,45 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             entitiesModified: historyModifiedIds.size > 0 ? Array.from(historyModifiedIds) : [agent.id]
           });
         } else {
-          // Apply prominence decrease on failure (if action opts in)
+          // Apply prominence decrease on failure (if action specifies a negative delta)
+          // NOTE: Do NOT modify entity directly - let worldEngine apply changes
+          const failureDelta = selectedAction.actorProminenceDelta.onFailure;
           if (
-            selectedAction.applyProminenceToActor &&
+            failureDelta !== 0 &&
             Math.random() < prominenceDownChance &&
             !hasTag(agent.tags, FRAMEWORK_TAGS.PROMINENCE_LOCKED)
           ) {
-            agent.prominence = adjustProminence(agent.prominence, -1);
+            const newProminence = clampProminence(agent.prominence + failureDelta);
             entitiesModified.push({
               id: agent.id,
-              changes: { prominence: agent.prominence }
+              changes: { prominence: newProminence },
+              actionContext,
             });
-            prominenceChanges.push({ entityId: agent.id, entityName: agent.name, direction: 'down' });
+            prominenceChanges.push({ entityId: agent.id, entityName: agent.name, direction: failureDelta < 0 ? 'down' : 'up' });
+          }
+
+          // Apply target prominence change on failure (if action specifies a delta)
+          const targetFailureDelta = selectedAction.targetProminenceDelta.onFailure;
+          if (targetFailureDelta !== 0 && outcome.targetId) {
+            const target = graphView.getEntity(outcome.targetId);
+            if (target && !hasTag(target.tags, FRAMEWORK_TAGS.PROMINENCE_LOCKED)) {
+              const newProminence = clampProminence(target.prominence + targetFailureDelta);
+              entitiesModified.push({
+                id: target.id,
+                changes: { prominence: newProminence },
+                actionContext,
+              });
+              prominenceChanges.push({
+                entityId: target.id,
+                entityName: target.name,
+                direction: targetFailureDelta > 0 ? 'up' : 'down'
+              });
+            }
           }
         }
+
+        // NOTE: Action context is now embedded in modifications instead of using enter/exit
+        // This ensures WorldEngine can apply the correct context when recording mutations
 
         // Emit action application event for instrumentation
         if (emitter) {
@@ -263,7 +307,7 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             actorId: agent.id,
             actorName: agent.name,
             actorKind: agent.kind,
-            actorProminence: agent.prominence,
+            actorProminence: prominenceLabel(agent.prominence),
             instigatorId: outcome.instigatorId,
             instigatorName: outcome.instigatorName,
             targetId: outcome.targetId,

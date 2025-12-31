@@ -208,6 +208,17 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
     });
   };
 
+  const updateStatusTransitionVerb = (kindKey, statusId, transitionVerb) => {
+    if (entityKinds.find((k) => k.kind === kindKey)?.isFramework) return;
+    const ek = entityKinds.find((k) => k.kind === kindKey);
+    if (!ek) return;
+    updateKind(kindKey, {
+      statuses: ek.statuses.map((s) =>
+        s.id === statusId ? { ...s, transitionVerb: transitionVerb || undefined } : s
+      ),
+    });
+  };
+
   const toggleSubtypeAuthority = (kindKey, subtypeId) => {
     if (entityKinds.find((k) => k.kind === kindKey)?.isFramework) return;
     const ek = entityKinds.find((k) => k.kind === kindKey);
@@ -395,41 +406,56 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                 {/* Statuses */}
                 <div className="section">
                   <div className="section-title">Statuses</div>
-                  <div className="chip-list">
+                  <div className="chip-list" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                     {ek.statuses.map((status) => (
-                      <div key={status.id} className="chip" style={{ alignItems: 'center' }}>
-                        <input
-                          type="checkbox"
-                          checked={status.isTerminal}
-                          disabled={isFramework}
-                          onChange={() => toggleStatusTerminal(ek.kind, status.id)}
-                          title="Terminal status"
-                        />
-                        <span style={{
-                          textDecoration: status.isTerminal ? 'line-through' : 'none',
-                          opacity: status.isTerminal ? 0.7 : 1,
-                        }}>
-                          {status.name}
-                        </span>
-                        <select
-                          className="input input-micro"
-                          value={status.polarity || 'neutral'}
-                          disabled={isFramework}
-                          onChange={(e) => updateStatusPolarity(ek.kind, status.id, e.target.value)}
-                          title="Status polarity (for narrative events)"
-                          style={{ marginLeft: '4px', padding: '2px 4px', fontSize: '10px', width: '70px' }}
-                        >
-                          <option value="positive">+</option>
-                          <option value="neutral">○</option>
-                          <option value="negative">−</option>
-                        </select>
-                        <button
-                          className="chip-remove"
-                          onClick={() => removeStatus(ek.kind, status.id)}
-                          disabled={isFramework}
-                        >
-                          ×
-                        </button>
+                      <div key={status.id} className="chip" style={{ flexDirection: 'column', alignItems: 'stretch', padding: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <input
+                            type="checkbox"
+                            checked={status.isTerminal}
+                            disabled={isFramework}
+                            onChange={() => toggleStatusTerminal(ek.kind, status.id)}
+                            title="Terminal status"
+                          />
+                          <span style={{
+                            textDecoration: status.isTerminal ? 'line-through' : 'none',
+                            opacity: status.isTerminal ? 0.7 : 1,
+                            flex: 1,
+                          }}>
+                            {status.name}
+                          </span>
+                          <select
+                            className="input input-micro"
+                            value={status.polarity || 'neutral'}
+                            disabled={isFramework}
+                            onChange={(e) => updateStatusPolarity(ek.kind, status.id, e.target.value)}
+                            title="Status polarity (for narrative events)"
+                            style={{ padding: '2px 4px', fontSize: '10px', width: '50px' }}
+                          >
+                            <option value="positive">+</option>
+                            <option value="neutral">○</option>
+                            <option value="negative">−</option>
+                          </select>
+                          <button
+                            className="chip-remove"
+                            onClick={() => removeStatus(ek.kind, status.id)}
+                            disabled={isFramework}
+                          >
+                            ×
+                          </button>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                          <span className="text-muted text-small" style={{ width: '40px' }}>Verb:</span>
+                          <input
+                            className="input input-sm"
+                            value={status.transitionVerb || ''}
+                            disabled={isFramework}
+                            onChange={(e) => updateStatusTransitionVerb(ek.kind, status.id, e.target.value)}
+                            placeholder="e.g., was destroyed"
+                            title="Verb used in narrative events for this status transition"
+                            style={{ flex: 1, fontSize: '11px', padding: '2px 6px' }}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -446,7 +472,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                       Add
                     </button>
                   </div>
-                  <div className="hint">☑ = terminal (entity ends), + = positive, ○ = neutral, − = negative polarity</div>
+                  <div className="hint">☑ = terminal (entity ends), + = positive, ○ = neutral, − = negative polarity. Verb is used in narrative event descriptions.</div>
                 </div>
 
                 {/* Default Status */}

@@ -44,4 +44,20 @@ export interface RelationshipKindDefinition {
    * - negative: rivals, enemies, opposes
    */
   polarity?: Polarity;
+
+  /**
+   * Narrative verbs for describing this relationship in natural language.
+   * Used by the narrative system to generate human-readable effect descriptions.
+   * If not provided, framework defaults are used.
+   *
+   * Example for "member_of":
+   *   verbs: { formed: "joined", ended: "left" }
+   *   → "Alice joined The Guild" / "Alice left The Guild"
+   */
+  verbs?: {
+    /** Verb for when this relationship is formed (e.g., "joined", "allied with") */
+    formed: string;
+    /** Verb for when this relationship ends (e.g., "left", "broke alliance with") */
+    ended: string;
+  };
 }

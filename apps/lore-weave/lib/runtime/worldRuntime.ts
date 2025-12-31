@@ -29,6 +29,7 @@ import type {
 } from '../coordinates/types';
 import type { PlacementAnchor, PlacementRegionPolicy, PlacementSpacing, PlacementStep } from '../engine/declarativeTypes';
 import type { PressureModificationSource } from '../observer/types';
+import { prominenceLabel } from '../rules/types';
 
 /** Result of placement with debug info */
 export interface PlacementResultWithDebug {
@@ -161,6 +162,11 @@ export class WorldRuntime implements Graph {
   }
   set currentEra(value: import('../engine/types').Era) {
     this.graph.currentEra = value;
+  }
+
+  /** Mutation tracker for lineage tracking (see LINEAGE.md) */
+  get mutationTracker() {
+    return this.graph.mutationTracker;
   }
 
   /** Pressure map (mutable) */
@@ -598,10 +604,11 @@ export class WorldRuntime implements Graph {
       }
 
       const tagArray = Object.keys(tags);
+      // Convert numeric prominence to label for name-forge
       name = await nameForge.generate(
         partial.kind,
         partial.subtype,
-        partial.prominence,
+        prominenceLabel(partial.prominence),
         tagArray,
         partial.culture,
         namingContext
@@ -642,12 +649,24 @@ export class WorldRuntime implements Graph {
       }
     }
 
+    const currentEraEntity = partial.kind !== FRAMEWORK_ENTITY_KINDS.ERA
+      ? this.graph.findEntities({
+          kind: FRAMEWORK_ENTITY_KINDS.ERA,
+          status: FRAMEWORK_STATUS.CURRENT
+        })[0]
+      : undefined;
+    const explicitEraId = (settingsOrPartial as CreateEntitySettings).eraId ?? partial.eraId;
+    const resolvedEraId = typeof explicitEraId === 'string' && explicitEraId
+      ? explicitEraId
+      : (partial.kind === FRAMEWORK_ENTITY_KINDS.ERA ? partial.subtype : currentEraEntity?.id);
+
     const entityId = await this.graph.createEntity({
       id: resolvedId,
       kind: partial.kind,
       subtype: partial.subtype,
       coordinates: validCoords,
       tags,
+      eraId: resolvedEraId,
       name,
       description: partial.description ?? '',
       status: partial.status,
@@ -660,20 +679,13 @@ export class WorldRuntime implements Graph {
       allRegionIds: partial.allRegionIds
     });
 
-    if (partial.kind !== FRAMEWORK_ENTITY_KINDS.ERA) {
-      const currentEraEntity = this.graph.findEntities({
-        kind: FRAMEWORK_ENTITY_KINDS.ERA,
-        status: FRAMEWORK_STATUS.CURRENT
-      })[0];
-
-      if (currentEraEntity) {
-        this.graph.addRelationship(
-          FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING,
-          entityId,
-          currentEraEntity.id,
-          FRAMEWORK_RELATIONSHIP_PROPERTIES[FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING].defaultStrength
-        );
-      }
+    if (partial.kind !== FRAMEWORK_ENTITY_KINDS.ERA && currentEraEntity) {
+      this.graph.addRelationship(
+        FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING,
+        entityId,
+        currentEraEntity.id,
+        FRAMEWORK_RELATIONSHIP_PROPERTIES[FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING].defaultStrength
+      );
     }
 
     return entityId;

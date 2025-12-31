@@ -6,7 +6,8 @@ import {
   GlobalTargets,
   EraTargetOverrides,
 } from '../statistics/types';
-import { Prominence } from '../core/worldTypes';
+import { ProminenceLabel } from '../core/worldTypes';
+import { prominenceLabel } from '../rules/types';
 
 /**
  * Tracks distribution metrics and calculates deviations from targets
@@ -52,7 +53,7 @@ export class DistributionTracker {
     });
 
     // Prominence distribution
-    const prominenceCounts: Record<Prominence, number> = {
+    const prominenceCounts: Record<ProminenceLabel, number> = {
       forgotten: 0,
       marginal: 0,
       recognized: 0,
@@ -60,10 +61,10 @@ export class DistributionTracker {
       mythic: 0,
     };
     entities.forEach((e) => {
-      prominenceCounts[e.prominence]++;
+      prominenceCounts[prominenceLabel(e.prominence)]++;
     });
 
-    const prominenceRatios: Record<Prominence, number> = {
+    const prominenceRatios: Record<ProminenceLabel, number> = {
       forgotten: prominenceCounts.forgotten / totalEntities,
       marginal: prominenceCounts.marginal / totalEntities,
       recognized: prominenceCounts.recognized / totalEntities,
@@ -72,16 +73,16 @@ export class DistributionTracker {
     };
 
     // Prominence by kind
-    const prominenceByKind: Record<string, Record<Prominence, number>> = {};
+    const prominenceByKind: Record<string, Record<ProminenceLabel, number>> = {};
     Object.keys(entityKindCounts).forEach((kind) => {
       const kindEntities = entities.filter((e) => e.kind === kind);
       const kindTotal = kindEntities.length;
       prominenceByKind[kind] = {
-        forgotten: kindEntities.filter((e) => e.prominence === 'forgotten').length / kindTotal,
-        marginal: kindEntities.filter((e) => e.prominence === 'marginal').length / kindTotal,
-        recognized: kindEntities.filter((e) => e.prominence === 'recognized').length / kindTotal,
-        renowned: kindEntities.filter((e) => e.prominence === 'renowned').length / kindTotal,
-        mythic: kindEntities.filter((e) => e.prominence === 'mythic').length / kindTotal,
+        forgotten: kindEntities.filter((e) => prominenceLabel(e.prominence) === 'forgotten').length / kindTotal,
+        marginal: kindEntities.filter((e) => prominenceLabel(e.prominence) === 'marginal').length / kindTotal,
+        recognized: kindEntities.filter((e) => prominenceLabel(e.prominence) === 'recognized').length / kindTotal,
+        renowned: kindEntities.filter((e) => prominenceLabel(e.prominence) === 'renowned').length / kindTotal,
+        mythic: kindEntities.filter((e) => prominenceLabel(e.prominence) === 'mythic').length / kindTotal,
       };
     });
 
@@ -151,12 +152,12 @@ export class DistributionTracker {
     entityKindScore /= Object.keys(effectiveTargets.entityKindDistribution.targets).length;
 
     // Prominence deviation
-    const prominenceDeviations: Record<Prominence, number> = {} as Record<Prominence, number>;
+    const prominenceDeviations: Record<ProminenceLabel, number> = {} as Record<ProminenceLabel, number>;
     let prominenceScore = 0;
     Object.entries(globalTargets.prominenceDistribution.targets).forEach(([level, target]) => {
-      const actual = state.prominenceRatios[level as Prominence] || 0;
+      const actual = state.prominenceRatios[level as ProminenceLabel] || 0;
       const deviation = Math.abs(actual - target);
-      prominenceDeviations[level as Prominence] = deviation;
+      prominenceDeviations[level as ProminenceLabel] = deviation;
       prominenceScore += deviation;
     });
     prominenceScore /= Object.keys(globalTargets.prominenceDistribution.targets).length;
@@ -367,7 +368,7 @@ export class DistributionTracker {
     if (eraOverrides.prominenceDistribution) {
       Object.entries(eraOverrides.prominenceDistribution).forEach(([level, ratio]) => {
         if (level !== 'comment' && typeof ratio === 'number') {
-          merged.prominenceDistribution.targets[level as Prominence] = ratio;
+          merged.prominenceDistribution.targets[level as ProminenceLabel] = ratio;
         }
       });
     }

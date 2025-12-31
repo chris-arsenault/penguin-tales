@@ -10,7 +10,11 @@
     ],
     "cullable": false,
     "decayRate": "slow",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "settled in",
+      "ended": "departed from"
+    }
   },
   {
     "kind": "member_of",
@@ -23,7 +27,11 @@
     ],
     "cullable": false,
     "decayRate": "slow",
-    "polarity": "positive"
+    "polarity": "positive",
+    "verbs": {
+      "formed": "joined",
+      "ended": "left"
+    }
   },
   {
     "kind": "leader_of",
@@ -37,7 +45,11 @@
     ],
     "cullable": false,
     "decayRate": "slow",
-    "polarity": "positive"
+    "polarity": "positive",
+    "verbs": {
+      "formed": "assumed leadership of",
+      "ended": "relinquished leadership of"
+    }
   },
   {
     "kind": "enemy_of",
@@ -52,7 +64,11 @@
     ],
     "cullable": true,
     "decayRate": "medium",
-    "polarity": "negative"
+    "polarity": "negative",
+    "verbs": {
+      "formed": "became enemies with",
+      "ended": "reconciled with"
+    }
   },
   {
     "kind": "allied_with",
@@ -67,7 +83,11 @@
     ],
     "cullable": true,
     "decayRate": "slow",
-    "polarity": "positive"
+    "polarity": "positive",
+    "verbs": {
+      "formed": "allied with",
+      "ended": "broke alliance with"
+    }
   },
   {
     "kind": "at_war_with",
@@ -80,7 +100,11 @@
     ],
     "cullable": true,
     "decayRate": "slow",
-    "polarity": "negative"
+    "polarity": "negative",
+    "verbs": {
+      "formed": "declared war on",
+      "ended": "made peace with"
+    }
   },
   {
     "kind": "controls",
@@ -93,7 +117,11 @@
     ],
     "cullable": true,
     "decayRate": "slow",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "gained control of",
+      "ended": "lost control of"
+    }
   },
   {
     "kind": "adjacent_to",
@@ -106,7 +134,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became adjacent to",
+      "ended": "separated from"
+    }
   },
   {
     "kind": "practitioner_of",
@@ -120,7 +152,11 @@
     ],
     "cullable": false,
     "decayRate": "slow",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "learned to practice",
+      "ended": "abandoned practice of"
+    }
   },
   {
     "kind": "occupies",
@@ -134,7 +170,11 @@
     ],
     "cullable": true,
     "decayRate": "medium",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "occupied",
+      "ended": "withdrew from"
+    }
   },
   {
     "kind": "trades_with",
@@ -151,7 +191,11 @@
     ],
     "cullable": true,
     "decayRate": "medium",
-    "polarity": "positive"
+    "polarity": "positive",
+    "verbs": {
+      "formed": "established trade with",
+      "ended": "ceased trade with"
+    }
   },
   {
     "kind": "contained_by",
@@ -164,7 +208,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became part of",
+      "ended": "separated from"
+    }
   },
   {
     "kind": "discovered_by",
@@ -180,7 +228,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was discovered by",
+      "ended": "was forgotten by"
+    }
   },
   {
     "kind": "explorer_of",
@@ -193,7 +245,11 @@
     ],
     "cullable": true,
     "decayRate": "slow",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "began exploring",
+      "ended": "ceased exploring"
+    }
   },
   {
     "kind": "commemorates",
@@ -208,7 +264,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "began commemorating",
+      "ended": "stopped commemorating"
+    }
   },
   {
     "kind": "originated_in",
@@ -224,7 +284,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "originated in",
+      "ended": "distanced from origins in"
+    }
   },
   {
     "kind": "related_to",
@@ -245,7 +309,11 @@
     ],
     "cullable": true,
     "decayRate": "slow",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became connected to",
+      "ended": "severed ties with"
+    }
   },
   {
     "kind": "corrupted_by",
@@ -259,7 +327,11 @@
     ],
     "cullable": true,
     "decayRate": "slow",
-    "polarity": "negative"
+    "polarity": "negative",
+    "verbs": {
+      "formed": "fell under corruption from",
+      "ended": "was cleansed of corruption from"
+    }
   },
   {
     "kind": "celebrated_by",
@@ -275,7 +347,11 @@
     ],
     "cullable": true,
     "decayRate": "medium",
-    "polarity": "positive"
+    "polarity": "positive",
+    "verbs": {
+      "formed": "began to be celebrated by",
+      "ended": "was no longer celebrated by"
+    }
   },
   {
     "kind": "derived_from",
@@ -293,7 +369,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "derived from",
+      "ended": "diverged from"
+    }
   },
   {
     "kind": "manifests_at",
@@ -307,7 +387,11 @@
     ],
     "cullable": true,
     "decayRate": "medium",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "began manifesting at",
+      "ended": "ceased manifesting at"
+    }
   },
   {
     "kind": "believer_of",
@@ -323,7 +407,11 @@
     ],
     "cullable": true,
     "decayRate": "medium",
-    "polarity": "positive"
+    "polarity": "positive",
+    "verbs": {
+      "formed": "became a believer in",
+      "ended": "lost faith in"
+    }
   },
   {
     "kind": "splinter_of",
@@ -336,7 +424,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "splintered from",
+      "ended": "reunited with"
+    }
   },
   {
     "kind": "taught_by",
@@ -351,7 +443,11 @@
     ],
     "cullable": true,
     "decayRate": "medium",
-    "polarity": "positive"
+    "polarity": "positive",
+    "verbs": {
+      "formed": "became a student of",
+      "ended": "concluded studies under"
+    }
   },
   {
     "kind": "contains",
@@ -360,7 +456,11 @@
     "dstKinds": [],
     "cullable": true,
     "decayRate": "medium",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "began containing",
+      "ended": "released"
+    }
   },
   {
     "kind": "supersedes",
@@ -373,7 +473,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "superseded",
+      "ended": "was unseated as successor of"
+    }
   },
   {
     "kind": "part_of",
@@ -382,7 +486,11 @@
     "dstKinds": [],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "positive"
+    "polarity": "positive",
+    "verbs": {
+      "formed": "became part of",
+      "ended": "separated from"
+    }
   },
   {
     "kind": "active_during",
@@ -393,7 +501,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became active during",
+      "ended": "became inactive during"
+    }
   },
   {
     "kind": "created_during",
@@ -404,7 +516,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was created during",
+      "ended": "was destroyed during"
+    }
   },
   {
     "kind": "participant_in",
@@ -415,7 +531,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "participated in",
+      "ended": "withdrew from"
+    }
   },
   {
     "kind": "epicenter_of",
@@ -428,7 +548,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became the epicenter of",
+      "ended": "ceased being the epicenter of"
+    }
   },
   {
     "kind": "triggered_by",
@@ -439,7 +563,11 @@
     "dstKinds": [],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was triggered by",
+      "ended": "was resolved despite"
+    }
   },
   {
     "kind": "owned_by",
@@ -453,7 +581,11 @@
     ],
     "cullable": true,
     "decayRate": "slow",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "came into possession of",
+      "ended": "was lost by"
+    }
   },
   {
     "kind": "created_by",
@@ -467,7 +599,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was created by",
+      "ended": "was disowned by"
+    }
   },
   {
     "kind": "stored_at",
@@ -480,7 +616,11 @@
     ],
     "cullable": true,
     "decayRate": "medium",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was stored at",
+      "ended": "was removed from"
+    }
   },
   {
     "kind": "empowered_by",
@@ -493,7 +633,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "positive"
+    "polarity": "positive",
+    "verbs": {
+      "formed": "became empowered by",
+      "ended": "lost empowerment from"
+    }
   },
   {
     "kind": "central_to",
@@ -506,7 +650,11 @@
     ],
     "cullable": true,
     "decayRate": "slow",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became central to",
+      "ended": "was removed from"
+    }
   },
   {
     "kind": "catalyst_of",
@@ -519,7 +667,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "catalyzed",
+      "ended": "was absolved of catalyzing"
+    }
   },
   {
     "kind": "occurred_at",
@@ -532,7 +684,11 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "occurred at",
+      "ended": "concluded at"
+    }
   },
   {
     "kind": "instigated_by",
@@ -546,6 +702,27 @@
     ],
     "cullable": false,
     "decayRate": "none",
-    "polarity": "neutral"
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was instigated by",
+      "ended": "was disavowed by"
+    }
+  },
+  {
+    "kind": "blessed_by",
+    "description": "Blessed By",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "artifact"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "was blessed by",
+      "ended": "lost the blessing of"
+    }
   }
 ]

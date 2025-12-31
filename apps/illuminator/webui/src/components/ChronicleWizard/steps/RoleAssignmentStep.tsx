@@ -13,7 +13,6 @@ import type { StoryNarrativeStyle, DocumentNarrativeStyle, RoleDefinition } from
 import { useWizard } from '../WizardContext';
 import {
   validateRoleAssignments,
-  findEraForTick,
   type EntitySelectionMetrics,
 } from '../../../lib/chronicle/selectionWizard';
 import { getEntityUsageStats } from '../../../lib/chronicleStorage';
@@ -33,6 +32,11 @@ function getRoles(style: { format: string } | null | undefined): RoleDefinition[
   }
   const docStyle = style as DocumentNarrativeStyle;
   return docStyle.roles || [];
+}
+
+function resolveEntityEraId(entity: { eraId?: string } | null): string | undefined {
+  if (!entity) return undefined;
+  return typeof entity.eraId === 'string' && entity.eraId ? entity.eraId : undefined;
 }
 
 export default function RoleAssignmentStep() {
@@ -102,7 +106,8 @@ export default function RoleAssignmentStep() {
   // Get era name for selected entity
   const selectedEntityEra = useMemo(() => {
     if (!selectedEntity || eras.length === 0) return undefined;
-    const era = findEraForTick(selectedEntity.createdAt, eras);
+    const entityEraId = resolveEntityEraId(selectedEntity);
+    const era = entityEraId ? eras.find(e => e.id === entityEraId) : undefined;
     return era?.name;
   }, [selectedEntity, eras]);
 

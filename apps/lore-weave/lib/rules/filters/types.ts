@@ -5,7 +5,7 @@
  * This is the single source of truth - other modules import from here.
  */
 
-import type { Prominence } from '../../core/worldTypes';
+import type { ProminenceLabel } from '../types';
 
 // =============================================================================
 // GRAPH PATH TYPES (used by graph_path filter)
@@ -155,7 +155,7 @@ export interface HasStatusFilter {
 
 export interface HasProminenceFilter {
   type: 'has_prominence';
-  minProminence: Prominence;
+  minProminence: ProminenceLabel;
 }
 
 /**

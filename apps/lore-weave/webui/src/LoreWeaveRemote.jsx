@@ -164,6 +164,7 @@ export default function LoreWeaveRemote({
             pressures={pressures}
             systems={systems}
             actions={actions}
+            seedEntities={seedEntities}
           />
         );
       case 'run':

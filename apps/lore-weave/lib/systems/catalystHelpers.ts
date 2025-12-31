@@ -188,8 +188,8 @@ export function initializeCatalyst(
  * @param graph - Graph (used for context)
  */
 export function initializeCatalystSmart(entity: HardState): void {
-  // Only prominent entities can act
-  if (!['recognized', 'renowned', 'mythic'].includes(entity.prominence)) {
+  // Only prominent entities can act (prominence >= 2.0 = recognized or higher)
+  if (entity.prominence < 2.0) {
     return;
   }
 

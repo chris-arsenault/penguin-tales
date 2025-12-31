@@ -8,7 +8,7 @@ import { HardState } from '../../core/worldTypes';
 import { hasTag, pickRandom } from '../../utils';
 import type { RuleContext } from '../context';
 import { applySelectionFilters } from '../filters';
-import { normalizeDirection, prominenceIndex, PROMINENCE_ORDER } from '../types';
+import { normalizeDirection, prominenceIndex, prominenceThreshold, ProminenceLabel } from '../types';
 import type {
   EntitySelectionCriteria,
   SelectionRule,
@@ -425,10 +425,10 @@ export function selectEntities(
     }
 
     case 'by_prominence': {
-      const minIndex = PROMINENCE_ORDER.indexOf(rule.minProminence || 'marginal');
+      const minLabel = (rule.minProminence || 'marginal') as ProminenceLabel;
+      const minThreshold = prominenceThreshold(minLabel);
       entities = getCandidatesByKind().filter((e) => {
-        const entityIndex = PROMINENCE_ORDER.indexOf(e.prominence);
-        return entityIndex >= minIndex;
+        return e.prominence >= minThreshold;
       });
       pushTrace(trace, `prominence>=${rule.minProminence ?? 'marginal'}`, entities.length);
       break;
@@ -552,6 +552,108 @@ export function selectVariableEntities(
   }
 
   return applyPreferFilters(entities, select.preferFilters, ctx, trace);
+}
+
+/**
+ * Resolve a single variable selection.
+ *
+ * This is the core variable resolution function used by both templateInterpreter
+ * and thresholdTrigger systems.
+ *
+ * @param select - Variable selection rule
+ * @param ctx - Rule context with graph, resolver, and any bound entities
+ * @returns Single entity, array of entities, or undefined if no matches
+ */
+export function resolveSingleVariable(
+  select: VariableSelectionRule,
+  ctx: RuleContext
+): HardState | HardState[] | undefined {
+  const candidates = selectVariableEntities(select, ctx);
+
+  if (candidates.length === 0) {
+    return undefined;
+  }
+
+  const pickStrategy = select.pickStrategy ?? 'random';
+  const picked = applyPickStrategy(candidates, pickStrategy, select.maxResults);
+
+  if (pickStrategy === 'all' || (select.maxResults && select.maxResults > 1)) {
+    return picked;
+  }
+  return picked[0];
+}
+
+/**
+ * Variable definition for resolution.
+ */
+export interface VariableDefinitionForResolution {
+  select: VariableSelectionRule;
+  required?: boolean;
+}
+
+/**
+ * Resolve a set of variables for a given self entity.
+ *
+ * Variables are resolved in order, and each resolved variable becomes available
+ * to subsequent variable selections (allowing $var1 to reference $var2 if $var2
+ * was defined earlier).
+ *
+ * This is a convenience wrapper around resolveSingleVariable for systems that
+ * need to resolve all variables at once.
+ *
+ * @param variables - Map of variable names to definitions
+ * @param baseCtx - Base rule context (should have graph and resolver)
+ * @param self - The entity to bind as $self
+ * @returns Record of resolved variables, or null if any required variable couldn't be resolved
+ */
+export function resolveVariablesForEntity(
+  variables: Record<string, VariableDefinitionForResolution>,
+  baseCtx: RuleContext,
+  self: HardState
+): Record<string, HardState> | null {
+  const resolved: Record<string, HardState> = {};
+
+  // Create a resolver that can resolve $self and previously resolved variables
+  const createResolvingContext = (): RuleContext => ({
+    ...baseCtx,
+    self,
+    entities: { ...baseCtx.entities, self, ...resolved },
+    resolver: {
+      ...baseCtx.resolver,
+      resolveEntity: (ref: string): HardState | undefined => {
+        if (ref === '$self') return self;
+        if (ref.startsWith('$')) {
+          const name = ref.slice(1);
+          if (resolved[name]) return resolved[name];
+          if (name === 'self') return self;
+        }
+        return baseCtx.resolver.resolveEntity(ref);
+      },
+    },
+  });
+
+  // Resolve variables in order
+  for (const [varName, varDef] of Object.entries(variables)) {
+    // Strip leading $ from variable name for storage
+    const cleanName = varName.startsWith('$') ? varName.slice(1) : varName;
+
+    const ctx = createResolvingContext();
+    const result = resolveSingleVariable(varDef.select, ctx);
+
+    if (!result || (Array.isArray(result) && result.length === 0)) {
+      if (varDef.required) {
+        // Required variable not found - skip this entity
+        return null;
+      }
+      // Optional variable not found - continue without it
+      continue;
+    }
+
+    // For system variables, we only support single entities
+    resolved[cleanName] = Array.isArray(result) ? result[0] : result;
+  }
+
+  return resolved;
 }
 
 export * from './types';

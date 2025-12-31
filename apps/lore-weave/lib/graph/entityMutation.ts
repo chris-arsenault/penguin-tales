@@ -190,12 +190,24 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
   }
   const validCoords = { x: coords.x, y: coords.y, z: coords.z };
 
+  const currentEraEntity = entity.kind !== FRAMEWORK_ENTITY_KINDS.ERA
+    ? graph.findEntities({
+        kind: FRAMEWORK_ENTITY_KINDS.ERA,
+        status: FRAMEWORK_STATUS.CURRENT
+      })[0]
+    : undefined;
+  const explicitEraId = entity.eraId;
+  const resolvedEraId = typeof explicitEraId === 'string' && explicitEraId
+    ? explicitEraId
+    : (entity.kind === FRAMEWORK_ENTITY_KINDS.ERA ? entity.subtype : currentEraEntity?.id);
+
   const createdId = await graph.createEntity({
     id: entityId,
     kind: entity.kind,
     subtype: entity.subtype,
     coordinates: validCoords,
     tags,
+    eraId: resolvedEraId,
     name: entity.name,
     description: entity.description,
     status: entity.status,
@@ -208,20 +220,13 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
 
   // Create CREATED_DURING relationship to current era (unless entity is an era itself)
   // This is a framework-level temporal relationship distinct from spatial "originated_in"
-  if (entity.kind !== FRAMEWORK_ENTITY_KINDS.ERA) {
-    const currentEraEntity = graph.findEntities({
-      kind: FRAMEWORK_ENTITY_KINDS.ERA,
-      status: FRAMEWORK_STATUS.CURRENT
-    })[0];
-
-    if (currentEraEntity) {
-      graph.addRelationship(
-        FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING,
-        entityId,
-        currentEraEntity.id,
-        FRAMEWORK_RELATIONSHIP_PROPERTIES[FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING].defaultStrength
-      );
-    }
+  if (entity.kind !== FRAMEWORK_ENTITY_KINDS.ERA && currentEraEntity) {
+    graph.addRelationship(
+      FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING,
+      entityId,
+      currentEraEntity.id,
+      FRAMEWORK_RELATIONSHIP_PROPERTIES[FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING].defaultStrength
+    );
   }
 
   return createdId;

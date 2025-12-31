@@ -1,7 +1,7 @@
 import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
 import { HardState, Relationship } from '../core/worldTypes';
 import { WorldRuntime } from '../runtime/worldRuntime';
-import { getProminenceValue, rollProbability } from '../utils';
+import { rollProbability } from '../utils';
 import {
   createSystemContext,
   evaluateMetric,
@@ -125,7 +125,8 @@ function resolveThreshold(
     return threshold;
   }
   // prominence_scaled: (prominenceLevel + 1) * multiplier
-  const level = getProminenceValue(entity.prominence);
+  // entity.prominence is now numeric (0-5), use floor to get level index
+  const level = Math.floor(entity.prominence);
   return (level + 1) * multiplier;
 }
 

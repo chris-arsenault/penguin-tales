@@ -11,7 +11,6 @@ import {
   TemporalStats,
   FitnessMetrics
 } from '../statistics/types';
-import { getProminenceValue } from '../utils';
 import {
   calculateEntityKindCounts,
   calculateRatios,

@@ -50,8 +50,9 @@ export function createEraEntity(
     lockedSummary: true,              // Prevent enrichment from overwriting
     description: '',                  // LLM will generate via enrichment
     status: status,
-    prominence: 'mythic',  // Eras are always mythic (world-defining)
+    prominence: 5.0,  // Eras are always mythic (world-defining)
     culture: FRAMEWORK_CULTURES.WORLD,  // Eras are world-level entities
+    eraId: resolvedId,
     tags: {
       [FRAMEWORK_TAGS.TEMPORAL]: true,
       [FRAMEWORK_TAGS.ERA]: true,

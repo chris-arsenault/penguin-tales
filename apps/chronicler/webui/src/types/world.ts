@@ -5,7 +5,7 @@ import type {
   EntityKindDefinition,
   HistoryEvent,
   NarrativeEvent,
-  Prominence as CanonryProminence,
+  ProminenceLabel,
   SemanticCoordinates,
   SemanticRegion,
   Validation,
@@ -34,7 +34,7 @@ export type WorldState = Omit<CanonryWorldOutput, 'hardState'> & {
 };
 export type Relationship = CanonryWorldRelationship;
 export type WorldMetadata = CanonryWorldMetadata;
-export type Prominence = CanonryProminence;
+export type Prominence = ProminenceLabel;
 export type EntityKind = EntityKindDefinition['kind'];
 export type Point = SemanticCoordinates;
 export type Region = SemanticRegion;
@@ -127,7 +127,7 @@ export interface PageIndexEntry {
   // For entity pages
   entityKind?: string;
   entitySubtype?: string;
-  prominence?: string;
+  prominence?: number;
   culture?: string;
   // For static pages
   static?: {
@@ -197,6 +197,8 @@ export interface WikiPage {
   categories: string[];
   linkedEntities: string[];
   images: WikiImage[];
+  /** Raw narrative events for timeline display (entity pages) */
+  timelineEvents?: NarrativeEvent[];
   lastUpdated: number;
 }
 

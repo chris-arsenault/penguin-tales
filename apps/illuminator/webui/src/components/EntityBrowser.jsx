@@ -90,10 +90,34 @@ const PROMINENCE_OPTIONS = [
   { value: 'forgotten', label: 'Forgotten' },
 ];
 
+// Convert numeric prominence to display label
+function prominenceLabel(value) {
+  if (typeof value !== 'number') {
+    throw new Error(`prominenceLabel: expected number, got ${typeof value}: ${JSON.stringify(value)}`);
+  }
+  if (value < 1) return 'forgotten';
+  if (value < 2) return 'marginal';
+  if (value < 3) return 'recognized';
+  if (value < 4) return 'renowned';
+  return 'mythic';
+}
+
+// Convert prominence label to numeric threshold
+function prominenceThreshold(label) {
+  switch (label) {
+    case 'forgotten': return 0;
+    case 'marginal': return 1;
+    case 'recognized': return 2;
+    case 'renowned': return 3;
+    case 'mythic': return 4;
+    default: return 0;
+  }
+}
+
+// Check if numeric prominence meets minimum label threshold
 function prominenceAtLeast(prominence, minProminence) {
-  const idx = PROMINENCE_ORDER.indexOf(prominence);
-  const minIdx = PROMINENCE_ORDER.indexOf(minProminence);
-  return idx >= 0 && minIdx >= 0 && idx <= minIdx;
+  const minThreshold = prominenceThreshold(minProminence);
+  return prominence >= minThreshold;
 }
 
 function EnrichmentStatusBadge({ status, label, cost }) {
@@ -193,7 +217,7 @@ function EntityRow({
           {entity.name}
         </div>
         <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-          {entity.kind}/{entity.subtype} · {entity.prominence}
+          {entity.kind}/{entity.subtype} · {prominenceLabel(entity.prominence)}
           {entity.culture && ` · ${entity.culture}`}
         </div>
 
@@ -451,7 +475,7 @@ export default function EntityBrowser({
   const filteredEntities = useMemo(() => {
     return entities.filter((entity) => {
       if (filters.kind !== 'all' && entity.kind !== filters.kind) return false;
-      if (filters.prominence !== 'all' && entity.prominence !== filters.prominence) return false;
+      if (filters.prominence !== 'all' && prominenceLabel(entity.prominence) !== filters.prominence) return false;
       if (filters.culture !== 'all' && entity.culture !== filters.culture) return false;
 
       const descStatus = getStatus(entity, 'description');

@@ -85,7 +85,7 @@ export {
 
 // Seed data types
 export type {
-  Prominence,
+  ProminenceLabel,
   SemanticCoordinates,
   SeedEntity,
   SeedRelationship,
@@ -101,7 +101,10 @@ export type {
   NarrativeEvent,
   NarrativeEventKind,
   NarrativeEntityRef,
-  NarrativeStateChange,
+  EntityEffectType,
+  SemanticEffectKind,
+  EntityEffect,
+  ParticipantEffect,
   CoordinateState,
   DistributionMetrics,
   GraphMetrics,

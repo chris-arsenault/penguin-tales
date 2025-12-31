@@ -14,7 +14,6 @@ import {
   pickRandom,
   weightedRandom,
   findEntities,
-  getProminenceValue,
   hasTag
 } from '../utils';
 import { initializeCatalystSmart } from '../systems/catalystHelpers';
@@ -32,7 +31,7 @@ import { coordinateStats } from '../coordinates/coordinateStatistics';
 import { SimulationStatistics, ValidationStats } from '../statistics/types';
 import { FrameworkValidator } from './frameworkValidator';
 import { ContractEnforcer } from './contractEnforcer';
-import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS, FRAMEWORK_TAGS, FRAMEWORK_TAG_VALUES } from '@canonry/world-schema';
+import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS, FRAMEWORK_TAGS, FRAMEWORK_TAG_VALUES, type NarrativeEvent } from '@canonry/world-schema';
 import { createEraEntity } from '../systems/eraSpawner';
 import type {
   ISimulationEmitter,
@@ -43,7 +42,8 @@ import type {
 import { NameForgeService } from '../naming/nameForgeService';
 import type { NameGenerationService } from './types';
 import { createGrowthSystem, GrowthSystem, GrowthEpochSummary } from '../systems/growthSystem';
-import { StateChangeTracker, createDefaultNarrativeConfig, NarrativeEventBuilder } from '../narrative/index.js';
+import { StateChangeTracker, createDefaultNarrativeConfig } from '../narrative/index.js';
+import { MutationTracker } from '../narrative/mutationTracker.js';
 
 // Change detection functions moved to @illuminator/lib/engine/changeDetection.ts
 // EntitySnapshot interface and detect*Changes functions available there
@@ -128,6 +128,13 @@ export class WorldEngine {
   // Narrative event tracking (captures state changes for story generation)
   private stateChangeTracker: StateChangeTracker;
 
+  /**
+   * Mutation tracker for lineage tracking.
+   * Part of the unified lineage system - see lib/narrative/LINEAGE.md.
+   * Tracks execution context for entity/relationship creation and tag/field changes.
+   */
+  private mutationTracker: MutationTracker;
+
   private reachabilityComponents: number | null = null;
   private fullyConnectedTick: number | null = null;
 
@@ -150,6 +157,13 @@ export class WorldEngine {
     }
     this.emitter = config.emitter;
     this.config = config;
+
+    // Set prominence debug flags based on debug config
+    const prominenceDebugEnabled = config.debugConfig?.enabled &&
+      (config.debugConfig.enabledCategories.length === 0 ||
+       config.debugConfig.enabledCategories.includes('prominence'));
+    GraphStore.DEBUG_PROMINENCE = prominenceDebugEnabled ?? false;
+    StateChangeTracker.DEBUG_PROMINENCE = prominenceDebugEnabled ?? false;
 
     // Emit initializing progress
     this.emitter.progress({
@@ -280,14 +294,51 @@ export class WorldEngine {
     this.targetSelector = new TargetSelector();
     this.emitter.log('info', 'Intelligent target selection enabled (anti-super-hub)');
 
+    // Initialize mutation tracker (lineage system - see LINEAGE.md)
+    this.mutationTracker = new MutationTracker();
+
     // Initialize narrative event tracking
     const narrativeConfig = config.narrativeConfig || createDefaultNarrativeConfig();
-    this.stateChangeTracker = new StateChangeTracker(narrativeConfig);
+    this.stateChangeTracker = new StateChangeTracker(narrativeConfig, this.mutationTracker);
     this.stateChangeTracker.setSchema({
       relationshipKinds: config.schema.relationshipKinds,
       entityKinds: config.schema.entityKinds,
       tagRegistry: config.schema.tagRegistry,
     });
+
+    // Populate system and action display names for narrative descriptions
+    const sourceNames: Array<{ id: string; name: string }> = [];
+    for (const sys of config.systems) {
+      if ('systemType' in sys && sys.config) {
+        // DeclarativeSystem
+        const id = sys.config.id || sys.systemType;
+        const name = sys.config.name || id;
+        sourceNames.push({ id, name });
+      } else if ('id' in sys) {
+        // SimulationSystem
+        sourceNames.push({ id: sys.id, name: sys.name || sys.id });
+      }
+    }
+    // Also add action names (actions use type as ID, name as display name)
+    if (config.executableActions) {
+      for (const action of config.executableActions) {
+        sourceNames.push({ id: action.type, name: action.name || action.type });
+      }
+    }
+    // Also add template names for narrative attribution
+    if (config.templates) {
+      for (const template of config.templates) {
+        sourceNames.push({ id: template.id, name: template.name || template.id });
+      }
+    }
+    // Also add era names for narrative attribution
+    if (config.eras) {
+      for (const era of config.eras) {
+        sourceNames.push({ id: era.id, name: era.name || era.id });
+      }
+    }
+    this.stateChangeTracker.setSystemNames(sourceNames);
+
     if (narrativeConfig.enabled) {
       this.emitter.log('info', 'Narrative event tracking enabled', {
         minSignificance: narrativeConfig.minSignificance,
@@ -345,6 +396,8 @@ export class WorldEngine {
       statisticsCollector: this.statisticsCollector,
       emitter: this.emitter,
       stateChangeTracker: this.stateChangeTracker,
+      // LINEAGE: Pass mutation tracker so templates can set execution context
+      mutationTracker: this.mutationTracker,
       getPendingPressureModifications: () => this.pendingPressureModifications,
       trackPressureModification: this.trackPressureModification.bind(this),
       calculateGrowthTarget: () => this.calculateGrowthTarget(),
@@ -409,6 +462,8 @@ export class WorldEngine {
 
     // Initialize graph from initial state using GraphStore
     this.graph = GraphStore.create(config.eras[0], config.pressures);
+    // Set mutation tracker for lineage stamping (see LINEAGE.md)
+    this.graph.mutationTracker = this.mutationTracker;
     // LLM loreIndex moved to @illuminator
     // Override rate limit state defaults
     this.graph.rateLimitState = {
@@ -631,7 +686,7 @@ export class WorldEngine {
   }
 
   private computeReachabilityComponents(): { components: number; entityCount: number } {
-    const excludedKinds = new Set([
+    const excludedKinds: Set<string> = new Set([
       FRAMEWORK_ENTITY_KINDS.ERA,
       FRAMEWORK_ENTITY_KINDS.OCCURRENCE
     ]);
@@ -823,6 +878,8 @@ export class WorldEngine {
 
     // Recreate graph from initial state
     this.graph = GraphStore.create(this.config.eras[0], this.config.pressures);
+    // Set mutation tracker for lineage stamping (see LINEAGE.md)
+    this.graph.mutationTracker = this.mutationTracker;
     this.graph.rateLimitState = {
       currentThreshold: 0.3,
       lastCreationTick: -999,
@@ -980,9 +1037,10 @@ export class WorldEngine {
     const eraStartTick = currentEra.temporal.startTick;
 
     // Find prominent entities created during this era (include 'recognized' for better coverage)
+    // Prominence: 0-1=forgotten, 1-2=marginal, 2-3=recognized, 3-4=renowned, 4-5=mythic
     const allEntities = this.graph.getEntities();
     const prominentEntities = allEntities.filter(e =>
-      (e.prominence === 'recognized' || e.prominence === 'renowned' || e.prominence === 'mythic') &&
+      e.prominence >= 2.0 && // recognized or higher
       e.kind !== FRAMEWORK_ENTITY_KINDS.ERA &&
       e.createdAt >= eraStartTick
     );
@@ -991,11 +1049,8 @@ export class WorldEngine {
     const entitiesToLink = prominentEntities.length > 0
       ? prominentEntities
       : allEntities
-          .filter(e => (e.prominence === 'renowned' || e.prominence === 'mythic') && e.kind !== FRAMEWORK_ENTITY_KINDS.ERA)
-          .sort((a, b) => {
-            const prominenceOrder = { mythic: 3, renowned: 2, recognized: 1, marginal: 0, forgotten: 0 };
-            return (prominenceOrder[b.prominence] || 0) - (prominenceOrder[a.prominence] || 0);
-          });
+          .filter(e => e.prominence >= 3.0 && e.kind !== FRAMEWORK_ENTITY_KINDS.ERA) // renowned or higher
+          .sort((a, b) => b.prominence - a.prominence);
 
     // Link up to 10 most prominent entities
     let linkedCount = 0;
@@ -1352,12 +1407,13 @@ export class WorldEngine {
     });
 
     // Notable entities (mythic and renowned)
+    // Prominence thresholds: mythic >= 4.0, renowned >= 3.0 but < 4.0
     const mythic = entities
-      .filter(e => e.prominence === 'mythic')
+      .filter(e => e.prominence >= 4.0)
       .map(e => ({ id: e.id, name: e.name, kind: e.kind, subtype: e.subtype }));
 
     const renowned = entities
-      .filter(e => e.prominence === 'renowned')
+      .filter(e => e.prominence >= 3.0 && e.prominence < 4.0)
       .map(e => ({ id: e.id, name: e.name, kind: e.kind, subtype: e.subtype }));
 
     this.emitter.notableEntities({ mythic, renowned });
@@ -1557,7 +1613,7 @@ export class WorldEngine {
             relationship: deviation.relationship.score,
             connectivity: deviation.connectivity.score
           },
-          targets: this.config.distributionTargets?.global
+          targets: this.config.distributionTargets?.global as Record<string, unknown> | undefined
         };
       })() : undefined,
       coordinateState
@@ -1683,6 +1739,9 @@ export class WorldEngine {
     const relationshipsThisTick: Relationship[] = [];
     const modifiedEntityIds: string[] = [];
 
+    // Initialize mutation tracker for this tick (lineage system - see LINEAGE.md)
+    this.mutationTracker.setTick(this.graph.tick);
+
     // Initialize narrative tracking for this tick
     this.stateChangeTracker.startTick(this.graph, this.graph.tick, era.id);
 
@@ -1703,6 +1762,12 @@ export class WorldEngine {
       const modifier = distributionModifiers[system.id] ?? baseModifier;
 
       try {
+        // Enter execution context for lineage tracking (see LINEAGE.md)
+        // This stamps createdBy on any entities/relationships created during system execution
+        // IMPORTANT: Context must wrap ALL mutations including relationship/entity modifications
+        // applied from the result, not just the system.apply() call itself
+        this.mutationTracker.enterContext('system', system.id);
+
         const systemGraphView = this.runtime;
         const relationshipsBefore = this.graph.getRelationshipCount();
         const result = await system.apply(systemGraphView, modifier);
@@ -1725,6 +1790,7 @@ export class WorldEngine {
         }
 
         // Apply relationships with budget check
+        // Group by action context for proper narrative attribution
         let addedFromResult = 0;
         for (const rel of result.relationshipsAdded) {
           // Check budget
@@ -1732,6 +1798,12 @@ export class WorldEngine {
             this.logWarning(`⚠️  RELATIONSHIP BUDGET REACHED: ${budget}/tick`);
             this.logWarning(`   Remaining systems may not add relationships this tick`);
             break;
+          }
+
+          // Enter action-specific context if provided (for narrative attribution)
+          const hasActionContext = rel.actionContext && rel.actionContext.source === 'action';
+          if (hasActionContext) {
+            this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId);
           }
 
           const before = this.graph.getRelationshipCount();
@@ -1744,12 +1816,28 @@ export class WorldEngine {
             metric.relationshipsCreated++;
             addedFromResult++;
           }
+
+          // Exit action context if we entered one
+          if (hasActionContext) {
+            this.mutationTracker.exitContext();
+          }
         }
         totalRelationships += addedFromResult;
 
         if (result.relationshipsAdjusted && result.relationshipsAdjusted.length > 0) {
           for (const rel of result.relationshipsAdjusted) {
+            // Enter action-specific context if provided (for narrative attribution)
+            const hasActionContext = rel.actionContext && rel.actionContext.source === 'action';
+            if (hasActionContext) {
+              this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId);
+            }
+
             modifyRelationshipStrength(this.graph, rel.src, rel.dst, rel.kind, rel.delta);
+
+            // Exit action context if we entered one
+            if (hasActionContext) {
+              this.mutationTracker.exitContext();
+            }
           }
         }
 
@@ -1762,7 +1850,8 @@ export class WorldEngine {
         this.systemMetrics.set(system.id, metric);
 
         // Apply modifications
-        result.entitiesModified.forEach(mod => {
+        // Group by action context for proper narrative attribution
+        for (const mod of result.entitiesModified) {
           const changes = { ...mod.changes };
           if (changes.tags) {
             const entity = this.graph.getEntity(mod.id);
@@ -1781,19 +1870,33 @@ export class WorldEngine {
             }
           }
 
+          // Enter action-specific context if provided (for narrative attribution)
+          const hasActionContext = mod.actionContext && mod.actionContext.source === 'action';
+          if (hasActionContext) {
+            this.mutationTracker.enterContext(mod.actionContext!.source, mod.actionContext!.sourceId);
+          }
+
           // Track state changes for narrative events
           const entity = this.graph.getEntity(mod.id);
+
+          // Debug logging for prominence modifications
+          if (GraphStore.DEBUG_PROMINENCE && 'prominence' in changes && entity) {
+            console.log(`[PROMINENCE-FLOW] tick=${this.graph.tick} system=${system.id} entity=${entity.name} (${mod.id})`);
+            console.log(`  entity.prominence=${entity.prominence} changes.prominence=${changes.prominence}`);
+          }
+
           if (entity) {
-            this.stateChangeTracker.recordEntityChange(entity, changes, {
-              entityId: system.id,
-              actionType: system.name,
-            });
+            // Use action context for catalyst if available, fall back to system
+            const catalyst = mod.actionContext
+              ? { entityId: mod.actionContext.sourceId, actionType: mod.actionContext.sourceId }
+              : { entityId: system.id, actionType: system.name };
+
+            this.stateChangeTracker.recordEntityChange(entity, changes, catalyst);
 
             // Track tag changes for narrative events
             if (changes.tags) {
               const oldTags = entity.tags || {};
               const newTags = changes.tags;
-              const catalyst = { entityId: system.id, actionType: system.name };
 
               // Find added tags
               for (const [tag, value] of Object.entries(newTags)) {
@@ -1825,7 +1928,12 @@ export class WorldEngine {
 
           updateEntity(this.graph, mod.id, changes);
           modifiedEntityIds.push(mod.id);
-        });
+
+          // Exit action context if we entered one
+          if (hasActionContext) {
+            this.mutationTracker.exitContext();
+          }
+        }
 
         // Apply pressure changes and track for emitting
         for (const [pressure, delta] of Object.entries(result.pressureChanges)) {
@@ -1851,20 +1959,28 @@ export class WorldEngine {
               .find(e => e.kind === 'era' && e.name === eraTransition.toEra)?.id || ''
           );
           if (oldEra && newEra) {
-            const narrativeContext = {
+            // Build era transition event inline (no legacy builder needed)
+            const eraEvent: NarrativeEvent = {
+              id: `era-${this.graph.tick}-${Math.random().toString(36).substr(2, 9)}`,
               tick: this.graph.tick,
-              eraId: eraTransition.toEraId,
-              getEntity: (id: string) => this.graph.getEntity(id),
-              getEntityRelationships: (id: string) => this.graph.getEntityRelationships(id).map(r => ({
-                kind: r.kind, src: r.src, dst: r.dst
-              }))
+              era: newEra.id,
+              eventKind: 'era_transition',
+              significance: 0.95,
+              subject: { id: oldEra.id, name: oldEra.name, kind: oldEra.kind, subtype: oldEra.subtype },
+              action: 'ended',
+              participantEffects: [
+                {
+                  entity: { id: oldEra.id, name: oldEra.name, kind: oldEra.kind, subtype: oldEra.subtype },
+                  effects: [{ type: 'ended', description: 'era concluded' }],
+                },
+                {
+                  entity: { id: newEra.id, name: newEra.name, kind: newEra.kind, subtype: newEra.subtype },
+                  effects: [{ type: 'created', description: 'era began' }],
+                },
+              ],
+              description: `${oldEra.name} has run its course. The world enters a new era: ${newEra.name}.`,
+              narrativeTags: ['era', 'transition', 'historical', 'temporal'],
             };
-            const eventBuilder = new NarrativeEventBuilder(narrativeContext);
-            const eraEvent = eventBuilder.buildEraTransitionEvent(
-              oldEra,
-              newEra,
-              `${oldEra.name} has run its course`
-            );
             this.graph.narrativeHistory.push(eraEvent);
           }
         }
@@ -1899,7 +2015,13 @@ export class WorldEngine {
 
         totalModifications += result.entitiesModified.length;
 
+        // Exit context AFTER all mutations are applied (see LINEAGE.md)
+        // This ensures all relationships added and entities modified get proper lineage
+        this.mutationTracker.exitContext();
+
       } catch (error) {
+        // Ensure we exit context even on error (lineage system - see LINEAGE.md)
+        this.mutationTracker.exitContext();
         this.emitter.log('error', `System ${system.id} failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
@@ -1927,6 +2049,9 @@ export class WorldEngine {
     if (narrativeEvents.length > 0) {
       this.graph.narrativeHistory.push(...narrativeEvents);
     }
+
+    // Clear mutation tracker for next tick (lineage system - see LINEAGE.md)
+    this.mutationTracker.clear();
 
     // Monitor relationship growth rate
     this.monitorRelationshipGrowth();
@@ -2128,15 +2253,16 @@ export class WorldEngine {
 
   private pruneAndConsolidate(): void {
     // Mark very old, unconnected entities as 'forgotten'
+    // Forgotten is prominence < 1.0
     const allEntities = this.graph.getEntities();
     for (const entity of allEntities) {
-      if (entity.prominence === 'forgotten') continue;
+      if (entity.prominence < 1.0) continue; // already forgotten
 
       const age = this.graph.tick - entity.createdAt;
       const connections = this.graph.getEntityRelationships(entity.id).length;
 
       if (age > 50 && connections < 2) {
-        this.graph.updateEntity(entity.id, { prominence: 'forgotten' });
+        this.graph.updateEntity(entity.id, { prominence: 0.5 }); // set to forgotten
       }
     }
     

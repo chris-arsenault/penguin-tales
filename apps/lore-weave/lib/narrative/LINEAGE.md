@@ -58,63 +58,118 @@ interface WorldRelationship {
 - Survives serialization/deserialization
 - Enables queries like "show all entities created by template X"
 
-### 2. Transient Lineage (Tags & Field Changes)
+### 2. Transient Lineage (All Mutations)
 
-Tag changes and field mutations are tracked via MutationTracker during tick execution:
+ALL mutations are tracked via MutationTracker during tick execution:
 
 ```typescript
+type MutationType =
+  | 'entity_created'
+  | 'relationship_created'
+  | 'relationship_archived'
+  | 'tag_added'
+  | 'tag_removed'
+  | 'field_changed';
+
 interface TrackedMutation {
-  type: 'tag_added' | 'tag_removed' | 'field_changed';
+  type: MutationType;
   tick: number;
   context: ExecutionContext;
-  entityId: string;
-  data: { tag?: string; field?: string; oldValue?: any; newValue?: any };
+  data: EntityCreatedData | RelationshipCreatedData | TagChangeData | FieldChangeData | ...;
 }
 ```
 
-**Why transient?**
-- Tags/fields change frequently; storing full history would bloat state
-- Only needed for event generation within the same tick
+**Why track everything transiently?**
+- Enables grouping ALL changes by context for unified event generation
+- One source of truth for "what happened this tick"
 - Cleared at tick end after events are generated
 
 ## Unified Event Generation
 
-Despite hybrid storage, event generation sees a unified view:
+StateChangeTracker.flush() generates ONE event per execution context:
 
 ```typescript
 // StateChangeTracker.flush()
 
-// 1. Collect ALL mutations with lineage
-const mutations = this.collectMutationsWithLineage();
-//    - Entity creations: from graph, read entity.createdBy
-//    - Relationship creations: from graph, read relationship.createdBy
-//    - Tag/field changes: from MutationTracker
+// 1. Get all mutations grouped by context
+const contextGroups = mutationTracker.getMutationsByContext();
+// Returns Map<contextKey, ContextMutationGroup>
+// Each group has: entitiesCreated, relationshipsCreated, tagsAdded, fieldsChanged, etc.
 
-// 2. Group by execution context
-const byContext = groupBy(mutations, m => contextKey(m.context));
-
-// 3. Generate events per context
-for (const [key, contextMutations] of byContext) {
-  if (contextMutations[0].context.source === 'template') {
-    // Single rich event for template execution
-    this.emitTemplateEvent(contextMutations);
-  } else {
-    // System/action events - may still group related changes
-    this.emitSystemEvents(contextMutations);
-  }
+// 2. Generate ONE event per context
+for (const [key, group] of contextGroups) {
+  const event = buildEventForContext(group);
+  // Template context → creation_batch event
+  // System context → system_action event
+  // Action context → action_executed event
 }
 ```
 
+### Event Type Selection
+
+| Context Source | Event Kind | Description |
+|---------------|------------|-------------|
+| `template` | `creation_batch` | Entities created with initial relationships/tags |
+| `system` | `state_change` | System modified entities/relationships |
+| `action` | `state_change` | Agent action executed |
+| `framework` | `state_change` | Framework/initialization operation |
+
+### Rich Event Content
+
+Each context-based event contains:
+- All entities created in that context
+- All relationships created/archived
+- All tag changes
+- All field changes
+- Computed significance based on impact
+- Descriptive headline summarizing what happened
+
+## Context Stack (Nested Execution)
+
+Execution contexts naturally form a hierarchy. A system may run templates, a template may trigger actions:
+
+```
+system:framework-growth
+  └─ template:hero_emergence    ← entities created here get this context
+       └─ action:declare_war    ← relationships created here get this context
+```
+
+MutationTracker uses a **stack** to track nested contexts. The innermost (most specific) context
+is what gets stamped on created entities/relationships:
+
+```typescript
+// WorldEngine enters system context
+mutationTracker.enterContext('system', 'framework-growth');
+// Stack: [system:framework-growth]
+
+// GrowthSystem enters template context
+mutationTracker.enterContext('template', 'hero_emergence');
+// Stack: [system:framework-growth, template:hero_emergence]
+
+// Entity created → createdBy: { source: 'template', sourceId: 'hero_emergence' }
+
+// Template exits
+mutationTracker.exitContext();
+// Stack: [system:framework-growth]
+
+// System exits
+mutationTracker.exitContext();
+// Stack: []
+```
+
+This gives us specific attribution ("created by template:hero_emergence") rather than
+vague attribution ("created by system:framework-growth").
+
 ## Design Principles
 
-1. **Single Source of Truth for Context**
-   - WorldEngine manages the current ExecutionContext
-   - All mutation paths read from this single source
-   - No passing context through 10 layers of function calls
+1. **Context Stack for Nested Execution**
+   - MutationTracker maintains a stack of contexts
+   - Innermost context (top of stack) is used for stamping
+   - Supports arbitrary nesting: system → template → action
 
 2. **Fail-Safe Default**
-   - If context is missing, mutations still work (backward compatible)
-   - Events will be generated with source='unknown'
+   - If context stack is empty, mutations still work (backward compatible)
+   - Events will be generated with source='framework', sourceId='unknown'
    - Prefer noisy events over lost data
 
 3. **Lineage is Metadata, Not Logic**
@@ -130,12 +185,12 @@ for (const [key, contextMutations] of byContext) {
 ## File Locations
 
 - `packages/world-schema/src/world.ts` - ExecutionContext type, createdBy on entities/relationships
-- `apps/lore-weave/lib/narrative/mutationTracker.ts` - Transient tag/field tracking
+- `apps/lore-weave/lib/narrative/mutationTracker.ts` - Transient tag/field tracking + context stack
 - `apps/lore-weave/lib/narrative/stateChangeTracker.ts` - Unified event generation
-- `apps/lore-weave/lib/engine/worldEngine.ts` - Context management
+- `apps/lore-weave/lib/engine/worldEngine.ts` - System-level context management
+- `apps/lore-weave/lib/systems/growthSystem.ts` - Template-level context management
 
 ## Future Considerations
 
-- **Nested contexts**: Actions triggered by systems could have parent context
 - **Context inheritance**: Child entities could inherit parent's creation context
 - **Lineage queries**: "Show causal chain for this entity's current state"

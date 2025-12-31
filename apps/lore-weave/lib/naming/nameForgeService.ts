@@ -14,6 +14,7 @@ import {
   type Grammar,
   type Profile,
 } from 'name-forge';
+import type { CultureDefinition } from '@canonry/world-schema';
 
 // Re-export name-forge types for external use
 export type {
@@ -94,7 +95,7 @@ export class NameForgeService {
    * @param emitter - Optional emitter for logging (uses console if not provided)
    */
   constructor(
-    cultures: Culture[],
+    cultures: CultureDefinition[],
     emitter?: { log: (level: 'debug' | 'info' | 'warn' | 'error', message: string, context?: Record<string, unknown>) => void }
   ) {
     // Set up logging - use emitter if provided, otherwise console
@@ -123,14 +124,15 @@ export class NameForgeService {
       }
 
       // Transform to name-forge Culture format
+      // The CultureNamingData from world-schema is compatible with name-forge types
       this.cultures[culture.id] = {
         id: culture.id,
         name: culture.name,
         description: culture.description,
-        domains: culture.naming.domains,
-        lexemeLists: culture.naming.lexemeLists,
-        grammars: culture.naming.grammars,
-        profiles: culture.naming.profiles,
+        domains: culture.naming.domains as NamingDomain[],
+        lexemeLists: culture.naming.lexemeLists as Record<string, LexemeList>,
+        grammars: culture.naming.grammars as Grammar[],
+        profiles: culture.naming.profiles as Profile[],
       };
     }
 

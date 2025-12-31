@@ -4,7 +4,7 @@
  * Types for statistics collection, distribution tracking, and fitness evaluation.
  */
 
-import { Prominence } from '../core/worldTypes';
+import { ProminenceLabel } from '../core/worldTypes';
 
 // ============================================================================
 // EPOCH AND DISTRIBUTION STATS
@@ -40,7 +40,7 @@ export interface DistributionStats {
   entityKindRatios: Record<string, number>;
   entityKindDeviation: number;
 
-  // Prominence distribution
+  // ProminenceLabel distribution
   prominenceRatios: Record<string, number>;
   prominenceDeviation: number;
 
@@ -225,7 +225,7 @@ export interface GlobalTargets {
     type: 'normal' | 'uniform' | 'powerlaw';
     mean?: string;
     stdDev?: number;
-    targets: Record<Prominence, number>;
+    targets: Record<ProminenceLabel, number>;
     perKind?: {
       enabled: boolean;
       comment?: string;
@@ -270,7 +270,7 @@ export interface GlobalTargets {
 export interface EraTargetOverrides {
   comment?: string;
   entityKindDistribution?: Partial<Record<string, number | string>>;
-  prominenceDistribution?: Partial<Record<Prominence | string, number | string>>;
+  prominenceDistribution?: Partial<Record<ProminenceLabel | string, number | string>>;
   relationshipDistribution?: {
     preferredTypes?: string[];
     preferredRatio?: number;
@@ -306,9 +306,9 @@ export interface DistributionState {
   totalEntities: number;
   entityKindCounts: Record<string, number>;
   entityKindRatios: Record<string, number>;
-  prominenceCounts: Record<Prominence, number>;
-  prominenceRatios: Record<Prominence, number>;
-  prominenceByKind: Record<string, Record<Prominence, number>>;
+  prominenceCounts: Record<ProminenceLabel, number>;
+  prominenceRatios: Record<ProminenceLabel, number>;
+  prominenceByKind: Record<string, Record<ProminenceLabel, number>>;
   relationshipTypeCounts: Record<string, number>;
   relationshipTypeRatios: Record<string, number>;
   relationshipCategoryCounts: Record<string, number>;
@@ -334,8 +334,8 @@ export interface DeviationScore {
   };
   prominence: {
     score: number;
-    deviations: Record<Prominence, number>;
-    byKind?: Record<string, Record<Prominence, number>>;
+    deviations: Record<ProminenceLabel, number>;
+    byKind?: Record<string, Record<ProminenceLabel, number>>;
   };
   relationship: {
     score: number;

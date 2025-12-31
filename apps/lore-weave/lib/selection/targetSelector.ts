@@ -12,8 +12,9 @@
  */
 
 import { Graph } from '../engine/types';
-import { HardState, Relationship, Prominence } from '../core/worldTypes';
+import { HardState, Relationship, ProminenceLabel } from '../core/worldTypes';
 import { findEntities, hasTag } from '../utils';
+import { prominenceLabel } from '../rules/types';
 
 /**
  * Selection bias configuration - defines preferences and penalties
@@ -28,7 +29,7 @@ export interface SelectionBias {
     tags?: string[];
 
     /** Preferred prominence levels */
-    prominence?: Prominence[];
+    prominence?: ProminenceLabel[];
 
     /** Same location as reference entity (for local recruitment) */
     sameLocationAs?: string; // Entity ID
@@ -269,7 +270,7 @@ export class TargetSelector {
       }
 
       // Prominence preference
-      if (bias.prefer.prominence?.includes(entity.prominence)) {
+      if (bias.prefer.prominence?.includes(prominenceLabel(entity.prominence))) {
         score *= boost;
       }
 

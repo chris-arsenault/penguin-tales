@@ -9,7 +9,7 @@
  * All mutations use `type` as the discriminant field.
  */
 
-import type { Direction, Prominence } from '../types';
+import type { Direction } from '../types';
 import type { Condition } from '../conditions/types';
 
 /**
@@ -204,8 +204,8 @@ export interface AdjustProminenceMutation {
   type: 'adjust_prominence';
   /** Entity reference */
   entity: string;
-  /** Direction: 'up' or 'down' */
-  direction: 'up' | 'down';
+  /** Delta to apply (positive = increase, negative = decrease) */
+  delta: number;
 }
 
 // =============================================================================
@@ -275,7 +275,7 @@ export interface EntityModification {
   /** Changes to apply */
   changes: {
     status?: string;
-    prominence?: Prominence;
+    prominence?: number;
     tags?: Record<string, string | boolean>;
   };
 }

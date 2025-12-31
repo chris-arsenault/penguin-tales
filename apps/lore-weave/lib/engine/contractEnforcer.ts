@@ -32,7 +32,9 @@ export class ContractEnforcer {
   private registry: TagMetadata[];
 
   constructor(private config: EngineConfig) {
-    this.registry = config.schema.tagRegistry || [];
+    // TagDefinition from schema is looser than TagMetadata; filter to valid entries
+    this.registry = (config.schema.tagRegistry || [])
+      .filter((t): t is TagMetadata => t.category !== undefined) as TagMetadata[];
     this.tagAnalyzer = new TagHealthAnalyzer(this.registry);
   }
 

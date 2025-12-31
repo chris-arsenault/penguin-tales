@@ -23,7 +23,6 @@ import type {
   HardState,
   LoreRecord,
   DisambiguationEntry,
-  NarrativeEvent,
   Region,
 } from '../types/world.ts';
 import type { ChronicleRecord } from './chronicleStorage.ts';
@@ -89,6 +88,22 @@ export function buildWikiPages(
 }
 
 /**
+ * Convert numeric prominence (0-5) to display label.
+ */
+function prominenceLabel(value: number): string {
+  if (typeof value !== 'number') {
+    throw new Error(
+      `prominenceLabel: expected number (0-5), got ${typeof value}: ${JSON.stringify(value)}`
+    );
+  }
+  if (value < 1) return 'forgotten';
+  if (value < 2) return 'marginal';
+  if (value < 3) return 'recognized';
+  if (value < 4) return 'renowned';
+  return 'mythic';
+}
+
+/**
  * Parse namespace and base name from a page title
  * e.g., "Cultures:Aurora Stack" -> { namespace: "Cultures", baseName: "Aurora Stack" }
  *       "Aurora Stack" -> { namespace: undefined, baseName: "Aurora Stack" }
@@ -102,16 +117,6 @@ function parseNamespace(title: string): { namespace?: string; baseName: string }
     };
   }
   return { baseName: title };
-}
-
-/**
- * Get all regions (seed + emergent) for a given entity kind
- */
-function getAllRegions(worldData: WorldState, entityKind: string): Region[] {
-  const kindDef = worldData.schema.entityKinds.find(k => k.kind === entityKind);
-  const seedRegions = kindDef?.semanticPlane?.regions ?? [];
-  const emergentRegions = worldData.coordinateState?.emergentRegions?.[entityKind] ?? [];
-  return [...seedRegions, ...emergentRegions];
 }
 
 /**
@@ -1045,17 +1050,20 @@ function buildEntityPage(
     });
   }
 
-  // Timeline section (narrative events)
-  if (worldData.narrativeHistory && worldData.narrativeHistory.length > 0) {
-    const timelineContent = formatNarrativeEvents(entity.id, worldData.narrativeHistory, worldData);
-    if (timelineContent) {
-      sections.push({
-        id: `section-${sectionIndex++}`,
-        heading: 'Timeline',
-        level: 2,
-        content: timelineContent,
-      });
-    }
+  // Timeline events (raw events for EntityTimeline component)
+  // Filter events where this entity appears in participantEffects
+  const timelineEvents = (worldData.narrativeHistory ?? []).filter(event =>
+    event.participantEffects?.some(p => p.entity.id === entity.id)
+  );
+
+  // Add Timeline section placeholder if there are events
+  if (timelineEvents.length > 0) {
+    sections.push({
+      id: `section-${sectionIndex++}`,
+      heading: 'Timeline',
+      level: 2,
+      content: '', // Content rendered by EntityTimeline component
+    });
   }
 
   // Build infobox
@@ -1083,6 +1091,7 @@ function buildEntityPage(
     images: imageIndex.has(entity.id)
       ? [{ entityId: entity.id, path: imageIndex.get(entity.id)!, caption: entity.name }]
       : [],
+    timelineEvents: timelineEvents.length > 0 ? timelineEvents : undefined,
     lastUpdated: entity.updatedAt || entity.createdAt,
   };
 }
@@ -1208,69 +1217,6 @@ function formatRelationships(
 }
 
 /**
- * Format narrative events for display as a table
- */
-function formatNarrativeEvents(
-  entityId: string,
-  narrativeEvents: NarrativeEvent[],
-  worldData: WorldState
-): string {
-  // Find events where this entity is subject, object, or participant
-  const relevantEvents = narrativeEvents.filter(event => {
-    if (event.subject.id === entityId) return true;
-    if (event.object?.id === entityId) return true;
-    if (event.participants?.some(p => p.id === entityId)) return true;
-    return false;
-  });
-
-  if (relevantEvents.length === 0) return '';
-
-  // Sort by tick (chronological order)
-  const sorted = [...relevantEvents].sort((a, b) => a.tick - b.tick);
-
-  const entityMap = new Map(worldData.hardState.map(e => [e.id, e]));
-
-  // Build table
-  const lines: string[] = [];
-  lines.push('| Tick | Era | Event |');
-  lines.push('|------|-----|-------|');
-
-  for (const event of sorted) {
-    let headline = event.headline;
-
-    // Wiki-link the subject if not the current entity
-    if (event.subject.id !== entityId) {
-      const subjectEntity = entityMap.get(event.subject.id);
-      if (subjectEntity) {
-        headline = headline.replace(
-          new RegExp(`\\b${escapeRegex(event.subject.name)}\\b`, 'i'),
-          `[[${subjectEntity.name}]]`
-        );
-      }
-    }
-
-    // Wiki-link the object if present and not the current entity
-    if (event.object && event.object.id !== entityId) {
-      const objectEntity = entityMap.get(event.object.id);
-      if (objectEntity) {
-        headline = headline.replace(
-          new RegExp(`\\b${escapeRegex(event.object.name)}\\b`, 'i'),
-          `[[${objectEntity.name}]]`
-        );
-      }
-    }
-
-    // Look up era name from entity map
-    const eraEntity = entityMap.get(event.era);
-    const eraName = eraEntity ? eraEntity.name : event.era;
-
-    lines.push(`| ${event.tick} | ${eraName} | ${headline} |`);
-  }
-
-  return lines.join('\n');
-}
-
-/**
  * Build infobox for an entity
  */
 function buildEntityInfobox(
@@ -1285,7 +1231,7 @@ function buildEntityInfobox(
     fields.push({ label: 'Subtype', value: entity.subtype });
   }
   fields.push({ label: 'Status', value: entity.status });
-  fields.push({ label: 'Prominence', value: entity.prominence });
+  fields.push({ label: 'Prominence', value: prominenceLabel(entity.prominence) });
   if (entity.culture) {
     fields.push({ label: 'Culture', value: entity.culture });
   }
@@ -1359,7 +1305,7 @@ function buildEntityCategories(entity: HardState, worldData: WorldState): string
   }
 
   // By prominence
-  categories.push(`prominence-${entity.prominence}`);
+  categories.push(`prominence-${prominenceLabel(entity.prominence)}`);
 
   // By status
   categories.push(`status-${entity.status}`);

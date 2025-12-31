@@ -10,7 +10,7 @@ import { SelectionFilter } from './types';
 import { hasTag, getTagValue } from '../../utils';
 import { EntityResolver } from '../resolver';
 import { evaluateGraphPath } from '../graphPath';
-import { PROMINENCE_ORDER } from '../types';
+import { prominenceThreshold } from '../types';
 
 /**
  * Apply a list of selection filters to entities.
@@ -133,12 +133,8 @@ export function applySelectionFilter(
     }
 
     case 'has_prominence': {
-      const minIndex = PROMINENCE_ORDER.indexOf(filter.minProminence);
-      if (minIndex === -1) return entities;
-      return entities.filter(e => {
-        const entityIndex = PROMINENCE_ORDER.indexOf(e.prominence);
-        return entityIndex >= minIndex;
-      });
+      const minValue = prominenceThreshold(filter.minProminence);
+      return entities.filter(e => e.prominence >= minValue);
     }
 
     case 'shares_related': {

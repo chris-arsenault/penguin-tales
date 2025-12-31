@@ -34,8 +34,6 @@ export {
   findEntities,
   getRelated,
   hasRelationship,
-  getProminenceValue,
-  adjustProminence,
   getConnectionWeight
 } from '../graph/entityQueries';
 export type { RelationshipQueryOptions } from '../graph/entityQueries';

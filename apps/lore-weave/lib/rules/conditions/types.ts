@@ -10,7 +10,7 @@
  * All conditions use `type` as the discriminant field.
  */
 
-import type { ComparisonOperator, Direction } from '../types';
+import type { ComparisonOperator, Direction, ProminenceLabel } from '../types';
 import type { GraphPathAssertion } from '../../engine/declarativeTypes';
 
 /**
@@ -194,8 +194,8 @@ export interface StatusCondition {
  */
 export interface ProminenceCondition {
   type: 'prominence';
-  min?: string; // Minimum prominence level
-  max?: string; // Maximum prominence level
+  min?: ProminenceLabel; // Minimum prominence level
+  max?: ProminenceLabel; // Maximum prominence level
 }
 
 // =============================================================================
