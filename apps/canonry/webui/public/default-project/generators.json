@@ -4300,6 +4300,10 @@
       ],
       "filters": [
         {
+          "type": "not_has_culture",
+          "culture": "orca"
+        },
+        {
           "type": "graph_path",
           "assert": {
             "check": "count_max",
@@ -5433,6 +5437,10 @@
         }
       ],
       "filters": [
+        {
+          "type": "not_has_culture",
+          "culture": "orca"
+        },
         {
           "type": "graph_path",
           "assert": {

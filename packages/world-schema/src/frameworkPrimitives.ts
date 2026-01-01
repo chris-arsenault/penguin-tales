@@ -54,6 +54,7 @@ export const FRAMEWORK_STATUS = {
   HISTORICAL: 'historical',
   CURRENT: 'current',
   FUTURE: 'future',
+  SUBSUMED: 'subsumed',
 } as const;
 
 export type FrameworkStatus = typeof FRAMEWORK_STATUS[keyof typeof FRAMEWORK_STATUS];

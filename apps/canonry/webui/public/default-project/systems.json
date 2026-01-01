@@ -16,7 +16,7 @@
       "name": "Era Progression",
       "description": "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future → current → historical.",
       "prominenceSnapshot": {
-        "enabled": true,
+        "enabled": false,
         "minProminence": "renowned"
       }
     },
@@ -199,17 +199,29 @@
         {
           "condition": {
             "operator": ">=",
-            "threshold": 3.5
+            "threshold": 3.0
           },
-          "probability": 0.5,
+          "probability": 0.8,
           "action": {
             "type": "adjust_prominence",
-            "delta": 0.15,
+            "delta": 0.35,
+            "entity": "$self"
+          }
+        },
+        {
+          "condition": {
+            "operator": ">=",
+            "threshold": 2.0
+          },
+          "probability": 0.6,
+          "action": {
+            "type": "adjust_prominence",
+            "delta": 0.2,
             "entity": "$self"
           }
         }
       ],
-      "throttleChance": 0.2,
+      "throttleChance": 0.1,
       "selection": {
         "strategy": "by_kind",
         "kind": "any"
@@ -772,7 +784,7 @@
     "config": {
       "id": "magic_school_formation",
       "name": "Magic School Formation",
-      "description": "Clusters magic abilities into unified schools to create narrative density",
+      "description": "Clusters magic abilities into unified schools. Only top practitioners by prominence become 'masters' with direct links to the meta-ability.",
       "runAtEpochEnd": true,
       "clustering": {
         "minSize": 5,
@@ -814,6 +826,16 @@
         "additionalTags": [],
         "descriptionTemplate": "A unified tradition encompassing {names}. Formed from {count} related abilities practiced by multiple penguins."
       },
+      "masterSelection": {
+        "filters": [
+          { "type": "matches_culture", "with": "$meta" }
+        ],
+        "pickStrategy": "weighted",
+        "maxResults": 2
+      },
+      "memberUpdates": [
+        { "type": "change_status", "entity": "$member", "newStatus": "subsumed" }
+      ],
       "postProcess": {
         "pressureChanges": {
           "security": 2
@@ -824,6 +846,9 @@
         "kind": "abilities",
         "subtypes": [
           "magic"
+        ],
+        "filters": [
+          { "type": "lacks_tag", "tag": "meta-entity" }
         ]
       }
     },
@@ -834,7 +859,7 @@
     "config": {
       "id": "combat_technique_formation",
       "name": "Combat Technique Formation",
-      "description": "Clusters combat abilities into unified fighting styles",
+      "description": "Clusters combat abilities into unified fighting styles. Only top practitioners by prominence become 'masters' with direct links to the meta-ability.",
       "runAtEpochEnd": true,
       "clustering": {
         "minSize": 5,
@@ -878,6 +903,16 @@
         ],
         "descriptionTemplate": "A unified combat tradition encompassing {names}. Mastered by warriors who practice {count} techniques in harmony."
       },
+      "masterSelection": {
+        "filters": [
+          { "type": "matches_culture", "with": "$meta" }
+        ],
+        "pickStrategy": "weighted",
+        "maxResults": 2
+      },
+      "memberUpdates": [
+        { "type": "change_status", "entity": "$member", "newStatus": "subsumed" }
+      ],
       "postProcess": {
         "pressureChanges": {
           "security": 2
@@ -888,6 +923,9 @@
         "kind": "abilities",
         "subtypes": [
           "combat"
+        ],
+        "filters": [
+          { "type": "lacks_tag", "tag": "meta-entity" }
         ]
       }
     },
@@ -1567,7 +1605,7 @@
   {
     "systemType": "thresholdTrigger",
     "config": {
-      "id": "control_collapse",
+      "id": "control_coreview llapse",
       "name": "Control Collapse",
       "description": "When a faction's control over a location weakens below threshold, they lose control entirely",
       "conditions": [

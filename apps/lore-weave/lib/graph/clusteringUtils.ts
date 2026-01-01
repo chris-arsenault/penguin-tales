@@ -247,6 +247,7 @@ export function detectClusters(
 export function filterClusterableEntities(entities: HardState[]): HardState[] {
   return entities.filter(e =>
     e.status !== FRAMEWORK_STATUS.HISTORICAL &&
+    e.status !== FRAMEWORK_STATUS.SUBSUMED &&
     !hasTag(e.tags, FRAMEWORK_TAGS.META_ENTITY)
   );
 }

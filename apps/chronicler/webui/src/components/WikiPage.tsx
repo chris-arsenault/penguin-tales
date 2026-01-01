@@ -14,6 +14,7 @@ import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata,
 import { SeedModal, type ChronicleSeedData } from './ChronicleSeedViewer.tsx';
 import { applyWikiLinks } from '../lib/wikiBuilder.ts';
 import EntityTimeline from './EntityTimeline.tsx';
+import ProminenceTimeline from './ProminenceTimeline.tsx';
 
 // Convert numeric prominence (0-5) to display label
 function prominenceLabel(value: number): string {
@@ -1251,12 +1252,20 @@ export default function WikiPageView({
             <div key={section.id} id={section.id} style={styles.section}>
               <h2 style={styles.sectionHeading}>{section.heading}</h2>
               {section.heading === 'Timeline' && page.timelineEvents && page.timelineEvents.length > 0 ? (
-                <EntityTimeline
-                  events={page.timelineEvents}
-                  entityId={page.id}
-                  entityIndex={entityIndex}
-                  onNavigate={handleEntityClick}
-                />
+                <>
+                  {/* Prominence Timeline graph - shows prominence changes over time */}
+                  <ProminenceTimeline
+                    events={page.timelineEvents}
+                    entityId={page.id}
+                  />
+                  {/* Entity Timeline table - shows discrete events (excluding prominence-only) */}
+                  <EntityTimeline
+                    events={page.timelineEvents}
+                    entityId={page.id}
+                    entityIndex={entityIndex}
+                    onNavigate={handleEntityClick}
+                  />
+                </>
               ) : (
                 <SectionWithImages
                   section={section}

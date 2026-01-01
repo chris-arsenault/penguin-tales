@@ -1086,7 +1086,9 @@ export class StateChangeTracker {
       }
       if (kindCounts.size === 1) {
         const [kind, count] = [...kindCounts.entries()][0];
-        parts.push(`${count} ${kind} relationship${count > 1 ? 's' : ''} formed`);
+        // Format relationship kind: replace underscores with spaces for readability
+        const formattedKind = kind.replace(/_/g, ' ');
+        parts.push(`${count} ${formattedKind} relationship${count > 1 ? 's' : ''} formed`);
       } else {
         parts.push(`${relationshipFormedCount} relationships formed`);
       }
@@ -1099,7 +1101,9 @@ export class StateChangeTracker {
     if (tagGainedCount > 0) {
       const uniqueTags = [...new Set(tagsAdded.map(t => t.tag))];
       if (uniqueTags.length <= 2) {
-        parts.push(`gained ${uniqueTags.join(', ')}`);
+        // Format tag names: replace underscores with spaces for readability
+        const formatted = uniqueTags.map(t => t.replace(/_/g, ' '));
+        parts.push(`gained ${formatted.join(', ')}`);
       } else {
         parts.push(`gained ${tagGainedCount} tags`);
       }
@@ -1108,7 +1112,9 @@ export class StateChangeTracker {
     if (tagLostCount > 0) {
       const uniqueTags = [...new Set(tagsRemoved.map(t => t.tag))];
       if (uniqueTags.length <= 2) {
-        parts.push(`lost ${uniqueTags.join(', ')}`);
+        // Format tag names: replace underscores with spaces for readability
+        const formatted = uniqueTags.map(t => t.replace(/_/g, ' '));
+        parts.push(`lost ${formatted.join(', ')}`);
       } else {
         parts.push(`lost ${tagLostCount} tags`);
       }

@@ -75,6 +75,7 @@ export type SelectionFilter =
   | LacksTagSelectionFilter
   | LacksAnyTagSelectionFilter
   | HasCultureFilter
+  | NotHasCultureFilter
   | MatchesCultureFilter
   | NotMatchesCultureFilter
   | HasStatusFilter
@@ -141,6 +142,11 @@ export interface LacksAnyTagSelectionFilter {
 
 export interface HasCultureFilter {
   type: 'has_culture';
+  culture: string;
+}
+
+export interface NotHasCultureFilter {
+  type: 'not_has_culture';
   culture: string;
 }
 

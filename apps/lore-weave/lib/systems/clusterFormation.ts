@@ -21,10 +21,12 @@ import {
   detectClusters,
   filterClusterableEntities
 } from '../graph/clusteringUtils';
-import { FRAMEWORK_RELATIONSHIP_KINDS, FRAMEWORK_TAGS } from '@canonry/world-schema';
-import { pickRandom } from '../utils';
+import { FRAMEWORK_RELATIONSHIP_KINDS, FRAMEWORK_TAGS, FRAMEWORK_STATUS } from '@canonry/world-schema';
+import { pickRandom, weightedRandom } from '../utils';
 import { selectEntities, createSystemContext } from '../rules';
 import type { SelectionRule } from '../rules';
+import type { SelectionFilter } from '../rules/filters/types';
+import type { Mutation } from '../rules/mutations/types';
 
 // =============================================================================
 // CONFIGURATION TYPES
@@ -111,6 +113,20 @@ export interface PostProcessConfig {
 }
 
 /**
+ * Configuration for selecting "masters" - practitioners who get
+ * direct relationships to the meta-ability.
+ * Applied to practitioners collected from cluster members.
+ */
+export interface MasterSelectionConfig {
+  /** Filters to apply to practitioner candidates (e.g., matches_culture with $meta) */
+  filters: SelectionFilter[];
+  /** Pick strategy: 'weighted' uses prominence-weighted random, 'first' takes top N, 'random' is uniform */
+  pickStrategy: 'weighted' | 'first' | 'random';
+  /** Maximum number of masters to select */
+  maxResults: number;
+}
+
+/**
  * Full cluster formation configuration
  */
 export interface ClusterFormationConfig {
@@ -135,6 +151,21 @@ export interface ClusterFormationConfig {
 
   /** Optional post-processing */
   postProcess?: PostProcessConfig;
+
+  /**
+   * Optional master selection configuration.
+   * When provided, only selected "masters" get direct practitioner_of relationships
+   * to the meta-entity. Non-masters retain their relationships to absorbed abilities.
+   * This reduces graph hub formation while preserving narrative structure.
+   */
+  masterSelection?: MasterSelectionConfig;
+
+  /**
+   * Optional mutations to apply to each absorbed cluster member.
+   * $member is bound to each absorbed entity during mutation application.
+   * Example: [{ type: 'change_status', entity: '$member', newStatus: 'subsumed' }]
+   */
+  memberUpdates?: Mutation[];
 }
 
 // =============================================================================
@@ -167,6 +198,83 @@ function getMajority<T>(counts: Map<T, number>, defaultValue: T): T {
     }
   });
   return majority;
+}
+
+/**
+ * Select masters from practitioners based on MasterSelectionConfig.
+ * Filters by culture match with meta-entity, then selects using pick strategy.
+ */
+function selectMasters(
+  practitioners: HardState[],
+  metaEntity: HardState,
+  config: MasterSelectionConfig
+): HardState[] {
+  // Apply filters
+  let filtered = practitioners;
+
+  for (const filter of config.filters) {
+    if (filter.type === 'matches_culture' && filter.with === '$meta') {
+      filtered = filtered.filter(p => p.culture === metaEntity.culture);
+    }
+    // Add other filter types as needed
+  }
+
+  // Sort by prominence (descending) for deterministic behavior
+  filtered.sort((a, b) => b.prominence - a.prominence);
+
+  // Apply pick strategy
+  const limit = Math.min(config.maxResults, filtered.length);
+
+  switch (config.pickStrategy) {
+    case 'weighted':
+      // Prominence-weighted sampling
+      return sampleByProminence(filtered, limit);
+    case 'first':
+      return filtered.slice(0, limit);
+    case 'random':
+      return sampleRandom(filtered, limit);
+    default:
+      return filtered.slice(0, limit);
+  }
+}
+
+/**
+ * Sample entities weighted by prominence
+ */
+function sampleByProminence(entities: HardState[], count: number): HardState[] {
+  if (count >= entities.length) return entities;
+
+  const result: HardState[] = [];
+  const remaining = [...entities];
+
+  for (let i = 0; i < count && remaining.length > 0; i++) {
+    // Calculate weights based on prominence (higher prominence = higher weight)
+    const weights = remaining.map(e => e.prominence + 1); // +1 to avoid zero weights
+    const selected = weightedRandom(remaining, weights);
+    if (selected) {
+      result.push(selected);
+      const idx = remaining.indexOf(selected);
+      if (idx > -1) remaining.splice(idx, 1);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Random sampling without replacement
+ */
+function sampleRandom(entities: HardState[], count: number): HardState[] {
+  if (count >= entities.length) return entities;
+
+  const shuffled = [...entities];
+  // Fisher-Yates shuffle
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled.slice(0, count);
 }
 
 /**
@@ -424,15 +532,61 @@ export function createClusterFormationSystem(
         // Get cluster entity IDs
         const clusterIds = cluster.entities.map(e => e.id);
 
-        // Transfer relationships from cluster to meta-entity
-        graphView.transferRelationships(
-          clusterIds,
-          metaEntityId,
-          {
-            excludeKinds: [FRAMEWORK_RELATIONSHIP_KINDS.PART_OF],
-            archiveOriginals: true
+        // Handle practitioner relationships based on masterSelection config
+        if (config.masterSelection) {
+          // Collect all practitioners of cluster members
+          const allPractitioners: HardState[] = [];
+          const seenIds = new Set<string>();
+          for (const memberId of clusterIds) {
+            const practitioners = graphView.getRelatedEntities(memberId, 'practitioner_of', 'dst');
+            for (const p of practitioners) {
+              if (!seenIds.has(p.id)) {
+                seenIds.add(p.id);
+                allPractitioners.push(p);
+              }
+            }
           }
-        );
+
+          // Select masters using the simplified selection logic
+          const masters = selectMasters(allPractitioners, metaEntity, config.masterSelection);
+
+          // Create practitioner_of relationships only for masters
+          for (const master of masters) {
+            graphView.createRelationship('practitioner_of', master.id, metaEntityId);
+            relationshipsAdded.push({
+              kind: 'practitioner_of',
+              src: master.id,
+              dst: metaEntityId,
+              strength: 1.0
+            });
+            // Archive the old practitioner_of relationships for this master
+            for (const memberId of clusterIds) {
+              graphView.archiveRelationship(master.id, memberId, 'practitioner_of');
+            }
+          }
+
+          // Transfer non-practitioner relationships from cluster to meta-entity
+          graphView.transferRelationships(
+            clusterIds,
+            metaEntityId,
+            {
+              excludeKinds: [FRAMEWORK_RELATIONSHIP_KINDS.PART_OF, 'practitioner_of'],
+              archiveOriginals: true
+            }
+          );
+
+          graphView.log('info', `${config.name}: selected ${masters.length} masters from ${allPractitioners.length} practitioners`);
+        } else {
+          // Original behavior: transfer all relationships
+          graphView.transferRelationships(
+            clusterIds,
+            metaEntityId,
+            {
+              excludeKinds: [FRAMEWORK_RELATIONSHIP_KINDS.PART_OF],
+              archiveOriginals: true
+            }
+          );
+        }
 
         // Create part_of relationships (member → meta-entity)
         graphView.createPartOfRelationships(clusterIds, metaEntityId);
@@ -493,22 +647,42 @@ export function createClusterFormationSystem(
           }
         }
 
-        // Archive original entities
-        graphView.archiveEntities(
-          clusterIds,
-          {
-            archiveRelationships: false,
-            excludeRelationshipKinds: [FRAMEWORK_RELATIONSHIP_KINDS.PART_OF]
-          }
-        );
+        // Apply member updates or fall back to archiving
+        if (config.memberUpdates && config.memberUpdates.length > 0) {
+          // Find the status mutation if present
+          const statusMutation = config.memberUpdates.find(
+            m => m.type === 'change_status'
+          ) as { type: 'change_status'; newStatus: string } | undefined;
 
-        // Track modifications
-        clusterIds.forEach(id => {
-          entitiesModified.push({
-            id,
-            changes: { status: 'historical' }
+          const newStatus = statusMutation?.newStatus ?? FRAMEWORK_STATUS.SUBSUMED;
+
+          // Apply status change to each cluster member
+          for (const memberId of clusterIds) {
+            graphView.updateEntityStatus(memberId, newStatus);
+
+            entitiesModified.push({
+              id: memberId,
+              changes: { status: newStatus }
+            });
+          }
+        } else {
+          // Original behavior: archive as historical
+          graphView.archiveEntities(
+            clusterIds,
+            {
+              archiveRelationships: false,
+              excludeRelationshipKinds: [FRAMEWORK_RELATIONSHIP_KINDS.PART_OF]
+            }
+          );
+
+          // Track modifications
+          clusterIds.forEach(id => {
+            entitiesModified.push({
+              id,
+              changes: { status: 'historical' }
+            });
           });
-        });
+        }
       }
 
       // Record in history

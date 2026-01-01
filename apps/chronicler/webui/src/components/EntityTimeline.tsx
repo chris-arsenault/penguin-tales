@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import type { NarrativeEvent, ParticipantEffect, EntityEffect } from '@canonry/world-schema';
+import type { NarrativeEvent, EntityEffect } from '@canonry/world-schema';
 import type { HardState } from '../types/world.ts';
 
 const colors = {
@@ -249,18 +249,38 @@ export default function EntityTimeline({
   // Multi-expand state: set of expanded event IDs
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
+  /**
+   * Check if an event is "prominence-only" for this entity.
+   * An event is prominence-only if ALL of its effects for this entity
+   * are field_changed effects on the 'prominence' field.
+   */
+  const isProminenceOnlyEvent = useCallback((event: NarrativeEvent): boolean => {
+    const participant = event.participantEffects?.find(p => p.entity.id === entityId);
+    if (!participant || participant.effects.length === 0) return false;
+
+    // Check if ALL effects are prominence field changes
+    return participant.effects.every(
+      effect => effect.type === 'field_changed' && effect.field === 'prominence'
+    );
+  }, [entityId]);
+
   // Filter and process events for this entity
+  // Exclude prominence-only events (those will be shown in ProminenceTimeline)
   const relevantEvents = useMemo(() => {
     return events
       .filter(event => {
         // Check if entity appears in participantEffects
-        if (event.participantEffects?.some(p => p.entity.id === entityId)) {
-          return true;
+        if (!event.participantEffects?.some(p => p.entity.id === entityId)) {
+          return false;
         }
-        return false;
+        // Exclude prominence-only events
+        if (isProminenceOnlyEvent(event)) {
+          return false;
+        }
+        return true;
       })
       .sort((a, b) => a.tick - b.tick); // Chronological order
-  }, [events, entityId]);
+  }, [events, entityId, isProminenceOnlyEvent]);
 
   // Get participant effects for the current entity
   const getEntityEffects = useCallback((event: NarrativeEvent): EntityEffect[] => {
@@ -280,11 +300,6 @@ export default function EntityTimeline({
       return next;
     });
   }, []);
-
-  // Check if event has effects to show
-  const hasEffects = useCallback((event: NarrativeEvent): boolean => {
-    return getEntityEffects(event).length > 0;
-  }, [getEntityEffects]);
 
   // Get era name from entity index
   const getEraName = useCallback((eraId: string): string => {

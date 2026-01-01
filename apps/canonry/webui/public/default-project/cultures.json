@@ -1455,6 +1455,24 @@
           }
         },
         {
+          "id": "aurora_meta_ability",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              ["The", "tradition", "Way of the", "slot:aurora_magic_part_a~cap", "slot:aurora_magic_part_c~cap"],
+              ["tradition", "slot:aurora_magic_part_a~cap^-^slot:aurora_magic_partb~er", "Discipline"],
+              ["The", "slot:aurora_magic_part_c~cap", "School"],
+              ["tradition", "slot:aurora_place_echoes~cap", "Arts"],
+              ["Path of", "slot:aurora_magic_partb~ing", "slot:aurora_magic_part_c~cap"]
+            ],
+            "tradition": [
+              ["domain:aurora_domain~cap^'^s"],
+              [""]
+            ]
+          }
+        },
+        {
           "id": "aurora_holidays",
           "start": "name",
           "capitalization": "titleWords",
@@ -2144,6 +2162,25 @@
         {
           "id": "aurora_abilities",
           "strategyGroups": [
+            {
+              "name": "Meta-Entity Schools",
+              "priority": 80,
+              "conditions": {
+                "entityKinds": ["abilities"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": ["meta-entity"],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_meta_ability"
+                }
+              ]
+            },
             {
               "name": "Magic",
               "priority": 50,
@@ -3502,6 +3539,20 @@
           }
         },
         {
+          "id": "nightshelf_meta_ability",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              ["☽The", "slot:nightshelf_shadow_gen~cap", "Rite☽"],
+              ["Order of the", "slot:nightshelf_magic_part_c~cap", "slot:nightshelf_magic_partb~er~cap^s"],
+              ["The", "slot:nightshelf_whisper_ends~cap", "Doctrine"],
+              ["☽^slot:nightshelf_latin_roots~cap^-^slot:nightshelf_magic_part_a^☽", "Arts"],
+              ["School of", "slot:nightshelf_shadow_gen~cap", "slot:nightshelf_magic_part_c~cap"]
+            ]
+          }
+        },
+        {
           "id": "nightshelf_region",
           "start": "name",
           "rules": {
@@ -4015,6 +4066,25 @@
         {
           "id": "nightshelf_abilities",
           "strategyGroups": [
+            {
+              "name": "Meta-Entity Schools",
+              "priority": 80,
+              "conditions": {
+                "entityKinds": ["abilities"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": ["meta-entity"],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_meta_ability"
+                }
+              ]
+            },
             {
               "name": "Magic",
               "priority": 50,
@@ -5161,6 +5231,20 @@
           }
         },
         {
+          "id": "orca_meta_ability",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              ["The", "slot:orca_prey_glyph~cap^-^slot:orca_territory_glyph", "School"],
+              ["slot:orca_deed_root~cap^-^slot:orca_prey_glyph", "Tradition"],
+              ["Way of the", "slot:orca_territory_glyph~cap", "slot:orca_prey_glyph~cap^s"],
+              ["The", "slot:orca_deed_root~cap^-^slot:orca_territory_glyph^-blood", "Arts"],
+              ["slot:orca_prey_glyph~cap", "slot:orca_deed_root~cap^-masters'", "Path"]
+            ]
+          }
+        },
+        {
           "id": "orca_npc",
           "start": "name",
           "rules": {
@@ -5682,6 +5766,25 @@
           "id": "orca_combat_techs",
           "name": "Orca Abilities",
           "strategyGroups": [
+            {
+              "name": "Meta-Entity Schools",
+              "priority": 80,
+              "conditions": {
+                "entityKinds": ["abilities"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": ["meta-entity"],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "orca_meta_ability"
+                }
+              ]
+            },
             {
               "name": "Combat Tech",
               "priority": 60,

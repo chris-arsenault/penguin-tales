@@ -553,6 +553,147 @@ export class WorldEngine {
       relationshipsCreated: initialRelationships,
       entitiesModified: []
     });
+
+    // Create genesis narrative event for seed entities
+    const genesisEvent = this.buildGenesisEvent(config.eras[0].id);
+    if (genesisEvent) {
+      this.graph.narrativeHistory.push(genesisEvent);
+    }
+  }
+
+  /**
+   * Build a "creation myth" narrative event capturing all seed entities and relationships.
+   * This ensures initial world state appears in narrative history.
+   */
+  private buildGenesisEvent(eraId: string): NarrativeEvent | null {
+    const entities = this.graph.getEntities();
+    const relationships = this.graph.getRelationships();
+
+    if (entities.length === 0) return null;
+
+    // Build participant effects for each entity
+    const participantEffects: NarrativeEvent['participantEffects'] = [];
+
+    // Group relationships by entity for efficient lookup
+    const relsByEntity = new Map<string, Relationship[]>();
+    for (const rel of relationships) {
+      if (!relsByEntity.has(rel.src)) relsByEntity.set(rel.src, []);
+      if (!relsByEntity.has(rel.dst)) relsByEntity.set(rel.dst, []);
+      relsByEntity.get(rel.src)!.push(rel);
+      relsByEntity.get(rel.dst)!.push(rel);
+    }
+
+    for (const entity of entities) {
+      const effects: NarrativeEvent['participantEffects'][0]['effects'] = [];
+
+      // Entity creation effect
+      effects.push({
+        type: 'created',
+        description: this.getGenesisCreationVerb(entity.kind)
+      });
+
+      // Relationship effects
+      const entityRels = relsByEntity.get(entity.id) || [];
+      for (const rel of entityRels) {
+        const isSource = rel.src === entity.id;
+        const otherId = isSource ? rel.dst : rel.src;
+        const other = this.graph.getEntity(otherId);
+        if (!other) continue;
+
+        effects.push({
+          type: 'relationship_formed',
+          relationshipKind: rel.kind,
+          relatedEntity: {
+            id: other.id,
+            name: other.name,
+            kind: other.kind,
+            subtype: other.subtype
+          },
+          description: this.getGenesisRelationshipVerb(rel.kind, isSource, other.name)
+        });
+      }
+
+      participantEffects.push({
+        entity: {
+          id: entity.id,
+          name: entity.name,
+          kind: entity.kind,
+          subtype: entity.subtype
+        },
+        effects
+      });
+    }
+
+    // Count entities by kind for description
+    const kindCounts = new Map<string, number>();
+    for (const e of entities) {
+      kindCounts.set(e.kind, (kindCounts.get(e.kind) || 0) + 1);
+    }
+    const kindSummary = Array.from(kindCounts.entries())
+      .map(([kind, count]) => `${count} ${kind}${count > 1 ? 's' : ''}`)
+      .join(', ');
+
+    // Pick a prominent entity as the subject (or first entity)
+    const subject = entities.reduce((best, e) =>
+      e.prominence > best.prominence ? e : best, entities[0]);
+
+    return {
+      id: 'genesis-0',
+      tick: 0,
+      era: eraId,
+      eventKind: 'creation_batch',
+      significance: 1.0,
+      subject: {
+        id: subject.id,
+        name: subject.name,
+        kind: subject.kind,
+        subtype: subject.subtype
+      },
+      action: 'genesis',
+      participantEffects,
+      description: `In the time before memory, the world took shape. ${kindSummary} emerged from the primordial ice, bound by ${relationships.length} threads of fate.`,
+      causedBy: {
+        actionType: 'genesis'
+      },
+      narrativeTags: ['genesis', 'creation', 'primordial', 'origin']
+    };
+  }
+
+  /**
+   * Get creation verb for genesis event based on entity kind
+   */
+  private getGenesisCreationVerb(kind: string): string {
+    const verbs: Record<string, string> = {
+      'location': 'rose from the frozen depths',
+      'npc': 'awakened to consciousness',
+      'faction': 'coalesced from shared purpose',
+      'artifact': 'crystallized from ancient power',
+      'abilities': 'manifested from the primordial currents',
+      'ideology': 'emerged as an eternal truth',
+      'era': 'began its inexorable march'
+    };
+    return verbs[kind] || 'came into being';
+  }
+
+  /**
+   * Get relationship verb for genesis event
+   */
+  private getGenesisRelationshipVerb(kind: string, isSource: boolean, otherName: string): string {
+    const verbs: Record<string, [string, string]> = {
+      'contains': ['contained within', 'encompassed'],
+      'adjacent_to': ['stood beside', 'neighbored'],
+      'leader_of': ['was destined to lead', 'awaited leadership from'],
+      'resident_of': ['would call home', 'sheltered'],
+      'controls': ['held dominion over', 'submitted to'],
+      'allied_with': ['was bound in fellowship with', 'pledged kinship to'],
+      'trades_with': ['shared prosperity with', 'exchanged gifts with'],
+      'corrupted_by': ['carried the taint of', 'cast shadow upon'],
+      'manifests_at': ['resonated through', 'channeled the power of'],
+      'practitioner_of': ['inherited the ways of', 'bestowed knowledge upon']
+    };
+
+    const [srcVerb, dstVerb] = verbs[kind] || ['was connected to', 'was linked with'];
+    return `${isSource ? srcVerb : dstVerb} ${otherName}`;
   }
 
   private findEntityByName(name: string): HardState | undefined {

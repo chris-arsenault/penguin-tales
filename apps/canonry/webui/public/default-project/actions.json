@@ -1449,7 +1449,7 @@
       ],
       "descriptionTemplate": "{actor.name} claimed the artifact {target.name}",
       "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
-      "targetProminenceDelta": { "onSuccess": 0.2, "onFailure": 0 }
+      "targetProminenceDelta": { "onSuccess": 0.4, "onFailure": 0 }
     },
     "probability": {
       "baseSuccessChance": 0.6,
@@ -1606,7 +1606,7 @@
       ],
       "descriptionTemplate": "{actor.name} stole the artifact {target.name}",
       "actorProminenceDelta": { "onSuccess": 0.4, "onFailure": -0.25 },
-      "targetProminenceDelta": { "onSuccess": 0.3, "onFailure": 0 }
+      "targetProminenceDelta": { "onSuccess": 0.5, "onFailure": 0 }
     },
     "probability": {
       "baseSuccessChance": 0.2,
@@ -1749,7 +1749,7 @@
       ],
       "descriptionTemplate": "{actor.name} claimed the weapon {target.name}",
       "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
-      "targetProminenceDelta": { "onSuccess": 0.15, "onFailure": 0 }
+      "targetProminenceDelta": { "onSuccess": 0.35, "onFailure": 0 }
     },
     "probability": {
       "baseSuccessChance": 0.45,
@@ -1816,7 +1816,7 @@
       ],
       "descriptionTemplate": "{actor.name} was purified by the music of {target.name}",
       "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
-      "targetProminenceDelta": { "onSuccess": 0.15, "onFailure": 0 }
+      "targetProminenceDelta": { "onSuccess": 0.35, "onFailure": 0 }
     },
     "probability": {
       "baseSuccessChance": 0.6,
@@ -2068,10 +2068,6 @@
         {
           "type": "lacks_tag",
           "tag": "stolen_art"
-        },
-        {
-          "type": "random_chance",
-          "chance": 0.15
         }
       ]
     },
@@ -2122,11 +2118,11 @@
         }
       ],
       "descriptionTemplate": "stole the secret of {target.name}, forfeiting leadership",
-      "actorProminenceDelta": { "onSuccess": 0.3, "onFailure": -0.2 }
+      "actorProminenceDelta": { "onSuccess": 0.3, "onFailure": 0 }
     },
     "probability": {
-      "baseSuccessChance": 0.2,
-      "baseWeight": 0.1,
+      "baseSuccessChance": 0.15,
+      "baseWeight": 0.05,
       "pressureModifiers": []
     },
     "enabled": true

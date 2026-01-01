@@ -542,6 +542,15 @@
         },
         {
           "type": "object",
+          "required": ["type", "culture"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "not_has_culture" },
+            "culture": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
           "required": ["type", "with"],
           "additionalProperties": false,
           "properties": {
