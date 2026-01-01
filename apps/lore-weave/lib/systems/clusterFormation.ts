@@ -565,15 +565,28 @@ export function createClusterFormationSystem(
             }
           }
 
-          // Transfer non-practitioner relationships from cluster to meta-entity
-          graphView.transferRelationships(
-            clusterIds,
-            metaEntityId,
-            {
-              excludeKinds: [FRAMEWORK_RELATIONSHIP_KINDS.PART_OF, 'practitioner_of'],
-              archiveOriginals: true
+          // Find origin location from absorbed abilities' manifests_at relationships
+          const locationCounts = new Map<string, number>();
+          for (const memberId of clusterIds) {
+            const locations = graphView.getRelatedEntities(memberId, 'manifests_at', 'src');
+            for (const loc of locations) {
+              locationCounts.set(loc.id, (locationCounts.get(loc.id) || 0) + 1);
             }
-          );
+          }
+
+          // Create originated_in link to most common location
+          if (locationCounts.size > 0) {
+            const originLocationId = getMajority(locationCounts, '');
+            if (originLocationId) {
+              graphView.createRelationship('originated_in', metaEntityId, originLocationId);
+              relationshipsAdded.push({
+                kind: 'originated_in',
+                src: metaEntityId,
+                dst: originLocationId,
+                strength: 1.0
+              });
+            }
+          }
 
           graphView.log('info', `${config.name}: selected ${masters.length} masters from ${allPractitioners.length} practitioners`);
         } else {
@@ -588,23 +601,12 @@ export function createClusterFormationSystem(
           );
         }
 
-        // Create part_of relationships (member → meta-entity)
-        graphView.createPartOfRelationships(clusterIds, metaEntityId);
+        // Create subsumes relationships (meta-entity subsumes member)
+        // This makes it explicit that the meta-entity absorbs the cluster members
         clusterIds.forEach(id => {
+          graphView.createRelationship('subsumes', metaEntityId, id);
           relationshipsAdded.push({
-            kind: FRAMEWORK_RELATIONSHIP_KINDS.PART_OF,
-            src: id,
-            dst: metaEntityId,
-            strength: 1.0  // Part-of relationships are strong
-          });
-        });
-
-        // Create supersedes relationships (meta-entity supersedes member)
-        // This makes it explicit that the meta-entity replaces the cluster members
-        clusterIds.forEach(id => {
-          graphView.createRelationship(FRAMEWORK_RELATIONSHIP_KINDS.SUPERSEDES, metaEntityId, id);
-          relationshipsAdded.push({
-            kind: FRAMEWORK_RELATIONSHIP_KINDS.SUPERSEDES,
+            kind: 'subsumes',
             src: metaEntityId,
             dst: id,
             strength: 1.0

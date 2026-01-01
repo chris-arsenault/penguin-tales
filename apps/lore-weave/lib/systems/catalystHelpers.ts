@@ -194,7 +194,7 @@ export function initializeCatalystSmart(entity: HardState): void {
   }
 
   // Entity kinds that can act
-  const actorKinds = ['npc', 'faction', 'abilities', 'occurrence', 'location'];
+  const actorKinds = ['npc', 'faction', 'abilities', 'occurrence', 'location', 'artifact', 'rules'];
   if (!actorKinds.includes(entity.kind)) {
     return;
   }

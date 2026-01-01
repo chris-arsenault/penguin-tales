@@ -54,7 +54,10 @@
         }
       ],
       "descriptionTemplate": "{actor.name} seized control of {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.4, "onFailure": -0.25 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.64,
+        "onFailure": 0.21
+      }
     },
     "probability": {
       "baseSuccessChance": 0.3,
@@ -121,7 +124,10 @@
         }
       ],
       "descriptionTemplate": "forged alliance with {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.4,
+        "onFailure": 0.13
+      }
     },
     "probability": {
       "baseSuccessChance": 0.4,
@@ -183,8 +189,14 @@
         }
       ],
       "descriptionTemplate": "declared war on {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.4, "onFailure": -0.25 },
-      "targetProminenceDelta": { "onSuccess": 0.2, "onFailure": 0 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.64,
+        "onFailure": 0.21
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.32,
+        "onFailure": 0.08
+      }
     },
     "probability": {
       "baseSuccessChance": 0.6,
@@ -289,7 +301,10 @@
         }
       ],
       "descriptionTemplate": "surrendered to {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.4, "onFailure": -0.25 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.64,
+        "onFailure": 0.21
+      }
     },
     "probability": {
       "baseSuccessChance": 0.5,
@@ -333,7 +348,9 @@
           "direction": "src"
         },
         "kind": "occurrence",
-        "subtypes": ["war"],
+        "subtypes": [
+          "war"
+        ],
         "statusFilter": "active",
         "filters": [
           {
@@ -365,7 +382,9 @@
       "filters": [
         {
           "type": "exclude",
-          "entities": ["$actor"]
+          "entities": [
+            "$actor"
+          ]
         },
         {
           "type": "has_relationship",
@@ -418,7 +437,10 @@
         }
       ],
       "descriptionTemplate": "achieved victory over {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.6, "onFailure": -0.35 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.96,
+        "onFailure": 0.32
+      }
     },
     "probability": {
       "baseSuccessChance": 0.35,
@@ -486,7 +508,10 @@
         }
       ],
       "descriptionTemplate": "raided {target.name}'s territory",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.4,
+        "onFailure": 0.13
+      }
     },
     "probability": {
       "baseSuccessChance": 0.35,
@@ -552,7 +577,10 @@
         }
       ],
       "descriptionTemplate": "established trade route between {target.name} and {target2.name}",
-      "actorProminenceDelta": { "onSuccess": 0.15, "onFailure": -0.05 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.24,
+        "onFailure": 0.08
+      }
     },
     "probability": {
       "baseSuccessChance": 0.6,
@@ -627,7 +655,10 @@
         }
       ],
       "descriptionTemplate": "corrupted {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.20,
+        "onFailure": 0.07
+      }
     },
     "probability": {
       "baseSuccessChance": 0.25,
@@ -685,7 +716,11 @@
         }
       ],
       "descriptionTemplate": "manifested at {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.15, "onFailure": -0.05 }    },
+      "actorProminenceDelta": {
+        "onSuccess": 0.12,
+        "onFailure": 0.04
+      }
+    },
     "probability": {
       "baseSuccessChance": 0.3,
       "baseWeight": 0.6,
@@ -746,7 +781,10 @@
         }
       ],
       "descriptionTemplate": "spread to {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.15, "onFailure": -0.05 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.12,
+        "onFailure": 0.04
+      }
     },
     "probability": {
       "baseSuccessChance": 0.4,
@@ -755,104 +793,6 @@
         {
           "pressure": "resource_availibility",
           "multiplier": -0.6
-        }
-      ]
-    },
-    "enabled": true
-  },
-  {
-    "id": "convert_faction",
-    "name": "Convert Faction",
-    "description": "Spread cultural/religious belief to faction",
-    "actor": {
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "filters": [
-          {
-            "type": "has_any_tag",
-            "tags": [
-              "organized",
-              "trade",
-              "mystical",
-              "political"
-            ]
-          }
-        ]
-      },
-      "instigator": {
-        "from": "graph",
-        "kind": "rules",
-        "subtypes": [
-          "ideology",
-          "law"
-        ],
-        "filters": [
-          {
-            "type": "matches_culture",
-            "with": "$actor"
-          }
-        ],
-        "pickStrategy": "random",
-        "required": true
-      }
-    },
-    "targeting": {
-      "strategy": "by_kind",
-      "kind": "faction",
-      "filters": [
-        {
-          "type": "lacks_relationship",
-          "kind": "believer_of",
-          "with": "$instigator"
-        },
-        {
-          "type": "exclude",
-          "entities": [
-            "$actor"
-          ]
-        }
-      ]
-    },
-    "outcome": {
-      "mutations": [
-        {
-          "type": "create_relationship",
-          "kind": "believer_of",
-          "src": "$target",
-          "dst": "$instigator",
-          "strength": 0.7
-        },
-        {
-          "type": "set_tag",
-          "entity": "$target",
-          "tag": "apostate",
-          "value": true
-        },
-        {
-          "type": "modify_pressure",
-          "pressureId": "harmony",
-          "delta": 3
-        },
-        {
-          "type": "modify_pressure",
-          "pressureId": "security",
-          "delta": 2
-        }
-      ],
-      "descriptionTemplate": "converted {target.name} to {instigator.name} (now seen as apostate)",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }    },
-    "probability": {
-      "baseSuccessChance": 0.3,
-      "baseWeight": 0.6,
-      "pressureModifiers": [
-        {
-          "pressure": "harmony",
-          "multiplier": 0.6
-        },
-        {
-          "pressure": "security",
-          "multiplier": 0.4
         }
       ]
     },
@@ -898,7 +838,10 @@
         }
       ],
       "descriptionTemplate": "drew {target.name} into the war",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.16,
+        "onFailure": 0.05
+      }
     },
     "probability": {
       "baseSuccessChance": 0.3,
@@ -957,7 +900,10 @@
         }
       ],
       "descriptionTemplate": "escalated in intensity",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.16,
+        "onFailure": 0.05
+      }
     },
     "probability": {
       "baseSuccessChance": 0.4,
@@ -1028,7 +974,11 @@
         }
       ],
       "descriptionTemplate": "spread corruption to {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }    },
+      "actorProminenceDelta": {
+        "onSuccess": 0.4,
+        "onFailure": 0.13
+      }
+    },
     "probability": {
       "baseSuccessChance": 0.35,
       "baseWeight": 0.5,
@@ -1049,7 +999,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "subtypes": ["hero"],
+        "subtypes": [
+          "hero"
+        ],
         "statusFilter": "alive",
         "filters": [
           {
@@ -1062,12 +1014,16 @@
     "targeting": {
       "strategy": "by_kind",
       "kind": "npc",
-      "subtypes": ["orca"],
+      "subtypes": [
+        "orca"
+      ],
       "statusFilter": "alive",
       "filters": [
         {
           "type": "exclude",
-          "entities": ["$actor"]
+          "entities": [
+            "$actor"
+          ]
         },
         {
           "type": "lacks_tag",
@@ -1094,8 +1050,14 @@
           "delta": 0.5
         }
       ],
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
-      "targetProminenceDelta": { "onSuccess": 0.1, "onFailure": 0 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.4,
+        "onFailure": 0.13
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.16,
+        "onFailure": 0.05
+      }
     },
     "probability": {
       "baseSuccessChance": 0.6,
@@ -1112,7 +1074,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "subtypes": ["hero"],
+        "subtypes": [
+          "hero"
+        ],
         "statusFilter": "alive",
         "filters": [
           {
@@ -1125,12 +1089,16 @@
     "targeting": {
       "strategy": "by_kind",
       "kind": "npc",
-      "subtypes": ["orca"],
+      "subtypes": [
+        "orca"
+      ],
       "statusFilter": "alive",
       "filters": [
         {
           "type": "exclude",
-          "entities": ["$actor"]
+          "entities": [
+            "$actor"
+          ]
         },
         {
           "type": "has_tag",
@@ -1162,8 +1130,14 @@
           "delta": 0.5
         }
       ],
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
-      "targetProminenceDelta": { "onSuccess": 0.15, "onFailure": 0 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.4,
+        "onFailure": 0.13
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.24,
+        "onFailure": 0.06
+      }
     },
     "probability": {
       "baseSuccessChance": 0.5,
@@ -1180,7 +1154,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "subtypes": ["hero"],
+        "subtypes": [
+          "hero"
+        ],
         "statusFilter": "alive",
         "filters": [
           {
@@ -1193,12 +1169,16 @@
     "targeting": {
       "strategy": "by_kind",
       "kind": "npc",
-      "subtypes": ["orca"],
+      "subtypes": [
+        "orca"
+      ],
       "statusFilter": "alive",
       "filters": [
         {
           "type": "exclude",
-          "entities": ["$actor"]
+          "entities": [
+            "$actor"
+          ]
         },
         {
           "type": "has_tag",
@@ -1220,8 +1200,14 @@
           "delta": 1
         }
       ],
-      "actorProminenceDelta": { "onSuccess": 0.6, "onFailure": -0.35 },
-      "targetProminenceDelta": { "onSuccess": 0.2, "onFailure": 0 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.96,
+        "onFailure": 0.32
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.32,
+        "onFailure": 0.08
+      }
     },
     "probability": {
       "baseSuccessChance": 0.5,
@@ -1279,7 +1265,10 @@
         }
       ],
       "descriptionTemplate": "mastered the art of {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.15, "onFailure": -0.05 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.24,
+        "onFailure": 0.08
+      }
     },
     "probability": {
       "baseSuccessChance": 0.5,
@@ -1364,7 +1353,10 @@
         }
       ],
       "descriptionTemplate": "echoed through the event of {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.20,
+        "onFailure": 0.07
+      }
     },
     "probability": {
       "baseSuccessChance": 0.35,
@@ -1376,87 +1368,6 @@
         },
         {
           "pressure": "magical_stability",
-          "multiplier": 0.3
-        }
-      ]
-    },
-    "enabled": true
-  },
-  {
-    "id": "claim_artifact",
-    "name": "Claim Artifact",
-    "description": "A faction claims an unowned artifact in territory they control",
-    "actor": {
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "filters": [
-          {
-            "type": "has_relationship",
-            "kind": "controls",
-            "direction": "src"
-          }
-        ]
-      }
-    },
-    "targeting": {
-      "strategy": "by_kind",
-      "kind": "artifact",
-      "filters": [
-        {
-          "type": "lacks_relationship",
-          "kind": "owned_by"
-        },
-        {
-          "type": "graph_path",
-          "assert": {
-            "check": "exists",
-            "path": [
-              {
-                "via": "stored_at",
-                "direction": "src",
-                "targetKind": "location",
-                "targetSubtype": "any"
-              },
-              {
-                "via": "controls",
-                "direction": "in",
-                "targetKind": "faction",
-                "targetSubtype": "any",
-                "matchEntity": "$actor"
-              }
-            ]
-          }
-        }
-      ],
-      "pickStrategy": "random"
-    },
-    "outcome": {
-      "mutations": [
-        {
-          "type": "create_relationship",
-          "kind": "owned_by",
-          "src": "$target",
-          "dst": "$actor",
-          "strength": 0.8
-        },
-        {
-          "type": "set_tag",
-          "entity": "$target",
-          "tag": "claimed",
-          "value": true
-        }
-      ],
-      "descriptionTemplate": "{actor.name} claimed the artifact {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
-      "targetProminenceDelta": { "onSuccess": 0.4, "onFailure": 0 }
-    },
-    "probability": {
-      "baseSuccessChance": 0.6,
-      "baseWeight": 0.4,
-      "pressureModifiers": [
-        {
-          "pressure": "security",
           "multiplier": 0.3
         }
       ]
@@ -1530,7 +1441,8 @@
           "delta": 3
         }
       ],
-      "descriptionTemplate": "{instigator.name} gifted {actor.name} to {target.name}"    },
+      "descriptionTemplate": "{instigator.name} gifted {actor.name} to {target.name}"
+    },
     "probability": {
       "baseSuccessChance": 0.25,
       "baseWeight": 0.2,
@@ -1551,7 +1463,10 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "subtypes": ["outlaw", "orca"],
+        "subtypes": [
+          "outlaw",
+          "orca"
+        ],
         "statusFilter": "alive"
       }
     },
@@ -1605,8 +1520,14 @@
         }
       ],
       "descriptionTemplate": "{actor.name} stole the artifact {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.4, "onFailure": -0.25 },
-      "targetProminenceDelta": { "onSuccess": 0.5, "onFailure": 0 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.64,
+        "onFailure": 0.21
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.8,
+        "onFailure": 0.21
+      }
     },
     "probability": {
       "baseSuccessChance": 0.2,
@@ -1628,7 +1549,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "subtypes": ["hero"],
+        "subtypes": [
+          "hero"
+        ],
         "statusFilter": "alive"
       },
       "conditions": [
@@ -1686,7 +1609,10 @@
         }
       ],
       "descriptionTemplate": "{actor.name} purified the corruption at {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.4, "onFailure": -0.25 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.64,
+        "onFailure": 0.21
+      }
     },
     "probability": {
       "baseSuccessChance": 0.4,
@@ -1708,7 +1634,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "subtypes": ["hero"],
+        "subtypes": [
+          "hero"
+        ],
         "statusFilter": "alive",
         "filters": [
           {
@@ -1721,7 +1649,9 @@
     "targeting": {
       "strategy": "by_kind",
       "kind": "artifact",
-      "subtypes": ["weapon"],
+      "subtypes": [
+        "weapon"
+      ],
       "statusFilter": "intact",
       "filters": [
         {
@@ -1748,8 +1678,14 @@
         }
       ],
       "descriptionTemplate": "{actor.name} claimed the weapon {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
-      "targetProminenceDelta": { "onSuccess": 0.35, "onFailure": 0 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.4,
+        "onFailure": 0.13
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.56,
+        "onFailure": 0.14
+      }
     },
     "probability": {
       "baseSuccessChance": 0.45,
@@ -1771,12 +1707,17 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "subtypes": ["hero"],
+        "subtypes": [
+          "hero"
+        ],
         "statusFilter": "alive",
         "filters": [
           {
             "type": "has_any_tag",
-            "tags": ["corrupted", "cursed"]
+            "tags": [
+              "corrupted",
+              "cursed"
+            ]
           }
         ]
       }
@@ -1784,7 +1725,9 @@
     "targeting": {
       "strategy": "by_kind",
       "kind": "artifact",
-      "subtypes": ["instrument"],
+      "subtypes": [
+        "instrument"
+      ],
       "statusFilter": "intact",
       "pickStrategy": "random"
     },
@@ -1815,8 +1758,14 @@
         }
       ],
       "descriptionTemplate": "{actor.name} was purified by the music of {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
-      "targetProminenceDelta": { "onSuccess": 0.35, "onFailure": 0 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.4,
+        "onFailure": 0.13
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.56,
+        "onFailure": 0.14
+      }
     },
     "probability": {
       "baseSuccessChance": 0.6,
@@ -1838,7 +1787,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
-        "subtypes": ["weapon"],
+        "subtypes": [
+          "weapon"
+        ],
         "statusFilter": "intact",
         "filters": [
           {
@@ -1851,7 +1802,9 @@
     "targeting": {
       "strategy": "by_kind",
       "kind": "npc",
-      "subtypes": ["hero"],
+      "subtypes": [
+        "hero"
+      ],
       "statusFilter": "alive",
       "filters": [
         {
@@ -1883,7 +1836,10 @@
         }
       ],
       "descriptionTemplate": "{actor.name} chose {target.name} as its wielder",
-      "actorProminenceDelta": { "onSuccess": 0.6, "onFailure": -0.35 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.96,
+        "onFailure": 0.32
+      }
     },
     "probability": {
       "baseSuccessChance": 0.7,
@@ -1899,7 +1855,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "location",
-        "subtypes": ["colony"],
+        "subtypes": [
+          "colony"
+        ],
         "statusFilter": "thriving",
         "minProminence": "recognized"
       }
@@ -1937,7 +1895,10 @@
         }
       ],
       "descriptionTemplate": "The ice of {actor.name} remembered {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0, "onFailure": 0 }
+      "actorProminenceDelta": {
+        "onSuccess": 0,
+        "onFailure": 0
+      }
     },
     "probability": {
       "baseSuccessChance": 0.5,
@@ -1953,7 +1914,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "occurrence",
-        "subtypes": ["war"],
+        "subtypes": [
+          "war"
+        ],
         "statusFilter": "active",
         "minProminence": "recognized"
       }
@@ -1990,7 +1953,10 @@
         }
       ],
       "descriptionTemplate": "{actor.name} left its mark upon {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.16,
+        "onFailure": 0.05
+      }
     },
     "probability": {
       "baseSuccessChance": 0.6,
@@ -2006,14 +1972,20 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
-        "subtypes": ["instrument"],
+        "subtypes": [
+          "instrument"
+        ],
         "statusFilter": "intact"
       }
     },
     "targeting": {
       "strategy": "by_kind",
       "kind": "npc",
-      "subtypes": ["merchant", "outlaw", "mayor"],
+      "subtypes": [
+        "merchant",
+        "outlaw",
+        "mayor"
+      ],
       "statusFilter": "alive",
       "filters": [
         {
@@ -2045,7 +2017,10 @@
         }
       ],
       "descriptionTemplate": "The music of {actor.name} blessed {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.4,
+        "onFailure": 0.13
+      }
     },
     "probability": {
       "baseSuccessChance": 0.4,
@@ -2062,7 +2037,11 @@
         "strategy": "by_kind",
         "kind": "npc",
         "statusFilter": "alive",
-        "subtypes": ["outlaw", "merchant", "mayor"]
+        "subtypes": [
+          "outlaw",
+          "merchant",
+          "mayor"
+        ]
       },
       "conditions": [
         {
@@ -2074,7 +2053,11 @@
     "targeting": {
       "strategy": "by_kind",
       "kind": "abilities",
-      "statuses": ["active", "discovered", "emergent"],
+      "statuses": [
+        "active",
+        "discovered",
+        "emergent"
+      ],
       "filters": [
         {
           "type": "lacks_relationship",
@@ -2118,12 +2101,318 @@
         }
       ],
       "descriptionTemplate": "stole the secret of {target.name}, forfeiting leadership",
-      "actorProminenceDelta": { "onSuccess": 0.3, "onFailure": 0 }
+      "actorProminenceDelta": {
+        "onSuccess": 0.48,
+        "onFailure": 0
+      }
     },
     "probability": {
       "baseSuccessChance": 0.15,
       "baseWeight": 0.05,
       "pressureModifiers": []
+    },
+    "enabled": true
+  },
+  {
+    "id": "occurrence_marks_artifact",
+    "name": "Event Marks Relic",
+    "description": "A significant event leaves its memory upon an artifact, making it historically significant",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "occurrence",
+        "subtypes": ["war", "disaster", "celebration", "succession_crisis"],
+        "statusFilter": "active",
+        "minProminence": "marginal"
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "artifact",
+      "statusFilter": "intact",
+      "filters": [
+        {
+          "type": "lacks_relationship",
+          "kind": "participant_in",
+          "with": "$actor"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "participant_in",
+          "src": "$target",
+          "dst": "$actor",
+          "strength": 0.8
+        }
+      ],
+      "descriptionTemplate": "{actor.name} left its memory upon {target.name}",
+      "actorProminenceDelta": {
+        "onSuccess": 0.12,
+        "onFailure": 0.04
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.5,
+        "onFailure": 0.15
+      }
+    },
+    "probability": {
+      "baseSuccessChance": 0.5,
+      "baseWeight": 0.5
+    },
+    "enabled": true
+  },
+  {
+    "id": "artifact_enshrines_tradition",
+    "name": "Relic Enshrines Tradition",
+    "description": "A historically significant artifact becomes central to a cultural tradition",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact",
+        "statusFilter": "intact",
+        "minProminence": "marginal",
+        "filters": [
+          {
+            "type": "has_relationship",
+            "kind": "participant_in",
+            "direction": "src"
+          }
+        ]
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "rules",
+      "subtypes": ["ideology", "law", "social", "memorial"],
+      "filters": [
+        {
+          "type": "matches_culture",
+          "with": "$actor"
+        },
+        {
+          "type": "lacks_relationship",
+          "kind": "central_to",
+          "with": "$actor"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "central_to",
+          "src": "$actor",
+          "dst": "$target",
+          "strength": 0.8
+        }
+      ],
+      "descriptionTemplate": "{actor.name} became central to the practice of {target.name}",
+      "actorProminenceDelta": {
+        "onSuccess": 0.3,
+        "onFailure": 0.1
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.30,
+        "onFailure": 0.09
+      }
+    },
+    "probability": {
+      "baseSuccessChance": 0.4,
+      "baseWeight": 0.4
+    },
+    "enabled": true
+  },
+  {
+    "id": "tradition_commemorates_event",
+    "name": "Tradition Commemorates Event",
+    "description": "A cultural tradition begins commemorating a significant event",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "rules",
+        "subtypes": ["ideology", "law", "social", "memorial"],
+        "minProminence": "marginal"
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "occurrence",
+      "subtypes": ["war", "disaster", "celebration", "succession_crisis"],
+      "filters": [
+        {
+          "type": "matches_culture",
+          "with": "$actor"
+        },
+        {
+          "type": "lacks_relationship",
+          "kind": "commemorates",
+          "with": "$actor"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "commemorates",
+          "src": "$actor",
+          "dst": "$target",
+          "strength": 0.7
+        }
+      ],
+      "descriptionTemplate": "The tradition of {actor.name} now commemorates {target.name}",
+      "actorProminenceDelta": {
+        "onSuccess": 0.18,
+        "onFailure": 0.06
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.20,
+        "onFailure": 0.06
+      }
+    },
+    "probability": {
+      "baseSuccessChance": 0.45,
+      "baseWeight": 0.4
+    },
+    "enabled": true
+  },
+  {
+    "id": "artifact_selects_custodian",
+    "name": "Artifact Selects Custodian",
+    "description": "An unclaimed artifact chooses a worthy faction to be its guardian",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact",
+        "statusFilter": "intact",
+        "filters": [
+          {
+            "type": "lacks_relationship",
+            "kind": "owned_by"
+          },
+          {
+            "type": "has_relationship",
+            "kind": "stored_at",
+            "direction": "src"
+          }
+        ]
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "filters": [
+        {
+          "type": "has_relationship",
+          "kind": "controls",
+          "direction": "src"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "owned_by",
+          "src": "$actor",
+          "dst": "$target",
+          "strength": 0.8
+        },
+        {
+          "type": "set_tag",
+          "entity": "$actor",
+          "tag": "claimed",
+          "value": true
+        }
+      ],
+      "descriptionTemplate": "{actor.name} chose {target.name} as its guardian",
+      "actorProminenceDelta": {
+        "onSuccess": 0.5,
+        "onFailure": 0.15
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.25,
+        "onFailure": 0.08
+      }
+    },
+    "probability": {
+      "baseSuccessChance": 0.5,
+      "baseWeight": 0.4
+    },
+    "enabled": true
+  },
+  {
+    "id": "ideology_conquers",
+    "name": "Ideology Conquers",
+    "description": "A powerful ideology spreads to claim new believers among the factions",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "rules",
+        "subtypes": ["ideology", "law"],
+        "minProminence": "marginal"
+      },
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "believer_of",
+          "direction": "dst",
+          "min": 1
+        }
+      ]
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "filters": [
+        {
+          "type": "lacks_relationship",
+          "kind": "believer_of",
+          "with": "$actor"
+        },
+        {
+          "type": "matches_culture",
+          "with": "$actor"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "believer_of",
+          "src": "$target",
+          "dst": "$actor",
+          "strength": 0.7
+        }
+      ],
+      "descriptionTemplate": "{actor.name} claimed {target.name} among its believers",
+      "actorProminenceDelta": {
+        "onSuccess": 0.24,
+        "onFailure": 0.08
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.2,
+        "onFailure": 0.07
+      }
+    },
+    "probability": {
+      "baseSuccessChance": 0.35,
+      "baseWeight": 0.5,
+      "pressureModifiers": [
+        {
+          "pressure": "harmony",
+          "multiplier": 0.4
+        }
+      ]
     },
     "enabled": true
   }

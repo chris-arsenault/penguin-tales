@@ -480,6 +480,27 @@
     }
   },
   {
+    "kind": "subsumes",
+    "description": "Subsumes",
+    "srcKinds": [
+      "abilities",
+      "rules",
+      "faction"
+    ],
+    "dstKinds": [
+      "abilities",
+      "rules",
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "subsumed",
+      "ended": "released"
+    }
+  },
+  {
     "kind": "part_of",
     "description": "Part Of",
     "srcKinds": [],

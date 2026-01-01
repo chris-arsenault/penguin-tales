@@ -140,6 +140,22 @@ const styles = {
     fontStyle: 'italic' as const,
     fontSize: '12px',
   },
+  filterRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '12px',
+    fontSize: '12px',
+    color: colors.textMuted,
+  },
+  checkbox: {
+    accentColor: colors.accent,
+    cursor: 'pointer',
+  },
+  checkboxLabel: {
+    cursor: 'pointer',
+    userSelect: 'none' as const,
+  },
 };
 
 /**
@@ -248,6 +264,8 @@ export default function EntityTimeline({
 }: EntityTimelineProps) {
   // Multi-expand state: set of expanded event IDs
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  // Whether to show prominence-only events (default: hidden)
+  const [showProminenceOnly, setShowProminenceOnly] = useState(false);
 
   /**
    * Check if an event is "prominence-only" for this entity.
@@ -265,7 +283,6 @@ export default function EntityTimeline({
   }, [entityId]);
 
   // Filter and process events for this entity
-  // Exclude prominence-only events (those will be shown in ProminenceTimeline)
   const relevantEvents = useMemo(() => {
     return events
       .filter(event => {
@@ -273,14 +290,14 @@ export default function EntityTimeline({
         if (!event.participantEffects?.some(p => p.entity.id === entityId)) {
           return false;
         }
-        // Exclude prominence-only events
-        if (isProminenceOnlyEvent(event)) {
+        // Exclude prominence-only events unless checkbox is checked
+        if (!showProminenceOnly && isProminenceOnlyEvent(event)) {
           return false;
         }
         return true;
       })
       .sort((a, b) => a.tick - b.tick); // Chronological order
-  }, [events, entityId, isProminenceOnlyEvent]);
+  }, [events, entityId, isProminenceOnlyEvent, showProminenceOnly]);
 
   // Get participant effects for the current entity
   const getEntityEffects = useCallback((event: NarrativeEvent): EntityEffect[] => {
@@ -313,16 +330,36 @@ export default function EntityTimeline({
     return linkifyDescription(description, entityIndex, onNavigate);
   }, [entityIndex, onNavigate]);
 
-  if (relevantEvents.length === 0) {
+  if (relevantEvents.length === 0 && !showProminenceOnly) {
     return (
-      <div style={styles.emptyState}>
-        No timeline events recorded for this entity.
+      <div style={styles.container}>
+        <label style={styles.filterRow}>
+          <input
+            type="checkbox"
+            checked={showProminenceOnly}
+            onChange={(e) => setShowProminenceOnly(e.target.checked)}
+            style={styles.checkbox}
+          />
+          <span style={styles.checkboxLabel}>Show prominence-only events</span>
+        </label>
+        <div style={styles.emptyState}>
+          No timeline events recorded for this entity.
+        </div>
       </div>
     );
   }
 
   return (
     <div style={styles.container}>
+      <label style={styles.filterRow}>
+        <input
+          type="checkbox"
+          checked={showProminenceOnly}
+          onChange={(e) => setShowProminenceOnly(e.target.checked)}
+          style={styles.checkbox}
+        />
+        <span style={styles.checkboxLabel}>Show prominence-only events</span>
+      </label>
       <table style={styles.table}>
         <thead>
           <tr style={styles.headerRow}>

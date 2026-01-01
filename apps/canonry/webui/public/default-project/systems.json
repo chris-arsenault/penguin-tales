@@ -143,7 +143,7 @@
     "config": {
       "id": "prominence_evolution",
       "name": "Prominence Evolution",
-      "description": "Entities with many connections gain prominence; isolated entities fade",
+      "description": "All entities fade over time; connections slow the decay (inactivity leads to being forgotten)",
       "metric": {
         "type": "connection_count",
         "direction": "both",
@@ -152,23 +152,22 @@
       "rules": [
         {
           "condition": {
-            "operator": ">=",
-            "threshold": 5,
-            "multiplier": 6
+            "operator": "<=",
+            "threshold": 2
           },
-          "probability": 0.7,
+          "probability": 0.9,
           "action": {
             "type": "adjust_prominence",
-            "delta": 0.2,
+            "delta": -0.25,
             "entity": "$self"
           }
         },
         {
           "condition": {
-            "operator": "<=",
-            "threshold": 2
+            "operator": ">=",
+            "threshold": 3
           },
-          "probability": 0.8,
+          "probability": 0.75,
           "action": {
             "type": "adjust_prominence",
             "delta": -0.15,
@@ -176,7 +175,7 @@
           }
         }
       ],
-      "throttleChance": 0.15,
+      "throttleChance": 0.08,
       "selection": {
         "strategy": "by_kind",
         "kind": "any"
@@ -189,7 +188,7 @@
     "config": {
       "id": "reflected_glory",
       "name": "Reflected Glory",
-      "description": "Entities connected to high-prominence entities gradually gain prominence themselves. A sword wielded by a legendary hero becomes legendary; an NPC serving a mythic faction gains notoriety.",
+      "description": "Weak homeostatic pressure. Connected to legends? Slight rise. Connected to the forgotten? Slight fade.",
       "metric": {
         "type": "neighbor_prominence",
         "direction": "both",
@@ -201,27 +200,27 @@
             "operator": ">=",
             "threshold": 3.0
           },
-          "probability": 0.8,
+          "probability": 0.4,
           "action": {
             "type": "adjust_prominence",
-            "delta": 0.35,
+            "delta": 0.08,
             "entity": "$self"
           }
         },
         {
           "condition": {
-            "operator": ">=",
+            "operator": "<=",
             "threshold": 2.0
           },
-          "probability": 0.6,
+          "probability": 0.4,
           "action": {
             "type": "adjust_prominence",
-            "delta": 0.2,
+            "delta": -0.06,
             "entity": "$self"
           }
         }
       ],
-      "throttleChance": 0.1,
+      "throttleChance": 0.25,
       "selection": {
         "strategy": "by_kind",
         "kind": "any"

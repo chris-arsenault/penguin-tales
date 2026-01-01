@@ -3127,6 +3127,10 @@
       "statusFilter": "active",
       "filters": [
         {
+          "type": "not_has_culture",
+          "culture": "orca"
+        },
+        {
           "type": "has_tag",
           "tag": "war_weary"
         }
