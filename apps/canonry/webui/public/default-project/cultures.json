@@ -1944,6 +1944,21 @@
                 { "type": "grammar", "weight": 0.85, "grammarId": "aurora_faction" },
                 { "type": "grammar", "weight": 0.15, "grammarId": "aurora_faction_regional" }
               ]
+            },
+            {
+              "name": "Region Names",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["faction"],
+                "prominence": [],
+                "subtypes": ["region"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "aurora_region" }
+              ]
             }
           ],
           "isDefault": false,
@@ -2100,6 +2115,25 @@
               "strategies": [
                 { "type": "grammar", "weight": 0.85, "grammarId": "aurora_law" },
                 { "type": "grammar", "weight": 0.15, "grammarId": "aurora_rules_regional" }
+              ]
+            },
+            {
+              "name": "Region Names",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": [
+                  "rules"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "region"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "aurora_region" }
               ]
             }
           ],
@@ -3723,6 +3757,21 @@
               ]
             },
             {
+              "name": "Region Names",
+              "priority": 55,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["region"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_region" }
+              ]
+            },
+            {
               "name": "Default NPC Names",
               "priority": 0,
               "conditions": {
@@ -3896,6 +3945,25 @@
                 { "type": "grammar", "weight": 0.85, "grammarId": "nightshelf_magic" },
                 { "type": "grammar", "weight": 0.15, "grammarId": "nightshelf_rules_regional" }
               ]
+            },
+            {
+              "name": "Region Names",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": [
+                  "rules"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "region"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_region" }
+              ]
             }
           ],
           "isDefault": false,
@@ -3922,6 +3990,21 @@
               "strategies": [
                 { "type": "grammar", "weight": 0.85, "grammarId": "nightshelf_faction" },
                 { "type": "grammar", "weight": 0.15, "grammarId": "nightshelf_faction_regional" }
+              ]
+            },
+            {
+              "name": "Region Names",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["faction"],
+                "prominence": [],
+                "subtypes": ["region"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_region" }
               ]
             }
           ],
@@ -5491,6 +5574,21 @@
               ]
             },
             {
+              "name": "Region Names",
+              "priority": 55,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["region"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "orca_region" }
+              ]
+            },
+            {
               "name": "Default NPC Names",
               "priority": 0,
               "conditions": {
@@ -5756,6 +5854,21 @@
                 { "type": "phonotactic", "weight": 0.3, "domainId": "orca_domain" },
                 { "type": "grammar", "weight": 0.15, "grammarId": "orca_faction_regional" }
               ]
+            },
+            {
+              "name": "Region Names",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["faction"],
+                "prominence": [],
+                "subtypes": ["region"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "orca_region" }
+              ]
             }
           ],
           "isDefault": false,
@@ -5780,6 +5893,21 @@
                 { "type": "grammar", "weight": 0.55, "grammarId": "orca_law" },
                 { "type": "phonotactic", "weight": 0.3, "domainId": "orca_domain" },
                 { "type": "grammar", "weight": 0.15, "grammarId": "orca_rules_regional" }
+              ]
+            },
+            {
+              "name": "Region Names",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": ["rules"],
+                "prominence": [],
+                "subtypes": ["region"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 1, "grammarId": "orca_region" }
               ]
             }
           ],

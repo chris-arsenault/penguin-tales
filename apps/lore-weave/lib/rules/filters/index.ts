@@ -128,6 +128,12 @@ export function applySelectionFilter(
       return entities.filter(e => e.culture === refEntity.culture);
     }
 
+    case 'not_matches_culture': {
+      const refEntity = resolver.resolveEntity(filter.with);
+      if (!refEntity) return entities;
+      return entities.filter(e => e.culture !== refEntity.culture);
+    }
+
     case 'has_status': {
       return entities.filter(e => e.status === filter.status);
     }

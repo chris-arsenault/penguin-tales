@@ -110,6 +110,17 @@ export function MutationCard({
       }
       case 'update_rate_limit':
         return 'track execution';
+      case 'transfer_relationship':
+        return `${mutation.entity || '?'} ${mutation.relationshipKind || '?'} from ${mutation.from || '?'} to ${mutation.to || '?'}`;
+      case 'for_each_related': {
+        const actionCount = (mutation.actions || []).length;
+        return `${mutation.relationship || '?'} (${actionCount} action${actionCount !== 1 ? 's' : ''})`;
+      }
+      case 'conditional': {
+        const thenCount = (mutation.thenActions || []).length;
+        const elseCount = (mutation.elseActions || []).length;
+        return `then: ${thenCount}, else: ${elseCount}`;
+      }
       default:
         return '';
     }
@@ -398,6 +409,184 @@ export function MutationCard({
             {mutation.type === 'update_rate_limit' && (
               <div className="text-muted" style={{ gridColumn: '1 / -1' }}>
                 Tracks generator execution for rate limiting.
+              </div>
+            )}
+
+            {mutation.type === 'transfer_relationship' && (
+              <>
+                <ReferenceDropdown
+                  label="Entity"
+                  value={mutation.entity || ''}
+                  onChange={(v) => update('entity', v)}
+                  options={entityRefs}
+                  placeholder="Select entity..."
+                />
+                <ReferenceDropdown
+                  label="Relationship Kind"
+                  value={mutation.relationshipKind || ''}
+                  onChange={(v) => update('relationshipKind', v)}
+                  options={relationshipKindOptions}
+                  placeholder="Select relationship..."
+                />
+                <ReferenceDropdown
+                  label="From"
+                  value={mutation.from || ''}
+                  onChange={(v) => update('from', v)}
+                  options={entityRefs}
+                  placeholder="Select source..."
+                />
+                <ReferenceDropdown
+                  label="To"
+                  value={mutation.to || ''}
+                  onChange={(v) => update('to', v)}
+                  options={entityRefs}
+                  placeholder="Select destination..."
+                />
+              </>
+            )}
+
+            {mutation.type === 'for_each_related' && (
+              <>
+                <ReferenceDropdown
+                  label="Relationship"
+                  value={mutation.relationship || ''}
+                  onChange={(v) => update('relationship', v)}
+                  options={relationshipKindOptions}
+                  placeholder="Select relationship..."
+                />
+                <ReferenceDropdown
+                  label="Direction"
+                  value={mutation.direction || 'both'}
+                  onChange={(v) => update('direction', v)}
+                  options={DIRECTION_OPTIONS}
+                />
+                <div className="form-group">
+                  <label className="label">Target Kind (optional)</label>
+                  <input
+                    type="text"
+                    value={mutation.targetKind || ''}
+                    onChange={(e) => update('targetKind', e.target.value || undefined)}
+                    className="input"
+                    placeholder="e.g., artifact"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Target Subtype (optional)</label>
+                  <input
+                    type="text"
+                    value={mutation.targetSubtype || ''}
+                    onChange={(e) => update('targetSubtype', e.target.value || undefined)}
+                    className="input"
+                    placeholder="e.g., weapon"
+                  />
+                </div>
+                <div style={{ gridColumn: '1 / -1', marginTop: '16px' }}>
+                  <label className="label">Nested Actions ({(mutation.actions || []).length})</label>
+                  <div className="info-box-text" style={{ marginBottom: '8px', fontSize: '12px' }}>
+                    Actions executed for each related entity. Use <code>$related</code> to reference the current entity.
+                  </div>
+                  {(mutation.actions || []).map((nestedAction, idx) => (
+                    <div key={idx} style={{ marginBottom: '8px', marginLeft: '16px', borderLeft: '2px solid #a855f7', paddingLeft: '12px' }}>
+                      <MutationCard
+                        mutation={nestedAction}
+                        onChange={(a) => {
+                          const newActions = [...(mutation.actions || [])];
+                          newActions[idx] = a;
+                          update('actions', newActions);
+                        }}
+                        onRemove={() => {
+                          update('actions', (mutation.actions || []).filter((_, i) => i !== idx));
+                        }}
+                        schema={schema}
+                        pressures={pressures}
+                        entityOptions={[...entityRefs, { value: '$related', label: '$related' }]}
+                        typeOptions={types.filter(t => t.value !== 'for_each_related')}
+                        createMutation={createMutation}
+                      />
+                    </div>
+                  ))}
+                  <button
+                    className="btn-add"
+                    onClick={() => update('actions', [...(mutation.actions || []), { type: 'set_tag', entity: '$related', tag: '' }])}
+                    style={{ marginLeft: '16px' }}
+                  >
+                    + Add Nested Action
+                  </button>
+                </div>
+              </>
+            )}
+
+            {mutation.type === 'conditional' && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <div className="info-box-text" style={{ marginBottom: '12px', fontSize: '12px' }}>
+                  Execute different actions based on a condition.
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label className="label">Then Actions ({(mutation.thenActions || []).length})</label>
+                  <div className="info-box-text" style={{ marginBottom: '8px', fontSize: '12px' }}>
+                    Actions executed when condition passes.
+                  </div>
+                  {(mutation.thenActions || []).map((nestedAction, idx) => (
+                    <div key={idx} style={{ marginBottom: '8px', marginLeft: '16px', borderLeft: '2px solid #10b981', paddingLeft: '12px' }}>
+                      <MutationCard
+                        mutation={nestedAction}
+                        onChange={(a) => {
+                          const newActions = [...(mutation.thenActions || [])];
+                          newActions[idx] = a;
+                          update('thenActions', newActions);
+                        }}
+                        onRemove={() => {
+                          update('thenActions', (mutation.thenActions || []).filter((_, i) => i !== idx));
+                        }}
+                        schema={schema}
+                        pressures={pressures}
+                        entityOptions={entityRefs}
+                        typeOptions={types}
+                        createMutation={createMutation}
+                      />
+                    </div>
+                  ))}
+                  <button
+                    className="btn-add"
+                    onClick={() => update('thenActions', [...(mutation.thenActions || []), { type: 'set_tag', entity: '$self', tag: '' }])}
+                    style={{ marginLeft: '16px' }}
+                  >
+                    + Add Then Action
+                  </button>
+                </div>
+                <div>
+                  <label className="label">Else Actions ({(mutation.elseActions || []).length})</label>
+                  <div className="info-box-text" style={{ marginBottom: '8px', fontSize: '12px' }}>
+                    Actions executed when condition fails (optional).
+                  </div>
+                  {(mutation.elseActions || []).map((nestedAction, idx) => (
+                    <div key={idx} style={{ marginBottom: '8px', marginLeft: '16px', borderLeft: '2px solid #ef4444', paddingLeft: '12px' }}>
+                      <MutationCard
+                        mutation={nestedAction}
+                        onChange={(a) => {
+                          const newActions = [...(mutation.elseActions || [])];
+                          newActions[idx] = a;
+                          update('elseActions', newActions);
+                        }}
+                        onRemove={() => {
+                          update('elseActions', (mutation.elseActions || []).filter((_, i) => i !== idx));
+                        }}
+                        schema={schema}
+                        pressures={pressures}
+                        entityOptions={entityRefs}
+                        typeOptions={types}
+                        createMutation={createMutation}
+                      />
+                    </div>
+                  ))}
+                  <button
+                    className="btn-add"
+                    onClick={() => update('elseActions', [...(mutation.elseActions || []), { type: 'set_tag', entity: '$self', tag: '' }])}
+                    style={{ marginLeft: '16px' }}
+                  >
+                    + Add Else Action
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -64,7 +64,7 @@
         { "$ref": "#/$defs/RelationshipCountCondition" },
         { "$ref": "#/$defs/RelationshipExistsCondition" },
         { "$ref": "#/$defs/TagExistsCondition" },
-        { "$ref": "#/$defs/TagAbsentCondition" },
+        { "$ref": "#/$defs/LacksTagCondition" },
         { "$ref": "#/$defs/StatusCondition" },
         { "$ref": "#/$defs/ProminenceCondition" },
         { "$ref": "#/$defs/TimeElapsedCondition" },
@@ -170,12 +170,12 @@
       }
     },
 
-    "TagAbsentCondition": {
+    "LacksTagCondition": {
       "type": "object",
       "required": ["type", "tag"],
       "additionalProperties": false,
       "properties": {
-        "type": { "const": "tag_absent" },
+        "type": { "const": "lacks_tag" },
         "entity": { "$ref": "#/$defs/NonEmptyString" },
         "tag": { "$ref": "#/$defs/NonEmptyString" }
       }

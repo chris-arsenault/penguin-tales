@@ -32,7 +32,7 @@ export type Condition =
 
   // Tag conditions
   | TagExistsCondition
-  | TagAbsentCondition
+  | LacksTagCondition
 
   // Status/prominence conditions
   | StatusCondition
@@ -165,10 +165,10 @@ export interface TagExistsCondition {
 
 /**
  * Check if a tag is absent.
- * Replaces: tag_absent, lacks_tag
+ * Canonical name: lacks_tag (matches filter naming pattern)
  */
-export interface TagAbsentCondition {
-  type: 'tag_absent';
+export interface LacksTagCondition {
+  type: 'lacks_tag';
   /** Optional entity reference (defaults to ctx.self) */
   entity?: string;
   tag: string;

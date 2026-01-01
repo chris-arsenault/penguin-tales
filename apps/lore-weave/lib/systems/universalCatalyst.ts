@@ -146,7 +146,8 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
 
         // Store action context for narrative attribution
         // WorldEngine will use this to enter/exit contexts when applying modifications
-        const actionContext = { source: 'action' as const, sourceId: selectedAction.type };
+        // Include agent.id to make each action invocation a separate narrative event
+        const actionContext = { source: 'action' as const, sourceId: `${selectedAction.type}:${agent.id}` };
 
         // Attempt to execute action with extended outcome
         const outcome = executeActionWithContext(agent, selectedAction, graphView);

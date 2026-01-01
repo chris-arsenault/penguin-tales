@@ -390,6 +390,8 @@ export interface SystemResult {
   relationshipsAdded: Array<Relationship & {
     /** Action context for narrative attribution (e.g., action:raid instead of system:universal_catalyst) */
     actionContext?: ActionContext;
+    /** Narrative group ID for per-target event splitting (e.g., entity ID when clusterMode=individual) */
+    narrativeGroupId?: string;
   }>;
   relationshipsAdjusted?: Array<{
     kind: string;
@@ -398,12 +400,16 @@ export interface SystemResult {
     delta: number;
     /** Action context for narrative attribution */
     actionContext?: ActionContext;
+    /** Narrative group ID for per-target event splitting */
+    narrativeGroupId?: string;
   }>;
   entitiesModified: Array<{
     id: string;
     changes: Partial<HardState>;
     /** Action context for narrative attribution */
     actionContext?: ActionContext;
+    /** Narrative group ID for per-target event splitting (e.g., entity ID when clusterMode=individual) */
+    narrativeGroupId?: string;
   }>;
   pressureChanges: Record<string, number>;
   description: string;

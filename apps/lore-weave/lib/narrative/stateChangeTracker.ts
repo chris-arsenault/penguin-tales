@@ -166,9 +166,24 @@ export class StateChangeTracker {
 
   /**
    * Get display name for a system ID, falling back to ID if not found.
+   * Handles entity-specific suffixes like "prominence_evolution:entity_id"
+   * by stripping the suffix and looking up the base system ID.
    */
   private getSystemDisplayName(sourceId: string): string {
-    return this.systemNames.get(sourceId) || sourceId;
+    // Try exact match first
+    const exact = this.systemNames.get(sourceId);
+    if (exact) return exact;
+
+    // Strip entity-specific suffix (e.g., "prominence_evolution:entity_id" -> "prominence_evolution")
+    const colonIndex = sourceId.indexOf(':');
+    if (colonIndex > 0) {
+      const baseId = sourceId.substring(0, colonIndex);
+      const baseName = this.systemNames.get(baseId);
+      if (baseName) return baseName;
+    }
+
+    // No match - return raw ID to surface misconfiguration
+    return sourceId;
   }
 
   /**

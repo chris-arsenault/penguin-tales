@@ -26,7 +26,18 @@ function VariableCard({ name, config, onChange, onRemove, schema, availableRefs 
     onChange({ ...config, required: value });
   };
 
-  const displayMode = selectConfig.from && typeof selectConfig.from === 'object' ? 'Related entities' : (selectConfig.kind || 'Not configured');
+  // Determine display mode
+  const getDisplayMode = () => {
+    if (!selectConfig.from || selectConfig.from === 'graph') {
+      return selectConfig.kind || 'Not configured';
+    }
+    if (typeof selectConfig.from === 'object' && 'path' in selectConfig.from) {
+      const stepCount = selectConfig.from.path?.length || 0;
+      return `Path traversal (${stepCount} step${stepCount !== 1 ? 's' : ''})`;
+    }
+    return 'Related entities';
+  };
+  const displayMode = getDisplayMode();
   const displayStrategy = selectConfig.pickStrategy || 'Not set';
   const filterCount = (selectConfig.filters || []).length;
 
@@ -185,8 +196,14 @@ export function ThresholdTriggerTab({ system, onChange, schema, pressures }) {
         return { type: 'archive_relationship', entity: '$self', relationshipKind: '', direction: 'both' };
       case 'adjust_relationship_strength':
         return { type: 'adjust_relationship_strength', kind: '', src: '$self', dst: '$self', delta: 0.1 };
+      case 'transfer_relationship':
+        return { type: 'transfer_relationship', entity: '$self', relationshipKind: '', from: '$self', to: '$self' };
       case 'update_rate_limit':
         return { type: 'update_rate_limit' };
+      case 'for_each_related':
+        return { type: 'for_each_related', relationship: '', direction: 'both', actions: [] };
+      case 'conditional':
+        return { type: 'conditional', condition: { type: 'random_chance', chance: 0.5 }, thenActions: [], elseActions: [] };
       case 'create_relationship':
       default:
         return { type: 'create_relationship', kind: '', src: '$self', dst: '$self', strength: 0.5 };

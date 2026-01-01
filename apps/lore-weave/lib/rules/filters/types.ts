@@ -76,6 +76,7 @@ export type SelectionFilter =
   | LacksAnyTagSelectionFilter
   | HasCultureFilter
   | MatchesCultureFilter
+  | NotMatchesCultureFilter
   | HasStatusFilter
   | HasProminenceFilter
   | SharesRelatedFilter
@@ -146,6 +147,11 @@ export interface HasCultureFilter {
 export interface MatchesCultureFilter {
   type: 'matches_culture';
   with: string;  // Variable reference like "$target"
+}
+
+export interface NotMatchesCultureFilter {
+  type: 'not_matches_culture';
+  with: string;  // Variable reference like "$actor"
 }
 
 export interface HasStatusFilter {

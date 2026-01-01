@@ -35,6 +35,7 @@ export type Metric =
 
   // Prominence metrics
   | ProminenceMultiplierMetric
+  | NeighborProminenceMetric
 
   // Decay/falloff metrics
   | DecayRateMetric
@@ -201,6 +202,25 @@ export interface ProminenceMultiplierMetric {
    * - 'action_rate': For action selection probability (0.3 - 2.0)
    */
   mode?: 'success_chance' | 'action_rate';
+}
+
+/**
+ * Average prominence of connected entities.
+ * Implements "Reflected Glory" - entities connected to high-prominence
+ * entities can benefit from their fame.
+ */
+export interface NeighborProminenceMetric {
+  type: 'neighbor_prominence';
+  /** Relationship kinds to consider (all if not specified) */
+  relationshipKinds?: string[];
+  /** Direction of relationships to consider */
+  direction?: Direction;
+  /** Minimum relationship strength to count */
+  minStrength?: number;
+  /** Coefficient to multiply the result */
+  coefficient?: number;
+  /** Maximum value cap */
+  cap?: number;
 }
 
 // =============================================================================

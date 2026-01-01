@@ -73,8 +73,8 @@
       },
       "regions": [
         {
-          "id": "region_1764785235600",
-          "label": "Night Magic",
+          "id": "abilities_nightshelf_moonweave",
+          "label": "Moonweave Mysteries",
           "color": "#9370DB",
           "culture": "nightshelf",
           "tags": [],
@@ -88,8 +88,8 @@
           }
         },
         {
-          "id": "region_1764785261183",
-          "label": "Golden Auras",
+          "id": "abilities_aurora_prismcraft",
+          "label": "Prismcraft Arts",
           "color": "#FFD700",
           "culture": "aurora-stack",
           "tags": [],
@@ -103,8 +103,8 @@
           }
         },
         {
-          "id": "region_1764785282607",
-          "label": "Orca Combats",
+          "id": "abilities_orca_battleways",
+          "label": "Orca Battleways",
           "color": "#2F4F4F",
           "culture": "orca",
           "tags": [],
@@ -267,8 +267,8 @@
       },
       "regions": [
         {
-          "id": "region_1765071910751",
-          "label": "Trade Edics",
+          "id": "rules_aurora_trade_edicts",
+          "label": "Trade Edicts",
           "color": "#FFD700",
           "culture": "aurora-stack",
           "tags": [],
@@ -282,8 +282,8 @@
           }
         },
         {
-          "id": "region_1765071940851",
-          "label": "Rules of Engagement",
+          "id": "rules_orca_war_doctrines",
+          "label": "War Doctrines",
           "color": "#2F4F4F",
           "culture": "orca",
           "tags": [],
@@ -297,8 +297,8 @@
           }
         },
         {
-          "id": "region_1765071956803",
-          "label": "Secret Policies",
+          "id": "rules_nightshelf_shadow_codes",
+          "label": "Shadow Codes",
           "color": "#9370DB",
           "culture": "nightshelf",
           "tags": [],
@@ -388,8 +388,8 @@
       },
       "regions": [
         {
-          "id": "aurora_stack",
-          "label": "Aurora Stack",
+          "id": "npc_aurora_citizens",
+          "label": "Golden Citizens",
           "color": "#FFD700",
           "culture": "aurora-stack",
           "tags": [
@@ -407,8 +407,8 @@
           }
         },
         {
-          "id": "nightfall_shelf",
-          "label": "Nightfall Shelf",
+          "id": "npc_nightshelf_denizens",
+          "label": "Twilight Denizens",
           "color": "#9370DB",
           "culture": "nightshelf",
           "tags": [
@@ -425,8 +425,8 @@
           }
         },
         {
-          "id": "orca_waters",
-          "label": "Orca Waters",
+          "id": "npc_orca_raiders",
+          "label": "Orca Marauders",
           "color": "#2F4F4F",
           "culture": "orca",
           "tags": [
@@ -515,8 +515,8 @@
       },
       "regions": [
         {
-          "id": "aurora_stack_loc",
-          "label": "Aurora Stack",
+          "id": "location_aurora_markets",
+          "label": "Aurora Markets",
           "color": "#FFD700",
           "culture": "aurora-stack",
           "tags": [
@@ -534,8 +534,8 @@
           }
         },
         {
-          "id": "nightfall_shelf_loc",
-          "label": "Nightfall Shelf",
+          "id": "location_nightshelf_sanctums",
+          "label": "Hidden Sanctums",
           "color": "#9370DB",
           "culture": "nightshelf",
           "tags": [
@@ -553,9 +553,10 @@
           }
         },
         {
-          "id": "glow_fissure",
+          "id": "location_glow_fissure",
           "label": "The Glow-Fissure",
           "color": "#FF6347",
+          "culture": "nightshelf",
           "tags": [
             "anomaly",
             "dangerous",
@@ -568,8 +569,7 @@
               "y": 65
             },
             "radius": 8
-          },
-          "culture": "nightshelf"
+          }
         }
       ]
     },
@@ -650,8 +650,8 @@
       },
       "regions": [
         {
-          "id": "aurora_factions",
-          "label": "Aurora Stack",
+          "id": "faction_aurora_guilds",
+          "label": "Merchant Guilds",
           "color": "#FFD700",
           "culture": "aurora-stack",
           "tags": [
@@ -670,8 +670,8 @@
           }
         },
         {
-          "id": "nightfall_factions",
-          "label": "Nightfall Shelf",
+          "id": "faction_nightshelf_covens",
+          "label": "Shadow Covens",
           "color": "#9370DB",
           "culture": "nightshelf",
           "tags": [
@@ -688,8 +688,8 @@
           }
         },
         {
-          "id": "region_1765071992810",
-          "label": "Orca Raiders",
+          "id": "faction_orca_warclans",
+          "label": "War Clans",
           "color": "#410f1e",
           "culture": "orca",
           "tags": [

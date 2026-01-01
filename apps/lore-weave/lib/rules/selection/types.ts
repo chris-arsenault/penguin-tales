@@ -73,11 +73,34 @@ export interface RelatedEntitiesSpec {
 }
 
 /**
+ * A step in a path traversal for variable selection.
+ */
+export interface PathTraversalStep {
+  /** Starting entity reference (only for first step) */
+  from?: string;
+  /** Relationship to traverse */
+  via: string;
+  /** Direction: 'out'/'in'/'any' or 'src'/'dst'/'both' */
+  direction: Direction | 'out' | 'in' | 'any';
+  /** Filter targets at this step */
+  targetKind?: string;
+  targetSubtype?: string;
+  targetStatus?: string;
+}
+
+/**
+ * Path-based entity selection - multi-hop traversal.
+ */
+export interface PathBasedSpec {
+  path: PathTraversalStep[];
+}
+
+/**
  * Variable selection rule (used by template variables).
  */
 export interface VariableSelectionRule {
-  // Select from graph or from related entities
-  from?: RelatedEntitiesSpec | 'graph';
+  // Select from graph, from related entities, or via path traversal
+  from?: RelatedEntitiesSpec | PathBasedSpec | 'graph';
 
   // Entity filtering (kind used when from='graph')
   kind?: string;

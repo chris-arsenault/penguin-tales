@@ -132,31 +132,38 @@ function resolveThreshold(
 
 function mergeMutationResult(
   result: MutationResult,
-  modifications: EntityModification[],
-  relationships: Relationship[],
-  relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }>,
-  pressureChanges: Record<string, number>
+  modifications: Array<EntityModification & { narrativeGroupId?: string }>,
+  relationships: Array<Relationship & { narrativeGroupId?: string }>,
+  relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number; narrativeGroupId?: string }>,
+  pressureChanges: Record<string, number>,
+  narrativeGroupId?: string
 ): void {
   if (!result.applied) return;
 
   if (result.entityModifications.length > 0) {
-    modifications.push(...result.entityModifications);
+    for (const mod of result.entityModifications) {
+      modifications.push(narrativeGroupId ? { ...mod, narrativeGroupId } : mod);
+    }
   }
 
   if (result.relationshipsCreated.length > 0) {
     for (const rel of result.relationshipsCreated) {
-      relationships.push({
+      const relWithGroup = {
         kind: rel.kind,
         src: rel.src,
         dst: rel.dst,
         strength: rel.strength,
         category: rel.category,
-      });
+        ...(narrativeGroupId ? { narrativeGroupId } : {}),
+      };
+      relationships.push(relWithGroup);
     }
   }
 
   if (result.relationshipsAdjusted.length > 0) {
-    relationshipsAdjusted.push(...result.relationshipsAdjusted);
+    for (const adj of result.relationshipsAdjusted) {
+      relationshipsAdjusted.push(narrativeGroupId ? { ...adj, narrativeGroupId } : adj);
+    }
   }
 
   for (const [pressureId, delta] of Object.entries(result.pressureChanges)) {
@@ -199,9 +206,9 @@ export function createConnectionEvolutionSystem(
         }
       }
 
-      const modifications: EntityModification[] = [];
-      const relationships: Relationship[] = [];
-      const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
+      const modifications: Array<EntityModification & { narrativeGroupId?: string }> = [];
+      const relationships: Array<Relationship & { narrativeGroupId?: string }> = [];
+      const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number; narrativeGroupId?: string }> = [];
       const pressureChanges: Record<string, number> = {};
 
       // Find entities to evaluate
@@ -244,18 +251,24 @@ export function createConnectionEvolutionSystem(
           const entityCtx = { ...ruleCtx, self: entity };
 
           if (rule.action.type === 'create_relationship' && rule.betweenMatching) {
+            // betweenMatching relationships are a unified narrative (coalition formation)
+            // so we don't split by entity - they'll be grouped together
             if (!matchingByRule.has(ruleIdx)) {
               matchingByRule.set(ruleIdx, []);
             }
             matchingByRule.get(ruleIdx)!.push(entity);
           } else {
+            // Individual actions (prominence, status, tags) are separate narratives per entity
+            // Each entity's rise/fall is its own story
             const result = prepareMutation(rule.action as Mutation, entityCtx);
-            mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges);
+            mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges, entity.id);
           }
         }
       }
 
       // Create relationships between matching entities (for betweenMatching rules)
+      // NOTE: No narrativeGroupId here - coalition/alliance formation is ONE unified narrative
+      // "Renowned figures formed alliances" not "X allied, Y allied, Z allied"
       for (const [ruleIdx, matchingEntities] of matchingByRule.entries()) {
         const rule = config.rules[ruleIdx];
         if (rule.action.type !== 'create_relationship') continue;
@@ -290,7 +303,7 @@ export function createConnectionEvolutionSystem(
       return {
         relationshipsAdded: relationships,
         relationshipsAdjusted,
-        entitiesModified: modifications,
+        entitiesModified: modifications as SystemResult['entitiesModified'],
         pressureChanges,
         description: `${config.name}: ${modifications.length} modified, ${relationships.length} relationships`
       };

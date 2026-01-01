@@ -276,7 +276,8 @@ export interface EntityModification {
   changes: {
     status?: string;
     prominence?: number;
-    tags?: Record<string, string | boolean>;
+    // Tag patch: set values; use undefined to remove.
+    tags?: Record<string, string | boolean | undefined>;
   };
 }
 

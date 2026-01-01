@@ -332,7 +332,9 @@ function createActionHandler(action: DeclarativeAction): ExecutableAction['handl
 
     for (const result of prepared) {
       if (result.entityModifications.length > 0) {
-        modifications.push(...result.entityModifications);
+        // Type assertion: EntityModification has TagPatch (with undefined for deletions)
+        // but ActionResult expects Partial<HardState> - these are compatible at runtime
+        modifications.push(...result.entityModifications as typeof modifications[number][]);
       }
 
       if (result.relationshipsCreated.length > 0) {

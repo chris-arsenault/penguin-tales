@@ -14,6 +14,8 @@ import type {
   SelectionRule,
   VariableSelectionRule,
   SaturationLimit,
+  PathBasedSpec,
+  PathTraversalStep,
 } from './types';
 import type { SelectionFilter } from '../filters/types';
 
@@ -53,6 +55,8 @@ export function describeSelectionFilter(filter: SelectionFilter): string {
       return `has_culture '${filter.culture}'`;
     case 'matches_culture':
       return `matches_culture with ${filter.with}`;
+    case 'not_matches_culture':
+      return `not_matches_culture with ${filter.with}`;
     case 'has_status':
       return `has_status '${filter.status}'`;
     case 'has_prominence':
@@ -477,6 +481,51 @@ export function selectEntities(
 }
 
 /**
+ * Type guard to check if a from spec is a path-based spec.
+ */
+function isPathBasedSpec(from: VariableSelectionRule['from']): from is PathBasedSpec {
+  return typeof from === 'object' && from !== null && 'path' in from;
+}
+
+/**
+ * Traverse a multi-hop path starting from entities.
+ */
+function traversePath(
+  startEntities: HardState[],
+  steps: PathTraversalStep[],
+  ctx: RuleContext,
+  trace?: SelectionTrace
+): HardState[] {
+  const graphView = ctx.graph;
+  let currentEntities = startEntities;
+
+  for (const step of steps) {
+    const nextEntities: HardState[] = [];
+    const direction = normalizeDirection(step.direction);
+
+    for (const entity of currentEntities) {
+      const related = graphView.getRelatedEntities(entity.id, step.via, direction);
+      for (const r of related) {
+        // Apply step filters
+        if (step.targetKind && step.targetKind !== 'any' && r.kind !== step.targetKind) continue;
+        if (step.targetSubtype && step.targetSubtype !== 'any' && r.subtype !== step.targetSubtype) continue;
+        if (step.targetStatus && step.targetStatus !== 'any' && r.status !== step.targetStatus) continue;
+        nextEntities.push(r);
+      }
+    }
+
+    pushTrace(trace, `via ${step.via}: ${currentEntities.length} -> ${nextEntities.length}`, nextEntities.length);
+    currentEntities = nextEntities;
+
+    if (currentEntities.length === 0) {
+      return [];
+    }
+  }
+
+  return currentEntities;
+}
+
+/**
  * Select candidates for a variable selection rule.
  */
 export function selectVariableEntities(
@@ -491,18 +540,50 @@ export function selectVariableEntities(
   const needsHistorical = select.statusFilter === 'historical' || select.statuses?.includes('historical');
 
   if (select.from && select.from !== 'graph') {
-    const relatedTo = ctx.resolver.resolveEntity(select.from.relatedTo);
-    if (!relatedTo) {
-      pushTrace(trace, `related to ${select.from.relatedTo} (not found)`, 0);
-      return [];
+    // Check if this is a path-based traversal
+    if (isPathBasedSpec(select.from)) {
+      // Path-based traversal: follow multiple hops
+      const steps = select.from.path;
+      if (steps.length === 0) {
+        pushTrace(trace, 'empty path', 0);
+        return [];
+      }
+
+      // Get starting entities from first step's 'from' field
+      const firstStep = steps[0];
+      let startEntities: HardState[];
+
+      if (firstStep.from) {
+        const startEntity = ctx.resolver.resolveEntity(firstStep.from);
+        if (!startEntity) {
+          pushTrace(trace, `path start ${firstStep.from} (not found)`, 0);
+          return [];
+        }
+        startEntities = [startEntity];
+        pushTrace(trace, `path start: ${startEntity.name || startEntity.id}`, 1);
+      } else {
+        // No 'from' on first step - use all entities matching kind filters
+        startEntities = graphView.getEntities({ includeHistorical: needsHistorical });
+        pushTrace(trace, 'path start: all entities', startEntities.length);
+      }
+
+      // Traverse the path
+      entities = traversePath(startEntities, steps, ctx, trace);
+    } else {
+      // Single-hop related entities (legacy format)
+      const relatedTo = ctx.resolver.resolveEntity(select.from.relatedTo);
+      if (!relatedTo) {
+        pushTrace(trace, `related to ${select.from.relatedTo} (not found)`, 0);
+        return [];
+      }
+      const direction = normalizeDirection(select.from.direction);
+      entities = graphView.getRelatedEntities(
+        relatedTo.id,
+        select.from.relationship,
+        direction
+      );
+      pushTrace(trace, `via ${select.from.relationship} from ${relatedTo.name || relatedTo.id}`, entities.length);
     }
-    const direction = normalizeDirection(select.from.direction);
-    entities = graphView.getRelatedEntities(
-      relatedTo.id,
-      select.from.relationship,
-      direction
-    );
-    pushTrace(trace, `via ${select.from.relationship} from ${relatedTo.name || relatedTo.id}`, entities.length);
   } else {
     if (select.kinds && select.kinds.length > 0) {
       entities = graphView.getEntities({ includeHistorical: needsHistorical }).filter((e) => select.kinds!.includes(e.kind));
@@ -619,7 +700,6 @@ export function resolveVariablesForEntity(
     self,
     entities: { ...baseCtx.entities, self, ...resolved },
     resolver: {
-      ...baseCtx.resolver,
       resolveEntity: (ref: string): HardState | undefined => {
         if (ref === '$self') return self;
         if (ref.startsWith('$')) {
@@ -629,6 +709,9 @@ export function resolveVariablesForEntity(
         }
         return baseCtx.resolver.resolveEntity(ref);
       },
+      getGraphView: () => baseCtx.resolver.getGraphView(),
+      setPathSet: (name: string, ids: Set<string>) => baseCtx.resolver.setPathSet(name, ids),
+      getPathSet: (name: string) => baseCtx.resolver.getPathSet(name),
     },
   });
 

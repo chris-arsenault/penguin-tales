@@ -109,7 +109,7 @@ export interface TemplateUsagePayload {
     };
     variableDiagnoses?: Array<{
       name: string;
-      fromType: 'graph' | 'related';
+      fromType: 'graph' | 'related' | 'path';
       kind?: string;
       relationshipKind?: string;
       relatedTo?: string;

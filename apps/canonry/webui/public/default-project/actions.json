@@ -183,7 +183,8 @@
         }
       ],
       "descriptionTemplate": "declared war on {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.4, "onFailure": -0.25 }
+      "actorProminenceDelta": { "onSuccess": 0.4, "onFailure": -0.25 },
+      "targetProminenceDelta": { "onSuccess": 0.2, "onFailure": 0 }
     },
     "probability": {
       "baseSuccessChance": 0.6,
@@ -1093,7 +1094,8 @@
           "delta": 0.5
         }
       ],
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
+      "targetProminenceDelta": { "onSuccess": 0.1, "onFailure": 0 }
     },
     "probability": {
       "baseSuccessChance": 0.6,
@@ -1160,7 +1162,8 @@
           "delta": 0.5
         }
       ],
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
+      "targetProminenceDelta": { "onSuccess": 0.15, "onFailure": 0 }
     },
     "probability": {
       "baseSuccessChance": 0.5,
@@ -1217,7 +1220,9 @@
           "delta": 1
         }
       ],
-      "actorProminenceDelta": { "onSuccess": 0.6, "onFailure": -0.35 }    },
+      "actorProminenceDelta": { "onSuccess": 0.6, "onFailure": -0.35 },
+      "targetProminenceDelta": { "onSuccess": 0.2, "onFailure": 0 }
+    },
     "probability": {
       "baseSuccessChance": 0.5,
       "baseWeight": 0.6,
@@ -1254,6 +1259,10 @@
         {
           "type": "lacks_relationship",
           "kind": "practitioner_of",
+          "with": "$actor"
+        },
+        {
+          "type": "matches_culture",
           "with": "$actor"
         }
       ],
@@ -1439,7 +1448,8 @@
         }
       ],
       "descriptionTemplate": "{actor.name} claimed the artifact {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
+      "targetProminenceDelta": { "onSuccess": 0.2, "onFailure": 0 }
     },
     "probability": {
       "baseSuccessChance": 0.6,
@@ -1595,7 +1605,8 @@
         }
       ],
       "descriptionTemplate": "{actor.name} stole the artifact {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.4, "onFailure": -0.25 }
+      "actorProminenceDelta": { "onSuccess": 0.4, "onFailure": -0.25 },
+      "targetProminenceDelta": { "onSuccess": 0.3, "onFailure": 0 }
     },
     "probability": {
       "baseSuccessChance": 0.2,
@@ -1737,7 +1748,8 @@
         }
       ],
       "descriptionTemplate": "{actor.name} claimed the weapon {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
+      "targetProminenceDelta": { "onSuccess": 0.15, "onFailure": 0 }
     },
     "probability": {
       "baseSuccessChance": 0.45,
@@ -1803,7 +1815,8 @@
         }
       ],
       "descriptionTemplate": "{actor.name} was purified by the music of {target.name}",
-      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 }
+      "actorProminenceDelta": { "onSuccess": 0.25, "onFailure": -0.15 },
+      "targetProminenceDelta": { "onSuccess": 0.15, "onFailure": 0 }
     },
     "probability": {
       "baseSuccessChance": 0.6,
@@ -2037,6 +2050,84 @@
     "probability": {
       "baseSuccessChance": 0.4,
       "baseWeight": 0.3
+    },
+    "enabled": true
+  },
+  {
+    "id": "steal_foreign_art",
+    "name": "Steal Foreign Art",
+    "description": "An outsider steals knowledge from another culture, forfeiting their right to lead",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "statusFilter": "alive",
+        "subtypes": ["outlaw", "merchant", "mayor"]
+      },
+      "conditions": [
+        {
+          "type": "lacks_tag",
+          "tag": "stolen_art"
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.15
+        }
+      ]
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "abilities",
+      "statuses": ["active", "discovered", "emergent"],
+      "filters": [
+        {
+          "type": "lacks_relationship",
+          "kind": "practitioner_of",
+          "with": "$actor"
+        },
+        {
+          "type": "not_matches_culture",
+          "with": "$actor"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "practitioner_of",
+          "src": "$actor",
+          "dst": "$target",
+          "strength": 0.5
+        },
+        {
+          "type": "archive_all_relationships",
+          "entity": "$actor",
+          "relationshipKind": "leader_of",
+          "direction": "src"
+        },
+        {
+          "type": "create_relationship",
+          "kind": "enemy_of",
+          "src": "$target",
+          "dst": "$actor",
+          "strength": 0.6
+        },
+        {
+          "type": "set_tag",
+          "entity": "$actor",
+          "tag": "stolen_art",
+          "value": true
+        }
+      ],
+      "descriptionTemplate": "stole the secret of {target.name}, forfeiting leadership",
+      "actorProminenceDelta": { "onSuccess": 0.3, "onFailure": -0.2 }
+    },
+    "probability": {
+      "baseSuccessChance": 0.2,
+      "baseWeight": 0.1,
+      "pressureModifiers": []
     },
     "enabled": true
   }

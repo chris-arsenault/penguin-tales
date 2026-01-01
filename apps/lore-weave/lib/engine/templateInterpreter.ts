@@ -72,7 +72,7 @@ export interface SelectionDiagnosis {
  */
 export interface VariableDiagnosis {
   name: string;
-  fromType: 'graph' | 'related';
+  fromType: 'graph' | 'related' | 'path';
   kind?: string;
   relationshipKind?: string;
   relatedTo?: string;
@@ -341,11 +341,13 @@ export class TemplateInterpreter {
     rulesSelectVariableEntities(select, ruleCtx, trace);
 
     const fromSpec = select.from;
-    const isFromRelated = fromSpec && fromSpec !== 'graph';
+    const isFromGraph = !fromSpec || fromSpec === 'graph';
+    const isFromPath = fromSpec && typeof fromSpec === 'object' && 'path' in fromSpec;
+    const isFromRelated = fromSpec && typeof fromSpec === 'object' && 'relatedTo' in fromSpec;
 
     return {
       name,
-      fromType: isFromRelated ? 'related' : 'graph',
+      fromType: isFromGraph ? 'graph' : isFromPath ? 'path' : 'related',
       kind: select.kind,
       relationshipKind: isFromRelated ? fromSpec.relationship : undefined,
       relatedTo: isFromRelated ? fromSpec.relatedTo : undefined,

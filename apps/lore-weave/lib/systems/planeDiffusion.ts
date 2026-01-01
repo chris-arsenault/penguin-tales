@@ -25,7 +25,7 @@ import { HardState } from '../core/worldTypes';
 import { Point } from '../coordinates/types';
 import { WorldRuntime } from '../runtime/worldRuntime';
 import { hasTag, getTagValue } from '../utils';
-import { createSystemContext, evaluateMetric, selectEntities } from '../rules';
+import { buildTagPatch, createSystemContext, evaluateMetric, selectEntities } from '../rules';
 import type { Metric, SelectionRule } from '../rules';
 import { FRAMEWORK_TAG_VALUES } from '@canonry/world-schema';
 
@@ -560,10 +560,12 @@ export function createPlaneDiffusionSystem(
             }
           }
 
+          // Type assertion: buildTagPatch returns TagPatch (with undefined for deletions)
+          // but SystemResult expects Partial<HardState> - compatible at runtime
           modifications.push({
             id: entity.id,
-            changes: { tags: newTags as Record<string, boolean> }
-          });
+            changes: { tags: buildTagPatch(entity.tags, newTags as Record<string, string | boolean>) }
+          } as typeof modifications[number]);
 
           // Only count as significant if a new output tag was added
           if (newOutputTagAdded) {

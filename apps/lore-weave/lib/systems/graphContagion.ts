@@ -7,6 +7,8 @@ import {
   createSystemContext,
   selectEntities,
   prepareMutation,
+  applyTagPatch,
+  buildTagPatch,
 } from '../rules';
 import type {
   SelectionRule,
@@ -459,7 +461,7 @@ function applySingleSourceContagion(
 
           modifications.push({
             id: entity.id,
-            changes: { tags: newTags }
+            changes: { tags: buildTagPatch(entity.tags, newTags) }
           });
         }
       }
@@ -551,7 +553,7 @@ function applySingleSourceContagion(
   return {
     relationshipsAdded: relationships,
     relationshipsAdjusted,
-    entitiesModified: modifications,
+    entitiesModified: modifications as SystemResult['entitiesModified'],
     pressureChanges,
     description: `${config.name}: ${relationships.length} new infections, ${modifications.length} modifications`,
     details: {
@@ -663,9 +665,9 @@ function applyMultiSourceContagion(
           if (result.applied) {
             actionApplied = true;
             for (const mod of result.entityModifications) {
-              const currentTags = modifiedTags.get(mod.id) || { ...entity.tags };
+              let currentTags = modifiedTags.get(mod.id) || { ...entity.tags };
               if (mod.changes.tags) {
-                Object.assign(currentTags, mod.changes.tags);
+                currentTags = applyTagPatch(currentTags, mod.changes.tags);
               }
               modifiedTags.set(mod.id, currentTags);
             }
@@ -761,7 +763,7 @@ function applyMultiSourceContagion(
     }
     modifications.push({
       id: entityId,
-      changes: { tags }
+      changes: { tags: buildTagPatch(graphView.getEntity(entityId)?.tags, tags) }
     });
   }
 
@@ -841,7 +843,7 @@ function applyMultiSourceContagion(
   return {
     relationshipsAdded: relationships,
     relationshipsAdjusted,
-    entitiesModified: modifications,
+    entitiesModified: modifications as SystemResult['entitiesModified'],
     pressureChanges,
     description: `${config.name}: ${relationships.length} new believers, ${modifications.length} modifications across ${sources.length} sources`,
     details: {

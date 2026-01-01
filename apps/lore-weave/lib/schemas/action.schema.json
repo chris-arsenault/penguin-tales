@@ -166,6 +166,15 @@
         },
         {
           "type": "object",
+          "required": ["type", "with"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "not_matches_culture" },
+            "with": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
           "required": ["type", "status"],
           "additionalProperties": false,
           "properties": {
@@ -412,7 +421,7 @@
         { "$ref": "#/$defs/RelationshipCountCondition" },
         { "$ref": "#/$defs/RelationshipExistsCondition" },
         { "$ref": "#/$defs/TagExistsCondition" },
-        { "$ref": "#/$defs/TagAbsentCondition" },
+        { "$ref": "#/$defs/LacksTagCondition" },
         { "$ref": "#/$defs/StatusCondition" },
         { "$ref": "#/$defs/ProminenceCondition" },
         { "$ref": "#/$defs/TimeElapsedCondition" },
@@ -519,12 +528,12 @@
       }
     },
 
-    "TagAbsentCondition": {
+    "LacksTagCondition": {
       "type": "object",
       "required": ["type", "tag"],
       "additionalProperties": false,
       "properties": {
-        "type": { "const": "tag_absent" },
+        "type": { "const": "lacks_tag" },
         "entity": { "$ref": "#/$defs/NonEmptyString" },
         "tag": { "$ref": "#/$defs/NonEmptyString" }
       }
@@ -823,6 +832,14 @@
           "properties": {
             "onSuccess": { "type": "number", "description": "Delta to apply to actor prominence on success" },
             "onFailure": { "type": "number", "description": "Delta to apply to actor prominence on failure" }
+          }
+        },
+        "targetProminenceDelta": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "onSuccess": { "type": "number", "description": "Delta to apply to target prominence on success" },
+            "onFailure": { "type": "number", "description": "Delta to apply to target prominence on failure" }
           }
         }
       }

@@ -38,6 +38,64 @@ import { hasTag } from '../../utils';
 // Re-export types
 export * from './types';
 
+type TagValue = string | boolean;
+type TagPatch = Record<string, TagValue | undefined>;
+
+export function applyTagPatch(
+  base: Record<string, TagValue> | undefined,
+  patch: TagPatch
+): Record<string, TagValue> {
+  const merged: Record<string, TagValue> = { ...(base ?? {}) };
+
+  for (const [tag, value] of Object.entries(patch)) {
+    if (!tag || tag === 'undefined') {
+      continue;
+    }
+    if (value === undefined) {
+      delete merged[tag];
+    } else {
+      merged[tag] = value;
+    }
+  }
+
+  if ('undefined' in merged) {
+    delete merged['undefined'];
+  }
+  if ('' in merged) {
+    delete merged[''];
+  }
+
+  return merged;
+}
+
+export function buildTagPatch(
+  before: Record<string, TagValue> | undefined,
+  after: Record<string, TagValue>
+): TagPatch {
+  const base = before ?? {};
+  const patch: TagPatch = {};
+
+  for (const [tag, value] of Object.entries(after)) {
+    if (!tag || tag === 'undefined') {
+      continue;
+    }
+    if (base[tag] !== value) {
+      patch[tag] = value;
+    }
+  }
+
+  for (const tag of Object.keys(base)) {
+    if (!tag || tag === 'undefined') {
+      continue;
+    }
+    if (!(tag in after)) {
+      patch[tag] = undefined;
+    }
+  }
+
+  return patch;
+}
+
 function resolveEntityRef(ref: string, ctx: RuleContext): HardState | undefined {
   if (ref === '$self') {
     return ctx.self;
@@ -168,8 +226,7 @@ export function applyMutationResult(result: MutationResult, ctx: RuleContext): v
     }
 
     if (mod.changes.tags !== undefined) {
-      const currentTags = entity.tags || {};
-      const newTags = { ...currentTags, ...mod.changes.tags };
+      const newTags = applyTagPatch(entity.tags, mod.changes.tags);
       ctx.graph.updateEntity(mod.id, { tags: newTags });
     }
   }
@@ -274,14 +331,9 @@ function prepareRemoveTag(
     return result;
   }
 
-  // Get current tags and remove the specified one
-  const currentTags = entity.tags || {};
-  const newTags = { ...currentTags };
-  delete newTags[mutation.tag];
-
   result.entityModifications.push({
     id: entity.id,
-    changes: { tags: newTags },
+    changes: { tags: { [mutation.tag]: undefined } },
   });
 
   result.diagnostic = `removed ${mutation.tag} from ${entity.name}`;

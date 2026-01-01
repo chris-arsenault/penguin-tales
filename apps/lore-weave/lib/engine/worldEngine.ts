@@ -31,7 +31,8 @@ import { coordinateStats } from '../coordinates/coordinateStatistics';
 import { SimulationStatistics, ValidationStats } from '../statistics/types';
 import { FrameworkValidator } from './frameworkValidator';
 import { ContractEnforcer } from './contractEnforcer';
-import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS, FRAMEWORK_TAGS, FRAMEWORK_TAG_VALUES, type NarrativeEvent } from '@canonry/world-schema';
+import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS, FRAMEWORK_TAGS, type NarrativeEvent } from '@canonry/world-schema';
+import { applyTagPatch } from '../rules';
 import { createEraEntity } from '../systems/eraSpawner';
 import type {
   ISimulationEmitter,
@@ -1806,6 +1807,12 @@ export class WorldEngine {
             this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId);
           }
 
+          // Enter narrative group sub-context if provided (for per-target event splitting)
+          const hasNarrativeGroup = rel.narrativeGroupId && !hasActionContext;
+          if (hasNarrativeGroup) {
+            this.mutationTracker.enterContext('system', `${system.id}:${rel.narrativeGroupId}`);
+          }
+
           const before = this.graph.getRelationshipCount();
           addRelationship(this.graph, rel.kind, rel.src, rel.dst);
           const after = this.graph.getRelationshipCount();
@@ -1815,6 +1822,11 @@ export class WorldEngine {
             relationshipsAddedThisTick++;
             metric.relationshipsCreated++;
             addedFromResult++;
+          }
+
+          // Exit narrative group context if we entered one
+          if (hasNarrativeGroup) {
+            this.mutationTracker.exitContext();
           }
 
           // Exit action context if we entered one
@@ -1832,7 +1844,18 @@ export class WorldEngine {
               this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId);
             }
 
+            // Enter narrative group sub-context if provided (for per-target event splitting)
+            const hasNarrativeGroup = rel.narrativeGroupId && !hasActionContext;
+            if (hasNarrativeGroup) {
+              this.mutationTracker.enterContext('system', `${system.id}:${rel.narrativeGroupId}`);
+            }
+
             modifyRelationshipStrength(this.graph, rel.src, rel.dst, rel.kind, rel.delta);
+
+            // Exit narrative group context if we entered one
+            if (hasNarrativeGroup) {
+              this.mutationTracker.exitContext();
+            }
 
             // Exit action context if we entered one
             if (hasActionContext) {
@@ -1853,22 +1876,6 @@ export class WorldEngine {
         // Group by action context for proper narrative attribution
         for (const mod of result.entitiesModified) {
           const changes = { ...mod.changes };
-          if (changes.tags) {
-            const entity = this.graph.getEntity(mod.id);
-            if (entity?.tags) {
-              for (const tag of FRAMEWORK_TAG_VALUES) {
-                if (!(tag in changes.tags) && tag in entity.tags) {
-                  changes.tags[tag] = entity.tags[tag];
-                }
-              }
-            }
-            if ('undefined' in changes.tags) {
-              delete changes.tags['undefined'];
-            }
-            if ('' in changes.tags) {
-              delete changes.tags[''];
-            }
-          }
 
           // Enter action-specific context if provided (for narrative attribution)
           const hasActionContext = mod.actionContext && mod.actionContext.source === 'action';
@@ -1876,8 +1883,18 @@ export class WorldEngine {
             this.mutationTracker.enterContext(mod.actionContext!.source, mod.actionContext!.sourceId);
           }
 
+          // Enter narrative group sub-context if provided (for per-target event splitting)
+          // This creates events like "system:power_vacuum_detector:knot-of-nightfall-shelf"
+          const hasNarrativeGroup = mod.narrativeGroupId && !hasActionContext;
+          if (hasNarrativeGroup) {
+            this.mutationTracker.enterContext('system', `${system.id}:${mod.narrativeGroupId}`);
+          }
+
           // Track state changes for narrative events
           const entity = this.graph.getEntity(mod.id);
+          if (changes.tags && entity) {
+            changes.tags = applyTagPatch(entity.tags, changes.tags);
+          }
 
           // Debug logging for prominence modifications
           if (GraphStore.DEBUG_PROMINENCE && 'prominence' in changes && entity) {
@@ -1928,6 +1945,11 @@ export class WorldEngine {
 
           updateEntity(this.graph, mod.id, changes);
           modifiedEntityIds.push(mod.id);
+
+          // Exit narrative group context if we entered one
+          if (hasNarrativeGroup) {
+            this.mutationTracker.exitContext();
+          }
 
           // Exit action context if we entered one
           if (hasActionContext) {

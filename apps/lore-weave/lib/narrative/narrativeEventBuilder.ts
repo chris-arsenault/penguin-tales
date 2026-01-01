@@ -468,12 +468,27 @@ export class NarrativeEventBuilder {
     if (field === 'prominence') {
       const oldVal = getProminenceValue(oldValue as string | number);
       const newVal = getProminenceValue(newValue as string | number);
-      // Display using label for narrative clarity
+      // Get labels for both old and new values
+      const oldLabel = typeof oldValue === 'number' ? prominenceLabel(oldValue) : oldValue;
       const newLabel = typeof newValue === 'number' ? prominenceLabel(newValue) : newValue;
-      if (newVal > oldVal) {
-        return `rose to ${newLabel} prominence`;
+
+      // Check if tier (label) changed
+      const tierChanged = oldLabel !== newLabel;
+
+      if (tierChanged) {
+        // Tier changed - use "rose to" / "fell to"
+        if (newVal > oldVal) {
+          return `rose to ${newLabel} prominence`;
+        } else {
+          return `fell to ${newLabel} prominence`;
+        }
       } else {
-        return `fell to ${newLabel} prominence`;
+        // Same tier - describe incremental change with neutral phrasing
+        if (newVal > oldVal) {
+          return `gained prominence (still ${newLabel})`;
+        } else {
+          return `lost prominence (still ${newLabel})`;
+        }
       }
     }
     if (field === 'status') {

@@ -185,6 +185,39 @@
     "enabled": true
   },
   {
+    "systemType": "connectionEvolution",
+    "config": {
+      "id": "reflected_glory",
+      "name": "Reflected Glory",
+      "description": "Entities connected to high-prominence entities gradually gain prominence themselves. A sword wielded by a legendary hero becomes legendary; an NPC serving a mythic faction gains notoriety.",
+      "metric": {
+        "type": "neighbor_prominence",
+        "direction": "both",
+        "minStrength": 0.2
+      },
+      "rules": [
+        {
+          "condition": {
+            "operator": ">=",
+            "threshold": 3.5
+          },
+          "probability": 0.5,
+          "action": {
+            "type": "adjust_prominence",
+            "delta": 0.15,
+            "entity": "$self"
+          }
+        }
+      ],
+      "throttleChance": 0.2,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "any"
+      }
+    },
+    "enabled": true
+  },
+  {
     "systemType": "thresholdTrigger",
     "config": {
       "id": "war_casualties",
@@ -1421,7 +1454,7 @@
           "min": 1
         },
         {
-          "type": "tag_absent",
+          "type": "lacks_tag",
           "tag": "devout"
         }
       ],
@@ -1730,11 +1763,11 @@
           "direction": "both"
         },
         {
-          "type": "tag_absent",
+          "type": "lacks_tag",
           "tag": "honor_bound"
         },
         {
-          "type": "tag_absent",
+          "type": "lacks_tag",
           "tag": "oath_breaker"
         },
         {

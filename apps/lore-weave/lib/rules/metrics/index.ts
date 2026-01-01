@@ -31,6 +31,7 @@ import type {
   SharedRelationshipMetric,
   CatalyzedEventsMetric,
   ProminenceMultiplierMetric,
+  NeighborProminenceMetric,
   DecayRateMetric,
   FalloffMetric,
 } from './types';
@@ -106,6 +107,8 @@ export function describeMetric(metric: Metric): string {
       return 'catalyzed events';
     case 'prominence_multiplier':
       return `prominence multiplier (${metric.mode ?? 'success_chance'})`;
+    case 'neighbor_prominence':
+      return `neighbor prominence (${metric.relationshipKinds?.join('/') ?? 'all'} connections)`;
     case 'decay_rate':
       return `decay rate ${metric.rate}`;
     case 'falloff':
@@ -224,6 +227,9 @@ export function evaluateMetric(
 
     case 'prominence_multiplier':
       return evaluateProminenceMultiplier(metric, entity);
+
+    case 'neighbor_prominence':
+      return evaluateNeighborProminence(metric, ctx, entity);
 
     // =========================================================================
     // DECAY/FALLOFF METRICS
@@ -722,6 +728,87 @@ function evaluateProminenceMultiplier(
       prominenceLabel: label,
       mode: metric.mode ?? 'success_chance',
       multiplier: value,
+    },
+  };
+}
+
+/**
+ * Calculate average prominence of connected entities.
+ * Implements "Reflected Glory" - entities connected to high-prominence
+ * entities can benefit from their fame.
+ */
+function evaluateNeighborProminence(
+  metric: NeighborProminenceMetric,
+  ctx: MetricContext,
+  entity?: HardState
+): MetricResult {
+  if (!entity) {
+    return { value: 0, diagnostic: 'no entity for neighbor prominence', details: {} };
+  }
+
+  const direction = normalizeDirection(metric.direction);
+  const minStrength = metric.minStrength ?? 0;
+  const rels = ctx.graph.getAllRelationships();
+
+  // Find all neighbors connected to this entity
+  const neighborIds = new Set<string>();
+  for (const link of rels) {
+    // Check relationship kind filter
+    if (metric.relationshipKinds?.length && !metric.relationshipKinds.includes(link.kind)) {
+      continue;
+    }
+    // Check strength filter
+    if ((link.strength ?? 0) < minStrength) {
+      continue;
+    }
+
+    // Check direction and collect neighbor IDs
+    if (direction === 'both') {
+      if (link.src === entity.id) neighborIds.add(link.dst);
+      if (link.dst === entity.id) neighborIds.add(link.src);
+    } else if (direction === 'src' && link.src === entity.id) {
+      neighborIds.add(link.dst);
+    } else if (direction === 'dst' && link.dst === entity.id) {
+      neighborIds.add(link.src);
+    }
+  }
+
+  if (neighborIds.size === 0) {
+    return {
+      value: 0,
+      diagnostic: `no neighbors found for ${entity.name}`,
+      details: { entityId: entity.id, neighborCount: 0 },
+    };
+  }
+
+  // Calculate average prominence of neighbors
+  let totalProminence = 0;
+  let validNeighbors = 0;
+  for (const neighborId of neighborIds) {
+    const neighbor = ctx.graph.getEntity(neighborId);
+    if (neighbor) {
+      totalProminence += neighbor.prominence;
+      validNeighbors++;
+    }
+  }
+
+  const avgProminence = validNeighbors > 0 ? totalProminence / validNeighbors : 0;
+
+  let value = avgProminence * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `neighbor prominence avg=${avgProminence.toFixed(2)} (${validNeighbors} neighbors)`,
+    details: {
+      entityId: entity.id,
+      neighborCount: validNeighbors,
+      totalProminence,
+      avgProminence,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
     },
   };
 }

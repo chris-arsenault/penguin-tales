@@ -32,7 +32,7 @@ import type {
   RelationshipCountCondition,
   RelationshipExistsCondition,
   TagExistsCondition,
-  TagAbsentCondition,
+  LacksTagCondition,
   StatusCondition,
   ProminenceCondition,
   TimeElapsedCondition,
@@ -104,8 +104,8 @@ export function evaluateCondition(
     case 'tag_exists':
       return evaluateTagExists(condition, ctx, self);
 
-    case 'tag_absent':
-      return evaluateTagAbsent(condition, ctx, self);
+    case 'lacks_tag':
+      return evaluateLacksTag(condition, ctx, self);
 
     // =========================================================================
     // STATUS/PROMINENCE CONDITIONS
@@ -478,8 +478,8 @@ function resolveEntityRef(
   return ctx.resolver.resolveEntity(ref);
 }
 
-function evaluateTagAbsent(
-  condition: TagAbsentCondition,
+function evaluateLacksTag(
+  condition: LacksTagCondition,
   ctx: RuleContext,
   self?: HardState
 ): ConditionResult {
@@ -488,7 +488,7 @@ function evaluateTagAbsent(
   if (!entity) {
     return {
       passed: true,
-      diagnostic: 'no entity (tag absent trivially true)',
+      diagnostic: 'no entity (lacks_tag trivially true)',
       details: { entityRef: condition.entity },
     };
   }

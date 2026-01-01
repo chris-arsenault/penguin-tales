@@ -53,7 +53,7 @@ export type {
   RelationshipCountCondition,
   RelationshipExistsCondition,
   TagExistsCondition,
-  TagAbsentCondition,
+  LacksTagCondition,
   StatusCondition,
   ProminenceCondition,
   TimeElapsedCondition,
@@ -103,6 +103,8 @@ export {
   prepareMutation,
   applyMutation,
   applyMutationResult,
+  applyTagPatch,
+  buildTagPatch,
 } from './mutations';
 export type {
   Mutation,
@@ -168,6 +170,8 @@ export type {
   VariableSelectionRule,
   VariableDefinitionForResolution,
   RelatedEntitiesSpec,
+  PathBasedSpec,
+  PathTraversalStep,
   SaturationLimit,
   SelectionPickStrategy,
   EntitySelectionCriteria,

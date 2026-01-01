@@ -893,7 +893,7 @@
         { "$ref": "#/$defs/RelationshipCountCondition" },
         { "$ref": "#/$defs/RelationshipExistsCondition" },
         { "$ref": "#/$defs/TagExistsCondition" },
-        { "$ref": "#/$defs/TagAbsentCondition" },
+        { "$ref": "#/$defs/LacksTagCondition" },
         { "$ref": "#/$defs/StatusCondition" },
         { "$ref": "#/$defs/ProminenceCondition" },
         { "$ref": "#/$defs/TimeElapsedCondition" },
@@ -999,12 +999,12 @@
       }
     },
 
-    "TagAbsentCondition": {
+    "LacksTagCondition": {
       "type": "object",
       "required": ["type", "tag"],
       "additionalProperties": false,
       "properties": {
-        "type": { "const": "tag_absent" },
+        "type": { "const": "lacks_tag" },
         "entity": { "$ref": "#/$defs/NonEmptyString" },
         "tag": { "$ref": "#/$defs/NonEmptyString" }
       }
@@ -1342,6 +1342,7 @@
         { "$ref": "#/$defs/SharedRelationshipMetric" },
         { "$ref": "#/$defs/CatalyzedEventsMetric" },
         { "$ref": "#/$defs/ProminenceMultiplierMetric" },
+        { "$ref": "#/$defs/NeighborProminenceMetric" },
         { "$ref": "#/$defs/DecayRateMetric" },
         { "$ref": "#/$defs/FalloffMetric" }
       ]
@@ -1538,6 +1539,20 @@
       "properties": {
         "type": { "const": "prominence_multiplier" },
         "mode": { "enum": ["success_chance", "action_rate"] }
+      },
+      "additionalProperties": false
+    },
+
+    "NeighborProminenceMetric": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "neighbor_prominence" },
+        "relationshipKinds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" } },
+        "direction": { "enum": ["src", "dst", "both"] },
+        "minStrength": { "type": "number", "minimum": 0, "maximum": 1 },
+        "coefficient": { "type": "number" },
+        "cap": { "type": "number" }
       },
       "additionalProperties": false
     },
