@@ -649,6 +649,12 @@
           "strength": 0.7
         },
         {
+          "type": "set_tag",
+          "tag": "corrupted",
+          "value": true,
+          "entity": "$target"
+        },
+        {
           "type": "modify_pressure",
           "pressureId": "magical_stability",
           "delta": -5
@@ -966,6 +972,12 @@
           "src": "$target",
           "dst": "$actor",
           "strength": 0.8
+        },
+        {
+          "type": "set_tag",
+          "tag": "corrupted",
+          "value": true,
+          "entity": "$target"
         },
         {
           "type": "modify_pressure",

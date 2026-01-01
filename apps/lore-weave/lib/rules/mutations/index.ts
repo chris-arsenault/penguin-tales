@@ -709,8 +709,8 @@ function prepareConditional(
   ctx: RuleContext,
   result: MutationResult
 ): MutationResult {
-  const conditionMet = evaluateCondition(mutation.condition, ctx);
-  const actionsToExecute = conditionMet ? mutation.thenActions : mutation.elseActions || [];
+  const conditionResult = evaluateCondition(mutation.condition, ctx);
+  const actionsToExecute = conditionResult.passed ? mutation.thenActions : mutation.elseActions || [];
 
   const diagnostics: string[] = [];
   for (const action of actionsToExecute) {
@@ -728,6 +728,6 @@ function prepareConditional(
     diagnostics.push(actionResult.diagnostic);
   }
 
-  result.diagnostic = `conditional (${conditionMet ? 'then' : 'else'}): ${diagnostics.join('; ')}`;
+  result.diagnostic = `conditional (${conditionResult.passed ? 'then' : 'else'}): ${diagnostics.join('; ')}`;
   return result;
 }

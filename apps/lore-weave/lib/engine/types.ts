@@ -193,7 +193,7 @@ export interface Graph {
   // Query methods
   findEntities(criteria: EntityCriteria): HardState[];
   getEntitiesByKind(kind: string, options?: { includeHistorical?: boolean }): HardState[];
-  getConnectedEntities(entityId: string, relationKind?: string, options?: { includeHistorical?: boolean }): HardState[];
+  getConnectedEntities(entityId: string, relationKind?: string, direction?: 'src' | 'dst' | 'both', options?: { includeHistorical?: boolean }): HardState[];
 
   // =============================================================================
   // ENTITY MUTATION METHODS (framework-aware)
@@ -793,14 +793,24 @@ export class GraphStore implements Graph {
     return this.findEntities({ kind, includeHistorical: options?.includeHistorical });
   }
 
-  getConnectedEntities(entityId: string, relationKind?: string, options?: { includeHistorical?: boolean }): HardState[] {
+  getConnectedEntities(
+    entityId: string,
+    relationKind?: string,
+    direction: 'src' | 'dst' | 'both' = 'both',
+    options?: { includeHistorical?: boolean }
+  ): HardState[] {
     const connectedIds = new Set<string>();
     for (const rel of this.#relationships) {
       // Skip historical relationships by default
       if (!options?.includeHistorical && rel.status === FRAMEWORK_STATUS.HISTORICAL) continue;
       if (relationKind && rel.kind !== relationKind) continue;
-      if (rel.src === entityId) connectedIds.add(rel.dst);
-      if (rel.dst === entityId) connectedIds.add(rel.src);
+      // Direction filtering: 'src' means entity is src, 'dst' means entity is dst
+      if (direction === 'src' || direction === 'both') {
+        if (rel.src === entityId) connectedIds.add(rel.dst);
+      }
+      if (direction === 'dst' || direction === 'both') {
+        if (rel.dst === entityId) connectedIds.add(rel.src);
+      }
     }
     return Array.from(connectedIds)
       .map(id => this.getEntity(id))

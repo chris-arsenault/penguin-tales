@@ -154,7 +154,7 @@ export function applySelectionFilter(
       if (!refEntity) return entities;
 
       const refRelated = graphView
-        .getRelatedEntities(refEntity.id, filter.relationshipKind, 'both')
+        .getConnectedEntities(refEntity.id, filter.relationshipKind, 'both')
         .map(entity => entity.id);
 
       if (refRelated.length === 0) return [];
@@ -163,7 +163,7 @@ export function applySelectionFilter(
 
       return entities.filter(entity => {
         const entityRelated = graphView
-          .getRelatedEntities(entity.id, filter.relationshipKind, 'both')
+          .getConnectedEntities(entity.id, filter.relationshipKind, 'both')
           .map(related => related.id);
         return entityRelated.some(id => refRelatedSet.has(id));
       });

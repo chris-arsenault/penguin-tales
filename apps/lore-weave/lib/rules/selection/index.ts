@@ -504,7 +504,7 @@ function traversePath(
     const direction = normalizeDirection(step.direction);
 
     for (const entity of currentEntities) {
-      const related = graphView.getRelatedEntities(entity.id, step.via, direction);
+      const related = graphView.getConnectedEntities(entity.id, step.via, direction);
       for (const r of related) {
         // Apply step filters
         if (step.targetKind && step.targetKind !== 'any' && r.kind !== step.targetKind) continue;
@@ -577,7 +577,7 @@ export function selectVariableEntities(
         return [];
       }
       const direction = normalizeDirection(select.from.direction);
-      entities = graphView.getRelatedEntities(
+      entities = graphView.getConnectedEntities(
         relatedTo.id,
         select.from.relationship,
         direction

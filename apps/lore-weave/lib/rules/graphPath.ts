@@ -78,7 +78,7 @@ function traverseStep(
   const direction = step.direction === 'out' ? 'src' :
                    step.direction === 'in' ? 'dst' : 'both';
 
-  let related = graphView.getRelatedEntities(entity.id, step.via, direction);
+  let related = graphView.getConnectedEntities(entity.id, step.via, direction);
 
   // Filter by target kind/subtype/status ("any" means no filtering)
   if (step.targetKind && step.targetKind !== 'any') {
@@ -160,7 +160,7 @@ function evaluatePathConstraints(
           }
         } else {
           // No withEntity specified - just check if any such relationship exists
-          const related = graphView.getRelatedEntities(entity.id, constraint.kind, 'both');
+          const related = graphView.getConnectedEntities(entity.id, constraint.kind, 'both');
           if (related.length === 0) {
             return false;
           }

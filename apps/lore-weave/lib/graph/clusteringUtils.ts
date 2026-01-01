@@ -97,8 +97,8 @@ export function calculateSimilarity(
         if (!criterion.relationshipKind) break;
         const direction = criterion.direction || 'src';
 
-        const e1Related = graphView.getRelatedEntities(e1.id, criterion.relationshipKind, direction);
-        const e2Related = graphView.getRelatedEntities(e2.id, criterion.relationshipKind, direction);
+        const e1Related = graphView.getConnectedEntities(e1.id, criterion.relationshipKind, direction);
+        const e2Related = graphView.getConnectedEntities(e2.id, criterion.relationshipKind, direction);
         const e1RelatedIds = new Set(e1Related.map(r => r.id));
         matches = e2Related.some(r => e1RelatedIds.has(r.id));
         break;

@@ -365,13 +365,15 @@ export class WorldRuntime implements Graph {
 
   /**
    * Get entities connected to a specific entity by relationship kind.
+   * Excludes historical entities by default.
    */
   getConnectedEntities(
     entityId: string,
     relationKind?: string,
+    direction: 'src' | 'dst' | 'both' = 'both',
     options?: { includeHistorical?: boolean }
   ): HardState[] {
-    return this.graph.getConnectedEntities(entityId, relationKind, options);
+    return this.graph.getConnectedEntities(entityId, relationKind, direction, options);
   }
 
   /**
@@ -422,25 +424,6 @@ export class WorldRuntime implements Graph {
     options?: { includeHistorical?: boolean }
   ): Relationship[] {
     return this.graph.getEntityRelationships(entityId, direction, options);
-  }
-
-  /**
-   * Get entities related to a specific entity
-   */
-  getRelatedEntities(entityId: string, relationshipKind?: string, direction?: 'src' | 'dst' | 'both'): HardState[] {
-    const related: HardState[] = [];
-    const dir = direction || 'both';
-
-    const relationships = this.graph.getEntityRelationships(entityId, dir);
-    for (const link of relationships) {
-      if (relationshipKind && link.kind !== relationshipKind) continue;
-
-      const otherId = link.src === entityId ? link.dst : link.src;
-      const other = this.graph.getEntity(otherId);
-      if (other) related.push(other);
-    }
-
-    return related;
   }
 
   /**

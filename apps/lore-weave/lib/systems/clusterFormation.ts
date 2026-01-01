@@ -538,7 +538,7 @@ export function createClusterFormationSystem(
           const allPractitioners: HardState[] = [];
           const seenIds = new Set<string>();
           for (const memberId of clusterIds) {
-            const practitioners = graphView.getRelatedEntities(memberId, 'practitioner_of', 'dst');
+            const practitioners = graphView.getConnectedEntities(memberId, 'practitioner_of', 'dst');
             for (const p of practitioners) {
               if (!seenIds.has(p.id)) {
                 seenIds.add(p.id);
@@ -568,7 +568,7 @@ export function createClusterFormationSystem(
           // Find origin location from absorbed abilities' manifests_at relationships
           const locationCounts = new Map<string, number>();
           for (const memberId of clusterIds) {
-            const locations = graphView.getRelatedEntities(memberId, 'manifests_at', 'src');
+            const locations = graphView.getConnectedEntities(memberId, 'manifests_at', 'src');
             for (const loc of locations) {
               locationCounts.set(loc.id, (locationCounts.get(loc.id) || 0) + 1);
             }
