@@ -15,10 +15,6 @@ Location: `src/systems/universalCatalyst.ts`
 
 - **actionAttemptRate**: Base chance per tick that agents attempt actions
   - Default: 0.3, Range: [0.1, 0.8]
-- **influenceGain**: Influence gain on successful action
-  - Default: 0.1, Range: [0.05, 0.3]
-- **influenceLoss**: Influence loss on failed action
-  - Default: 0.05, Range: [0.01, 0.15]
 - **pressureMultiplier**: How much pressures amplify action attempt rates
   - Default: 1.5, Range: [1.0, 3.0]
 
@@ -189,8 +185,7 @@ const overrides = {
     'universal_catalyst': {
       metadata: {
         parameters: {
-          actionAttemptRate: { value: 0.45 },
-          influenceGain: { value: 0.15 }
+          actionAttemptRate: { value: 0.45 }
         }
       }
     }

@@ -230,11 +230,8 @@ export function validateSystems(systems: unknown): SchemaValidationResult {
   systems.forEach((system, index) => {
     // Skip disabled systems
     if (typeof system === 'object' && system !== null &&
-        'config' in system && typeof (system as { config: unknown }).config === 'object') {
-      const config = (system as { config: { enabled?: unknown } }).config;
-      if (config && 'enabled' in config && config.enabled === false) {
-        return;
-      }
+        'enabled' in system && (system as { enabled?: unknown }).enabled === false) {
+      return;
     }
 
     const itemId = getItemId(system) || `[${index}]`;

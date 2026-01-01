@@ -108,9 +108,9 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
       // Find all agents (entities that can act)
       const allAgents = graphView.getEntities().filter(e => e.catalyst?.canAct === true);
 
-      const relationshipsAdded: Array<Relationship & { actionContext?: { source: 'action'; sourceId: string } }> = [];
-      const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number; actionContext?: { source: 'action'; sourceId: string } }> = [];
-      const entitiesModified: Array<{ id: string; changes: Partial<HardState>; actionContext?: { source: 'action'; sourceId: string } }> = [];
+      const relationshipsAdded: Array<Relationship & { actionContext?: { source: 'action'; sourceId: string; success?: boolean } }> = [];
+      const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number; actionContext?: { source: 'action'; sourceId: string; success?: boolean } }> = [];
+      const entitiesModified: Array<{ id: string; changes: Partial<HardState>; actionContext?: { source: 'action'; sourceId: string; success?: boolean } }> = [];
       const pressureChanges: Record<string, number> = {};
       let actionsAttempted = 0;
       let actionsSucceeded = 0;
@@ -144,13 +144,18 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
         );
         if (!selectedAction) return;
 
+        // Attempt to execute action with extended outcome
+        const outcome = executeActionWithContext(agent, selectedAction, graphView);
+
         // Store action context for narrative attribution
         // WorldEngine will use this to enter/exit contexts when applying modifications
         // Include agent.id to make each action invocation a separate narrative event
-        const actionContext = { source: 'action' as const, sourceId: `${selectedAction.type}:${agent.id}` };
-
-        // Attempt to execute action with extended outcome
-        const outcome = executeActionWithContext(agent, selectedAction, graphView);
+        // Include success flag so failed actions can be filtered in narrative views
+        const actionContext = {
+          source: 'action' as const,
+          sourceId: `${selectedAction.type}:${agent.id}`,
+          success: outcome.success,
+        };
 
         // Track prominence changes for instrumentation
         const prominenceChanges: Array<{ entityId: string; entityName: string; direction: 'up' | 'down' }> = [];

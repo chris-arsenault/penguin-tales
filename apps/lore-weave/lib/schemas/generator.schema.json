@@ -331,6 +331,7 @@
         "targetKind": { "$ref": "#/$defs/AnyOrString" },
         "targetSubtype": { "$ref": "#/$defs/AnyOrString" },
         "targetStatus": { "$ref": "#/$defs/AnyOrString" },
+        "filters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
         "as": { "$ref": "#/$defs/NonEmptyString" }
       }
     },
@@ -613,7 +614,6 @@
         "tags": { "type": "object", "additionalProperties": { "type": "boolean" } },
         "placement": { "$ref": "#/$defs/PlacementSpec" },
         "count": { "oneOf": [{ "type": "integer", "minimum": 1 }, { "$ref": "#/$defs/CountRange" }] },
-        "lineage": { "$ref": "#/$defs/LineageSpec" },
         "createChance": { "type": "number", "minimum": 0, "maximum": 1, "description": "Optional creation chance (0.0 to 1.0). If specified, entity is only created with given probability. Useful for cross-pollination." }
       }
     },
@@ -682,156 +682,94 @@
     },
 
     "PlacementSpec": {
-      "oneOf": [
-        {
-          "type": "object",
-          "required": ["type", "entity"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "near_entity" },
-            "entity": { "$ref": "#/$defs/NonEmptyString" },
-            "maxDistance": { "type": "number", "minimum": 0 },
-            "minDistance": { "type": "number", "minimum": 0 }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type", "culture"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "in_culture_region" },
-            "culture": { "$ref": "#/$defs/NonEmptyString" }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type", "references"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "derived_from_references" },
-            "references": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
-            "culture": { "$ref": "#/$defs/NonEmptyString" }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "random_in_bounds" },
-            "bounds": {
+      "type": "object",
+      "required": ["anchor"],
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "oneOf": [
+            {
               "type": "object",
+              "required": ["type", "ref"],
               "additionalProperties": false,
               "properties": {
-                "x": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-                "y": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-                "z": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+                "type": { "const": "entity" },
+                "ref": { "$ref": "#/$defs/NonEmptyString" },
+                "stickToRegion": { "type": "boolean" }
               }
-            }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "in_sparse_area" },
-            "minDistanceFromEntities": { "type": "number", "minimum": 0 },
-            "preferPeriphery": { "type": "boolean" },
-            "createRegion": { "type": "boolean" }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["anchor"],
-          "additionalProperties": false,
-          "properties": {
-            "anchor": {
-              "oneOf": [
-                {
+            },
+            {
+              "type": "object",
+              "required": ["type", "id"],
+              "additionalProperties": false,
+              "properties": {
+                "type": { "const": "culture" },
+                "id": { "$ref": "#/$defs/NonEmptyString" }
+              }
+            },
+            {
+              "type": "object",
+              "required": ["type", "refs"],
+              "additionalProperties": false,
+              "properties": {
+                "type": { "const": "refs_centroid" },
+                "refs": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
+                "jitter": { "type": "number", "minimum": 0 }
+              }
+            },
+            {
+              "type": "object",
+              "required": ["type"],
+              "additionalProperties": false,
+              "properties": {
+                "type": { "const": "sparse" },
+                "preferPeriphery": { "type": "boolean" }
+              }
+            },
+            {
+              "type": "object",
+              "required": ["type"],
+              "additionalProperties": false,
+              "properties": {
+                "type": { "const": "bounds" },
+                "bounds": {
                   "type": "object",
-                  "required": ["type", "ref"],
                   "additionalProperties": false,
                   "properties": {
-                    "type": { "const": "entity" },
-                    "ref": { "$ref": "#/$defs/NonEmptyString" },
-                    "stickToRegion": { "type": "boolean" }
-                  }
-                },
-                {
-                  "type": "object",
-                  "required": ["type", "id"],
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": { "const": "culture" },
-                    "id": { "$ref": "#/$defs/NonEmptyString" }
-                  }
-                },
-                {
-                  "type": "object",
-                  "required": ["type", "refs"],
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": { "const": "refs_centroid" },
-                    "refs": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
-                    "jitter": { "type": "number", "minimum": 0 }
-                  }
-                },
-                {
-                  "type": "object",
-                  "required": ["type"],
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": { "const": "sparse" },
-                    "preferPeriphery": { "type": "boolean" }
-                  }
-                },
-                {
-                  "type": "object",
-                  "required": ["type"],
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": { "const": "bounds" },
-                    "bounds": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "x": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-                        "y": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-                        "z": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
-                      }
-                    }
+                    "x": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+                    "y": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+                    "z": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
                   }
                 }
-              ]
-            },
-            "spacing": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "minDistance": { "type": "number", "minimum": 0 },
-                "avoidRefs": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" } }
-              }
-            },
-            "regionPolicy": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "allowEmergent": { "type": "boolean", "description": "Allow emergent region creation when seed regions are at capacity" },
-                "createRegion": { "type": "boolean", "description": "Create a new region centered on the placed entity (useful for sparse placement establishing new territories)" },
-                "preferSparse": { "type": "boolean", "description": "Bias region selection toward sparser regions (weighted by inverse entity count)" }
-              }
-            },
-            "steps": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "enum": ["anchor_region", "seed_region", "sparse", "random"]
               }
             }
+          ]
+        },
+        "spacing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "minDistance": { "type": "number", "minimum": 0 },
+            "avoidRefs": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" } }
+          }
+        },
+        "regionPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowEmergent": { "type": "boolean", "description": "Allow emergent region creation when seed regions are at capacity" },
+            "createRegion": { "type": "boolean", "description": "Create a new region centered on the placed entity (useful for sparse placement establishing new territories)" },
+            "preferSparse": { "type": "boolean", "description": "Bias region selection toward sparser regions (weighted by inverse entity count)" }
+          }
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": ["anchor_region", "seed_region", "sparse", "random"]
           }
         }
-      ]
+      }
     },
 
     "CountRange": {
@@ -841,16 +779,6 @@
       "properties": {
         "min": { "type": "integer", "minimum": 1 },
         "max": { "type": "integer", "minimum": 1 }
-      }
-    },
-
-    "LineageSpec": {
-      "type": "object",
-      "required": ["parent"],
-      "additionalProperties": false,
-      "properties": {
-        "parent": { "$ref": "#/$defs/NonEmptyString" },
-        "relationshipKind": { "$ref": "#/$defs/NonEmptyString" }
       }
     },
 

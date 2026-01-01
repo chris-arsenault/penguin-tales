@@ -49,32 +49,37 @@ export type DeclarativeSystem =
   | DeclarativeRelationshipMaintenanceSystem
   | DeclarativeGrowthSystem;
 
-export interface DeclarativeConnectionEvolutionSystem {
+interface DeclarativeSystemBase {
+  /** Whether this system is active (default: true) */
+  enabled?: boolean;
+}
+
+export interface DeclarativeConnectionEvolutionSystem extends DeclarativeSystemBase {
   systemType: 'connectionEvolution';
   config: ConnectionEvolutionConfig;
 }
 
-export interface DeclarativeGraphContagionSystem {
+export interface DeclarativeGraphContagionSystem extends DeclarativeSystemBase {
   systemType: 'graphContagion';
   config: GraphContagionConfig;
 }
 
-export interface DeclarativeThresholdTriggerSystem {
+export interface DeclarativeThresholdTriggerSystem extends DeclarativeSystemBase {
   systemType: 'thresholdTrigger';
   config: ThresholdTriggerConfig;
 }
 
-export interface DeclarativeClusterFormationSystem {
+export interface DeclarativeClusterFormationSystem extends DeclarativeSystemBase {
   systemType: 'clusterFormation';
   config: ClusterFormationConfig;
 }
 
-export interface DeclarativeTagDiffusionSystem {
+export interface DeclarativeTagDiffusionSystem extends DeclarativeSystemBase {
   systemType: 'tagDiffusion';
   config: TagDiffusionConfig;
 }
 
-export interface DeclarativePlaneDiffusionSystem {
+export interface DeclarativePlaneDiffusionSystem extends DeclarativeSystemBase {
   systemType: 'planeDiffusion';
   config: PlaneDiffusionConfig;
 }
@@ -163,27 +168,27 @@ export interface RelationshipMaintenanceConfig extends FrameworkSystemConfig {
   proximityRelationshipKinds?: string[];
 }
 
-export interface DeclarativeEraSpawnerSystem {
+export interface DeclarativeEraSpawnerSystem extends DeclarativeSystemBase {
   systemType: 'eraSpawner';
   config: EraSpawnerConfig;
 }
 
-export interface DeclarativeEraTransitionSystem {
+export interface DeclarativeEraTransitionSystem extends DeclarativeSystemBase {
   systemType: 'eraTransition';
   config: EraTransitionConfig;
 }
 
-export interface DeclarativeUniversalCatalystSystem {
+export interface DeclarativeUniversalCatalystSystem extends DeclarativeSystemBase {
   systemType: 'universalCatalyst';
   config: UniversalCatalystConfig;
 }
 
-export interface DeclarativeRelationshipMaintenanceSystem {
+export interface DeclarativeRelationshipMaintenanceSystem extends DeclarativeSystemBase {
   systemType: 'relationshipMaintenance';
   config: RelationshipMaintenanceConfig;
 }
 
-export interface DeclarativeGrowthSystem {
+export interface DeclarativeGrowthSystem extends DeclarativeSystemBase {
   systemType: 'growth';
   config: GrowthSystemConfig;
 }
@@ -266,6 +271,9 @@ export function loadSystems(
     .filter(d => {
       if (!d || typeof d !== 'object') {
         console.warn('loadSystems: skipping invalid config', d);
+        return false;
+      }
+      if ('enabled' in d && d.enabled === false) {
         return false;
       }
       if (!d.systemType) {

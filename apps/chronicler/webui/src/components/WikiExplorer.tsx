@@ -15,6 +15,8 @@ import { getCompletedChroniclesForSimulation, type ChronicleRecord } from '../li
 import { getPublishedStaticPagesForProject, type StaticPage } from '../lib/staticPageStorage.ts';
 import WikiNav from './WikiNav.tsx';
 import ChronicleIndex from './ChronicleIndex.tsx';
+import ConfluxesIndex from './ConfluxesIndex.tsx';
+import WebsIndex from './WebsIndex.tsx';
 import WikiPageView from './WikiPage.tsx';
 import WikiSearch from './WikiSearch.tsx';
 
@@ -284,12 +286,28 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
     [indexAsPages]
   );
 
+  // Get conflux pages from page index entries (need PageIndexEntry type for conflux data)
+  const confluxPages = useMemo(
+    () => pageIndex.entries.filter((entry) => entry.type === 'conflux'),
+    [pageIndex.entries]
+  );
+
+  // Get web pages from page index entries
+  const webPages = useMemo(
+    () => pageIndex.entries.filter((entry) => entry.type === 'web-type'),
+    [pageIndex.entries]
+  );
+
   // Get current page
   const isChronicleIndex = currentPageId === 'chronicles'
     || currentPageId === 'chronicles-story'
     || currentPageId === 'chronicles-document';
 
   const isPagesIndex = currentPageId === 'pages';
+
+  const isConfluxesIndex = currentPageId === 'confluxes';
+
+  const isWebsIndex = currentPageId === 'webs';
 
   // Check if it's a page category (e.g., "page-category-System")
   const isPageCategory = currentPageId?.startsWith('page-category-');
@@ -298,7 +316,7 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
     : null;
 
   // Build current page on-demand
-  const currentPage = !isChronicleIndex && !isPagesIndex && !isPageCategory && currentPageId
+  const currentPage = !isChronicleIndex && !isPagesIndex && !isConfluxesIndex && !isWebsIndex && !isPageCategory && currentPageId
     ? getPage(currentPageId)
     : null;
 
@@ -321,12 +339,16 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
       document.title = 'Chronicles | The Canonry';
     } else if (isPagesIndex) {
       document.title = 'Pages | The Canonry';
+    } else if (isConfluxesIndex) {
+      document.title = 'Confluxes | The Canonry';
+    } else if (isWebsIndex) {
+      document.title = 'Huddles | The Canonry';
     } else if (isPageCategory && pageCategoryNamespace) {
       document.title = `${pageCategoryNamespace} | The Canonry`;
     } else {
       document.title = 'The Canonry';
     }
-  }, [currentPage, isChronicleIndex, isPagesIndex, isPageCategory, pageCategoryNamespace]);
+  }, [currentPage, isChronicleIndex, isPagesIndex, isConfluxesIndex, isWebsIndex, isPageCategory, pageCategoryNamespace]);
 
   // Handle navigation - updates hash which triggers state update via hashchange
   const handleNavigate = useCallback((pageId: string) => {
@@ -425,6 +447,8 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
           pages={indexAsPages}
           chronicles={chroniclePages}
           staticPages={staticPagesAsWikiPages}
+          confluxPages={confluxPages}
+          webPages={webPages}
           currentPageId={currentPageId}
           onNavigate={handleNavigate}
           onGoHome={handleGoHome}
@@ -452,6 +476,16 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
           ) : isPagesIndex ? (
             <PagesIndex
               pages={staticPagesAsWikiPages}
+              onNavigate={handleNavigate}
+            />
+          ) : isConfluxesIndex ? (
+            <ConfluxesIndex
+              confluxPages={confluxPages}
+              onNavigate={handleNavigate}
+            />
+          ) : isWebsIndex ? (
+            <WebsIndex
+              webPages={webPages}
               onNavigate={handleNavigate}
             />
           ) : isPageCategory && pageCategoryNamespace ? (

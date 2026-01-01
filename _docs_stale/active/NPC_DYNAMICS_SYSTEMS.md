@@ -18,8 +18,8 @@ Once we create 25 named NPCs as catalysts for world events, what keeps them dyna
    - YES: "Rukan seizes control of Krill Shoals" (world changes!)
 
 2. **Prominence is earned through catalyzed events**
-   - Success → prominence increases, influence grows
-   - Failure → prominence can ALSO increase (infamy), but influence wanes
+   - Success → prominence increases
+   - Failure → prominence can ALSO increase (infamy)
    - Inaction → prominence decays (forgotten)
 
 3. **Conflicts only matter if they affect the world**
@@ -56,10 +56,6 @@ const npc_agency_system: SimulationSystem = {
       prominenceThreshold: {
         value: 'recognized',
         comment: 'Minimum prominence to attempt major actions'
-      },
-      influenceDecayRate: {
-        value: 0.01,
-        comment: 'Influence decay per tick if NPC inactive'
       }
     }
   },
@@ -92,9 +88,8 @@ const npc_agency_system: SimulationSystem = {
           graph.relationships.push(rel);
         });
 
-        // Increase influence and potentially prominence
-        npc.agency.influence += outcome.influenceGain;
-        if (npc.agency.influence > prominenceThresholds[npc.prominence]) {
+        // Optionally increase prominence on success
+        if (shouldIncreaseProminence(npc, outcome)) {
           npc.prominence = increaseProminence(npc.prominence);
         }
 
@@ -105,14 +100,8 @@ const npc_agency_system: SimulationSystem = {
           tick: graph.tick
         });
       } else {
-        // Failed action - infamy increases but influence decreases
-        npc.agency.influence -= outcome.influenceLoss;
+        // Failed action - infamy can increase
         npc.tags.push(outcome.failureTag);  // e.g., 'failed_conqueror'
-      }
-
-      // 6. Decay influence for inactive NPCs
-      if (!outcome) {
-        npc.agency.influence -= influenceDecayRate;
       }
     });
 
@@ -150,7 +139,6 @@ const npc_agency_system: SimulationSystem = {
   relationships: [
     {kind: 'controls', src: midnight_claws, dst: krill_shoals}
   ],
-  influenceGain: 0.1,
   description: 'seized control of Krill Shoals',
   history: 'Cutthroat Dave expanded The Midnight Claws\' criminal empire to Krill Shoals'
 }
@@ -158,7 +146,6 @@ const npc_agency_system: SimulationSystem = {
 // FAILURE: Sage Bungus fails containment again
 {
   success: false,
-  influenceLoss: 0.05,
   failureTag: 'repeated_failure',
   description: 'failed to contain The Glow-Fissure again',
   history: 'Sage Bungus\' second attempt to contain The Glow-Fissure ended in disaster'
@@ -181,17 +168,14 @@ const prominence_evolution_npc: SimulationSystem = {
       // 1. Number of world events catalyzed
       const catalyzedCount = npc.agency?.catalystFor?.length || 0;
 
-      // 2. Influence score
-      const influence = npc.agency?.influence || 0;
-
-      // 3. Relationships to prominent entities
+      // 2. Relationships to prominent entities
       const importantConnections = npc.links.filter(l =>
         l.kind === 'leader_of' ||
         l.kind === 'founded_by' ||
         (l.kind === 'practitioner_of' && graph.entities.get(l.dst)?.prominence >= 'renowned')
       );
 
-      // 4. Recent activity (catalyzed event in last 20 ticks?)
+      // 3. Recent activity (catalyzed event in last 20 ticks?)
       const recentActivity = npc.agency?.catalystFor?.some(c =>
         graph.tick - c.tick < 20
       );
@@ -199,13 +183,13 @@ const prominence_evolution_npc: SimulationSystem = {
       // Calculate target prominence
       let targetProminence = npc.prominence;
 
-      if (catalyzedCount >= 5 && influence > 0.7) {
+      if (catalyzedCount >= 5) {
         targetProminence = 'mythic';  // Legendary figure
-      } else if (catalyzedCount >= 3 && influence > 0.5) {
+      } else if (catalyzedCount >= 3) {
         targetProminence = 'renowned';
-      } else if (catalyzedCount >= 1 && influence > 0.3) {
+      } else if (catalyzedCount >= 1) {
         targetProminence = 'recognized';
-      } else if (!recentActivity && influence < 0.2) {
+      } else if (!recentActivity) {
         targetProminence = 'marginal';  // Waning influence
       }
 

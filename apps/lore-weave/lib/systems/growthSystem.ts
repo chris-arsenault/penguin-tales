@@ -17,7 +17,6 @@ export interface GrowthSystemConfig {
   id: string;
   name: string;
   description?: string;
-  enabled?: boolean;
   /** Hard cap on template executions per tick (default: 5) */
   maxTemplatesPerTick?: number;
   /** Minimum templates to attempt per tick while target remains (default: 1) */
@@ -392,7 +391,7 @@ export function createGrowthSystem(
         deps.emitter.log('info', `[Growth] Auto-sync epoch ${state.epoch} in era ${era.name} with target ${state.epochTarget}`);
       }
 
-      if (modifier <= 0 || config.enabled === false) {
+      if (modifier <= 0) {
         return {
           relationshipsAdded: [],
           entitiesModified: [],

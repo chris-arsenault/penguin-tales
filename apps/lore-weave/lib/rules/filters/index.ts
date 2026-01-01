@@ -9,8 +9,19 @@ import { HardState } from '../../core/worldTypes';
 import { SelectionFilter } from './types';
 import { hasTag, getTagValue } from '../../utils';
 import { EntityResolver } from '../resolver';
-import { evaluateGraphPath } from '../graphPath';
+import { evaluateGraphPath, GraphPathOptions } from '../graphPath';
 import { prominenceThreshold } from '../types';
+
+function resolveGraphPathOptions(graphPathOptions?: GraphPathOptions): GraphPathOptions {
+  if (graphPathOptions?.filterEvaluator) {
+    return graphPathOptions;
+  }
+
+  const options: GraphPathOptions = {};
+  options.filterEvaluator = (entities, filters, resolver) =>
+    applySelectionFilters(entities, filters, resolver, options);
+  return options;
+}
 
 /**
  * Apply a list of selection filters to entities.
@@ -19,14 +30,16 @@ import { prominenceThreshold } from '../types';
 export function applySelectionFilters(
   entities: HardState[],
   filters: SelectionFilter[] | undefined,
-  resolver: EntityResolver
+  resolver: EntityResolver,
+  graphPathOptions?: GraphPathOptions
 ): HardState[] {
   if (!filters || filters.length === 0) return entities;
 
   let result = entities;
+  const options = resolveGraphPathOptions(graphPathOptions);
 
   for (const filter of filters) {
-    result = applySelectionFilter(result, filter, resolver);
+    result = applySelectionFilter(result, filter, resolver, options);
   }
 
   return result;
@@ -38,7 +51,8 @@ export function applySelectionFilters(
 export function applySelectionFilter(
   entities: HardState[],
   filter: SelectionFilter,
-  resolver: EntityResolver
+  resolver: EntityResolver,
+  graphPathOptions?: GraphPathOptions
 ): HardState[] {
   switch (filter.type) {
     case 'exclude': {
@@ -170,8 +184,9 @@ export function applySelectionFilter(
     }
 
     case 'graph_path': {
+      const options = resolveGraphPathOptions(graphPathOptions);
       return entities.filter(entity =>
-        evaluateGraphPath(entity, filter.assert, resolver)
+        evaluateGraphPath(entity, filter.assert, resolver, options)
       );
     }
 

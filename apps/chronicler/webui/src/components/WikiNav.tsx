@@ -7,7 +7,7 @@
  * - Random page
  */
 
-import type { WikiPage, WikiCategory } from '../types/world.ts';
+import type { WikiPage, WikiCategory, PageIndexEntry } from '../types/world.ts';
 
 const colors = {
   bgSecondary: '#1e3a5f',
@@ -66,6 +66,8 @@ interface WikiNavProps {
   pages: WikiPage[];
   chronicles: WikiPage[];
   staticPages: WikiPage[];
+  confluxPages: PageIndexEntry[];
+  webPages: PageIndexEntry[];
   currentPageId: string | null;
   onNavigate: (pageId: string) => void;
   onGoHome: () => void;
@@ -78,6 +80,8 @@ export default function WikiNav({
   pages,
   chronicles,
   staticPages,
+  confluxPages,
+  webPages,
   currentPageId,
   onNavigate,
   onGoHome,
@@ -248,6 +252,122 @@ export default function WikiNav({
               <span style={styles.badge}>({documentChronicles.length})</span>
             </button>
           )}
+        </div>
+      )}
+
+      {/* Confluxes */}
+      {confluxPages.length > 0 && (
+        <div style={styles.section}>
+          <div style={styles.sectionTitle}>Confluxes</div>
+          <button
+            style={{
+              ...styles.navItem,
+              ...(currentPageId === 'confluxes' ? styles.navItemActive : {}),
+            }}
+            onClick={() => onNavigate('confluxes')}
+            onMouseEnter={(e) => {
+              if (currentPageId !== 'confluxes') {
+                e.currentTarget.style.backgroundColor = colors.hoverBg;
+                e.currentTarget.style.color = colors.accent;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentPageId !== 'confluxes') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = colors.textSecondary;
+              }
+            }}
+          >
+            All Confluxes
+            <span style={styles.badge}>({confluxPages.length})</span>
+          </button>
+          {/* Show 5 rarest confluxes */}
+          {confluxPages
+            .sort((a, b) => (a.conflux?.manifestations ?? 0) - (b.conflux?.manifestations ?? 0))
+            .slice(0, 5)
+            .map(page => (
+              <button
+                key={page.id}
+                style={{
+                  ...styles.navItem,
+                  ...(currentPageId === page.id ? styles.navItemActive : {}),
+                }}
+                onClick={() => onNavigate(page.id)}
+                onMouseEnter={(e) => {
+                  if (currentPageId !== page.id) {
+                    e.currentTarget.style.backgroundColor = colors.hoverBg;
+                    e.currentTarget.style.color = colors.accent;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPageId !== page.id) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = colors.textSecondary;
+                  }
+                }}
+              >
+                {page.title}
+                <span style={styles.badge}>({page.conflux?.manifestations ?? 0})</span>
+              </button>
+            ))}
+        </div>
+      )}
+
+      {/* Huddles */}
+      {webPages.length > 0 && (
+        <div style={styles.section}>
+          <div style={styles.sectionTitle}>Huddles</div>
+          <button
+            style={{
+              ...styles.navItem,
+              ...(currentPageId === 'webs' ? styles.navItemActive : {}),
+            }}
+            onClick={() => onNavigate('webs')}
+            onMouseEnter={(e) => {
+              if (currentPageId !== 'webs') {
+                e.currentTarget.style.backgroundColor = colors.hoverBg;
+                e.currentTarget.style.color = colors.accent;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentPageId !== 'webs') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = colors.textSecondary;
+              }
+            }}
+          >
+            All Huddles
+            <span style={styles.badge}>({webPages.length})</span>
+          </button>
+          {/* Show 5 largest huddle types */}
+          {webPages
+            .sort((a, b) => (b.webType?.largestSize ?? 0) - (a.webType?.largestSize ?? 0))
+            .slice(0, 5)
+            .map(page => (
+              <button
+                key={page.id}
+                style={{
+                  ...styles.navItem,
+                  ...(currentPageId === page.id ? styles.navItemActive : {}),
+                }}
+                onClick={() => onNavigate(page.id)}
+                onMouseEnter={(e) => {
+                  if (currentPageId !== page.id) {
+                    e.currentTarget.style.backgroundColor = colors.hoverBg;
+                    e.currentTarget.style.color = colors.accent;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPageId !== page.id) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = colors.textSecondary;
+                  }
+                }}
+              >
+                {page.title}
+                <span style={styles.badge}>({page.webType?.largestSize ?? 0})</span>
+              </button>
+            ))}
         </div>
       )}
 

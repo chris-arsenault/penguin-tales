@@ -153,6 +153,8 @@ export type {
 export interface DeclarativeTemplate {
   id: string;
   name: string;
+  /** Whether this template is active (default: true) */
+  enabled?: boolean;
 
   // Step 1: Additional applicability constraints (pressure, era, counts, etc.)
   // The selection having at least 1 target is ALWAYS an implicit applicability rule.
@@ -218,15 +220,6 @@ export interface CreationRule {
    * If omitted, entity is always created (100% chance).
    */
   createChance?: number;
-
-  /**
-   * Optional naming context for name generation.
-   * Maps context keys to entity refs. The ref's name will be used as the context value.
-   * Example: { "instigator": "$selected", "location": "$target" }
-   * Results in context like { instigator: "King Gorban", location: "Frostholm" }
-   * Used in grammars via context:instigator, context:location etc.
-   */
-  namingContext?: Record<string, string>;
 }
 
 /**

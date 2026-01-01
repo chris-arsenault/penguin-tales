@@ -47,6 +47,8 @@ export interface ExecutionContext {
   source: ExecutionSource;
   /** Identifier for the specific template/system/action (e.g., "hero_emergence") */
   sourceId: string;
+  /** For actions: whether the action succeeded (false = failed attempt) */
+  success?: boolean;
 }
 
 /**
@@ -275,6 +277,8 @@ export interface NarrativeEvent {
     eventId?: string;
     entityId?: string;
     actionType?: string;
+    /** For actions: whether the action succeeded (false = failed attempt) */
+    success?: boolean;
   };
 
   /** Tags for filtering: ['death', 'war', 'royal', 'recruitment'] */

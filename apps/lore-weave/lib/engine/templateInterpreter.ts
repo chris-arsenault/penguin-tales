@@ -18,6 +18,7 @@ import {
   describeSelectionFilter as rulesDescribeSelectionFilter,
   evaluateGraphPath as sharedEvaluateGraphPath,
   evaluateCondition as rulesEvaluateCondition,
+  applySelectionFilters,
   applyMutation,
   createRuleContext,
   prominenceThreshold,
@@ -520,7 +521,10 @@ export class TemplateInterpreter {
     pathContext.target = context.target;
     pathContext.variables = context.variables;
     // Delegate to shared graph path implementation
-    return sharedEvaluateGraphPath(entity, assertion, pathContext);
+    return sharedEvaluateGraphPath(entity, assertion, pathContext, {
+      filterEvaluator: (entities, filters, resolver, options) =>
+        applySelectionFilters(entities, filters, resolver, options)
+    });
   }
 
   // ===========================================================================
@@ -612,9 +616,8 @@ export class TemplateInterpreter {
       const derivedTags = placementResult.derivedTags || {};
       const mergedTags = { ...(rule.tags || {}), ...derivedTags };
 
-      // Build naming context from rule spec, including region info for context:region support
+      // Build naming context from internal rules, including region info for context:region support
       const namingContext = this.buildNamingContext(
-        rule.namingContext,
         context,
         rule.kind,
         placementResult.regionId,
@@ -755,7 +758,6 @@ export class TemplateInterpreter {
    * If regionId is provided, looks up the region label and adds it as "region".
    */
   private buildNamingContext(
-    spec: Record<string, string> | undefined,
     context: ExecutionContext,
     entityKind?: string,
     regionId?: string | null,
@@ -771,16 +773,6 @@ export class TemplateInterpreter {
         // Strip $ prefix for context key: $selected -> selected
         const key = ref.startsWith('$') ? ref.slice(1) : ref;
         result[key] = entity.name;
-      }
-    }
-
-    // Add explicit context from spec
-    if (spec) {
-      for (const [key, ref] of Object.entries(spec)) {
-        const entity = context.resolveEntity(ref);
-        if (entity?.name) {
-          result[key] = entity.name;
-        }
       }
     }
 

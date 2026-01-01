@@ -27,10 +27,8 @@
     "config": {
       "id": "universal_catalyst",
       "name": "Agent Actions",
-      "description": "Enables agents (NPCs, factions) to perform domain-defined actions. Manages action selection, success/failure, and influence tracking.",
+      "description": "Enables agents (NPCs, factions) to perform domain-defined actions. Manages action selection and success/failure.",
       "actionAttemptRate": 0.18,
-      "influenceGain": 0.1,
-      "influenceLoss": 0.05,
       "pressureMultiplier": 1.1,
       "prominenceUpChanceOnSuccess": 1.0,
       "prominenceDownChanceOnFailure": 1.0
@@ -2176,6 +2174,80 @@
         }
       ],
       "throttleChance": 0.3
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "graphContagion",
+    "config": {
+      "id": "anomaly_resonance",
+      "name": "Anomaly Resonance",
+      "description": "Anomalies radiate strangeness to nearby locations. Adjacent places become touched by the mystical, dangerous, or hidden qualities of their anomalous neighbors.",
+      "contagion": {
+        "type": "tag",
+        "tag": "mystical"
+      },
+      "vectors": [
+        {
+          "relationshipKind": "adjacent_to",
+          "direction": "both",
+          "minStrength": 0.2
+        }
+      ],
+      "transmission": {
+        "baseRate": 0.2,
+        "contactMultiplier": 0.15,
+        "maxProbability": 0.6
+      },
+      "infectionAction": {
+        "type": "set_tag",
+        "tag": "mystical",
+        "value": true,
+        "entity": "$target"
+      },
+      "secondaryInfections": [
+        {
+          "condition": {
+            "type": "source_has_tag",
+            "tag": "dangerous"
+          },
+          "action": {
+            "type": "set_tag",
+            "tag": "dangerous",
+            "value": true,
+            "entity": "$target"
+          },
+          "probability": 0.3
+        },
+        {
+          "condition": {
+            "type": "source_has_tag",
+            "tag": "secretive"
+          },
+          "action": {
+            "type": "set_tag",
+            "tag": "hidden",
+            "value": true,
+            "entity": "$target"
+          },
+          "probability": 0.25
+        }
+      ],
+      "throttleChance": 0.4,
+      "cooldown": 8,
+      "pressureChanges": {
+        "magical_stability": -3
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "location",
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "anomaly"
+          }
+        ]
+      }
     },
     "enabled": true
   }

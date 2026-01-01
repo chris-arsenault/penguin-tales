@@ -39,7 +39,7 @@ interface PendingStateChange {
   field: string;
   previousValue: unknown;
   newValue: unknown;
-  catalyst?: { entityId: string; actionType: string };
+  catalyst?: { entityId: string; actionType: string; success?: boolean };
 }
 
 /**
@@ -69,7 +69,7 @@ interface PendingTagChange {
   tag: string;
   changeType: 'added' | 'removed';
   value?: string | boolean;
-  catalyst?: { entityId: string; actionType: string };
+  catalyst?: { entityId: string; actionType: string; success?: boolean };
 }
 
 /**
@@ -427,7 +427,7 @@ export class StateChangeTracker {
   recordEntityChange(
     entity: HardState,
     changes: Partial<HardState>,
-    catalyst?: { entityId: string; actionType: string }
+    catalyst?: { entityId: string; actionType: string; success?: boolean }
   ): void {
     if (!this.config.enabled) return;
 
@@ -452,7 +452,7 @@ export class StateChangeTracker {
     tag: string,
     changeType: 'added' | 'removed',
     value: string | boolean | undefined,
-    catalyst?: { entityId: string; actionType: string }
+    catalyst?: { entityId: string; actionType: string; success?: boolean }
   ): void {
     if (!this.config.enabled) return;
 
@@ -883,6 +883,7 @@ export class StateChangeTracker {
       description,
       causedBy: {
         actionType: `action:${context.sourceId}`,
+        success: context.success,
       },
       narrativeTags,
     };

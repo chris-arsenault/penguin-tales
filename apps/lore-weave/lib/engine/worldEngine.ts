@@ -159,6 +159,32 @@ export class WorldEngine {
     this.emitter = config.emitter;
     this.config = config;
 
+    const isExplicitlyDisabled = (value: unknown): boolean =>
+      typeof value === 'object' &&
+      value !== null &&
+      'enabled' in value &&
+      (value as { enabled?: unknown }).enabled === false;
+
+    const isGrowthSystem = (system: SimulationSystem | DeclarativeSystem): boolean => {
+      if (isDeclarativeSystem(system)) {
+        return system.systemType === 'growth';
+      }
+      return system.id === 'growth' || system.id === 'framework-growth';
+    };
+
+    const hasDisabledGrowthSystem = config.systems
+      .some(system => isExplicitlyDisabled(system) && isGrowthSystem(system));
+
+    const activeSystems = config.systems.filter(system => !isExplicitlyDisabled(system));
+    if (activeSystems.length !== config.systems.length) {
+      config.systems = activeSystems;
+    }
+
+    const activeTemplates = config.templates.filter(template => !isExplicitlyDisabled(template));
+    if (activeTemplates.length !== config.templates.length) {
+      config.templates = activeTemplates;
+    }
+
     // Set prominence debug flags based on debug config
     const prominenceDebugEnabled = config.debugConfig?.enabled &&
       (config.debugConfig.enabledCategories.length === 0 ||
@@ -428,7 +454,7 @@ export class WorldEngine {
       runtimeSystems.push(createSystemFromDeclarative(sys as DeclarativeSystem));
     }
 
-    if (!this.growthSystem) {
+    if (!this.growthSystem && !hasDisabledGrowthSystem) {
       this.growthSystem = createGrowthSystem(
         {
           id: 'framework-growth',
@@ -1231,11 +1257,13 @@ export class WorldEngine {
     const initialRelationshipCount = this.graph.getRelationshipCount();
 
     // Initialize distributed growth for this epoch
-    if (!this.growthSystem) {
-      throw new Error('Growth system was not initialized');
+    if (this.growthSystem) {
+      this.growthSystem.startEpoch(era);
+      this.lastGrowthSummary = null;
+    } else {
+      this.lastGrowthSummary = null;
+      this.emitter.log('info', 'Growth system disabled; skipping growth for this epoch');
     }
-    this.growthSystem.startEpoch(era);
-    this.lastGrowthSummary = null;
 
     // Simulation phase
     for (let i = 0; i < this.config.ticksPerEpoch; i++) {
@@ -1269,13 +1297,15 @@ export class WorldEngine {
     }
 
     // Capture growth summary for this epoch
-    this.lastGrowthSummary = this.growthSystem.completeEpoch();
-    this.emitter.growthPhase({
-      epoch: this.currentEpoch,
-      entitiesCreated: this.lastGrowthSummary.entitiesCreated,
-      target: this.lastGrowthSummary.target,
-      templatesApplied: this.lastGrowthSummary.templatesUsed
-    });
+    if (this.growthSystem) {
+      this.lastGrowthSummary = this.growthSystem.completeEpoch();
+      this.emitter.growthPhase({
+        epoch: this.currentEpoch,
+        entitiesCreated: this.lastGrowthSummary.entitiesCreated,
+        target: this.lastGrowthSummary.target,
+        templatesApplied: this.lastGrowthSummary.templatesUsed
+      });
+    }
 
     // Apply era special rules if any
     if (era.specialRules) {
@@ -1945,7 +1975,7 @@ export class WorldEngine {
           // Enter action-specific context if provided (for narrative attribution)
           const hasActionContext = rel.actionContext && rel.actionContext.source === 'action';
           if (hasActionContext) {
-            this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId);
+            this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId, rel.actionContext!.success);
           }
 
           // Enter narrative group sub-context if provided (for per-target event splitting)
@@ -1982,7 +2012,7 @@ export class WorldEngine {
             // Enter action-specific context if provided (for narrative attribution)
             const hasActionContext = rel.actionContext && rel.actionContext.source === 'action';
             if (hasActionContext) {
-              this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId);
+              this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId, rel.actionContext!.success);
             }
 
             // Enter narrative group sub-context if provided (for per-target event splitting)
@@ -2021,7 +2051,7 @@ export class WorldEngine {
           // Enter action-specific context if provided (for narrative attribution)
           const hasActionContext = mod.actionContext && mod.actionContext.source === 'action';
           if (hasActionContext) {
-            this.mutationTracker.enterContext(mod.actionContext!.source, mod.actionContext!.sourceId);
+            this.mutationTracker.enterContext(mod.actionContext!.source, mod.actionContext!.sourceId, mod.actionContext!.success);
           }
 
           // Enter narrative group sub-context if provided (for per-target event splitting)
@@ -2046,7 +2076,11 @@ export class WorldEngine {
           if (entity) {
             // Use action context for catalyst if available, fall back to system
             const catalyst = mod.actionContext
-              ? { entityId: mod.actionContext.sourceId, actionType: mod.actionContext.sourceId }
+              ? {
+                  entityId: mod.actionContext.sourceId,
+                  actionType: mod.actionContext.sourceId,
+                  success: mod.actionContext.success,
+                }
               : { entityId: system.id, actionType: system.name };
 
             this.stateChangeTracker.recordEntityChange(entity, changes, catalyst);

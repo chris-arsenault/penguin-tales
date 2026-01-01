@@ -42,6 +42,9 @@ export interface PathStep {
   targetSubtype?: string;
   targetStatus?: string;
 
+  /** Optional filters applied to entities reached at this step */
+  filters?: SelectionFilter[];
+
   /** Store intermediate result for reference */
   as?: string;  // e.g., "$controlled", "$adjacent"
 }

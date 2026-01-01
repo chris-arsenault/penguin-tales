@@ -202,11 +202,12 @@ export class MutationTracker {
   /**
    * Enter an execution context. Pushes onto the context stack.
    */
-  enterContext(source: ExecutionSource, sourceId: string): void {
+  enterContext(source: ExecutionSource, sourceId: string, success?: boolean): void {
     this.contextStack.push({
       tick: this.currentTick,
       source,
       sourceId,
+      success,
     });
   }
 

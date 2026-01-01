@@ -19,6 +19,7 @@ import {
   deleteStaticPagesForProject,
   loadAndImportSeedPages,
 } from './staticPageStorage.js';
+import { compileCanonProject, serializeCanonProject } from '@canonry/dsl';
 
 /**
  * Default project ID - used to identify the default project for reload functionality
@@ -26,26 +27,82 @@ import {
 export const DEFAULT_PROJECT_ID = 'project_1765083188592';
 
 /**
- * Project file names for individual domain files
+ * Canon project file names (default layout)
  */
-const PROJECT_FILES = [
-  'manifest',
-  'entityKinds',
-  'relationshipKinds',
+const CANON_PROJECT_FILES = [
+  'project',
+  'entity_kinds',
+  'relationship_kinds',
   'cultures',
-  'tagRegistry',
-  'axisDefinitions',
-  'uiConfig',
+  'tag_registry',
+  'axis_definitions',
+  'ui_config',
   'eras',
   'pressures',
   'generators',
   'systems',
   'actions',
-  'seedEntities',
-  'seedRelationships',
-  'distributionTargets',
-  'illuminatorConfig',
+  'seed_entities',
+  'seed_relationships',
+  'distribution_targets',
 ];
+
+const PROJECT_DEFAULTS = {
+  entityKinds: [],
+  relationshipKinds: [],
+  cultures: [],
+  tagRegistry: [],
+  axisDefinitions: [],
+  uiConfig: null,
+  eras: [],
+  pressures: [],
+  generators: [],
+  systems: [],
+  actions: [],
+  seedEntities: [],
+  seedRelationships: [],
+  distributionTargets: null,
+};
+
+function normalizeProjectConfig(raw) {
+  const project = { ...raw };
+  for (const [key, fallback] of Object.entries(PROJECT_DEFAULTS)) {
+    if (Array.isArray(fallback)) {
+      if (!Array.isArray(project[key])) {
+        project[key] = fallback;
+      }
+      continue;
+    }
+    if (project[key] === undefined) {
+      project[key] = fallback;
+    }
+  }
+
+  if (!project.id) {
+    project.id = `project_${Date.now()}`;
+  }
+  if (!project.name) {
+    project.name = 'New World';
+  }
+  if (!project.version) {
+    project.version = '1.0';
+  }
+
+  return project;
+}
+
+function formatCanonDiagnostics(diagnostics = []) {
+  return diagnostics
+    .map((diag) => {
+      if (!diag) return null;
+      const location = diag.span?.start
+        ? ` (${diag.span.file}:${diag.span.start.line}:${diag.span.start.column})`
+        : '';
+      return `${diag.message}${location}`;
+    })
+    .filter(Boolean)
+    .join('\n');
+}
 
 /**
  * Fetch and load the default seed project from individual files
@@ -54,39 +111,44 @@ async function fetchDefaultProject() {
   try {
     const baseUrl = `${import.meta.env.BASE_URL}default-project/`;
 
-    // Load all files in parallel
     const responses = await Promise.all(
-      PROJECT_FILES.map(async (file) => {
-        const response = await fetch(`${baseUrl}${file}.json`);
+      CANON_PROJECT_FILES.map(async (file) => {
+        const response = await fetch(`${baseUrl}${file}.canon`);
         if (!response.ok) {
-          console.warn(`Default project file ${file}.json not found`);
-          return { file, data: null };
+          console.warn(`Default project file ${file}.canon not found`);
+          return { file, content: null };
         }
-        const data = await response.json();
-        return { file, data };
+        const content = await response.text();
+        return { file, content };
       })
     );
 
-    // Check if manifest was loaded
-    const manifestResult = responses.find((r) => r.file === 'manifest');
-    if (!manifestResult?.data) {
-      console.warn('Default project manifest not found');
+    const sources = responses
+      .filter((entry) => entry.content !== null)
+      .map((entry) => ({
+        path: `${entry.file}.canon`,
+        content: entry.content,
+      }));
+
+    if (sources.length === 0) {
+      console.warn('Default project .canon files not found');
       return null;
     }
 
-    // Assemble the project from individual files
-    // illuminatorConfig is handled separately (stored in worldStore, not project)
-    let project = { ...manifestResult.data };
+    const { config, diagnostics } = compileCanonProject(sources);
+    if (!config || diagnostics.some((diag) => diag.severity === 'error')) {
+      console.warn('Failed to compile default project:', formatCanonDiagnostics(diagnostics));
+      return null;
+    }
+
+    let project = normalizeProjectConfig(config);
+
     let illuminatorConfig = null;
-    for (const { file, data } of responses) {
-      if (file === 'manifest') continue;
-      if (file === 'illuminatorConfig') {
-        illuminatorConfig = data;
-        continue;
-      }
-      if (data !== null) {
-        project[file] = data;
-      }
+    const illuminatorResponse = await fetch(`${baseUrl}illuminatorConfig.json`);
+    if (illuminatorResponse.ok) {
+      illuminatorConfig = await illuminatorResponse.json();
+    } else {
+      console.warn('Default project illuminatorConfig.json not found');
     }
 
     // Update timestamps to now
@@ -113,58 +175,9 @@ async function createProjectZip(project, options = {}) {
   const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
 
-  // Add manifest (project metadata without domain data)
-  const manifest = {
-    id: project.id,
-    name: project.name,
-    version: project.version || '1.0',
-    createdAt: project.createdAt,
-    updatedAt: project.updatedAt,
-  };
-  zip.file('manifest.json', JSON.stringify(manifest, null, 2));
-
-  // Add individual domain files
-  if (project.entityKinds) {
-    zip.file('entityKinds.json', JSON.stringify(project.entityKinds, null, 2));
-  }
-  if (project.relationshipKinds) {
-    zip.file('relationshipKinds.json', JSON.stringify(project.relationshipKinds, null, 2));
-  }
-  if (project.cultures) {
-    zip.file('cultures.json', JSON.stringify(project.cultures, null, 2));
-  }
-  if (project.tagRegistry) {
-    zip.file('tagRegistry.json', JSON.stringify(project.tagRegistry, null, 2));
-  }
-  if (project.axisDefinitions) {
-    zip.file('axisDefinitions.json', JSON.stringify(project.axisDefinitions, null, 2));
-  }
-  if (project.uiConfig) {
-    zip.file('uiConfig.json', JSON.stringify(project.uiConfig, null, 2));
-  }
-  if (project.eras) {
-    zip.file('eras.json', JSON.stringify(project.eras, null, 2));
-  }
-  if (project.pressures) {
-    zip.file('pressures.json', JSON.stringify(project.pressures, null, 2));
-  }
-  if (project.generators) {
-    zip.file('generators.json', JSON.stringify(project.generators, null, 2));
-  }
-  if (project.systems) {
-    zip.file('systems.json', JSON.stringify(project.systems, null, 2));
-  }
-  if (project.actions) {
-    zip.file('actions.json', JSON.stringify(project.actions, null, 2));
-  }
-  if (project.seedEntities) {
-    zip.file('seedEntities.json', JSON.stringify(project.seedEntities, null, 2));
-  }
-  if (project.seedRelationships) {
-    zip.file('seedRelationships.json', JSON.stringify(project.seedRelationships, null, 2));
-  }
-  if (project.distributionTargets !== undefined) {
-    zip.file('distributionTargets.json', JSON.stringify(project.distributionTargets, null, 2));
+  const canonFiles = serializeCanonProject(project);
+  for (const file of canonFiles) {
+    zip.file(file.path, file.content);
   }
 
   // Add Illuminator configuration if provided
@@ -189,14 +202,44 @@ async function extractProjectZip(zipBlob) {
   const { default: JSZip } = await import('jszip');
   const zip = await JSZip.loadAsync(zipBlob);
 
-  // Load manifest first
+  const canonFiles = zip.file(/\.canon$/);
+  if (canonFiles && canonFiles.length > 0) {
+    const sources = await Promise.all(
+      canonFiles.map(async (file) => ({
+        path: file.name,
+        content: await file.async('string'),
+      }))
+    );
+
+    const { config, diagnostics } = compileCanonProject(sources);
+    if (!config || diagnostics.some((diag) => diag.severity === 'error')) {
+      throw new Error(`Invalid .canon project:\n${formatCanonDiagnostics(diagnostics)}`);
+    }
+
+    const project = normalizeProjectConfig(config);
+
+    let illuminatorConfig = null;
+    const illuminatorFile = zip.file('illuminatorConfig.json');
+    if (illuminatorFile) {
+      illuminatorConfig = JSON.parse(await illuminatorFile.async('string'));
+    }
+
+    let staticPages = [];
+    const staticPagesFile = zip.file('staticPages.json');
+    if (staticPagesFile) {
+      staticPages = JSON.parse(await staticPagesFile.async('string'));
+    }
+
+    return { project, illuminatorConfig, staticPages };
+  }
+
+  // Legacy JSON export fallback
   const manifestFile = zip.file('manifest.json');
   if (!manifestFile) {
     throw new Error('Invalid project zip: missing manifest.json');
   }
   const manifest = JSON.parse(await manifestFile.async('string'));
 
-  // Load all other files
   const project = { ...manifest };
 
   const fileNames = [

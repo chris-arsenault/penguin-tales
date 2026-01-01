@@ -1175,6 +1175,8 @@ export default function WikiPageView({
               ? 'Categories'
               : page.type === 'chronicle'
               ? 'Chronicles'
+              : page.type === 'conflux'
+              ? 'Confluxes'
               : page.type}
           </span>
           {' / '}
@@ -1190,7 +1192,9 @@ export default function WikiPageView({
                 ? (entityIndex.get(page.id)?.kind || page.type)
                 : page.type === 'static'
                   ? (page.title.includes(':') ? page.title.split(':')[0].toLowerCase() : 'page')
-                  : page.type
+                  : page.type === 'conflux'
+                    ? 'conflux'
+                    : page.type
             }.
             {' '}See also:
             {disambiguation

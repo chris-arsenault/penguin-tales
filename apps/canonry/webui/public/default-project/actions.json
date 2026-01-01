@@ -2427,5 +2427,260 @@
       ]
     },
     "enabled": true
+  },
+  {
+    "id": "artifact_attracts_restorer",
+    "name": "The Relic Calls",
+    "description": "A damaged artifact's fading essence draws someone capable of preservation",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact",
+        "statusFilter": "damaged",
+        "minProminence": "marginal"
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "npc",
+      "subtypes": ["mayor", "merchant", "hero"],
+      "statusFilter": "alive",
+      "filters": [
+        {
+          "type": "matches_culture",
+          "with": "$actor"
+        }
+      ],
+      "pickStrategy": "weighted"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "change_status",
+          "entity": "$actor",
+          "newStatus": "intact"
+        },
+        {
+          "type": "create_relationship",
+          "kind": "owned_by",
+          "src": "$actor",
+          "dst": "$target",
+          "strength": 0.8
+        }
+      ],
+      "descriptionTemplate": "{actor.name} called to {target.name}, who restored it",
+      "actorProminenceDelta": {
+        "onSuccess": 0.5,
+        "onFailure": 0.15
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.3,
+        "onFailure": 0.1
+      }
+    },
+    "probability": {
+      "baseSuccessChance": 0.35,
+      "baseWeight": 0.5
+    },
+    "enabled": true
+  },
+  {
+    "id": "tome_reveals_resources",
+    "name": "The Map Reveals Riches",
+    "description": "A tome of places reveals hidden resources in its resting place",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact",
+        "subtypes": ["tome"],
+        "statusFilter": "intact",
+        "filters": [
+          {
+            "type": "has_relationship",
+            "kind": "stored_at",
+            "direction": "src"
+          }
+        ]
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "filters": [
+        {
+          "type": "has_relationship",
+          "kind": "stored_at",
+          "with": "$actor",
+          "direction": "dst"
+        },
+        {
+          "type": "lacks_tag",
+          "tag": "resource"
+        }
+      ]
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "set_tag",
+          "entity": "$target",
+          "tag": "resource",
+          "value": true
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "resource_availibility",
+          "delta": 5
+        }
+      ],
+      "descriptionTemplate": "{actor.name} revealed hidden riches at {target.name}",
+      "actorProminenceDelta": {
+        "onSuccess": 0.4,
+        "onFailure": 0.13
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.25,
+        "onFailure": 0.08
+      }
+    },
+    "probability": {
+      "baseSuccessChance": 0.4,
+      "baseWeight": 0.5
+    },
+    "enabled": true
+  },
+  {
+    "id": "tome_dispels_danger",
+    "name": "Knowledge Dispels Fear",
+    "description": "A tome's secrets reveal safe passage through dangerous lands",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact",
+        "subtypes": ["tome"],
+        "statusFilter": "intact",
+        "filters": [
+          {
+            "type": "has_relationship",
+            "kind": "stored_at",
+            "direction": "src"
+          }
+        ]
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "filters": [
+        {
+          "type": "has_tag",
+          "tag": "dangerous"
+        },
+        {
+          "type": "lacks_tag",
+          "tag": "safe"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "remove_tag",
+          "entity": "$target",
+          "tag": "dangerous"
+        },
+        {
+          "type": "set_tag",
+          "entity": "$target",
+          "tag": "safe",
+          "value": true
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": 3
+        }
+      ],
+      "descriptionTemplate": "{actor.name} revealed safe passage through {target.name}",
+      "actorProminenceDelta": {
+        "onSuccess": 0.35,
+        "onFailure": 0.12
+      }
+    },
+    "probability": {
+      "baseSuccessChance": 0.35,
+      "baseWeight": 0.4
+    },
+    "enabled": true
+  },
+  {
+    "id": "tome_cleanses_corruption",
+    "name": "Forbidden Knowledge Purifies",
+    "description": "A mystical tome's secrets cleanse corruption from the land",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "artifact",
+        "subtypes": ["tome"],
+        "statusFilter": "intact",
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "mystical"
+          }
+        ]
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "filters": [
+        {
+          "type": "has_tag",
+          "tag": "corrupted"
+        },
+        {
+          "type": "matches_culture",
+          "with": "$actor"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "remove_tag",
+          "entity": "$target",
+          "tag": "corrupted"
+        },
+        {
+          "type": "remove_tag",
+          "entity": "$target",
+          "tag": "crisis"
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "magical_stability",
+          "delta": 5
+        }
+      ],
+      "descriptionTemplate": "{actor.name} purified the corruption at {target.name}",
+      "actorProminenceDelta": {
+        "onSuccess": 0.5,
+        "onFailure": 0.15
+      }
+    },
+    "probability": {
+      "baseSuccessChance": 0.3,
+      "baseWeight": 0.4,
+      "pressureModifiers": [
+        {
+          "pressure": "magical_stability",
+          "multiplier": -0.4
+        }
+      ]
+    },
+    "enabled": true
   }
 ]

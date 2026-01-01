@@ -17,6 +17,7 @@
     "apps/illuminator/webui",
     "apps/archivist/webui",
     "packages/world-schema",
+    "packages/canonry-dsl",
     "packages/shared-components"
   ],
   "scripts": {

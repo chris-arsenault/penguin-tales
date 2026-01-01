@@ -23,8 +23,7 @@
       "properties": {
         "id": { "type": "string", "description": "Unique identifier for this system" },
         "name": { "type": "string", "description": "Human-readable name" },
-        "description": { "type": "string", "description": "Description of what this system does" },
-        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" }
+        "description": { "type": "string", "description": "Description of what this system does" }
       }
     },
 
@@ -33,6 +32,7 @@
       "required": ["systemType", "config"],
       "properties": {
         "systemType": { "const": "connectionEvolution" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" },
         "config": {
           "allOf": [
             { "$ref": "#/$defs/BaseConfig" },
@@ -72,6 +72,7 @@
       "required": ["systemType", "config"],
       "properties": {
         "systemType": { "const": "graphContagion" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" },
         "config": {
           "allOf": [
             { "$ref": "#/$defs/BaseConfig" },
@@ -180,6 +181,7 @@
       "required": ["systemType", "config"],
       "properties": {
         "systemType": { "const": "thresholdTrigger" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" },
         "config": {
           "allOf": [
             { "$ref": "#/$defs/BaseConfig" },
@@ -215,6 +217,7 @@
       "required": ["systemType", "config"],
       "properties": {
         "systemType": { "const": "clusterFormation" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" },
         "config": {
           "allOf": [
             { "$ref": "#/$defs/BaseConfig" },
@@ -291,6 +294,7 @@
       "required": ["systemType", "config"],
       "properties": {
         "systemType": { "const": "tagDiffusion" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" },
         "config": {
           "allOf": [
             { "$ref": "#/$defs/BaseConfig" },
@@ -345,6 +349,7 @@
       "description": "True time-evolving 2D diffusion field simulation. Uses a 100x100 grid matching the semantic coordinate space. Sources SET values at their positions (Dirichlet boundary), then values diffuse via heat equation. Simulation runs uncapped internally; values are clamped to -100 to 100 only at output (tags).",
       "properties": {
         "systemType": { "const": "planeDiffusion" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" },
         "config": {
           "allOf": [
             { "$ref": "#/$defs/BaseConfig" },
@@ -447,6 +452,7 @@
       "required": ["systemType", "config"],
       "properties": {
         "systemType": { "const": "eraSpawner" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" },
         "config": {
           "allOf": [
             { "$ref": "#/$defs/BaseConfig" },
@@ -466,6 +472,7 @@
       "required": ["systemType", "config"],
       "properties": {
         "systemType": { "const": "eraTransition" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" },
         "config": {
           "allOf": [
             { "$ref": "#/$defs/BaseConfig" },
@@ -501,6 +508,7 @@
       "required": ["systemType", "config"],
       "properties": {
         "systemType": { "const": "universalCatalyst" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" },
         "config": {
           "allOf": [
             { "$ref": "#/$defs/BaseConfig" },
@@ -523,6 +531,7 @@
       "required": ["systemType", "config"],
       "properties": {
         "systemType": { "const": "relationshipMaintenance" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" },
         "config": {
           "allOf": [
             { "$ref": "#/$defs/BaseConfig" },
@@ -551,6 +560,7 @@
       "required": ["systemType", "config"],
       "properties": {
         "systemType": { "const": "growth" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" },
         "config": {
           "allOf": [
             { "$ref": "#/$defs/BaseConfig" },
@@ -823,6 +833,7 @@
         "targetKind": { "$ref": "#/$defs/AnyOrString" },
         "targetSubtype": { "$ref": "#/$defs/AnyOrString" },
         "targetStatus": { "$ref": "#/$defs/AnyOrString" },
+        "filters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
         "as": { "$ref": "#/$defs/NonEmptyString" }
       }
     },

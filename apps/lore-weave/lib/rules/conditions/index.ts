@@ -12,6 +12,7 @@
 import { HardState } from '../../core/worldTypes';
 import { hasTag, getTagValue } from '../../utils';
 import { evaluateGraphPath } from '../graphPath';
+import { applySelectionFilters } from '../filters';
 import type { RuleContext } from '../context';
 import {
   applyOperator,
@@ -656,7 +657,10 @@ function evaluateGraphPathCondition(
     return { passed: false, diagnostic: 'no entity for graph path', details: {} };
   }
 
-  const passed = evaluateGraphPath(self, condition.assert, ctx.resolver);
+  const passed = evaluateGraphPath(self, condition.assert, ctx.resolver, {
+    filterEvaluator: (entities, filters, resolver, options) =>
+      applySelectionFilters(entities, filters, resolver, options)
+  });
 
   return {
     passed,

@@ -172,7 +172,6 @@ export interface CreateEntitySettings {
   temporal?: { startTick: number; endTick: number | null };
   source?: string;  // Optional - for debugging (e.g., template ID, system ID)
   placementStrategy?: string;  // Optional - for debugging (e.g., 'near_entity', 'in_culture_region')
-  namingContext?: Record<string, string>;  // Optional - context for name generation (e.g., { instigator: "King Gorban" })
   regionId?: string | null;  // Primary region containing this entity
   allRegionIds?: string[];   // All regions containing this entity (for overlapping regions)
 }
@@ -384,6 +383,8 @@ export interface SimulationSystem<TState = unknown> {
 export interface ActionContext {
   source: import('@canonry/world-schema').ExecutionSource;
   sourceId: string;
+  /** For actions: whether the action succeeded (false = failed attempt) */
+  success?: boolean;
 }
 
 export interface SystemResult {

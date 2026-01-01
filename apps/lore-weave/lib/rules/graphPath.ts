@@ -10,6 +10,15 @@ import { WorldRuntime } from '../runtime/worldRuntime';
 import { GraphPathAssertion, PathStep, PathConstraint } from './filters/types';
 import { EntityResolver } from './resolver';
 
+export interface GraphPathOptions {
+  filterEvaluator?: (
+    entities: HardState[],
+    filters: PathStep['filters'],
+    resolver: EntityResolver,
+    options?: GraphPathOptions
+  ) => HardState[];
+}
+
 /**
  * Evaluate a graph path assertion starting from an entity.
  * Returns true if the assertion passes.
@@ -17,9 +26,11 @@ import { EntityResolver } from './resolver';
 export function evaluateGraphPath(
   startEntity: HardState,
   assertion: GraphPathAssertion,
-  resolver: EntityResolver
+  resolver: EntityResolver,
+  options?: GraphPathOptions
 ): boolean {
   const graphView = resolver.getGraphView();
+  const filterEvaluator = options?.filterEvaluator;
 
   // Traverse the path, collecting entities at each step
   let currentEntities: HardState[] = [startEntity];
@@ -32,12 +43,16 @@ export function evaluateGraphPath(
       nextEntities.push(...related);
     }
 
-    // Store intermediate results if requested (for constraints like "not_in")
-    if (step.as) {
-      resolver.setPathSet(step.as, new Set(nextEntities.map(e => e.id)));
+    let filteredEntities = nextEntities;
+    if (step.filters && step.filters.length > 0 && filterEvaluator) {
+      filteredEntities = filterEvaluator(nextEntities, step.filters, resolver, options);
     }
 
-    currentEntities = nextEntities;
+    // Store intermediate results if requested (for constraints like "not_in")
+    if (step.as) {
+      resolver.setPathSet(step.as, new Set(filteredEntities.map(e => e.id)));
+    }
+    currentEntities = filteredEntities;
   }
 
   // Apply constraints to filter final entities

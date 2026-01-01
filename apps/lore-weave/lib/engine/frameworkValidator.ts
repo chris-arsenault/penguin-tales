@@ -204,8 +204,7 @@ export class FrameworkValidator {
    * Validate Contracts
    *
    * Note: Contract validation removed. Contracts are now empty.
-   * Lineage is now handled via inline lineage specs on CreationRule
-   * in declarative templates.
+   * Lineage attribution is handled by the mutation tracker; no contract validation needed.
    */
   private validateContracts(errors: string[], warnings: string[]): void {
     // Contracts are now empty - no validation needed
