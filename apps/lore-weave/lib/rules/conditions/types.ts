@@ -54,6 +54,9 @@ export type Condition =
   // Graph path conditions
   | GraphPathCondition
 
+  // Graph topology conditions
+  | ComponentSizeCondition
+
   // Entity existence
   | EntityExistsCondition
   | EntityHasRelationshipCondition
@@ -265,6 +268,31 @@ export interface RandomChanceCondition {
 export interface GraphPathCondition {
   type: 'graph_path';
   assert: GraphPathAssertion;
+}
+
+// =============================================================================
+// GRAPH TOPOLOGY CONDITIONS
+// =============================================================================
+
+/**
+ * Check connected component size against min/max bounds.
+ *
+ * Calculates the size of the connected component containing the entity
+ * via the specified relationship kind(s), treating the subgraph as undirected.
+ *
+ * Example: Limit alliance formation to components smaller than 8:
+ * { type: 'component_size', relationshipKinds: ['allied_with'], max: 7 }
+ */
+export interface ComponentSizeCondition {
+  type: 'component_size';
+  /** Relationship kind(s) defining the subgraph edges */
+  relationshipKinds: string[];
+  /** Minimum component size (inclusive) */
+  min?: number;
+  /** Maximum component size (inclusive) */
+  max?: number;
+  /** Minimum relationship strength to follow (default: 0) */
+  minStrength?: number;
 }
 
 // =============================================================================

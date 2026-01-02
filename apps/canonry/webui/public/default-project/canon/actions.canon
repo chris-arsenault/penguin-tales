@@ -1,0 +1,948 @@
+action artifact_attracts_restorer "The Relic Calls" do
+  description "A damaged artifact's fading essence draws someone capable of preservation"
+  actor choose artifact do
+    pick random
+    minProminence marginal
+    status damaged
+  end
+  target choose npc do
+    pick weighted
+    subtype in [mayor merchant hero]
+    filter matches_culture actor
+    status alive
+  end
+  on success do
+    change_status actor intact
+    rel owned_by actor -> target strength:0.8
+  end
+  narrative "{actor.name} called to {target.name}, who restored it"
+  prominence actor success 0.5 failure 0.15
+  prominence target success 0.3 failure 0.1
+  success_chance 0.35
+  weight 0.5
+end
+
+action artifact_enshrines_tradition "Relic Enshrines Tradition" do
+  description "A historically significant artifact becomes central to a cultural tradition"
+  actor choose artifact do
+    pick random
+    minProminence marginal
+    filter has_relationship participant_in direction src
+    status intact
+  end
+  target choose rule do
+    pick random
+    subtype in [ideology law social memorial]
+    filter matches_culture actor
+    filter lacks_relationship central_to with actor
+  end
+  on success do
+    rel central_to actor -> target strength:0.8
+  end
+  narrative "{actor.name} became central to the practice of {target.name}"
+  prominence actor success 0.3 failure 0.1
+  prominence target success 0.3 failure 0.09
+  success_chance 0.4
+  weight 0.4
+end
+
+action artifact_selects_custodian "Artifact Selects Custodian" do
+  description "An unclaimed artifact chooses a worthy faction to be its guardian"
+  actor choose artifact do
+    pick random
+    filter lacks_relationship owned_by
+    filter has_relationship stored_at direction src
+    status intact
+  end
+  target choose faction do
+    pick random
+    filter has_relationship controls direction src
+  end
+  on success do
+    rel owned_by actor -> target strength:0.8
+    set_tag actor claimed true
+  end
+  narrative "{actor.name} chose {target.name} as its guardian"
+  prominence actor success 0.5 failure 0.15
+  prominence target success 0.25 failure 0.08
+  success_chance 0.5
+  weight 0.4
+end
+
+action claim_victory "Claim Victory" do
+  description "The dominant faction claims victory in a war-weary conflict, seizing contested territory"
+  actor choose faction do
+    pick random
+    filter has_tag conflict
+  end
+  actor when do
+    relationship_count at_war_with both >= 1
+    relationship_count member_of dst >= 2
+  end
+  actor instigator do
+    from actor via participant_in src
+    kind occurrence
+    subtype war
+    pick random
+    filter has_tag war_weary
+    required true
+    status active
+  end
+  target choose faction do
+    pick random
+    filter exclude actor
+    filter has_relationship at_war_with with actor direction both
+  end
+  on success do
+    archive_relationship actor at_war_with target
+    change_status instigator historical
+    archive_all_relationships instigator participant_in direction dst
+    set_tag target defeated true
+    set_tag actor victorious true
+    mutate pressure harmony += 8
+    mutate pressure security += 5
+  end
+  narrative "achieved victory over {target.name}"
+  prominence actor success 0.96 failure 0.32
+  success_chance 0.35
+  weight 0.3
+  pressure_modifier security 0.3
+end
+
+action cleanse_corruption "Cleanse Corruption" do
+  description "Heroes purify corrupted locations, driving back the darkness"
+  actor choose npc do
+    pick random
+    subtype hero
+    status alive
+  end
+  actor when do
+    relationship_count practitioner_of src >= 1
+  end
+  target choose location do
+    pick random
+    filter has_relationship corrupted_by
+  end
+  on success do
+    archive_all_relationships target corrupted_by
+    remove_tag target corrupted
+    remove_tag target dangerous
+    set_tag target cleansed true
+    mutate pressure magical_stability += 5
+    mutate pressure security += 2
+  end
+  narrative "{actor.name} purified the corruption at {target.name}"
+  prominence actor success 0.64 failure 0.21
+  success_chance 0.4
+  weight 0.6
+  pressure_modifier magical_stability -0.3
+end
+
+action colony_elevates_resident "Colony Remembers" do
+  description "A prospering colony's memory elevates a resident to prominence"
+  actor choose location do
+    pick random
+    subtype colony
+    minProminence recognized
+    status thriving
+  end
+  target choose npc do
+    pick random
+    filter has_relationship resident_of with actor direction src
+    filter lacks_tag colony_remembered
+    status alive
+  end
+  on success do
+    set_tag target colony_remembered true
+    adjust_prominence target 0.2
+  end
+  narrative "The ice of {actor.name} remembered {target.name}"
+  prominence actor success 0 failure 0
+  success_chance 0.5
+  weight 0.4
+end
+
+action corrupt_location "Corrupt Location" do
+  description "Spread magical corruption to a location"
+  actor choose ability do
+    pick random
+    subtype magic
+  end
+  actor when do
+    pressure magical_stability <= 10
+  end
+  actor instigator do
+    from actor via practitioner_of dst
+    kinds [npc faction]
+    pick random
+  end
+  target choose location do
+    pick random
+    filter lacks_relationship corrupted_by
+    filter lacks_tag cleansed
+  end
+  on success do
+    rel corrupted_by target -> actor strength:0.7
+    set_tag target corrupted true
+    mutate pressure magical_stability -= 5
+  end
+  narrative "corrupted {target.name}"
+  prominence actor success 0.2 failure 0.07
+  success_chance 0.25
+  weight 0.6
+  pressure_modifier magical_stability 0.6
+end
+
+action draw_in_faction "Draw In Faction" do
+  description "Neutral faction becomes war participant"
+  actor choose occurrence do
+    pick random
+    subtype war
+    inbound participant_in <= 3
+  end
+  target choose faction do
+    pick random
+    filter lacks_relationship participant_in with actor
+  end
+  let existingParticipant do
+    from actor via participant_in dst
+    kind faction
+    pick random
+    required true
+  end
+  on success do
+    rel participant_in target -> actor strength:0.8
+    rel at_war_with target -> existingParticipant strength:0.6
+    mutate pressure harmony -= 5
+  end
+  narrative "drew {target.name} into the war"
+  prominence actor success 0.16 failure 0.05
+  success_chance 0.3
+  weight 0.9
+  pressure_modifier harmony 0.6
+  pressure_modifier security 0.4
+end
+
+action echo_occurrence "Echo Occurrence" do
+  description "An ability resonates with a major event and becomes legend"
+  actor choose ability do
+    pick random
+    subtype in [magic combat technology]
+    status in [active discovered emergent]
+  end
+  actor when do
+    relationship_count practitioner_of dst >= 1
+    prominence max renowned
+  end
+  target choose occurrence do
+    pick random
+    subtype in [war disaster celebration succession_crisis]
+    filter lacks_relationship derived_from with actor
+    status active
+  end
+  on success do
+    rel derived_from actor -> target strength:0.8
+    adjust_prominence actor 0.25
+  end
+  narrative "echoed through the event of {target.name}"
+  prominence actor success 0.2 failure 0.07
+  success_chance 0.35
+  weight 0.25
+  pressure_modifier harmony -0.2
+  pressure_modifier magical_stability 0.3
+end
+
+action escalate_war "Escalate War" do
+  description "War intensifies, strengthening participant relationships"
+  actor choose occurrence do
+    pick random
+    subtype war
+  end
+  target choose faction do
+    pick random
+    filter has_relationship participant_in with actor direction src
+  end
+  on success do
+    rel participant_in target -> actor delta:0.1
+    mutate pressure harmony -= 3
+  end
+  narrative "escalated in intensity"
+  prominence actor success 0.16 failure 0.05
+  success_chance 0.4
+  weight 0.7
+  pressure_modifier harmony 0.6
+  pressure_modifier security 0.4
+end
+
+action establish_trade "Establish Trade Route" do
+  description "Create trade connection between two thriving locations"
+  actor choose faction do
+    pick random
+  end
+  target choose location do
+    pick random
+    status thriving
+    max 2
+    filter has_any_tag trade resource
+    filter lacks_relationship trades_with
+  end
+  on success do
+    rel trades_with target -> target2 strength:0.6 bidirectional:true
+    mutate pressure resource_availibility += 2
+  end
+  narrative "established trade route between {target.name} and {target2.name}"
+  prominence actor success 0.24 failure 0.08
+  success_chance 0.6
+  weight 0.6
+  pressure_modifier resource_availibility -0.6
+  pressure_modifier security 0.2
+end
+
+action form_alliance "Form Alliance" do
+  description "Create alliance between factions that are not already allied or at war"
+  actor choose faction do
+    pick random
+  end
+  target choose faction do
+    pick random
+    filter exclude actor
+    filter lacks_relationship allied_with with actor
+    filter lacks_relationship at_war_with with actor
+  end
+  on success do
+    rel allied_with actor -> target strength:0.7 bidirectional:true
+    mutate pressure harmony += 2
+  end
+  narrative "forged alliance with {target.name}"
+  prominence actor success 0.4 failure 0.13
+  success_chance 0.4
+  weight 0.8
+  pressure_modifier harmony -0.6
+  pressure_modifier security -0.3
+  enabled false
+end
+
+action gift_artifact "Gift Artifact" do
+  description "An artifact is gifted by its owner to their faction"
+  actor choose artifact do
+    pick random
+    filter has_relationship owned_by direction src
+    status intact
+  end
+  actor instigator do
+    from actor via owned_by src
+    kind npc
+    pick random
+    status alive
+  end
+  target choose faction do
+    pick random
+    filter has_relationship member_of with instigator direction dst
+  end
+  on success do
+    archive_relationship actor owned_by instigator
+    rel owned_by actor -> target strength:0.9
+    set_tag actor gifted true
+    mutate pressure harmony += 3
+  end
+  narrative "{instigator.name} gifted {actor.name} to {target.name}"
+  success_chance 0.25
+  weight 0.2
+  pressure_modifier harmony 0.5
+end
+
+action ideology_conquers "Ideology Conquers" do
+  description "A powerful ideology spreads to claim new believers among the factions"
+  actor choose rule do
+    pick random
+    subtype in [ideology law]
+    minProminence marginal
+  end
+  actor when do
+    relationship_count believer_of dst >= 1
+  end
+  target choose faction do
+    pick random
+    filter lacks_relationship believer_of with actor
+    filter matches_culture actor
+  end
+  on success do
+    rel believer_of target -> actor strength:0.7
+  end
+  narrative "{actor.name} claimed {target.name} among its believers"
+  prominence actor success 0.24 failure 0.08
+  prominence target success 0.2 failure 0.07
+  success_chance 0.35
+  weight 0.5
+  pressure_modifier harmony 0.4
+end
+
+action instrument_blesses_listener "Instrument Blesses" do
+  description "An instrument's music touches a soul, blessing them with its resonance"
+  actor choose artifact do
+    pick random
+    subtype instrument
+    status intact
+  end
+  target choose npc do
+    pick random
+    subtype in [merchant outlaw mayor]
+    filter lacks_tag blessed
+    status alive
+  end
+  on success do
+    rel blessed_by target -> actor strength:0.6
+    set_tag target blessed true
+    adjust_prominence target 0.25
+  end
+  narrative "The music of {actor.name} blessed {target.name}"
+  prominence actor success 0.4 failure 0.13
+  success_chance 0.4
+  weight 0.3
+end
+
+action kill_orca "Kill Orca" do
+  description "Armed heroes finish off maimed orcas"
+  actor choose npc do
+    pick random
+    subtype hero
+    filter has_tag armed
+    status alive
+  end
+  target choose npc do
+    pick random
+    subtype orca
+    filter exclude actor
+    filter has_tag maimed
+    status alive
+  end
+  on success do
+    change_status target historical
+    mutate pressure security += 1
+  end
+  narrative "killed {target.name}"
+  prominence actor success 0.96 failure 0.32
+  prominence target success 0.32 failure 0.08
+  success_chance 0.5
+  weight 0.6
+end
+
+action maim_orca "Maim Orca" do
+  description "Armed heroes maim wounded orcas in combat"
+  actor choose npc do
+    pick random
+    subtype hero
+    filter has_tag armed
+    status alive
+  end
+  target choose npc do
+    pick random
+    subtype orca
+    filter exclude actor
+    filter has_tag wounded
+    filter lacks_tag maimed
+    status alive
+  end
+  on success do
+    remove_tag target wounded
+    set_tag target maimed true
+    mutate pressure security += 0.5
+  end
+  narrative "maimed {target.name}"
+  prominence actor success 0.4 failure 0.13
+  prominence target success 0.24 failure 0.06
+  success_chance 0.5
+  weight 0.7
+end
+
+action manifest_magic "Manifest Magic" do
+  description "Magic manifests at a location"
+  actor choose ability do
+    pick random
+    subtype magic
+  end
+  actor instigator do
+    from actor via practitioner_of dst
+    kinds [npc faction]
+    pick random
+  end
+  target choose location do
+    pick random
+  end
+  on success do
+    rel manifests_at actor -> target strength:0.8
+    mutate pressure magical_stability -= 2
+  end
+  narrative "manifested at {target.name}"
+  prominence actor success 0.12 failure 0.04
+  success_chance 0.3
+  weight 0.6
+  pressure_modifier magical_stability 0.6
+end
+
+action master_ability "Master Ability" do
+  description "An NPC studies and masters a notable ability"
+  actor choose npc do
+    pick random
+    subtype in [hero mayor merchant outlaw]
+    status alive
+  end
+  target choose ability do
+    pick random
+    status in [active discovered emergent]
+    filter lacks_relationship practitioner_of with actor
+    filter matches_culture actor
+  end
+  on success do
+    rel practitioner_of actor -> target strength:0.7
+  end
+  narrative "mastered the art of {target.name}"
+  prominence actor success 0.24 failure 0.08
+  success_chance 0.5
+  weight 0.35
+  pressure_modifier magical_stability 0.4
+  pressure_modifier security 0.2
+end
+
+action occurrence_marks_artifact "Event Marks Relic" do
+  description "A significant event leaves its memory upon an artifact, making it historically significant"
+  actor choose occurrence do
+    pick random
+    subtype in [war disaster celebration succession_crisis]
+    minProminence marginal
+    status active
+  end
+  target choose artifact do
+    pick random
+    filter lacks_relationship participant_in with actor
+    status intact
+  end
+  on success do
+    rel participant_in target -> actor strength:0.8
+  end
+  narrative "{actor.name} left its memory upon {target.name}"
+  prominence actor success 0.12 failure 0.04
+  prominence target success 0.5 failure 0.15
+  success_chance 0.5
+  weight 0.5
+end
+
+action raid Raid do
+  description "Attack an enemy faction's territory, weakening their hold on controlled locations"
+  actor choose faction do
+    pick random
+  end
+  target choose faction do
+    pick random
+    filter has_relationship at_war_with with actor direction both
+    filter has_relationship controls direction src
+  end
+  on success do
+    rel enemy_of actor -> target strength:0.8
+    set_tag target raided true
+    mutate pressure harmony -= 3
+    mutate pressure security -= 2
+  end
+  narrative "raided {target.name}'s territory"
+  prominence actor success 0.4 failure 0.13
+  success_chance 0.35
+  weight 0.5
+  pressure_modifier harmony 0.6
+  pressure_modifier security 0.4
+end
+
+action seek_artifact "Seek Weapon" do
+  description "Unarmed heroes seek weapons to fight the orca threat"
+  actor choose npc do
+    pick random
+    subtype hero
+    filter lacks_tag armed
+    status alive
+  end
+  target choose artifact do
+    pick random
+    subtype weapon
+    filter lacks_relationship owned_by
+    status intact
+  end
+  on success do
+    rel owned_by target -> actor strength:0.8
+    set_tag target claimed true
+  end
+  narrative "{actor.name} claimed the weapon {target.name}"
+  prominence actor success 0.4 failure 0.13
+  prominence target success 0.56 failure 0.14
+  success_chance 0.45
+  weight 0.7
+  pressure_modifier security -0.3
+end
+
+action seek_cleansing "Seek Cleansing" do
+  description "Corrupted heroes seek instruments to purify themselves through music"
+  actor choose npc do
+    pick random
+    subtype hero
+    filter has_any_tag corrupted cursed
+    status alive
+  end
+  target choose artifact do
+    pick random
+    subtype instrument
+    status intact
+  end
+  on success do
+    rel blessed_by actor -> target strength:0.9
+    remove_tag actor corrupted
+    remove_tag actor cursed
+    set_tag actor cleansed true
+  end
+  narrative "{actor.name} was purified by the music of {target.name}"
+  prominence actor success 0.4 failure 0.13
+  prominence target success 0.56 failure 0.14
+  success_chance 0.6
+  weight 0.8
+  pressure_modifier magical_stability 0.3
+end
+
+action seize_control "Seize Control" do
+  description "Take control of a location adjacent to territory already controlled"
+  actor choose faction do
+    pick random
+    filter path count_max do
+      count 2
+      step controls any location any
+    end
+  end
+  target choose location do
+    pick random
+    filter lacks_relationship controls with actor
+  end
+  on success do
+    rel controls actor -> target strength:0.8
+    mutate pressure security -= 2
+  end
+  narrative "{actor.name} seized control of {target.name}"
+  prominence actor success 0.64 failure 0.21
+  success_chance 0.3
+  weight 1
+  pressure_modifier resource_availibility -1
+  pressure_modifier security -1
+end
+
+action spread_corruption "Spread Corruption" do
+  description "Disaster corrupts adjacent locations"
+  actor choose location do
+    pick random
+    filter has_any_tag mystical anomaly dangerous
+  end
+  target choose location do
+    pick random
+    filter has_relationship adjacent_to with actor direction both
+    filter lacks_relationship corrupted_by with actor
+    filter lacks_tag cleansed
+  end
+  on success do
+    rel corrupted_by target -> actor strength:0.8
+    set_tag target corrupted true
+    mutate pressure magical_stability -= 4
+  end
+  narrative "spread corruption to {target.name}"
+  prominence actor success 0.4 failure 0.13
+  success_chance 0.35
+  weight 0.5
+  pressure_modifier magical_stability 0.6
+end
+
+action spread_innovation "Spread Innovation" do
+  description "Technology spreads to new practitioners"
+  actor choose ability do
+    pick random
+    subtype technology
+  end
+  target choose faction do
+    pick random
+    filter has_any_tag organized trade resource
+    filter lacks_relationship practitioner_of with actor
+  end
+  on success do
+    rel practitioner_of target -> actor strength:0.6
+    mutate pressure resource_availibility += 1
+  end
+  narrative "spread to {target.name}"
+  prominence actor success 0.12 failure 0.04
+  success_chance 0.4
+  weight 0.6
+  pressure_modifier resource_availibility -0.6
+end
+
+action steal_artifact "Steal Artifact" do
+  description "An outlaw steals an artifact from a faction or location"
+  actor choose npc do
+    pick random
+    subtype in [outlaw orca]
+    status alive
+  end
+  target choose artifact do
+    pick random
+    filter lacks_relationship owned_by with actor
+    filter has_relationship stored_at direction src
+    status intact
+  end
+  on success do
+    archive_all_relationships target owned_by
+    rel owned_by target -> actor strength:0.7
+    set_tag target stolen true
+    mutate pressure security -= 5
+    mutate pressure harmony -= 3
+  end
+  narrative "{actor.name} stole the artifact {target.name}"
+  prominence actor success 0.64 failure 0.21
+  prominence target success 0.8 failure 0.21
+  success_chance 0.2
+  weight 0.15
+  pressure_modifier security -0.5
+end
+
+action steal_foreign_art "Steal Foreign Art" do
+  description "An outsider steals knowledge from another culture, forfeiting their right to lead"
+  actor choose npc do
+    pick random
+    subtype in [outlaw merchant mayor]
+    status alive
+  end
+  actor when do
+    lacks_tag stolen_art
+  end
+  target choose ability do
+    pick random
+    status in [active discovered emergent]
+    filter lacks_relationship practitioner_of with actor
+    filter not_matches_culture actor
+  end
+  let victimFaction do
+    from target via practitioner_of in
+    kind faction
+    pick random
+    required false
+  end
+  on success do
+    rel practitioner_of actor -> target strength:0.5
+    rel enemy_of actor -> victimFaction strength:0.6 bidirectional:true
+    archive_all_relationships actor leader_of direction src
+    set_tag actor stolen_art true
+  end
+  narrative "stole the secret of {target.name}, forfeiting leadership"
+  prominence actor success 0.48 failure 0
+  success_chance 0.15
+  weight 0.05
+end
+
+action sue_for_peace "Sue for Peace" do
+  description "Surrender to end a war, ceding contested territory to the victor"
+  actor choose faction do
+    pick random
+  end
+  actor when do
+    relationship_count at_war_with both >= 1
+  end
+  actor instigator do
+    from actor via participant_in src
+    kind occurrence
+    subtype war
+    pick random
+    required true
+    status active
+  end
+  target choose faction do
+    pick random
+    filter exclude actor
+    filter has_relationship at_war_with with actor direction both
+  end
+  on success do
+    archive_relationship actor at_war_with target
+    change_status instigator historical
+    archive_all_relationships instigator participant_in direction dst
+    set_tag actor defeated true
+    mutate pressure harmony += 6
+    mutate pressure security += 3
+  end
+  narrative "surrendered to {target.name}"
+  prominence actor success 0.64 failure 0.21
+  success_chance 0.5
+  weight 0.25
+  pressure_modifier harmony -0.3
+  pressure_modifier security -0.2
+  pressure_modifier resource_availibility -0.2
+end
+
+action tome_cleanses_corruption "Forbidden Knowledge Purifies" do
+  description "A mystical tome's secrets cleanse corruption from the land"
+  actor choose artifact do
+    pick random
+    subtype tome
+    filter has_tag mystical
+    status intact
+  end
+  target choose location do
+    pick random
+    filter has_tag corrupted
+    filter matches_culture actor
+  end
+  on success do
+    remove_tag target corrupted
+    remove_tag target crisis
+    mutate pressure magical_stability += 5
+  end
+  narrative "{actor.name} purified the corruption at {target.name}"
+  prominence actor success 0.5 failure 0.15
+  success_chance 0.3
+  weight 0.4
+  pressure_modifier magical_stability -0.4
+end
+
+action tome_dispels_danger "Knowledge Dispels Fear" do
+  description "A tome's secrets reveal safe passage through dangerous lands"
+  actor choose artifact do
+    pick random
+    subtype tome
+    filter has_relationship stored_at direction src
+    status intact
+  end
+  target choose location do
+    pick random
+    filter has_tag dangerous
+    filter lacks_tag safe
+  end
+  on success do
+    remove_tag target dangerous
+    set_tag target safe true
+    mutate pressure security += 3
+  end
+  narrative "{actor.name} revealed safe passage through {target.name}"
+  prominence actor success 0.35 failure 0.12
+  success_chance 0.35
+  weight 0.4
+end
+
+action tome_reveals_resources "The Map Reveals Riches" do
+  description "A tome of places reveals hidden resources in its resting place"
+  actor choose artifact do
+    pick random
+    subtype tome
+    filter has_relationship stored_at direction src
+    status intact
+  end
+  target choose location do
+    pick random
+    filter has_relationship stored_at with actor direction dst
+    filter lacks_tag resource
+  end
+  on success do
+    set_tag target resource true
+    mutate pressure resource_availibility += 5
+  end
+  narrative "{actor.name} revealed hidden riches at {target.name}"
+  prominence actor success 0.4 failure 0.13
+  prominence target success 0.25 failure 0.08
+  success_chance 0.4
+  weight 0.5
+end
+
+action tradition_commemorates_event "Tradition Commemorates Event" do
+  description "A cultural tradition begins commemorating a significant event"
+  actor choose rule do
+    pick random
+    subtype in [ideology law social memorial]
+    minProminence marginal
+  end
+  target choose occurrence do
+    pick random
+    subtype in [war disaster celebration succession_crisis]
+    filter matches_culture actor
+    filter lacks_relationship commemorates with actor
+  end
+  on success do
+    rel commemorates actor -> target strength:0.7
+  end
+  narrative "The tradition of {actor.name} now commemorates {target.name}"
+  prominence actor success 0.18 failure 0.06
+  prominence target success 0.2 failure 0.06
+  success_chance 0.45
+  weight 0.4
+end
+
+action war_marks_survivor "War Marks Survivor" do
+  description "A war leaves its mark on those who endured it"
+  actor choose occurrence do
+    pick random
+    subtype war
+    minProminence recognized
+    status active
+  end
+  target choose npc do
+    pick random
+    filter has_relationship member_of direction src
+    filter lacks_tag war_marked
+    status alive
+  end
+  on success do
+    set_tag target war_marked true
+    adjust_prominence target 0.25
+  end
+  narrative "{actor.name} left its mark upon {target.name}"
+  prominence actor success 0.16 failure 0.05
+  success_chance 0.6
+  weight 0.5
+end
+
+action weapon_chooses_wielder "Weapon Chooses Wielder" do
+  description "A weapon of legend selects a worthy hero to carry it forward"
+  actor choose artifact do
+    pick random
+    subtype weapon
+    filter lacks_relationship owned_by
+    status intact
+  end
+  target choose npc do
+    pick random
+    subtype hero
+    filter lacks_tag armed
+    status alive
+  end
+  on success do
+    rel owned_by actor -> target strength:0.9
+    set_tag target armed true
+    adjust_prominence target 0.6
+  end
+  narrative "{actor.name} chose {target.name} as its wielder"
+  prominence actor success 0.96 failure 0.32
+  success_chance 0.7
+  weight 0.6
+end
+
+action wound_orca "Wound Orca" do
+  description "Armed heroes wound healthy orcas in combat"
+  actor choose npc do
+    pick random
+    subtype hero
+    filter has_tag armed
+    status alive
+  end
+  target choose npc do
+    pick random
+    subtype orca
+    filter exclude actor
+    filter lacks_tag wounded
+    filter lacks_tag maimed
+    status alive
+  end
+  on success do
+    set_tag target wounded true
+    mutate pressure security += 0.5
+  end
+  narrative "wounded {target.name}"
+  prominence actor success 0.4 failure 0.13
+  prominence target success 0.16 failure 0.05
+  success_chance 0.6
+  weight 0.8
+end

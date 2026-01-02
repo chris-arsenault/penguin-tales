@@ -86,17 +86,19 @@ function buildHistoricalContext(focalEra: EraTemporalInfo | undefined, allEras: 
 /**
  * Step 1: Narrative prompt - rich description, summary, aliases
  *
- * @param lockedSummary - If provided, this is a canonical summary to expand (not generate)
+ * @param narrativeHint - Narrative fragment to guide description generation
+ * @param lockedSummary - If true, summary is locked and should not be generated
  */
-function buildNarrativePrompt(lockedSummary?: string): string {
+function buildNarrativePrompt(narrativeHint?: string, lockedSummary?: boolean): string {
+  const hintBlock = narrativeHint
+    ? `NARRATIVE HINT (do not contradict):\n"${narrativeHint}"\n\n`
+    : '';
+
   if (lockedSummary) {
-    // Mode: Expand canonical summary into description
-    return `You expand canonical lore into rich descriptions. Your prompt contains:
+    // Mode: Expand narrative hint into description
+    return `You expand narrative hints into rich descriptions. Your prompt contains:
 
-CANONICAL SUMMARY (do not contradict):
-"${lockedSummary}"
-
-WORLD DATA:
+${hintBlock}WORLD DATA:
 - Historical Context: Era and world timeline
 - Entity: Core identity (kind, status, prominence, culture)
 - Relationships: Connections with strength markers
@@ -105,13 +107,13 @@ WORLD DATA:
 TASK DATA:
 - Output: JSON with description, aliases
 
-Expand and enrich. Don't paraphrase the summary.`;
+Expand and enrich. Don't paraphrase the hint.`;
   }
 
   // Standard mode: Generate both summary and description
   return `You are a creative writer building world lore. Your prompt contains:
 
-WORLD DATA:
+${hintBlock}WORLD DATA:
 - Historical Context: Era and world timeline
 - Entity: Core identity (kind, status, prominence, culture)
 - Relationships: Connections with strength markers
@@ -225,14 +227,15 @@ export const descriptionTask = {
       ? `${historicalContext}\n\n---\n\n${baseEntityContext}`
       : baseEntityContext;
 
-    // Use locked summary as input if provided (for seed entities, eras)
+    // Use narrative hint as input (summary remains locked if provided)
+    const narrativeHint = task.entityNarrativeHintText;
     const lockedSummary = task.entityLockedSummaryText;
 
     const narrativeCall = await runTextCall({
       llmClient,
       callType: 'description.narrative',
       callConfig: narrativeConfig,
-      systemPrompt: buildNarrativePrompt(lockedSummary),
+      systemPrompt: buildNarrativePrompt(narrativeHint, Boolean(lockedSummary)),
       prompt: entityContext,
       temperature: 0.7,
     });

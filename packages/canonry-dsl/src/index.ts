@@ -5,10 +5,11 @@ export type {
   BlockNode,
   StatementNode,
   AstFile,
-  CompileResult
-} from './types';
+  CompileResult,
+  StaticPagesCompileResult
+} from './types.js';
 
-export { parseCanon } from './parser';
-export { compileCanonProject } from './compile';
-export { serializeCanonProject } from './serialize';
-export type { CanonFile } from './serialize';
+export { parseCanon } from './parser.js';
+export { compileCanonProject, compileCanonStaticPages } from './compile.js';
+export { serializeCanonProject, serializeCanonStaticPages } from './serialize.js';
+export type { CanonFile, StaticPageRecord } from './serialize.js';

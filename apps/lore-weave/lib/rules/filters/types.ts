@@ -32,8 +32,8 @@ export interface GraphPathAssertion {
  * A single step in a graph traversal path.
  */
 export interface PathStep {
-  /** Relationship to traverse */
-  via: string;
+  /** Relationship(s) to traverse - can be a single kind or array of kinds */
+  via: string | string[];
   /** Direction: 'out'/'in'/'any' in JSON, normalized to 'src'/'dst'/'both' internally */
   direction: 'out' | 'in' | 'any';
 
@@ -84,7 +84,8 @@ export type SelectionFilter =
   | HasStatusFilter
   | HasProminenceFilter
   | SharesRelatedFilter
-  | GraphPathSelectionFilter;
+  | GraphPathSelectionFilter
+  | ComponentSizeFilter;
 
 /**
  * Graph path selection filter - filters entities based on graph traversal.
@@ -181,4 +182,24 @@ export interface SharesRelatedFilter {
   type: 'shares_related';
   relationshipKind: string;  // Relationship kind to check (e.g., 'resident_of')
   with: string;              // Reference entity (e.g., '$target')
+}
+
+/**
+ * Filter entities based on connected component size.
+ * Uses DFS to find all entities transitively reachable via the specified
+ * relationship kind(s), treating the subgraph as undirected.
+ *
+ * Example: Limit alliance formation to factions in small alliance blocs:
+ * { type: 'component_size', relationshipKinds: ['allied_with'], max: 6 }
+ */
+export interface ComponentSizeFilter {
+  type: 'component_size';
+  /** Relationship kind(s) defining the subgraph edges */
+  relationshipKinds: string[];
+  /** Minimum component size (inclusive) */
+  min?: number;
+  /** Maximum component size (inclusive) */
+  max?: number;
+  /** Minimum relationship strength to follow (default: 0) */
+  minStrength?: number;
 }

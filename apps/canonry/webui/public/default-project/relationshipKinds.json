@@ -107,6 +107,23 @@
     }
   },
   {
+    "kind": "betrayed_by",
+    "description": "Betrayed By",
+    "srcKinds": [
+      "faction"
+    ],
+    "dstKinds": [
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "negative",
+    "verbs": {
+      "formed": "was betrayed by",
+      "ended": "forgave"
+    }
+  },
+  {
     "kind": "controls",
     "description": "Controls",
     "srcKinds": [
@@ -148,7 +165,7 @@
       "faction"
     ],
     "dstKinds": [
-      "abilities"
+      "ability"
     ],
     "cullable": false,
     "decayRate": "slow",
@@ -219,7 +236,7 @@
     "description": "Discovered By",
     "srcKinds": [
       "location",
-      "abilities",
+      "ability",
       "artifact"
     ],
     "dstKinds": [
@@ -255,7 +272,7 @@
     "kind": "commemorates",
     "description": "Commemorates",
     "srcKinds": [
-      "rules",
+      "rule",
       "location"
     ],
     "dstKinds": [
@@ -274,8 +291,8 @@
     "kind": "originated_in",
     "description": "Originated In",
     "srcKinds": [
-      "abilities",
-      "rules",
+      "ability",
+      "rule",
       "faction"
     ],
     "dstKinds": [
@@ -296,15 +313,15 @@
     "srcKinds": [
       "npc",
       "faction",
-      "abilities",
-      "rules",
+      "ability",
+      "rule",
       "location"
     ],
     "dstKinds": [
       "npc",
       "faction",
-      "abilities",
-      "rules",
+      "ability",
+      "rule",
       "location"
     ],
     "cullable": true,
@@ -323,7 +340,7 @@
     ],
     "dstKinds": [
       "location",
-      "abilities"
+      "ability"
     ],
     "cullable": true,
     "decayRate": "slow",
@@ -337,7 +354,7 @@
     "kind": "celebrated_by",
     "description": "Celebrated By",
     "srcKinds": [
-      "rules",
+      "rule",
       "occurrence"
     ],
     "dstKinds": [
@@ -357,13 +374,13 @@
     "kind": "derived_from",
     "description": "Derived From",
     "srcKinds": [
-      "abilities",
-      "rules",
+      "ability",
+      "rule",
       "npc"
     ],
     "dstKinds": [
-      "abilities",
-      "rules",
+      "ability",
+      "rule",
       "npc",
       "occurrence"
     ],
@@ -379,7 +396,7 @@
     "kind": "manifests_at",
     "description": "Manifests At",
     "srcKinds": [
-      "abilities",
+      "ability",
       "occurrence"
     ],
     "dstKinds": [
@@ -401,7 +418,7 @@
       "faction"
     ],
     "dstKinds": [
-      "rules",
+      "rule",
       "faction",
       "npc"
     ],
@@ -483,13 +500,13 @@
     "kind": "subsumes",
     "description": "Subsumes",
     "srcKinds": [
-      "abilities",
-      "rules",
+      "ability",
+      "rule",
       "faction"
     ],
     "dstKinds": [
-      "abilities",
-      "rules",
+      "ability",
+      "rule",
       "faction"
     ],
     "cullable": false,
@@ -650,7 +667,7 @@
       "artifact"
     ],
     "dstKinds": [
-      "abilities"
+      "ability"
     ],
     "cullable": false,
     "decayRate": "none",
@@ -667,7 +684,7 @@
       "artifact"
     ],
     "dstKinds": [
-      "rules"
+      "rule"
     ],
     "cullable": true,
     "decayRate": "slow",

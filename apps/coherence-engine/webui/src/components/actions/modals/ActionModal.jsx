@@ -10,6 +10,7 @@ import {
   ActorTab,
   InstigatorTab,
   TargetingTab,
+  VariablesTab,
   OutcomeTab,
   ProbabilityTab,
 } from '../tabs';
@@ -27,6 +28,8 @@ export function ActionModal({ action, onChange, onClose, onDelete, schema, press
         return <InstigatorTab action={action} onChange={onChange} schema={schema} />;
       case 'targeting':
         return <TargetingTab action={action} onChange={onChange} schema={schema} />;
+      case 'variables':
+        return <VariablesTab action={action} onChange={onChange} schema={schema} />;
       case 'outcome':
         return <OutcomeTab action={action} onChange={onChange} schema={schema} pressures={pressures} />;
       case 'probability':

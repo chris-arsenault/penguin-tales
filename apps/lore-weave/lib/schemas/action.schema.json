@@ -29,6 +29,11 @@
     },
     "actor": { "$ref": "#/$defs/ActionActorConfig" },
     "targeting": { "$ref": "#/$defs/SelectionRule" },
+    "variables": {
+      "type": "object",
+      "description": "Named entity references computed during execution. Variables can reference $actor, $target, $instigator and each other. Resolved variables are available in mutations as $varName.",
+      "additionalProperties": { "$ref": "#/$defs/VariableDefinition" }
+    },
     "outcome": { "$ref": "#/$defs/ActionOutcomeConfig" },
     "probability": { "$ref": "#/$defs/ActionProbabilityConfig" }
   },
@@ -343,7 +348,7 @@
         "kinds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "subtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "excludeSubtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
-        "statusFilter": { "$ref": "#/$defs/NonEmptyString" },
+        "status": { "$ref": "#/$defs/NonEmptyString" },
         "statuses": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "notStatus": { "$ref": "#/$defs/NonEmptyString" },
         "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
@@ -362,11 +367,11 @@
 
     "RelatedEntitiesSpec": {
       "type": "object",
-      "required": ["relatedTo", "relationship", "direction"],
+      "required": ["relatedTo", "relationshipKind", "direction"],
       "additionalProperties": false,
       "properties": {
         "relatedTo": { "$ref": "#/$defs/NonEmptyString" },
-        "relationship": { "$ref": "#/$defs/NonEmptyString" },
+        "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
         "direction": { "enum": ["src", "dst", "both", "out", "in", "any"] }
       }
     },
@@ -384,13 +389,23 @@
         "kind": { "$ref": "#/$defs/NonEmptyString" },
         "kinds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "subtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
-        "statusFilter": { "$ref": "#/$defs/NonEmptyString" },
+        "status": { "$ref": "#/$defs/NonEmptyString" },
         "statuses": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "notStatus": { "$ref": "#/$defs/NonEmptyString" },
         "filters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
         "preferFilters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
         "pickStrategy": { "$ref": "#/$defs/SelectionPickStrategy" },
         "maxResults": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "VariableDefinition": {
+      "type": "object",
+      "required": ["select"],
+      "additionalProperties": false,
+      "properties": {
+        "select": { "$ref": "#/$defs/VariableSelectionRule" },
+        "required": { "type": "boolean", "description": "If true, action won't execute unless this variable resolves" }
       }
     },
 
@@ -407,7 +422,7 @@
         "kind": { "$ref": "#/$defs/NonEmptyString" },
         "kinds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "subtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
-        "statusFilter": { "$ref": "#/$defs/NonEmptyString" },
+        "status": { "$ref": "#/$defs/NonEmptyString" },
         "statuses": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "notStatus": { "$ref": "#/$defs/NonEmptyString" },
         "filters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },

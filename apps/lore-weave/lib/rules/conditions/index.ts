@@ -42,6 +42,7 @@ import type {
   EraMatchCondition,
   RandomChanceCondition,
   GraphPathCondition,
+  ComponentSizeCondition,
   EntityExistsCondition,
   EntityHasRelationshipCondition,
   AndCondition,
@@ -151,6 +152,13 @@ export function evaluateCondition(
 
     case 'graph_path':
       return evaluateGraphPathCondition(condition, ctx, self);
+
+    // =========================================================================
+    // GRAPH TOPOLOGY CONDITIONS
+    // =========================================================================
+
+    case 'component_size':
+      return evaluateComponentSize(condition, ctx, self);
 
     // =========================================================================
     // ENTITY EXISTENCE CONDITIONS
@@ -666,6 +674,78 @@ function evaluateGraphPathCondition(
     passed,
     diagnostic: `graph path ${condition.assert.check}: ${passed}`,
     details: { assertion: condition.assert },
+  };
+}
+
+// =============================================================================
+// GRAPH TOPOLOGY EVALUATORS
+// =============================================================================
+
+/**
+ * Check connected component size against min/max bounds.
+ *
+ * Uses DFS to find all entities transitively reachable via the specified
+ * relationship kind(s), treating the subgraph as undirected.
+ */
+function evaluateComponentSize(
+  condition: ComponentSizeCondition,
+  ctx: RuleContext,
+  self?: HardState
+): ConditionResult {
+  if (!self) {
+    return { passed: false, diagnostic: 'no entity for component size', details: {} };
+  }
+
+  const minStrength = condition.minStrength ?? 0;
+  const rels = ctx.graph.getAllRelationships();
+
+  // Build adjacency index for faster traversal
+  const adjacency = new Map<string, Set<string>>();
+
+  for (const link of rels) {
+    if (!condition.relationshipKinds.includes(link.kind)) continue;
+    if ((link.strength ?? 0) < minStrength) continue;
+
+    // Bidirectional edges (undirected graph)
+    if (!adjacency.has(link.src)) adjacency.set(link.src, new Set());
+    if (!adjacency.has(link.dst)) adjacency.set(link.dst, new Set());
+    adjacency.get(link.src)!.add(link.dst);
+    adjacency.get(link.dst)!.add(link.src);
+  }
+
+  // DFS to find all reachable entities
+  const visited = new Set<string>([self.id]);
+  const stack = [self.id];
+
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    const neighbors = adjacency.get(current);
+    if (neighbors) {
+      for (const neighborId of neighbors) {
+        if (!visited.has(neighborId)) {
+          visited.add(neighborId);
+          stack.push(neighborId);
+        }
+      }
+    }
+  }
+
+  const componentSize = visited.size;
+  const minOk = condition.min === undefined || componentSize >= condition.min;
+  const maxOk = condition.max === undefined || componentSize <= condition.max;
+  const passed = minOk && maxOk;
+
+  return {
+    passed,
+    diagnostic: `component size via ${condition.relationshipKinds.join('/')} = ${componentSize} (${condition.min ?? 1} to ${condition.max ?? '∞'})`,
+    details: {
+      entityId: self.id,
+      relationshipKinds: condition.relationshipKinds,
+      minStrength,
+      componentSize,
+      min: condition.min,
+      max: condition.max,
+    },
   };
 }
 

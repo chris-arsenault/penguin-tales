@@ -32,6 +32,8 @@ import type {
   CatalyzedEventsMetric,
   ProminenceMultiplierMetric,
   NeighborProminenceMetric,
+  NeighborKindCountMetric,
+  ComponentSizeMetric,
   DecayRateMetric,
   FalloffMetric,
 } from './types';
@@ -109,6 +111,10 @@ export function describeMetric(metric: Metric): string {
       return `prominence multiplier (${metric.mode ?? 'success_chance'})`;
     case 'neighbor_prominence':
       return `neighbor prominence (${metric.relationshipKinds?.join('/') ?? 'all'} connections)`;
+    case 'neighbor_kind_count':
+      return `neighbor ${metric.kind}${metric.subtype ? `:${metric.subtype}` : ''} count via ${metric.via}`;
+    case 'component_size':
+      return `component size via ${metric.relationshipKinds.join('/')}`;
     case 'decay_rate':
       return `decay rate ${metric.rate}`;
     case 'falloff':
@@ -230,6 +236,20 @@ export function evaluateMetric(
 
     case 'neighbor_prominence':
       return evaluateNeighborProminence(metric, ctx, entity);
+
+    // =========================================================================
+    // NEIGHBOR METRICS
+    // =========================================================================
+
+    case 'neighbor_kind_count':
+      return evaluateNeighborKindCount(metric, ctx, entity);
+
+    // =========================================================================
+    // GRAPH TOPOLOGY METRICS
+    // =========================================================================
+
+    case 'component_size':
+      return evaluateComponentSize(metric, ctx, entity);
 
     // =========================================================================
     // DECAY/FALLOFF METRICS
@@ -620,14 +640,19 @@ function evaluateSharedRelationship(
     return { value: 0, diagnostic: 'no entity for shared relationship', details: {} };
   }
 
-  // Find entities that share a target via the specified relationship
+  // Normalize to array for uniform handling
+  const kinds = Array.isArray(metric.sharedRelationshipKind)
+    ? metric.sharedRelationshipKind
+    : [metric.sharedRelationshipKind];
+
+  // Find entities that share a target via the specified relationship(s)
   const direction = metric.sharedDirection ?? 'src';
   const minStrength = metric.minStrength ?? 0;
   const myTargets = new Set<string>();
 
   const rels = ctx.graph.getAllRelationships();
   for (const link of rels) {
-    if (link.kind !== metric.sharedRelationshipKind) continue;
+    if (!kinds.includes(link.kind)) continue;
     if ((link.strength ?? 0) < minStrength) continue;
 
     if (direction === 'src' && link.src === entity.id) {
@@ -641,7 +666,7 @@ function evaluateSharedRelationship(
   // Count how many other entities share these targets
   const sharedCount = new Set<string>();
   for (const link of rels) {
-    if (link.kind !== metric.sharedRelationshipKind) continue;
+    if (!kinds.includes(link.kind)) continue;
     if ((link.strength ?? 0) < minStrength) continue;
 
     let otherId: string | null = null;
@@ -667,9 +692,9 @@ function evaluateSharedRelationship(
 
   return {
     value,
-    diagnostic: `shared ${metric.sharedRelationshipKind}=${sharedCount.size}`,
+    diagnostic: `shared ${kinds.join('/')}=${sharedCount.size}`,
     details: {
-      sharedRelationshipKind: metric.sharedRelationshipKind,
+      sharedRelationshipKind: kinds,
       sharedDirection: direction,
       myTargetCount: myTargets.size,
       sharedCount: sharedCount.size,
@@ -807,6 +832,192 @@ function evaluateNeighborProminence(
       neighborCount: validNeighbors,
       totalProminence,
       avgProminence,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
+    },
+  };
+}
+
+// =============================================================================
+// NEIGHBOR EVALUATORS
+// =============================================================================
+
+/**
+ * Count neighboring entities of a specific kind connected via relationship chain.
+ *
+ * Traverses from entity via first relationship, then optionally via second relationship,
+ * and counts entities matching the kind/subtype/status criteria.
+ *
+ * Example: Count NPCs at adjacent locations:
+ * - via: 'adjacent_to' (from location to neighboring locations)
+ * - then: 'resident_of' (from locations to NPCs that reside there)
+ * - kind: 'npc'
+ */
+function evaluateNeighborKindCount(
+  metric: NeighborKindCountMetric,
+  ctx: MetricContext,
+  entity?: HardState
+): MetricResult {
+  if (!entity) {
+    return { value: 0, diagnostic: 'no entity for neighbor kind count', details: {} };
+  }
+
+  const viaDirection = normalizeDirection(metric.viaDirection);
+  const minStrength = metric.minStrength ?? 0;
+  const rels = ctx.graph.getAllRelationships();
+
+  // Support both single relationship kind and array of kinds
+  const viaKinds = Array.isArray(metric.via) ? metric.via : [metric.via];
+
+  // Step 1: Find entities connected via the first relationship(s)
+  const viaEntityIds = new Set<string>();
+  for (const link of rels) {
+    if (!viaKinds.includes(link.kind)) continue;
+    if ((link.strength ?? 0) < minStrength) continue;
+
+    if (viaDirection === 'both') {
+      if (link.src === entity.id) viaEntityIds.add(link.dst);
+      if (link.dst === entity.id) viaEntityIds.add(link.src);
+    } else if (viaDirection === 'src' && link.src === entity.id) {
+      viaEntityIds.add(link.dst);
+    } else if (viaDirection === 'dst' && link.dst === entity.id) {
+      viaEntityIds.add(link.src);
+    }
+  }
+
+  // Step 2: If 'then' is specified, traverse another hop
+  let targetEntityIds: Set<string>;
+  if (metric.then) {
+    const thenDirection = normalizeDirection(metric.thenDirection);
+    targetEntityIds = new Set<string>();
+
+    for (const viaId of viaEntityIds) {
+      for (const link of rels) {
+        if (link.kind !== metric.then) continue;
+
+        if (thenDirection === 'both') {
+          if (link.src === viaId) targetEntityIds.add(link.dst);
+          if (link.dst === viaId) targetEntityIds.add(link.src);
+        } else if (thenDirection === 'src' && link.src === viaId) {
+          targetEntityIds.add(link.dst);
+        } else if (thenDirection === 'dst' && link.dst === viaId) {
+          targetEntityIds.add(link.src);
+        }
+      }
+    }
+  } else {
+    targetEntityIds = viaEntityIds;
+  }
+
+  // Step 3: Filter by kind/subtype/status/tag
+  let count = 0;
+  for (const targetId of targetEntityIds) {
+    const target = ctx.graph.getEntity(targetId);
+    if (!target) continue;
+
+    if (target.kind !== metric.kind) continue;
+    if (metric.subtype && target.subtype !== metric.subtype) continue;
+    if (metric.status && target.status !== metric.status) continue;
+    if (metric.hasTag && !hasTag(target.tags, metric.hasTag)) continue;
+
+    count++;
+  }
+
+  let value = count * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `neighbor ${metric.kind} count=${count} via ${metric.via}${metric.then ? `->${metric.then}` : ''}`,
+    details: {
+      entityId: entity.id,
+      via: metric.via,
+      then: metric.then,
+      viaCount: viaEntityIds.size,
+      matchingCount: count,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
+    },
+  };
+}
+
+// =============================================================================
+// GRAPH TOPOLOGY EVALUATORS
+// =============================================================================
+
+/**
+ * Calculate the size of the connected component containing an entity.
+ *
+ * Uses DFS to find all entities transitively reachable via the specified
+ * relationship kind(s), treating the subgraph as undirected (both src and dst
+ * directions are followed).
+ *
+ * Example: Find size of alliance bloc:
+ * { type: 'component_size', relationshipKinds: ['allied_with'] }
+ */
+function evaluateComponentSize(
+  metric: ComponentSizeMetric,
+  ctx: MetricContext,
+  entity?: HardState
+): MetricResult {
+  if (!entity) {
+    return { value: 0, diagnostic: 'no entity for component size', details: {} };
+  }
+
+  const minStrength = metric.minStrength ?? 0;
+  const rels = ctx.graph.getAllRelationships();
+
+  // Build adjacency index for faster traversal
+  // Maps entityId -> Set of connected entityIds via the specified relationships
+  const adjacency = new Map<string, Set<string>>();
+
+  for (const link of rels) {
+    // Filter by relationship kind
+    if (!metric.relationshipKinds.includes(link.kind)) continue;
+    // Filter by minimum strength
+    if ((link.strength ?? 0) < minStrength) continue;
+
+    // Add bidirectional edges (treat as undirected graph)
+    if (!adjacency.has(link.src)) adjacency.set(link.src, new Set());
+    if (!adjacency.has(link.dst)) adjacency.set(link.dst, new Set());
+    adjacency.get(link.src)!.add(link.dst);
+    adjacency.get(link.dst)!.add(link.src);
+  }
+
+  // DFS to find all reachable entities
+  const visited = new Set<string>([entity.id]);
+  const stack = [entity.id];
+
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    const neighbors = adjacency.get(current);
+    if (neighbors) {
+      for (const neighborId of neighbors) {
+        if (!visited.has(neighborId)) {
+          visited.add(neighborId);
+          stack.push(neighborId);
+        }
+      }
+    }
+  }
+
+  const componentSize = visited.size;
+
+  let value = componentSize * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `component size via ${metric.relationshipKinds.join('/')} = ${componentSize}`,
+    details: {
+      entityId: entity.id,
+      relationshipKinds: metric.relationshipKinds,
+      minStrength,
+      componentSize,
       coefficient: metric.coefficient,
       cap: metric.cap,
     },

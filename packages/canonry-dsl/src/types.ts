@@ -34,12 +34,20 @@ export interface ObjectValue {
   span: SourceSpan;
 }
 
-export type Value = string | number | boolean | null | IdentifierValue | ArrayValue | ObjectValue;
+export interface CallValue {
+  type: 'call';
+  name: string;
+  args: Value[];
+  span: SourceSpan;
+}
+
+export type Value = string | number | boolean | null | IdentifierValue | ArrayValue | ObjectValue | CallValue;
 
 export interface AttributeNode {
   type: 'attribute';
   key: string;
   value: Value;
+  labels?: string[];
   span: SourceSpan;
 }
 
@@ -51,7 +59,58 @@ export interface BlockNode {
   span: SourceSpan;
 }
 
-export type StatementNode = AttributeNode | BlockNode;
+export interface RelNode {
+  type: 'rel';
+  key: string;
+  kind: string;
+  src: string;
+  dst: string;
+  value: Value;
+  span: SourceSpan;
+}
+
+export interface MutateNode {
+  type: 'mutate';
+  target: string;
+  id: string;
+  operator: '+=' | '-=';
+  value: number;
+  span: SourceSpan;
+}
+
+export interface PredicateNode {
+  type: 'predicate';
+  keyword: string;
+  field?: string;
+  subject: string;
+  operator: string;
+  value: number;
+  span: SourceSpan;
+}
+
+export interface InNode {
+  type: 'in';
+  key: string;
+  items: Value[];
+  span: SourceSpan;
+}
+
+export interface FromNode {
+  type: 'from';
+  source: string;
+  relationship?: string;
+  direction?: string;
+  span: SourceSpan;
+}
+
+export type StatementNode =
+  | AttributeNode
+  | BlockNode
+  | RelNode
+  | MutateNode
+  | PredicateNode
+  | InNode
+  | FromNode;
 
 export interface AstFile {
   path: string;
@@ -60,5 +119,10 @@ export interface AstFile {
 
 export interface CompileResult<TConfig> {
   config: TConfig | null;
+  diagnostics: Diagnostic[];
+}
+
+export interface StaticPagesCompileResult {
+  pages: Record<string, unknown>[] | null;
   diagnostics: Diagnostic[];
 }

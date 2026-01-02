@@ -101,6 +101,23 @@ export interface ConnectionEvolutionConfig {
 
   /** Throttle: only run on some ticks (0-1, default: 1.0 = every tick) */
   throttleChance?: number;
+
+  /**
+   * For betweenMatching rules: exclude pairs that already have these relationship kinds.
+   * Prevents creating alliances between factions that are at war, etc.
+   */
+  pairExcludeRelationships?: string[];
+
+  /**
+   * For betweenMatching rules: limit the combined component size when creating relationships.
+   * If connecting two entities would create a component larger than this limit, skip the pair.
+   */
+  pairComponentSizeLimit?: {
+    /** Relationship kind(s) to calculate component size */
+    relationshipKinds: string[];
+    /** Maximum allowed component size after connecting the pair */
+    max: number;
+  };
 }
 
 // =============================================================================
@@ -269,6 +286,80 @@ export function createConnectionEvolutionSystem(
       // Create relationships between matching entities (for betweenMatching rules)
       // NOTE: No narrativeGroupId here - coalition/alliance formation is ONE unified narrative
       // "Renowned figures formed alliances" not "X allied, Y allied, Z allied"
+
+      // Build adjacency map for component size limit checks (if configured)
+      // This includes both existing relationships AND new ones we decide to create this tick
+      let adjacency: Map<string, Set<string>> | undefined;
+      if (config.pairComponentSizeLimit) {
+        adjacency = new Map<string, Set<string>>();
+        const rels = graphView.getAllRelationships();
+        for (const rel of rels) {
+          if (!config.pairComponentSizeLimit.relationshipKinds.includes(rel.kind)) continue;
+          if (!adjacency.has(rel.src)) adjacency.set(rel.src, new Set());
+          if (!adjacency.has(rel.dst)) adjacency.set(rel.dst, new Set());
+          adjacency.get(rel.src)!.add(rel.dst);
+          adjacency.get(rel.dst)!.add(rel.src);
+        }
+      }
+
+      // Helper: get component size for an entity using DFS
+      const getComponentSize = (entityId: string): number => {
+        if (!adjacency) return 1;
+        const visited = new Set<string>([entityId]);
+        const stack = [entityId];
+        while (stack.length > 0) {
+          const current = stack.pop()!;
+          const neighbors = adjacency.get(current);
+          if (neighbors) {
+            for (const neighborId of neighbors) {
+              if (!visited.has(neighborId)) {
+                visited.add(neighborId);
+                stack.push(neighborId);
+              }
+            }
+          }
+        }
+        return visited.size;
+      };
+
+      // Helper: get combined component size if two entities were connected
+      const getCombinedComponentSize = (srcId: string, dstId: string): number => {
+        if (!adjacency) return 2;
+        // Get all entities in src's component
+        const visited = new Set<string>([srcId]);
+        const stack = [srcId];
+        while (stack.length > 0) {
+          const current = stack.pop()!;
+          const neighbors = adjacency.get(current);
+          if (neighbors) {
+            for (const neighborId of neighbors) {
+              if (!visited.has(neighborId)) {
+                visited.add(neighborId);
+                stack.push(neighborId);
+              }
+            }
+          }
+        }
+        // If dst is already in the component, return current size
+        if (visited.has(dstId)) return visited.size;
+        // Otherwise, add dst's component size
+        const dstStack = [dstId];
+        visited.add(dstId);
+        while (dstStack.length > 0) {
+          const current = dstStack.pop()!;
+          const neighbors = adjacency.get(current);
+          if (neighbors) {
+            for (const neighborId of neighbors) {
+              if (!visited.has(neighborId)) {
+                visited.add(neighborId);
+                dstStack.push(neighborId);
+              }
+            }
+          }
+        }
+        return visited.size;
+      };
+
       for (const [ruleIdx, matchingEntities] of matchingByRule.entries()) {
         const rule = config.rules[ruleIdx];
         if (rule.action.type !== 'create_relationship') continue;
@@ -282,6 +373,32 @@ export function createConnectionEvolutionSystem(
             // Check if relationship already exists
             if (graphView.hasRelationship(src.id, dst.id, rule.action.kind)) {
               continue;
+            }
+
+            // Check pair exclusion relationships (e.g., don't ally factions at war)
+            if (config.pairExcludeRelationships?.length) {
+              let excluded = false;
+              for (const excludeKind of config.pairExcludeRelationships) {
+                if (graphView.hasRelationship(src.id, dst.id, excludeKind) ||
+                    graphView.hasRelationship(dst.id, src.id, excludeKind)) {
+                  excluded = true;
+                  break;
+                }
+              }
+              if (excluded) continue;
+            }
+
+            // Check component size limit (e.g., don't create alliances that would make giant blocs)
+            if (config.pairComponentSizeLimit && adjacency) {
+              const combinedSize = getCombinedComponentSize(src.id, dst.id);
+              if (combinedSize > config.pairComponentSizeLimit.max) {
+                continue; // Skip this pair - would create too large a component
+              }
+              // Update adjacency for future checks in this tick
+              if (!adjacency.has(src.id)) adjacency.set(src.id, new Set());
+              if (!adjacency.has(dst.id)) adjacency.set(dst.id, new Set());
+              adjacency.get(src.id)!.add(dst.id);
+              adjacency.get(dst.id)!.add(src.id);
             }
 
             const pairCtx = {

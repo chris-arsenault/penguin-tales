@@ -37,6 +37,12 @@ export type Metric =
   | ProminenceMultiplierMetric
   | NeighborProminenceMetric
 
+  // Neighbor metrics
+  | NeighborKindCountMetric
+
+  // Graph topology metrics
+  | ComponentSizeMetric
+
   // Decay/falloff metrics
   | DecayRateMetric
   | FalloffMetric;
@@ -165,11 +171,15 @@ export interface CrossCultureRatioMetric {
 
 /**
  * Count entities sharing a specific relationship.
- * (e.g., common enemies)
+ * (e.g., common enemies, trade partners)
+ *
+ * Supports multiple relationship kinds - entities matching ANY of the kinds
+ * will be counted (OR semantics).
  */
 export interface SharedRelationshipMetric {
   type: 'shared_relationship';
-  sharedRelationshipKind: string;
+  /** Relationship kind(s) to check - single string or array */
+  sharedRelationshipKind: string | string[];
   sharedDirection?: 'src' | 'dst';
   /** Minimum relationship strength to count */
   minStrength?: number;
@@ -216,6 +226,77 @@ export interface NeighborProminenceMetric {
   /** Direction of relationships to consider */
   direction?: Direction;
   /** Minimum relationship strength to count */
+  minStrength?: number;
+  /** Coefficient to multiply the result */
+  coefficient?: number;
+  /** Maximum value cap */
+  cap?: number;
+}
+
+// =============================================================================
+// NEIGHBOR METRICS
+// =============================================================================
+
+/**
+ * Count neighboring entities of a specific kind/subtype.
+ * Finds entities connected via a relationship chain and counts those matching criteria.
+ *
+ * Example: Count NPCs residing at adjacent locations:
+ * {
+ *   type: 'neighbor_kind_count',
+ *   via: 'adjacent_to',
+ *   viaDirection: 'both',
+ *   then: 'resident_of',
+ *   thenDirection: 'in',
+ *   kind: 'npc'
+ * }
+ */
+export interface NeighborKindCountMetric {
+  type: 'neighbor_kind_count';
+  /** First relationship(s) to traverse from the entity - can be single kind or array */
+  via: string | string[];
+  /** Direction for first relationship */
+  viaDirection?: Direction;
+  /** Optional second relationship to traverse */
+  then?: string;
+  /** Direction for second relationship */
+  thenDirection?: Direction;
+  /** Entity kind to count */
+  kind: string;
+  /** Optional subtype filter */
+  subtype?: string;
+  /** Optional status filter */
+  status?: string;
+  /** Optional tag filter - entity must have this tag */
+  hasTag?: string;
+  /** Minimum relationship strength for via */
+  minStrength?: number;
+  /** Coefficient to multiply the result */
+  coefficient?: number;
+  /** Maximum value cap */
+  cap?: number;
+}
+
+// =============================================================================
+// GRAPH TOPOLOGY METRICS
+// =============================================================================
+
+/**
+ * Size of the connected component containing an entity.
+ * Uses DFS to find all entities transitively reachable via the specified
+ * relationship kind(s), treating the subgraph as undirected.
+ *
+ * Example: Find size of alliance bloc containing a faction:
+ * {
+ *   type: 'component_size',
+ *   relationshipKinds: ['allied_with']
+ * }
+ */
+export interface ComponentSizeMetric {
+  type: 'component_size';
+  /** Relationship kind(s) defining the subgraph edges */
+  relationshipKinds: string[];
+  /** Minimum relationship strength to follow (default: 0) */
   minStrength?: number;
   /** Coefficient to multiply the result */
   coefficient?: number;

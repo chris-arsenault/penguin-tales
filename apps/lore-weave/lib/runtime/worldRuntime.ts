@@ -650,6 +650,7 @@ export class WorldRuntime implements Graph {
       eraId: resolvedEraId,
       name,
       description: partial.description ?? '',
+      narrativeHint: partial.narrativeHint,
       status: partial.status,
       prominence: partial.prominence,
       culture: partial.culture,

@@ -104,8 +104,8 @@ export function SelectionRuleEditor({
           <label className="label">Status (optional)</label>
           <input
             type="text"
-            value={selection.statusFilter || ''}
-            onChange={(e) => updateSelection('statusFilter', e.target.value || undefined)}
+          value={selection.status || ''}
+          onChange={(e) => updateSelection('status', e.target.value || undefined)}
             className="input"
             placeholder="e.g., active"
           />

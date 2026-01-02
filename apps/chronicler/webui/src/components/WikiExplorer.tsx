@@ -16,7 +16,7 @@ import { getPublishedStaticPagesForProject, type StaticPage } from '../lib/stati
 import WikiNav from './WikiNav.tsx';
 import ChronicleIndex from './ChronicleIndex.tsx';
 import ConfluxesIndex from './ConfluxesIndex.tsx';
-import WebsIndex from './WebsIndex.tsx';
+import HuddlesIndex from './HuddlesIndex.tsx';
 import WikiPageView from './WikiPage.tsx';
 import WikiSearch from './WikiSearch.tsx';
 
@@ -292,9 +292,9 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
     [pageIndex.entries]
   );
 
-  // Get web pages from page index entries
-  const webPages = useMemo(
-    () => pageIndex.entries.filter((entry) => entry.type === 'web-type'),
+  // Get huddle pages from page index entries
+  const huddlePages = useMemo(
+    () => pageIndex.entries.filter((entry) => entry.type === 'huddle-type'),
     [pageIndex.entries]
   );
 
@@ -307,7 +307,7 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
 
   const isConfluxesIndex = currentPageId === 'confluxes';
 
-  const isWebsIndex = currentPageId === 'webs';
+  const isHuddlesIndex = currentPageId === 'huddles';
 
   // Check if it's a page category (e.g., "page-category-System")
   const isPageCategory = currentPageId?.startsWith('page-category-');
@@ -316,7 +316,7 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
     : null;
 
   // Build current page on-demand
-  const currentPage = !isChronicleIndex && !isPagesIndex && !isConfluxesIndex && !isWebsIndex && !isPageCategory && currentPageId
+  const currentPage = !isChronicleIndex && !isPagesIndex && !isConfluxesIndex && !isHuddlesIndex && !isPageCategory && currentPageId
     ? getPage(currentPageId)
     : null;
 
@@ -341,14 +341,14 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
       document.title = 'Pages | The Canonry';
     } else if (isConfluxesIndex) {
       document.title = 'Confluxes | The Canonry';
-    } else if (isWebsIndex) {
+    } else if (isHuddlesIndex) {
       document.title = 'Huddles | The Canonry';
     } else if (isPageCategory && pageCategoryNamespace) {
       document.title = `${pageCategoryNamespace} | The Canonry`;
     } else {
       document.title = 'The Canonry';
     }
-  }, [currentPage, isChronicleIndex, isPagesIndex, isConfluxesIndex, isWebsIndex, isPageCategory, pageCategoryNamespace]);
+  }, [currentPage, isChronicleIndex, isPagesIndex, isConfluxesIndex, isHuddlesIndex, isPageCategory, pageCategoryNamespace]);
 
   // Handle navigation - updates hash which triggers state update via hashchange
   const handleNavigate = useCallback((pageId: string) => {
@@ -448,7 +448,7 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
           chronicles={chroniclePages}
           staticPages={staticPagesAsWikiPages}
           confluxPages={confluxPages}
-          webPages={webPages}
+          huddlePages={huddlePages}
           currentPageId={currentPageId}
           onNavigate={handleNavigate}
           onGoHome={handleGoHome}
@@ -483,9 +483,9 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
               confluxPages={confluxPages}
               onNavigate={handleNavigate}
             />
-          ) : isWebsIndex ? (
-            <WebsIndex
-              webPages={webPages}
+          ) : isHuddlesIndex ? (
+            <HuddlesIndex
+              huddlePages={huddlePages}
               onNavigate={handleNavigate}
             />
           ) : isPageCategory && pageCategoryNamespace ? (

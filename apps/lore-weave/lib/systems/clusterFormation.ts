@@ -337,9 +337,9 @@ async function createMetaEntity(
     config.additionalTags.forEach(tag => tags[tag] = true);
   }
 
-  // Build description
+  // Build narrative hint
   const entityNames = cluster.map(e => e.name).join(', ');
-  let description = config.descriptionTemplate
+  let narrativeHint = config.descriptionTemplate
     ? config.descriptionTemplate
         .replace('{count}', String(cluster.length))
         .replace('{names}', entityNames)
@@ -358,7 +358,7 @@ async function createMetaEntity(
   return {
     kind: config.kind,
     subtype,
-    description,
+    narrativeHint,
     status: config.status,
     prominence,
     culture,
@@ -427,7 +427,7 @@ async function createGovernanceFaction(
   const factionPartial: Partial<HardState> = {
     kind: 'faction',
     subtype: config.governanceFactionSubtype || 'political',
-    description: `A legislative body formed to administer ${metaEntity.name}.`,
+    narrativeHint: `A legislative body formed to administer ${metaEntity.name}.`,
     status: 'active',
     prominence: metaEntity.prominence,
     culture: primaryLocation.culture,

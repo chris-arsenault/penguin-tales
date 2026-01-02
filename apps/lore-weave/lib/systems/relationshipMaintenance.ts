@@ -14,7 +14,7 @@ type DecayRate = NonNullable<RelationshipKindDefinition['decayRate']>;
  * Unified system for relationship lifecycle management:
  * - Decay: Reduces strength over time based on relationship kind's decayRate
  * - Reinforcement: Increases strength when entities are in proximity or share context
- * - Culling: Removes weak relationships (respecting cullable flag)
+ * - Culling: Archives weak relationships (marks as historical, respecting cullable flag)
  *
  * Decay rates map to strength reduction per maintenance cycle:
  * - 'none': 0 (permanent)
@@ -130,25 +130,33 @@ export function createRelationshipMaintenanceSystem(config: RelationshipMaintena
         };
       }
 
-      const allRelationships = graphView.getAllRelationships();
-      const originalCount = allRelationships.length;
+      // Get all relationships including historical
+      const allRelationships = graphView.getAllRelationships({ includeHistorical: true });
+      const originalCount = allRelationships.filter(r => r.status !== 'historical').length;
 
       let decayed = 0;
       let reinforced = 0;
-      let culled = 0;
+      let archived = 0;
+      let removed = 0;
 
       const metricCtx = createSystemContext(graphView);
 
-      const keptRelationships: Relationship[] = [];
+      const maintainedRelationships: Relationship[] = [];
       const modifiedEntityIds = new Set<string>();
 
       for (const rel of allRelationships) {
+        // Preserve historical relationships unchanged
+        if (rel.status === 'historical') {
+          maintainedRelationships.push(rel);
+          continue;
+        }
+
         const srcEntity = graphView.getEntity(rel.src);
         const dstEntity = graphView.getEntity(rel.dst);
 
-        // Remove relationships to non-existent entities
+        // Remove relationships to non-existent entities (can't archive - no entity to reference)
         if (!srcEntity || !dstEntity) {
-          culled++;
+          removed++;
           continue;
         }
 
@@ -183,10 +191,14 @@ export function createRelationshipMaintenanceSystem(config: RelationshipMaintena
           reinforced++;
         }
 
-        // === CULLING ===
-        // Remove weak relationships that are cullable and past grace period
+        // === CULLING (now archives instead of deleting) ===
+        // Archive weak relationships that are cullable and past grace period
         if (!isYoung && cullable && strength < cullThreshold) {
-          culled++;
+          archived++;
+
+          // Mark as historical instead of removing
+          rel.status = 'historical';
+          rel.archivedAt = graphView.tick;
 
           if (srcEntity) {
             srcEntity.updatedAt = graphView.tick;
@@ -197,7 +209,8 @@ export function createRelationshipMaintenanceSystem(config: RelationshipMaintena
             modifiedEntityIds.add(dstEntity.id);
           }
 
-          continue; // Don't keep this relationship
+          maintainedRelationships.push(rel);
+          continue;
         }
 
         // Update strength if changed
@@ -205,17 +218,18 @@ export function createRelationshipMaintenanceSystem(config: RelationshipMaintena
           rel.strength = strength;
         }
 
-        keptRelationships.push(rel);
+        maintainedRelationships.push(rel);
       }
 
-      // Update graph with maintained relationships
-      graphView.setRelationships([...keptRelationships]);
+      // Update graph with all maintained relationships
+      graphView.setRelationships(maintainedRelationships);
 
       // Build description
       const parts: string[] = [];
       if (decayed > 0) parts.push(`${decayed} decayed`);
       if (reinforced > 0) parts.push(`${reinforced} reinforced`);
-      if (culled > 0) parts.push(`${culled} culled`);
+      if (archived > 0) parts.push(`${archived} archived`);
+      if (removed > 0) parts.push(`${removed} removed (orphaned)`);
 
       const description = parts.length > 0
         ? `Relationship maintenance: ${parts.join(', ')} (${originalCount} total)`

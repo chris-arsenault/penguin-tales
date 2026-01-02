@@ -2,8 +2,8 @@
   {
     "id": "resource_availibility",
     "name": "Resource Availibility",
-    "initialValue": -5,
-    "homeostasis": 0.35,
+    "initialValue": 15,
+    "homeostasis": 0.10,
     "growth": {
       "positiveFeedback": [
         {
@@ -16,7 +16,7 @@
       "negativeFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 0.4,
+          "coefficient": 0.15,
           "kind": "location",
           "subtype": "colony"
         },
@@ -46,7 +46,7 @@
         {
           "type": "entity_count",
           "coefficient": 3,
-          "kind": "abilities",
+          "kind": "ability",
           "subtype": "magic"
         }
       ],
@@ -121,7 +121,7 @@
       "positiveFeedback": [
         {
           "type": "tag_count",
-          "coefficient": 1.1,
+          "coefficient": 0.2,
           "tags": [
             "libertarian",
             "follower",
@@ -159,6 +159,20 @@
             "at_war_with"
           ],
           "coefficient": 0.1
+        },
+        {
+          "type": "relationship_count",
+          "relationshipKinds": [
+            "enemy_of"
+          ],
+          "coefficient": 0.3
+        },
+        {
+          "type": "relationship_count",
+          "relationshipKinds": [
+            "controls"
+          ],
+          "coefficient": 0.2
         }
       ]
     },

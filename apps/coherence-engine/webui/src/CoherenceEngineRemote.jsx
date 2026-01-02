@@ -236,6 +236,7 @@ export default function CoherenceEngineRemote({
             systems={systems}
             actions={actions}
             schema={schema}
+            usageMap={usageMap}
           />
         );
       case 'pressures':

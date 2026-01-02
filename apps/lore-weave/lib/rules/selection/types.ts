@@ -36,7 +36,7 @@ export interface SelectionRule {
   // Common filters
   subtypes?: string[];
   excludeSubtypes?: string[];
-  statusFilter?: string;
+  status?: string;
   statuses?: string[];
   notStatus?: string;
 
@@ -68,7 +68,7 @@ export interface SelectionRule {
 
 export interface RelatedEntitiesSpec {
   relatedTo: string;  // Variable reference
-  relationship: string;  // Relationship kind
+  relationshipKind: string;  // Relationship kind
   direction: Direction | 'out' | 'in' | 'any';
 }
 
@@ -106,7 +106,7 @@ export interface VariableSelectionRule {
   kind?: string;
   kinds?: string[];
   subtypes?: string[];
-  statusFilter?: string;
+  status?: string;
   statuses?: string[];
   notStatus?: string;
 
@@ -129,7 +129,7 @@ export interface EntitySelectionCriteria {
   kinds?: string[];
   subtypes?: string[];
   excludeSubtypes?: string[];
-  statusFilter?: string;
+  status?: string;
   statuses?: string[];
   notStatus?: string;
   hasTag?: string;

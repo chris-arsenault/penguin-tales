@@ -1,0 +1,21 @@
+axis alignment "Alignment" hostile -> friendly
+
+axis authority "Authority" follower -> leader
+
+axis autonomy "Autonomy" authoritarian -> libertarian
+
+axis element "Element" ice -> fire
+
+axis latitude "Latitude" south -> north
+
+axis longitude "Longitude" west -> east
+
+axis power "Power" emergent -> legendary
+
+axis pragmatism "Pragmatism" mundane -> mystical
+
+axis purpose "Purpose" destructive -> protective "The intended use of the artifact"
+
+axis structure "Structure" chaotic -> organized
+
+axis visibility "Visibility" hidden -> central

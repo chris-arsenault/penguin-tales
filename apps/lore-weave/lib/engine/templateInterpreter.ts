@@ -350,7 +350,7 @@ export class TemplateInterpreter {
       name,
       fromType: isFromGraph ? 'graph' : isFromPath ? 'path' : 'related',
       kind: select.kind,
-      relationshipKind: isFromRelated ? fromSpec.relationship : undefined,
+      relationshipKind: isFromRelated ? fromSpec.relationshipKind : undefined,
       relatedTo: isFromRelated ? fromSpec.relatedTo : undefined,
       filterSteps: trace.steps,
     };
@@ -598,8 +598,8 @@ export class TemplateInterpreter {
         );
       }
 
-      // Resolve description
-      const description = this.resolveDescription(rule.description, context);
+      // Resolve narrative hint
+      const narrativeHint = this.resolveDescription(rule.description, context);
 
       // Resolve placement
       let placementResult;
@@ -633,7 +633,7 @@ export class TemplateInterpreter {
         status: rule.status,
         prominence: prominenceValue,
         culture,
-        description,
+        narrativeHint,
         tags: mergedTags,
         coordinates: placementResult.coordinates,
         regionId: placementResult.regionId,

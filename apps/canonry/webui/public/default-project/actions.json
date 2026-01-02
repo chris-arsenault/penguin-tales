@@ -143,76 +143,7 @@
         }
       ]
     },
-    "enabled": true
-  },
-  {
-    "id": "declare_war",
-    "name": "Declare War",
-    "description": "Create enemy relationship between factions",
-    "actor": {
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction"
-      }
-    },
-    "targeting": {
-      "strategy": "by_kind",
-      "kind": "faction",
-      "filters": [
-        {
-          "type": "exclude",
-          "entities": [
-            "$actor"
-          ]
-        },
-        {
-          "type": "lacks_relationship",
-          "kind": "at_war_with",
-          "with": "$actor"
-        }
-      ]
-    },
-    "outcome": {
-      "mutations": [
-        {
-          "type": "create_relationship",
-          "kind": "at_war_with",
-          "src": "$actor",
-          "dst": "$target",
-          "strength": 0.9,
-          "bidirectional": true
-        },
-        {
-          "type": "modify_pressure",
-          "pressureId": "harmony",
-          "delta": -6
-        }
-      ],
-      "descriptionTemplate": "declared war on {target.name}",
-      "actorProminenceDelta": {
-        "onSuccess": 0.64,
-        "onFailure": 0.21
-      },
-      "targetProminenceDelta": {
-        "onSuccess": 0.32,
-        "onFailure": 0.08
-      }
-    },
-    "probability": {
-      "baseSuccessChance": 0.6,
-      "baseWeight": 0.3,
-      "pressureModifiers": [
-        {
-          "pressure": "harmony",
-          "multiplier": -0.4
-        },
-        {
-          "pressure": "security",
-          "multiplier": -0.3
-        }
-      ]
-    },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "sue_for_peace",
@@ -226,14 +157,14 @@
       "instigator": {
         "from": {
           "relatedTo": "$actor",
-          "relationship": "participant_in",
+          "relationshipKind": "participant_in",
           "direction": "src"
         },
         "kind": "occurrence",
         "subtypes": [
           "war"
         ],
-        "statusFilter": "active",
+        "status": "active",
         "pickStrategy": "random",
         "required": true
       },
@@ -344,14 +275,14 @@
       "instigator": {
         "from": {
           "relatedTo": "$actor",
-          "relationship": "participant_in",
+          "relationshipKind": "participant_in",
           "direction": "src"
         },
         "kind": "occurrence",
         "subtypes": [
           "war"
         ],
-        "statusFilter": "active",
+        "status": "active",
         "filters": [
           {
             "type": "has_tag",
@@ -573,7 +504,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "resource_availibility",
-          "delta": 5
+          "delta": 2
         }
       ],
       "descriptionTemplate": "established trade route between {target.name} and {target2.name}",
@@ -605,7 +536,7 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "abilities",
+        "kind": "ability",
         "subtypes": [
           "magic"
         ]
@@ -620,7 +551,7 @@
       "instigator": {
         "from": {
           "relatedTo": "$actor",
-          "relationship": "practitioner_of",
+          "relationshipKind": "practitioner_of",
           "direction": "dst"
         },
         "kinds": [
@@ -636,6 +567,10 @@
         {
           "type": "lacks_relationship",
           "kind": "corrupted_by"
+        },
+        {
+          "type": "lacks_tag",
+          "tag": "cleansed"
         }
       ]
     },
@@ -685,7 +620,7 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "abilities",
+        "kind": "ability",
         "subtypes": [
           "magic"
         ]
@@ -693,7 +628,7 @@
       "instigator": {
         "from": {
           "relatedTo": "$actor",
-          "relationship": "practitioner_of",
+          "relationshipKind": "practitioner_of",
           "direction": "dst"
         },
         "kinds": [
@@ -746,7 +681,7 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "abilities",
+        "kind": "ability",
         "subtypes": [
           "technology"
         ]
@@ -783,7 +718,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "resource_availibility",
-          "delta": 3
+          "delta": 1
         }
       ],
       "descriptionTemplate": "spread to {target.name}",
@@ -814,6 +749,13 @@
         "kind": "occurrence",
         "subtypes": [
           "war"
+        ],
+        "saturationLimits": [
+          {
+            "relationshipKind": "participant_in",
+            "direction": "in",
+            "maxCount": 3
+          }
         ]
       }
     },
@@ -828,6 +770,20 @@
         }
       ]
     },
+    "variables": {
+      "$existingParticipant": {
+        "select": {
+          "from": {
+            "relatedTo": "$actor",
+            "relationshipKind": "participant_in",
+            "direction": "dst"
+          },
+          "kind": "faction",
+          "pickStrategy": "random"
+        },
+        "required": true
+      }
+    },
     "outcome": {
       "mutations": [
         {
@@ -836,6 +792,13 @@
           "src": "$target",
           "dst": "$actor",
           "strength": 0.8
+        },
+        {
+          "type": "create_relationship",
+          "kind": "at_war_with",
+          "src": "$target",
+          "dst": "$existingParticipant",
+          "strength": 0.6
         },
         {
           "type": "modify_pressure",
@@ -961,6 +924,10 @@
           "type": "lacks_relationship",
           "kind": "corrupted_by",
           "with": "$actor"
+        },
+        {
+          "type": "lacks_tag",
+          "tag": "cleansed"
         }
       ]
     },
@@ -982,7 +949,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "magical_stability",
-          "delta": -8
+          "delta": -4
         }
       ],
       "descriptionTemplate": "spread corruption to {target.name}",
@@ -1014,7 +981,7 @@
         "subtypes": [
           "hero"
         ],
-        "statusFilter": "alive",
+        "status": "alive",
         "filters": [
           {
             "type": "has_tag",
@@ -1029,7 +996,7 @@
       "subtypes": [
         "orca"
       ],
-      "statusFilter": "alive",
+      "status": "alive",
       "filters": [
         {
           "type": "exclude",
@@ -1089,7 +1056,7 @@
         "subtypes": [
           "hero"
         ],
-        "statusFilter": "alive",
+        "status": "alive",
         "filters": [
           {
             "type": "has_tag",
@@ -1104,7 +1071,7 @@
       "subtypes": [
         "orca"
       ],
-      "statusFilter": "alive",
+      "status": "alive",
       "filters": [
         {
           "type": "exclude",
@@ -1169,7 +1136,7 @@
         "subtypes": [
           "hero"
         ],
-        "statusFilter": "alive",
+        "status": "alive",
         "filters": [
           {
             "type": "has_tag",
@@ -1184,7 +1151,7 @@
       "subtypes": [
         "orca"
       ],
-      "statusFilter": "alive",
+      "status": "alive",
       "filters": [
         {
           "type": "exclude",
@@ -1236,7 +1203,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "statusFilter": "alive",
+        "status": "alive",
         "subtypes": [
           "hero",
           "mayor",
@@ -1247,7 +1214,7 @@
     },
     "targeting": {
       "strategy": "by_kind",
-      "kind": "abilities",
+      "kind": "ability",
       "statuses": [
         "active",
         "discovered",
@@ -1305,7 +1272,7 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "abilities",
+        "kind": "ability",
         "subtypes": [
           "magic",
           "combat",
@@ -1333,7 +1300,7 @@
     "targeting": {
       "strategy": "by_kind",
       "kind": "occurrence",
-      "statusFilter": "active",
+      "status": "active",
       "subtypes": [
         "war",
         "disaster",
@@ -1394,7 +1361,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
-        "statusFilter": "intact",
+        "status": "intact",
         "filters": [
           {
             "type": "has_relationship",
@@ -1406,11 +1373,11 @@
       "instigator": {
         "from": {
           "relatedTo": "$actor",
-          "relationship": "owned_by",
+          "relationshipKind": "owned_by",
           "direction": "src"
         },
         "kind": "npc",
-        "statusFilter": "alive"
+        "status": "alive"
       }
     },
     "targeting": {
@@ -1479,13 +1446,13 @@
           "outlaw",
           "orca"
         ],
-        "statusFilter": "alive"
+        "status": "alive"
       }
     },
     "targeting": {
       "strategy": "by_kind",
       "kind": "artifact",
-      "statusFilter": "intact",
+      "status": "intact",
       "filters": [
         {
           "type": "lacks_relationship",
@@ -1564,7 +1531,7 @@
         "subtypes": [
           "hero"
         ],
-        "statusFilter": "alive"
+        "status": "alive"
       },
       "conditions": [
         {
@@ -1649,7 +1616,7 @@
         "subtypes": [
           "hero"
         ],
-        "statusFilter": "alive",
+        "status": "alive",
         "filters": [
           {
             "type": "lacks_tag",
@@ -1664,7 +1631,7 @@
       "subtypes": [
         "weapon"
       ],
-      "statusFilter": "intact",
+      "status": "intact",
       "filters": [
         {
           "type": "lacks_relationship",
@@ -1722,7 +1689,7 @@
         "subtypes": [
           "hero"
         ],
-        "statusFilter": "alive",
+        "status": "alive",
         "filters": [
           {
             "type": "has_any_tag",
@@ -1740,7 +1707,7 @@
       "subtypes": [
         "instrument"
       ],
-      "statusFilter": "intact",
+      "status": "intact",
       "pickStrategy": "random"
     },
     "outcome": {
@@ -1802,7 +1769,7 @@
         "subtypes": [
           "weapon"
         ],
-        "statusFilter": "intact",
+        "status": "intact",
         "filters": [
           {
             "type": "lacks_relationship",
@@ -1817,7 +1784,7 @@
       "subtypes": [
         "hero"
       ],
-      "statusFilter": "alive",
+      "status": "alive",
       "filters": [
         {
           "type": "lacks_tag",
@@ -1870,14 +1837,14 @@
         "subtypes": [
           "colony"
         ],
-        "statusFilter": "thriving",
+        "status": "thriving",
         "minProminence": "recognized"
       }
     },
     "targeting": {
       "strategy": "by_kind",
       "kind": "npc",
-      "statusFilter": "alive",
+      "status": "alive",
       "filters": [
         {
           "type": "has_relationship",
@@ -1929,14 +1896,14 @@
         "subtypes": [
           "war"
         ],
-        "statusFilter": "active",
+        "status": "active",
         "minProminence": "recognized"
       }
     },
     "targeting": {
       "strategy": "by_kind",
       "kind": "npc",
-      "statusFilter": "alive",
+      "status": "alive",
       "filters": [
         {
           "type": "has_relationship",
@@ -1987,7 +1954,7 @@
         "subtypes": [
           "instrument"
         ],
-        "statusFilter": "intact"
+        "status": "intact"
       }
     },
     "targeting": {
@@ -1998,7 +1965,7 @@
         "outlaw",
         "mayor"
       ],
-      "statusFilter": "alive",
+      "status": "alive",
       "filters": [
         {
           "type": "lacks_tag",
@@ -2048,7 +2015,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "statusFilter": "alive",
+        "status": "alive",
         "subtypes": [
           "outlaw",
           "merchant",
@@ -2064,7 +2031,7 @@
     },
     "targeting": {
       "strategy": "by_kind",
-      "kind": "abilities",
+      "kind": "ability",
       "statuses": [
         "active",
         "discovered",
@@ -2083,6 +2050,20 @@
       ],
       "pickStrategy": "random"
     },
+    "variables": {
+      "victimFaction": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationshipKind": "practitioner_of",
+            "direction": "in"
+          },
+          "kind": "faction",
+          "pickStrategy": "random"
+        },
+        "required": false
+      }
+    },
     "outcome": {
       "mutations": [
         {
@@ -2093,17 +2074,18 @@
           "strength": 0.5
         },
         {
+          "type": "create_relationship",
+          "kind": "enemy_of",
+          "src": "$actor",
+          "dst": "$victimFaction",
+          "strength": 0.6,
+          "bidirectional": true
+        },
+        {
           "type": "archive_all_relationships",
           "entity": "$actor",
           "relationshipKind": "leader_of",
           "direction": "src"
-        },
-        {
-          "type": "create_relationship",
-          "kind": "enemy_of",
-          "src": "$target",
-          "dst": "$actor",
-          "strength": 0.6
         },
         {
           "type": "set_tag",
@@ -2134,14 +2116,14 @@
         "strategy": "by_kind",
         "kind": "occurrence",
         "subtypes": ["war", "disaster", "celebration", "succession_crisis"],
-        "statusFilter": "active",
+        "status": "active",
         "minProminence": "marginal"
       }
     },
     "targeting": {
       "strategy": "by_kind",
       "kind": "artifact",
-      "statusFilter": "intact",
+      "status": "intact",
       "filters": [
         {
           "type": "lacks_relationship",
@@ -2185,7 +2167,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
-        "statusFilter": "intact",
+        "status": "intact",
         "minProminence": "marginal",
         "filters": [
           {
@@ -2198,7 +2180,7 @@
     },
     "targeting": {
       "strategy": "by_kind",
-      "kind": "rules",
+      "kind": "rule",
       "subtypes": ["ideology", "law", "social", "memorial"],
       "filters": [
         {
@@ -2246,7 +2228,7 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "rules",
+        "kind": "rule",
         "subtypes": ["ideology", "law", "social", "memorial"],
         "minProminence": "marginal"
       }
@@ -2302,7 +2284,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
-        "statusFilter": "intact",
+        "status": "intact",
         "filters": [
           {
             "type": "lacks_relationship",
@@ -2367,7 +2349,7 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "rules",
+        "kind": "rule",
         "subtypes": ["ideology", "law"],
         "minProminence": "marginal"
       },
@@ -2436,7 +2418,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
-        "statusFilter": "damaged",
+        "status": "damaged",
         "minProminence": "marginal"
       }
     },
@@ -2444,7 +2426,7 @@
       "strategy": "by_kind",
       "kind": "npc",
       "subtypes": ["mayor", "merchant", "hero"],
-      "statusFilter": "alive",
+      "status": "alive",
       "filters": [
         {
           "type": "matches_culture",
@@ -2493,7 +2475,7 @@
         "strategy": "by_kind",
         "kind": "artifact",
         "subtypes": ["tome"],
-        "statusFilter": "intact",
+        "status": "intact",
         "filters": [
           {
             "type": "has_relationship",
@@ -2558,7 +2540,7 @@
         "strategy": "by_kind",
         "kind": "artifact",
         "subtypes": ["tome"],
-        "statusFilter": "intact",
+        "status": "intact",
         "filters": [
           {
             "type": "has_relationship",
@@ -2623,7 +2605,7 @@
         "strategy": "by_kind",
         "kind": "artifact",
         "subtypes": ["tome"],
-        "statusFilter": "intact",
+        "status": "intact",
         "filters": [
           {
             "type": "has_tag",

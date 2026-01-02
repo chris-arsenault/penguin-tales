@@ -150,6 +150,12 @@ export interface GraphContagionConfig {
   pressureChanges?: Record<string, number>;
 
   /**
+   * Exclude infections where the entity and source have these relationship kinds.
+   * Prevents spreading conflict between allies, etc.
+   */
+  excludeRelationships?: string[];
+
+  /**
    * Multi-source mode: when configured, the system tracks multiple independent
    * contagion sources. Each source entity spreads independently through the
    * same population using the configured vectors and transmission settings.
@@ -403,6 +409,20 @@ function applySingleSourceContagion(
       }
 
       const source = infectedContacts[Math.floor(Math.random() * infectedContacts.length)];
+
+      // Check excluded relationships (e.g., don't spread war between allies)
+      if (config.excludeRelationships?.length) {
+        let excluded = false;
+        for (const excludeKind of config.excludeRelationships) {
+          if (graphView.hasRelationship(entity.id, source.id, excludeKind) ||
+              graphView.hasRelationship(source.id, entity.id, excludeKind)) {
+            excluded = true;
+            break;
+          }
+        }
+        if (excluded) continue;
+      }
+
       const infectionCtx = {
         ...baseCtx,
         self: entity,
@@ -479,7 +499,8 @@ function applySingleSourceContagion(
         for (const candidate of candidates) {
           const changes: Partial<HardState> = { status: transition.toStatus };
           if (transition.descriptionSuffix) {
-            changes.description = `${candidate.description} ${transition.descriptionSuffix}`;
+            const baseNarrative = candidate.narrativeHint ?? candidate.summary ?? candidate.description ?? '';
+            changes.narrativeHint = `${baseNarrative} ${transition.descriptionSuffix}`;
           }
           modifications.push({
             id: candidate.id,
@@ -724,7 +745,8 @@ function applyMultiSourceContagion(
 
         const changes: Partial<HardState> = { status: transition.toStatus };
         if (transition.descriptionSuffix) {
-          changes.description = `${source.description} ${transition.descriptionSuffix}`;
+          const baseNarrative = source.narrativeHint ?? source.summary ?? source.description ?? '';
+          changes.narrativeHint = `${baseNarrative} ${transition.descriptionSuffix}`;
         }
         modifications.push({
           id: source.id,

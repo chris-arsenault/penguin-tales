@@ -523,12 +523,15 @@ export class WorldEngine {
         );
       }
 
+      const narrativeHint = entity.narrativeHint ?? entity.summary ?? (entity.description ? entity.description : undefined);
+
       const loadedEntity: HardState = {
         ...entity,
         id,
         coordinates,
         createdAt: 0,
         updatedAt: 0,
+        narrativeHint,
         // Seed entities with summaries should have them locked (user-defined, not to be overwritten by enrichment)
         lockedSummary: entity.summary ? true : undefined
       };
@@ -694,7 +697,7 @@ export class WorldEngine {
       'npc': 'awakened to consciousness',
       'faction': 'coalesced from shared purpose',
       'artifact': 'crystallized from ancient power',
-      'abilities': 'manifested from the primordial currents',
+      'ability': 'manifested from the primordial currents',
       'ideology': 'emerged as an eternal truth',
       'era': 'began its inexorable march'
     };
@@ -1078,12 +1081,15 @@ export class WorldEngine {
         );
       }
 
+      const narrativeHint = entity.narrativeHint ?? entity.summary ?? (entity.description ? entity.description : undefined);
+
       const loadedEntity: HardState = {
         ...entity,
         id,
         coordinates,
         createdAt: 0,
         updatedAt: 0,
+        narrativeHint,
         // Seed entities with summaries should have them locked (user-defined, not to be overwritten by enrichment)
         lockedSummary: entity.summary ? true : undefined
       };
@@ -2404,9 +2410,9 @@ export class WorldEngine {
       }
     }
 
-    // High abilities deficit → boost magical_instability to trigger ability discovery
+    // High ability deficit → boost magical_instability to trigger ability discovery
     if (deviation.entityKind.score > threshold) {
-      const abilityDeviation = deviation.entityKind.deviations['abilities'] || 0;
+      const abilityDeviation = deviation.entityKind.deviations['ability'] || 0;
       if (abilityDeviation > 0.08) {
         adjustments['magical_instability'] = Math.min(abilityDeviation * 25, 5);
       }
@@ -2532,7 +2538,7 @@ export class WorldEngine {
         metaEntityFormation: {
           totalFormed: this.metaEntitiesFormed.length,
           formations: this.metaEntitiesFormed,
-          comment: 'Meta-entities are abilities/rules that emerged from clustering, marked with meta-entity tag'
+          comment: 'Meta-entities are ability/rule entities that emerged from clustering, marked with meta-entity tag'
         },
         reachability: this.getReachabilityMetrics(),
         enrichmentTriggers: {}

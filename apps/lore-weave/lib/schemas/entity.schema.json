@@ -59,6 +59,7 @@
     "regionId": { "type": ["string", "null"] },
     "allRegionIds": { "type": "array", "items": { "type": "string" } },
     "summary": { "type": "string" },
+    "narrativeHint": { "type": "string" },
     "lockedSummary": { "type": "boolean" },
     "createdBy": {
       "type": "object",

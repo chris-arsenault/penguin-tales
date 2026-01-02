@@ -1,0 +1,111 @@
+static_page "Lore:The Languages of The Berg" do
+  seedId:cultures-language-guide
+  summary:"A comprehensive guide to how names work in each culture - Aurora's ice-memory echoes, Nightshelf's whispered fragments, and Orca's deed-chains."
+  status:published
+  slug:lore-languages
+  content:read("page/lore-languages.md")
+end
+
+static_page "World:The Berg" do
+  seedId:world-the-berg
+  summary:"An overview of The Berg - the vast frozen continent where penguin civilization thrives in the eternal dance between light and dark."
+  status:published
+  slug:world-the-berg
+  content:read("page/world-the-berg.md")
+end
+
+static_page "Cultures:Aurora Stack" do
+  seedId:cultures-aurora-stack
+  summary:"The Aurora Stack penguins - traders, builders, and keepers of ice-memory who believe identity is accumulated through witnessed deeds."
+  status:published
+  slug:cultures-aurora-stack
+  content:read("page/cultures-aurora-stack.md")
+end
+
+static_page "Cultures:Nightshelf" do
+  seedId:cultures-nightshelf
+  summary:"The Nightshelf penguins - shadow-dwellers who believe names hold power and secrets are the true currency of existence."
+  status:published
+  slug:cultures-nightshelf
+  content:read("page/cultures-nightshelf.md")
+end
+
+static_page "Cultures:Orca" do
+  seedId:cultures-orca
+  summary:"The Orca - apex predators whose identity is defined purely by their kills and their place in the eternal hunt."
+  status:published
+  slug:cultures-orca
+  content:read("page/cultures-orca.md")
+end
+
+static_page "Lore:The Ice Remembers" do
+  seedId:lore-the-ice-remembers
+  summary:"The metaphysical nature of The Berg's ice and how it records, preserves, and sometimes speaks the memories of all who have lived upon it."
+  status:published
+  slug:lore-ice-remembers
+  content:read("page/lore-ice-remembers.md")
+end
+
+static_page "Lore:The Long Dark" do
+  seedId:lore-the-long-dark
+  summary:"The four-month polar winter when the sun never rises, survival becomes paramount, and the boundary between worlds grows thin."
+  status:published
+  slug:lore-long-dark
+  content:read("page/lore-long-dark.md")
+end
+
+static_page "Lore:The Before Times" do
+  seedId:lore-the-before-times
+  summary:"Ancient artifacts bearing alien serial numbers surface from the deep ice - relics of something that existed before penguins, before The Berg, perhaps before everything."
+  status:published
+  slug:lore-before-times
+  content:read("page/lore-before-times.md")
+end
+
+static_page "System:About This Project" do
+  seedId:system-about
+  summary:"What is Penguin Tales? A procedurally generated world of ice, darkness, and surprisingly complex penguin politics."
+  status:published
+  slug:system-about
+  content:read("page/system-about.md")
+end
+
+static_page "System:Lore Weave" do
+  seedId:system-lore-weave
+  summary:"The simulation engine that generates world history through templates, systems, and the patient accumulation of procedural chaos."
+  status:published
+  slug:system-lore-weave
+  content:read("page/system-lore-weave.md")
+end
+
+static_page "System:Name Forge" do
+  seedId:system-name-forge
+  summary:"The procedural naming system that gives everything culture-appropriate names - from Aurora's ice-memory echoes to Orca's kill-chains."
+  status:published
+  slug:system-name-forge
+  content:read("page/system-name-forge.md")
+end
+
+static_page "System:Illuminator" do
+  seedId:system-illuminator
+  summary:"The AI enrichment layer that transforms raw generated data into readable prose, backstories, and descriptions."
+  status:published
+  slug:system-illuminator
+  content:read("page/system-illuminator.md")
+end
+
+static_page "System:Chronicler" do
+  seedId:system-chronicler
+  summary:"The wiki viewer you're using right now - presenting generated content as explorable, interconnected pages."
+  status:published
+  slug:system-chronicler
+  content:read("page/system-chronicler.md")
+end
+
+static_page "System:Narrative Design Loops" do
+  seedId:system-narrative-loops
+  summary:"The design philosophy and specific gameplay loops that make generated content feel like interconnected stories rather than random events."
+  status:published
+  slug:system-narrative-loops
+  content:read("page/system-narrative-loops.md")
+end

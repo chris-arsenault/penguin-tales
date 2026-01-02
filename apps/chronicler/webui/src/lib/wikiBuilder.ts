@@ -29,8 +29,8 @@ import type {
   ConvergenceResult,
   EntityConvergence,
   NarrativeEvent,
-  WebType,
-  WebInstance,
+  HuddleType,
+  HuddleInstance,
 } from '../types/world.ts';
 import type { ChronicleRecord } from './chronicleStorage.ts';
 import { getChronicleContent } from './chronicleStorage.ts';
@@ -419,24 +419,24 @@ export function buildPageIndex(
     byId.set(entry.id, entry);
   }
 
-  // Build web index entries from entity relationships
+  // Build huddle index entries from entity relationships (excludes historical by default)
   const allRelationships = worldData.relationships ?? [];
-  const { webTypes } = buildWebIndex(worldData.hardState, allRelationships);
-  for (const [webTypeId, webType] of webTypes) {
-    const webTypePageId = `web-type:${webTypeId}`;
+  const { huddleTypes } = buildHuddleIndex(worldData.hardState, allRelationships);
+  for (const [huddleTypeId, huddleType] of huddleTypes) {
+    const huddleTypePageId = `huddle-type:${huddleTypeId}`;
     const entry: PageIndexEntry = {
-      id: webTypePageId,
-      title: webType.displayName,
-      type: 'web-type',
-      slug: `web/${slugify(webTypeId)}`,
-      summary: `${webType.instanceCount} ${webType.instanceCount === 1 ? 'huddle' : 'huddles'}, largest has ${webType.largestSize} ${webType.entityKind}s`,
-      categories: ['web', `web-${webType.entityKind}`],
-      webType: {
-        entityKind: webType.entityKind,
-        relationshipKind: webType.relationshipKind,
-        instanceCount: webType.instanceCount,
-        largestSize: webType.largestSize,
-        totalEntities: webType.totalEntities,
+      id: huddleTypePageId,
+      title: huddleType.displayName,
+      type: 'huddle-type',
+      slug: `huddle/${slugify(huddleTypeId)}`,
+      summary: `${huddleType.instanceCount} ${huddleType.instanceCount === 1 ? 'huddle' : 'huddles'}, largest has ${huddleType.largestSize} ${huddleType.entityKind}s`,
+      categories: ['huddle', `huddle-${huddleType.entityKind}`],
+      huddleType: {
+        entityKind: huddleType.entityKind,
+        relationshipKind: huddleType.relationshipKind,
+        instanceCount: huddleType.instanceCount,
+        largestSize: huddleType.largestSize,
+        totalEntities: huddleType.totalEntities,
       },
       linkedEntities: [],
       lastUpdated: Date.now(),
@@ -563,10 +563,10 @@ export function buildPageById(
     return buildConfluxPage(confluxId, worldData, pageIndex);
   }
 
-  // Web type page
-  if (indexEntry.type === 'web-type') {
-    const webTypeId = pageId.replace('web-type:', '');
-    return buildWebTypePage(webTypeId, worldData);
+  // Huddle type page
+  if (indexEntry.type === 'huddle-type') {
+    const huddleTypeId = pageId.replace('huddle-type:', '');
+    return buildHuddleTypePage(huddleTypeId, worldData);
   }
 
   return null;
@@ -2284,14 +2284,14 @@ function buildConfluxPage(
 }
 
 // =============================================================================
-// WEB DETECTION - Connected subgraphs of same-kind entities
+// HUDDLE DETECTION - Connected subgraphs of same-kind entities
 // =============================================================================
 
 /**
- * Format a web type ID into a human-readable display name.
+ * Format a huddle type ID into a human-readable display name.
  * E.g., "faction-allied_with" -> "Faction Alliances"
  */
-function formatWebTypeName(entityKind: string, relationshipKind: string): string {
+function formatHuddleTypeName(entityKind: string, relationshipKind: string): string {
   // Capitalize and pluralize entity kind
   const entityDisplay = entityKind.charAt(0).toUpperCase() + entityKind.slice(1);
 
@@ -2310,7 +2310,7 @@ function formatWebTypeName(entityKind: string, relationshipKind: string): string
 
   // If no special case matched, use generic format
   if (relDisplay === relationshipKind.replace(/_/g, ' ')) {
-    return `${entityDisplay} ${relDisplay.charAt(0).toUpperCase() + relDisplay.slice(1)} Webs`;
+    return `${entityDisplay} ${relDisplay.charAt(0).toUpperCase() + relDisplay.slice(1)} Huddles`;
   }
 
   return `${entityDisplay} ${relDisplay}`;
@@ -2354,16 +2354,20 @@ function findConnectedComponents(
 }
 
 /**
- * Detect all webs in the world graph.
- * A web is a connected subgraph where all nodes are the same entity kind
+ * Detect all huddles in the world graph.
+ * A huddle is a connected subgraph where all nodes are the same entity kind
  * and all edges are the same relationship kind.
  *
- * Returns a map of web type ID to WebType with instances.
+ * By default, excludes historical relationships (only includes active ones).
+ *
+ * Returns a map of huddle type ID to HuddleType with instances.
  */
-export function buildWebIndex(
+export function buildHuddleIndex(
   entities: HardState[],
-  relationships: Array<{ kind: string; src: string; dst: string; strength?: number }>
-): { webTypes: Map<string, WebType>; instances: Map<string, WebInstance[]> } {
+  relationships: Array<{ kind: string; src: string; dst: string; strength?: number; status?: 'active' | 'historical' }>,
+  options: { includeHistorical?: boolean } = {}
+): { huddleTypes: Map<string, HuddleType>; instances: Map<string, HuddleInstance[]> } {
+  const { includeHistorical = false } = options;
   const entityById = new Map(entities.map(e => [e.id, e]));
 
   // Group relationships by kind, filtering to same-kind entity pairs
@@ -2373,6 +2377,9 @@ export function buildWebIndex(
   }>();
 
   for (const rel of relationships) {
+    // Skip historical relationships by default
+    if (!includeHistorical && rel.status === 'historical') continue;
+
     const srcEntity = entityById.get(rel.src);
     const dstEntity = entityById.get(rel.dst);
 
@@ -2396,8 +2403,8 @@ export function buildWebIndex(
     });
   }
 
-  const webTypes = new Map<string, WebType>();
-  const instances = new Map<string, WebInstance[]>();
+  const huddleTypes = new Map<string, HuddleType>();
+  const instances = new Map<string, HuddleInstance[]>();
 
   for (const [key, data] of relsByKindAndEntityKind) {
     const [entityKind, relationshipKind] = key.split('-', 2);
@@ -2419,7 +2426,7 @@ export function buildWebIndex(
     // Find connected components
     const components = findConnectedComponents(adjacencyList);
 
-    // Filter to components with 3+ nodes (a web needs at least 3 to be interesting)
+    // Filter to components with 3+ nodes (a huddle needs at least 3 to be interesting)
     const significantComponents = components.filter(c => c.length >= 3);
 
     if (significantComponents.length === 0) continue;
@@ -2427,8 +2434,8 @@ export function buildWebIndex(
     // Sort by size descending
     significantComponents.sort((a, b) => b.length - a.length);
 
-    // Build web instances
-    const webInstances: WebInstance[] = significantComponents.map((component, index) => {
+    // Build huddle instances
+    const huddleInstances: HuddleInstance[] = significantComponents.map((component, index) => {
       // Count edges within this component
       const componentSet = new Set(component);
       let edgeCount = 0;
@@ -2444,7 +2451,7 @@ export function buildWebIndex(
 
       return {
         id: `${key}-${index}`,
-        webTypeId: key,
+        huddleTypeId: key,
         size: component.length,
         entityIds: component,
         edgeCount,
@@ -2452,39 +2459,39 @@ export function buildWebIndex(
       };
     });
 
-    instances.set(key, webInstances);
+    instances.set(key, huddleInstances);
 
-    // Build web type summary
+    // Build huddle type summary
     const totalEntities = significantComponents.reduce((sum, c) => sum + c.length, 0);
 
-    webTypes.set(key, {
+    huddleTypes.set(key, {
       id: key,
       entityKind,
       relationshipKind,
-      displayName: formatWebTypeName(entityKind, relationshipKind),
+      displayName: formatHuddleTypeName(entityKind, relationshipKind),
       instanceCount: significantComponents.length,
       largestSize: significantComponents[0]?.length ?? 0,
       totalEntities,
     });
   }
 
-  return { webTypes, instances };
+  return { huddleTypes, instances };
 }
 
 /**
- * Build a web type wiki page showing all instances of a web type.
+ * Build a huddle type wiki page showing all instances of a huddle type.
  */
-function buildWebTypePage(
-  webTypeId: string,
+function buildHuddleTypePage(
+  huddleTypeId: string,
   worldData: WorldState
 ): WikiPage | null {
   const allRelationships = worldData.relationships ?? [];
-  const { webTypes, instances } = buildWebIndex(worldData.hardState, allRelationships);
+  const { huddleTypes, instances } = buildHuddleIndex(worldData.hardState, allRelationships);
 
-  const webType = webTypes.get(webTypeId);
-  if (!webType) return null;
+  const huddleType = huddleTypes.get(huddleTypeId);
+  if (!huddleType) return null;
 
-  const webInstances = instances.get(webTypeId) ?? [];
+  const huddleInstances = instances.get(huddleTypeId) ?? [];
   const entityById = new Map(worldData.hardState.map(e => [e.id, e]));
 
   // Build sections
@@ -2496,17 +2503,17 @@ function buildWebTypePage(
     heading: 'Overview',
     level: 2,
     content: [
-      `A huddle of **${webType.entityKind}** entities connected by **${webType.relationshipKind.replace(/_/g, ' ')}** relationships.`,
+      `A huddle of **${huddleType.entityKind}** entities connected by **${huddleType.relationshipKind.replace(/_/g, ' ')}** relationships.`,
       '',
-      `**Huddles:** ${webType.instanceCount}`,
-      `**Largest Huddle:** ${webType.largestSize} entities`,
-      `**Total Entities:** ${webType.totalEntities}`,
+      `**Huddles:** ${huddleType.instanceCount}`,
+      `**Largest Huddle:** ${huddleType.largestSize} entities`,
+      `**Total Entities:** ${huddleType.totalEntities}`,
     ].join('\n'),
   });
 
-  // Build sections for each web instance (largest first)
-  for (let i = 0; i < webInstances.length; i++) {
-    const instance = webInstances[i];
+  // Build sections for each huddle instance (largest first)
+  for (let i = 0; i < huddleInstances.length; i++) {
+    const instance = huddleInstances[i];
 
     // Get entity details with connection counts
     const entityDetails = instance.entityIds
@@ -2514,13 +2521,14 @@ function buildWebTypePage(
         const entity = entityById.get(id);
         if (!entity) return null;
 
-        // Count connections within this web
+        // Count connections within this huddle (only active relationships)
         let connectionCount = 0;
         for (const rel of allRelationships) {
-          if (rel.kind !== webType.relationshipKind) continue;
-          const srcInWeb = instance.entityIds.includes(rel.src);
-          const dstInWeb = instance.entityIds.includes(rel.dst);
-          if ((rel.src === id && dstInWeb) || (rel.dst === id && srcInWeb)) {
+          if (rel.status === 'historical') continue;
+          if (rel.kind !== huddleType.relationshipKind) continue;
+          const srcInHuddle = instance.entityIds.includes(rel.src);
+          const dstInHuddle = instance.entityIds.includes(rel.dst);
+          if ((rel.src === id && dstInHuddle) || (rel.dst === id && srcInHuddle)) {
             connectionCount++;
           }
         }
@@ -2562,8 +2570,8 @@ function buildWebTypePage(
     });
 
     // Only show first 5 instances in detail
-    if (i >= 4 && webInstances.length > 5) {
-      const remaining = webInstances.length - 5;
+    if (i >= 4 && huddleInstances.length > 5) {
+      const remaining = huddleInstances.length - 5;
       sections.push({
         id: 'more-huddles',
         heading: 'Additional Huddles',
@@ -2575,18 +2583,18 @@ function buildWebTypePage(
   }
 
   // Collect all linked entities
-  const linkedEntities = webInstances.flatMap(inst => inst.entityIds);
+  const linkedEntities = huddleInstances.flatMap(inst => inst.entityIds);
 
   return {
-    id: `web-type:${webTypeId}`,
-    slug: `web/${slugify(webTypeId)}`,
-    title: webType.displayName,
-    type: 'web-type',
+    id: `huddle-type:${huddleTypeId}`,
+    slug: `huddle/${slugify(huddleTypeId)}`,
+    title: huddleType.displayName,
+    type: 'huddle-type',
     content: {
       sections,
-      summary: `${webType.instanceCount} ${webType.instanceCount === 1 ? 'huddle' : 'huddles'}, largest has ${webType.largestSize} ${webType.entityKind}s`,
+      summary: `${huddleType.instanceCount} ${huddleType.instanceCount === 1 ? 'huddle' : 'huddles'}, largest has ${huddleType.largestSize} ${huddleType.entityKind}s`,
     },
-    categories: ['web', `web-${webType.entityKind}`],
+    categories: ['huddle', `huddle-${huddleType.entityKind}`],
     linkedEntities: Array.from(new Set(linkedEntities)),
     images: [],
     lastUpdated: Date.now(),

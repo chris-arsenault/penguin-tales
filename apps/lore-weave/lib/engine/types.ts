@@ -166,6 +166,7 @@ export interface CreateEntitySettings {
   eraId?: string;  // Optional - era identifier for the entity
   name?: string;  // Optional - runtime may auto-generate if not provided
   description?: string;
+  narrativeHint?: string;
   status: string;
   prominence: number;  // 0.0-5.0 numeric scale
   culture: string;
@@ -493,7 +494,7 @@ export interface PressureContract {
 // Declares all operators (creators, modifiers, lineage) for an entity kind
 // Can be at kind-level (e.g., 'npc') or subtype-level (e.g., 'npc:hero')
 export interface EntityOperatorRegistry {
-  kind: string;      // e.g., 'npc', 'faction', 'abilities'
+  kind: string;      // e.g., 'npc', 'faction', 'ability'
   subtype?: string;  // Optional: e.g., 'hero', 'cult', 'merchant' (for subtype-specific registries)
 
   // Templates that create this entity
@@ -908,6 +909,7 @@ export class GraphStore implements Graph {
       subtype: settings.subtype,
       name,
       description: settings.description || '',
+      narrativeHint: settings.narrativeHint,
       status: settings.status,
       prominence: settings.prominence,
       culture: settings.culture,

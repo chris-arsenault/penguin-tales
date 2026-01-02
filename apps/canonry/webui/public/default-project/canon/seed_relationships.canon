@@ -1,0 +1,43 @@
+seed_relationship contains loc_aurora_berg loc_aurora_stack 1
+
+seed_relationship contains loc_aurora_berg loc_nightfall_shelf 1
+
+seed_relationship contains loc_aurora_berg loc_glow_fissure 1
+
+seed_relationship adjacent_to loc_aurora_stack loc_nightfall_shelf 0.5
+
+seed_relationship adjacent_to loc_nightfall_shelf loc_glow_fissure 0.5
+
+seed_relationship controls faction_icebound_exchange loc_aurora_stack 0.8
+
+seed_relationship controls faction_midnight_claws loc_nightfall_shelf 0.8
+
+seed_relationship leader_of npc_selka faction_icebound_exchange 1
+
+seed_relationship leader_of npc_selka loc_aurora_stack 1
+
+seed_relationship resident_of npc_selka loc_aurora_stack 1
+
+seed_relationship leader_of npc_nyla faction_midnight_claws 1
+
+seed_relationship leader_of npc_nyla loc_nightfall_shelf 1
+
+seed_relationship resident_of npc_nyla loc_nightfall_shelf 1
+
+seed_relationship resident_of npc_keeper_hollows loc_drowned_ledge 1
+
+seed_relationship stored_at artifact_deep_map loc_drowned_ledge 1
+
+seed_relationship owned_by artifact_deep_map npc_keeper_hollows 1
+
+seed_relationship leader_of npc_grandmother_deep faction_wake_singers 1
+
+seed_relationship occupies faction_wake_singers loc_corpse_current 1
+
+seed_relationship stored_at artifact_god_tooth loc_corpse_current 1
+
+seed_relationship owned_by artifact_god_tooth faction_wake_singers 1
+
+seed_relationship contained_by loc_veil_vents loc_still_pools 1
+
+seed_relationship adjacent_to loc_forgotten_shore loc_still_pools 0.8

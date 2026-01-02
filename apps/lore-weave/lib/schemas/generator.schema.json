@@ -428,7 +428,7 @@
         "kinds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "subtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "excludeSubtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
-        "statusFilter": { "$ref": "#/$defs/NonEmptyString" },
+        "status": { "$ref": "#/$defs/NonEmptyString" },
         "statuses": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "notStatus": { "$ref": "#/$defs/NonEmptyString" },
         "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
@@ -928,7 +928,7 @@
         "kind": { "$ref": "#/$defs/NonEmptyString" },
         "kinds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "subtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
-        "statusFilter": { "$ref": "#/$defs/NonEmptyString" },
+        "status": { "$ref": "#/$defs/NonEmptyString" },
         "statuses": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "notStatus": { "$ref": "#/$defs/NonEmptyString" },
         "filters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
@@ -940,11 +940,11 @@
 
     "RelatedEntitiesSpec": {
       "type": "object",
-      "required": ["relatedTo", "relationship", "direction"],
+      "required": ["relatedTo", "relationshipKind", "direction"],
       "additionalProperties": false,
       "properties": {
         "relatedTo": { "$ref": "#/$defs/NonEmptyString" },
-        "relationship": { "$ref": "#/$defs/NonEmptyString" },
+        "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
         "direction": { "enum": ["src", "dst", "both", "out", "in", "any"] }
       }
     },

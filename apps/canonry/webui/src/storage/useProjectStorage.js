@@ -19,12 +19,19 @@ import {
   deleteStaticPagesForProject,
   loadAndImportSeedPages,
 } from './staticPageStorage.js';
-import { compileCanonProject, serializeCanonProject } from '@canonry/dsl';
+import {
+  compileCanonProject,
+  compileCanonStaticPages,
+  serializeCanonProject,
+  serializeCanonStaticPages,
+} from '@canonry/dsl';
 
 /**
  * Default project ID - used to identify the default project for reload functionality
  */
 export const DEFAULT_PROJECT_ID = 'project_1765083188592';
+
+const USE_CANON_DSL = false;
 
 /**
  * Canon project file names (default layout)
@@ -45,6 +52,23 @@ const CANON_PROJECT_FILES = [
   'seed_entities',
   'seed_relationships',
   'distribution_targets',
+];
+
+const PROJECT_JSON_FILES = [
+  'entityKinds',
+  'relationshipKinds',
+  'cultures',
+  'tagRegistry',
+  'axisDefinitions',
+  'uiConfig',
+  'eras',
+  'pressures',
+  'generators',
+  'systems',
+  'actions',
+  'seedEntities',
+  'seedRelationships',
+  'distributionTargets',
 ];
 
 const PROJECT_DEFAULTS = {
@@ -108,6 +132,14 @@ function formatCanonDiagnostics(diagnostics = []) {
  * Fetch and load the default seed project from individual files
  */
 async function fetchDefaultProject() {
+  if (USE_CANON_DSL) {
+    return fetchDefaultProjectCanon();
+  }
+
+  return fetchDefaultProjectJson();
+}
+
+async function fetchDefaultProjectCanon() {
   try {
     const baseUrl = `${import.meta.env.BASE_URL}default-project/`;
 
@@ -162,6 +194,57 @@ async function fetchDefaultProject() {
   }
 }
 
+async function fetchDefaultProjectJson() {
+  try {
+    const baseUrl = `${import.meta.env.BASE_URL}default-project/`;
+
+    const manifestResponse = await fetch(`${baseUrl}manifest.json`);
+    if (!manifestResponse.ok) {
+      console.warn('Default project manifest.json not found');
+      return null;
+    }
+
+    const manifest = await manifestResponse.json();
+    const project = { ...manifest };
+
+    const responses = await Promise.all(
+      PROJECT_JSON_FILES.map(async (file) => {
+        const response = await fetch(`${baseUrl}${file}.json`);
+        if (!response.ok) {
+          console.warn(`Default project file ${file}.json not found`);
+          return { file, content: undefined };
+        }
+        const content = await response.json();
+        return { file, content };
+      })
+    );
+
+    for (const entry of responses) {
+      if (entry.content !== undefined) {
+        project[entry.file] = entry.content;
+      }
+    }
+
+    let normalized = normalizeProjectConfig(project);
+
+    let illuminatorConfig = null;
+    const illuminatorResponse = await fetch(`${baseUrl}illuminatorConfig.json`);
+    if (illuminatorResponse.ok) {
+      illuminatorConfig = await illuminatorResponse.json();
+    } else {
+      console.warn('Default project illuminatorConfig.json not found');
+    }
+
+    const now = new Date().toISOString();
+    normalized.createdAt = now;
+    normalized.updatedAt = now;
+    return { project: normalized, illuminatorConfig };
+  } catch (error) {
+    console.warn('Failed to load default project:', error);
+    return null;
+  }
+}
+
 /**
  * Create a zip file from project data using JSZip-like structure
  * Returns a Blob containing the zip file
@@ -175,9 +258,31 @@ async function createProjectZip(project, options = {}) {
   const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
 
-  const canonFiles = serializeCanonProject(project);
-  for (const file of canonFiles) {
-    zip.file(file.path, file.content);
+  if (USE_CANON_DSL) {
+    const canonFiles = serializeCanonProject(project);
+    for (const file of canonFiles) {
+      zip.file(file.path, file.content);
+    }
+
+    const { staticPages } = options;
+    if (staticPages && staticPages.length > 0) {
+      const staticFiles = serializeCanonStaticPages(staticPages, { includeEmpty: false });
+      for (const file of staticFiles) {
+        zip.file(file.path, file.content);
+      }
+    }
+  } else {
+    const manifest = { ...project };
+    for (const key of PROJECT_JSON_FILES) {
+      delete manifest[key];
+    }
+    zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+
+    for (const key of PROJECT_JSON_FILES) {
+      const fallback = Array.isArray(PROJECT_DEFAULTS[key]) ? [] : PROJECT_DEFAULTS[key];
+      const resolved = project[key] === undefined ? fallback : project[key];
+      zip.file(`${key}.json`, JSON.stringify(resolved, null, 2));
+    }
   }
 
   // Add Illuminator configuration if provided
@@ -186,8 +291,8 @@ async function createProjectZip(project, options = {}) {
     zip.file('illuminatorConfig.json', JSON.stringify(illuminatorConfig, null, 2));
   }
 
-  // Add static pages if provided
-  if (staticPages && staticPages.length > 0) {
+  // Add static pages if provided (JSON mode only)
+  if (!USE_CANON_DSL && staticPages && staticPages.length > 0) {
     zip.file('staticPages.json', JSON.stringify(staticPages, null, 2));
   }
 
@@ -203,7 +308,7 @@ async function extractProjectZip(zipBlob) {
   const zip = await JSZip.loadAsync(zipBlob);
 
   const canonFiles = zip.file(/\.canon$/);
-  if (canonFiles && canonFiles.length > 0) {
+  if (USE_CANON_DSL && canonFiles && canonFiles.length > 0) {
     const sources = await Promise.all(
       canonFiles.map(async (file) => ({
         path: file.name,
@@ -225,9 +330,24 @@ async function extractProjectZip(zipBlob) {
     }
 
     let staticPages = [];
-    const staticPagesFile = zip.file('staticPages.json');
-    if (staticPagesFile) {
-      staticPages = JSON.parse(await staticPagesFile.async('string'));
+    const mdFiles = zip.file(/\.md$/);
+    const staticSources = await Promise.all(
+      [...canonFiles, ...mdFiles].map(async (file) => ({
+        path: file.name,
+        content: await file.async('string'),
+      }))
+    );
+    const { pages, diagnostics: staticPageDiagnostics } = compileCanonStaticPages(staticSources);
+    if (staticPageDiagnostics.some((diag) => diag.severity === 'error')) {
+      throw new Error(`Invalid static pages:\n${formatCanonDiagnostics(staticPageDiagnostics)}`);
+    }
+    if (pages && pages.length > 0) {
+      staticPages = pages;
+    } else {
+      const staticPagesFile = zip.file('staticPages.json');
+      if (staticPagesFile) {
+        staticPages = JSON.parse(await staticPagesFile.async('string'));
+      }
     }
 
     return { project, illuminatorConfig, staticPages };
@@ -242,29 +362,12 @@ async function extractProjectZip(zipBlob) {
 
   const project = { ...manifest };
 
-  const fileNames = [
-    'entityKinds',
-    'relationshipKinds',
-    'cultures',
-    'tagRegistry',
-    'axisDefinitions',
-    'uiConfig',
-    'eras',
-    'pressures',
-    'generators',
-    'systems',
-    'actions',
-    'seedEntities',
-    'seedRelationships',
-    'distributionTargets',
-  ];
-
   const defaultValues = {
     uiConfig: null,
     distributionTargets: null,
   };
 
-  for (const fileName of fileNames) {
+  for (const fileName of PROJECT_JSON_FILES) {
     const file = zip.file(`${fileName}.json`);
     if (file) {
       project[fileName] = JSON.parse(await file.async('string'));

@@ -83,6 +83,8 @@ export interface WorldEntity {
   allRegionIds?: string[];
   /** Short user-defined summary (distinct from LLM-generated description) */
   summary?: string;
+  /** Brief narrative fragment to guide enrichment (set by lore-weave) */
+  narrativeHint?: string;
   /** If true, the summary field should not be overwritten by enrichment */
   lockedSummary?: boolean;
   /**

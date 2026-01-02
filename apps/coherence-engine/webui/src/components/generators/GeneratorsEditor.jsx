@@ -13,8 +13,8 @@ const DEFAULT_KIND_ICONS = {
   npc: '👤',
   location: '📍',
   faction: '🏛️',
-  abilities: '✨',
-  rules: '📜',
+  ability: '✨',
+  rule: '📜',
   era: '🕰️',
   occurrence: '⚡',
 };

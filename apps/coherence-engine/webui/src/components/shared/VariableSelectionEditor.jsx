@@ -73,7 +73,7 @@ export function VariableSelectionEditor({
     const relatedTo = availableRefs[0] || '$target';
     onChange({
       ...select,
-      from: { relatedTo, relationship: '', direction: 'both' },
+      from: { relatedTo, relationshipKind: '', direction: 'both' },
     });
   };
 
@@ -100,7 +100,7 @@ export function VariableSelectionEditor({
   };
 
   const updateFrom = (field, fieldValue) => {
-    const nextFrom = { ...(fromSpec || { relatedTo: availableRefs[0] || '$target', relationship: '', direction: 'both' }), [field]: fieldValue };
+    const nextFrom = { ...(fromSpec || { relatedTo: availableRefs[0] || '$target', relationshipKind: '', direction: 'both' }), [field]: fieldValue };
     updateSelect('from', nextFrom);
   };
 
@@ -139,8 +139,8 @@ export function VariableSelectionEditor({
             />
             <ReferenceDropdown
               label="Relationship Kind"
-              value={fromSpec?.relationship || ''}
-              onChange={(v) => updateFrom('relationship', v)}
+              value={fromSpec?.relationshipKind || ''}
+              onChange={(v) => updateFrom('relationshipKind', v)}
               options={relationshipKindOptions}
               placeholder="Select relationship..."
             />
@@ -281,8 +281,8 @@ export function VariableSelectionEditor({
         <label className="label">Status Filter (optional)</label>
         <input
           type="text"
-          value={select.statusFilter || ''}
-          onChange={(e) => updateSelect('statusFilter', e.target.value || undefined)}
+          value={select.status || ''}
+          onChange={(e) => updateSelect('status', e.target.value || undefined)}
           className="input"
           placeholder="e.g., active"
         />

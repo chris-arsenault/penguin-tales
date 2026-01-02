@@ -24,6 +24,7 @@ import type {
   RemoveTagMutation,
   CreateRelationshipMutation,
   ArchiveRelationshipMutation,
+  ArchiveAllRelationshipsMutation,
   AdjustRelationshipStrengthMutation,
   TransferRelationshipMutation,
   ChangeStatusMutation,
@@ -155,6 +156,19 @@ export function prepareMutation(
 
     case 'archive_relationship':
       return prepareArchiveRelationship(mutation, ctx, result);
+
+    case 'archive_all_relationships':
+      // Convert to archive_relationship format (without 'with' = archives all)
+      return prepareArchiveRelationship(
+        {
+          type: 'archive_relationship',
+          entity: mutation.entity,
+          relationshipKind: mutation.relationshipKind,
+          direction: mutation.direction,
+        },
+        ctx,
+        result
+      );
 
     case 'adjust_relationship_strength':
       return prepareAdjustRelationshipStrength(mutation, ctx, result);

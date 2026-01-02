@@ -27,7 +27,7 @@ export function getAgentsByCategory(
     return agents;
   }
 
-  // First-order agents: npc, faction, abilities, location (rare)
+  // First-order agents: npc, faction, ability, location (rare)
   // Second-order agents: occurrence
   if (category === 'first-order') {
     return agents.filter(e => e.kind !== FRAMEWORK_ENTITY_KINDS.OCCURRENCE);
@@ -194,7 +194,7 @@ export function initializeCatalystSmart(entity: HardState): void {
   }
 
   // Entity kinds that can act
-  const actorKinds = ['npc', 'faction', 'abilities', 'occurrence', 'location', 'artifact', 'rules'];
+  const actorKinds = ['npc', 'faction', 'ability', 'occurrence', 'location', 'artifact', 'rule'];
   if (!actorKinds.includes(entity.kind)) {
     return;
   }

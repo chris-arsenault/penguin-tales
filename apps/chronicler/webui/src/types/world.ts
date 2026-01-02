@@ -141,8 +141,8 @@ export interface PageIndexEntry {
     manifestations: number;
     touchedCount: number;
   };
-  // For web type pages
-  webType?: {
+  // For huddle type pages
+  huddleType?: {
     entityKind: string;
     relationshipKind: string;
     instanceCount: number;
@@ -193,7 +193,7 @@ export interface WikiPage {
   id: string;
   slug: string;
   title: string;
-  type: 'entity' | 'era' | 'category' | 'relationship' | 'chronicle' | 'static' | 'region' | 'conflux' | 'web-type';
+  type: 'entity' | 'era' | 'category' | 'relationship' | 'chronicle' | 'static' | 'region' | 'conflux' | 'huddle-type';
   chronicle?: {
     format: 'story' | 'document';
     entrypointId?: string;
@@ -372,73 +372,73 @@ export interface ConfluxPageData {
 }
 
 // =============================================================================
-// WEB TYPES - Connected subgraphs of same-kind entities with same relationship
+// HUDDLE TYPES - Connected subgraphs of same-kind entities with same relationship
 // =============================================================================
 
 /**
- * A category of webs defined by entity kind + relationship kind.
+ * A category of huddles defined by entity kind + relationship kind.
  * E.g., "faction alliances" = factions connected by allied_with.
  */
-export interface WebType {
+export interface HuddleType {
   /** Unique ID: "{entityKind}-{relationshipKind}" */
   id: string;
-  /** The entity kind that forms this web (e.g., "faction") */
+  /** The entity kind that forms this huddle (e.g., "faction") */
   entityKind: string;
   /** The relationship kind that connects entities (e.g., "allied_with") */
   relationshipKind: string;
   /** Human-readable name (e.g., "Alliance Networks") */
   displayName: string;
-  /** Number of distinct connected components (webs) of this type */
+  /** Number of distinct connected components (huddles) of this type */
   instanceCount: number;
-  /** Size of the largest web instance */
+  /** Size of the largest huddle instance */
   largestSize: number;
   /** Total entities across all instances */
   totalEntities: number;
 }
 
 /**
- * A specific web instance - one connected component.
+ * A specific huddle instance - one connected component.
  */
-export interface WebInstance {
-  /** Unique ID: "{webTypeId}-{index}" */
+export interface HuddleInstance {
+  /** Unique ID: "{huddleTypeId}-{index}" */
   id: string;
-  /** Reference to parent web type */
-  webTypeId: string;
-  /** Number of entities in this web */
+  /** Reference to parent huddle type */
+  huddleTypeId: string;
+  /** Number of entities in this huddle */
   size: number;
-  /** Entity IDs in this web */
+  /** Entity IDs in this huddle */
   entityIds: string[];
-  /** Number of relationships in this web */
+  /** Number of relationships in this huddle */
   edgeCount: number;
   /** Graph density: edgeCount / maxPossibleEdges (0-1) */
   density: number;
 }
 
 /**
- * Full data for a web type page showing all instances.
+ * Full data for a huddle type page showing all instances.
  */
-export interface WebTypePageData {
-  webType: WebType;
-  /** All instances of this web type, sorted by size descending */
-  instances: WebInstance[];
+export interface HuddleTypePageData {
+  huddleType: HuddleType;
+  /** All instances of this huddle type, sorted by size descending */
+  instances: HuddleInstance[];
   /** Entity details for display */
   entityDetails: Map<string, { name: string; subtype: string }>;
 }
 
 /**
- * Full data for a single web instance page.
+ * Full data for a single huddle instance page.
  */
-export interface WebInstancePageData {
-  webType: WebType;
-  instance: WebInstance;
-  /** Entities in this web with their connection counts */
+export interface HuddleInstancePageData {
+  huddleType: HuddleType;
+  instance: HuddleInstance;
+  /** Entities in this huddle with their connection counts */
   entities: Array<{
     id: string;
     name: string;
     subtype: string;
     connectionCount: number;
   }>;
-  /** The actual relationships in this web */
+  /** The actual relationships in this huddle */
   relationships: Array<{
     srcId: string;
     srcName: string;

@@ -166,8 +166,10 @@ export interface EnrichmentTaskBase {
   entityAllEras?: EraTemporalInfo[];
   /** If true, entity summary is user-defined and should not be overwritten by enrichment */
   entityLockedSummary?: boolean;
-  /** Canonical summary text (only set when lockedSummary=true) - used as input to description generation */
+  /** Locked summary text (only set when lockedSummary=true) - used to preserve summary output */
   entityLockedSummaryText?: string;
+  /** Narrative hint to guide description generation (always used as prompt input when present) */
+  entityNarrativeHintText?: string;
   /** Elements to avoid in visual thesis (overused motifs, from project config) */
   visualAvoid?: string;
   /** Per-kind domain instructions for visual thesis (required for description tasks) */

@@ -27,11 +27,12 @@ const EDGE_COLORS = {
  * Extract all causal nodes and edges from config data
  * Returns { nodes, links, warnings } where warnings contains any referential integrity issues
  */
-function extractCausalGraph(pressures, generators, systems, actions, schema, showDisabled = true) {
+function extractCausalGraph(pressures, generators, systems, actions, schema, showDisabled = true, usageMap) {
   const nodes = [];
   const pendingEdges = [];
   const nodeMap = new Map();
   const warnings = [];
+  const touchEdgeKeys = new Set();
 
   // Helper to add node if not exists
   const addNode = (id, type, label, data = {}, isDisabled = false) => {
@@ -53,18 +54,59 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
     return nodeMap.get(id);
   };
 
-  const addPressureEdgesFromMutations = (sourceId, mutations = []) => {
-    mutations.forEach((mutation) => {
-      if (mutation?.type !== 'modify_pressure' || !mutation.pressureId) return;
-      const delta = Number(mutation.delta || 0);
+  const addPressureEdgesFromChangeMap = (sourceId, pressureChanges = {}, edgeType = 'direct') => {
+    Object.entries(pressureChanges || {}).forEach(([pressureId, delta]) => {
+      if (typeof delta !== 'number') return;
       const polarity = delta >= 0 ? 'positive' : 'negative';
       pendingEdges.push({
         source: sourceId,
-        target: `pressure:${mutation.pressureId}`,
+        target: `pressure:${pressureId}`,
         polarity,
         label: delta > 0 ? `+${delta}` : `${delta}`,
-        edgeType: 'direct',
+        edgeType,
       });
+    });
+  };
+
+  const addPressureEdgesFromMutations = (sourceId, mutations) => {
+    const stack = Array.isArray(mutations) ? [...mutations] : [mutations];
+    while (stack.length > 0) {
+      const mutation = stack.pop();
+      if (!mutation || typeof mutation !== 'object') continue;
+      if (mutation.type === 'modify_pressure' && mutation.pressureId) {
+        const delta = Number(mutation.delta || 0);
+        const polarity = delta >= 0 ? 'positive' : 'negative';
+        pendingEdges.push({
+          source: sourceId,
+          target: `pressure:${mutation.pressureId}`,
+          polarity,
+          label: delta > 0 ? `+${delta}` : `${delta}`,
+          edgeType: 'direct',
+        });
+      }
+      Object.values(mutation).forEach((value) => {
+        if (Array.isArray(value)) {
+          value.forEach((entry) => stack.push(entry));
+        } else if (value && typeof value === 'object') {
+          stack.push(value);
+        }
+      });
+    }
+  };
+
+  const addEntityKindEdge = (sourceId, kind, label = 'touches') => {
+    if (!kind || kind === 'any') return;
+    const targetId = `entityKind:${kind}`;
+    addNode(targetId, 'entityKind', kind);
+    const edgeKey = `${sourceId}|${targetId}`;
+    if (touchEdgeKeys.has(edgeKey)) return;
+    touchEdgeKeys.add(edgeKey);
+    pendingEdges.push({
+      source: sourceId,
+      target: targetId,
+      polarity: 'neutral',
+      label,
+      edgeType: 'touches',
     });
   };
 
@@ -117,19 +159,20 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
     const config = s.config;
 
     // Pressure changes from systems (mutation-based actions)
-    const pressureChanges = config.pressureChanges || {};
-    Object.entries(pressureChanges).forEach(([pressureId, delta]) => {
-      if (typeof delta === 'number') {
-        const polarity = delta >= 0 ? 'positive' : 'negative';
-        pendingEdges.push({
-          source: `system:${sId}`,
-          target: `pressure:${pressureId}`,
-          polarity,
-          label: delta > 0 ? `+${delta}` : `${delta}`,
-          edgeType: 'direct',
-        });
-      }
-    });
+    addPressureEdgesFromChangeMap(`system:${sId}`, config.pressureChanges, 'direct');
+    addPressureEdgesFromChangeMap(`system:${sId}`, config.postProcess?.pressureChanges, 'postProcess');
+
+    const divergencePressure = config.divergencePressure;
+    if (divergencePressure?.pressureName && typeof divergencePressure.delta === 'number') {
+      const polarity = divergencePressure.delta >= 0 ? 'positive' : 'negative';
+      pendingEdges.push({
+        source: `system:${sId}`,
+        target: `pressure:${divergencePressure.pressureName}`,
+        polarity,
+        label: divergencePressure.delta > 0 ? `+${divergencePressure.delta}` : `${divergencePressure.delta}`,
+        edgeType: 'divergence',
+      });
+    }
 
     if (Array.isArray(config.actions)) {
       addPressureEdgesFromMutations(`system:${sId}`, config.actions);
@@ -157,9 +200,43 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
 
     // Action outcome pressure changes
     addPressureEdgesFromMutations(`action:${aId}`, a.outcome?.mutations || []);
+
+    const pressureModifiers = a.probability?.pressureModifiers || [];
+    pressureModifiers.forEach((modifier) => {
+      if (!modifier?.pressure) return;
+      const multiplier = Number(modifier.multiplier);
+      if (!Number.isFinite(multiplier) || multiplier === 0) return;
+      pendingEdges.push({
+        source: `pressure:${modifier.pressure}`,
+        target: `action:${aId}`,
+        polarity: multiplier >= 0 ? 'positive' : 'negative',
+        label: `x${multiplier}`,
+        edgeType: 'modifier',
+      });
+    });
+
+    const variables = a.variables || {};
+    Object.values(variables).forEach((variable) => {
+      const selection = variable?.select;
+      if (!selection) return;
+      addEntityKindEdge(`action:${aId}`, selection.kind);
+      (selection.kinds || []).forEach((kind) => addEntityKindEdge(`action:${aId}`, kind));
+    });
   });
 
-  // 5. Pressure feedback loops - entity counts affect pressures
+  // 5. Entity kind references (systems/actions)
+  if (usageMap?.entityKinds) {
+    Object.entries(usageMap.entityKinds).forEach(([kind, usage]) => {
+      (usage.systems || []).forEach((sysRef) => {
+        if (sysRef?.id) addEntityKindEdge(`system:${sysRef.id}`, kind);
+      });
+      (usage.actions || []).forEach((actionRef) => {
+        if (actionRef?.id) addEntityKindEdge(`action:${actionRef.id}`, kind);
+      });
+    });
+  }
+
+  // 6. Pressure feedback loops - entity counts affect pressures
   pressures.forEach(p => {
     const growth = p.growth || {};
     const feedback = [
@@ -182,7 +259,7 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
     });
   });
 
-  // 6. Pressure thresholds trigger generators/systems via era weights
+  // 7. Pressure thresholds trigger generators/systems via era weights
   pressures.forEach(p => {
     const triggers = p.triggers || [];
     triggers.forEach(trigger => {
@@ -201,7 +278,7 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
     });
   });
 
-  // 7. Validate edges - filter out invalid references and generate warnings
+  // 8. Validate edges - filter out invalid references and generate warnings
   const validEdges = [];
   for (const edge of pendingEdges) {
     const sourceExists = nodeMap.has(edge.source);
@@ -220,12 +297,21 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
     }
   }
 
-  // 8. Filter disabled nodes if requested
+  // 9. Filter disabled nodes if requested
   const filteredNodes = showDisabled ? nodes : nodes.filter(n => !n.isDisabled);
   const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
   const filteredEdges = validEdges.filter(e => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target));
 
-  return { nodes: filteredNodes, links: filteredEdges, warnings };
+  const connectedNodeIds = new Set();
+  filteredEdges.forEach((edge) => {
+    const sourceId = typeof edge.source === 'object' ? edge.source.id : edge.source;
+    const targetId = typeof edge.target === 'object' ? edge.target.id : edge.target;
+    if (sourceId) connectedNodeIds.add(sourceId);
+    if (targetId) connectedNodeIds.add(targetId);
+  });
+  const connectedNodes = filteredNodes.filter(node => connectedNodeIds.has(node.id));
+
+  return { nodes: connectedNodes, links: filteredEdges, warnings };
 }
 
 /**
@@ -294,7 +380,8 @@ export default function CausalLoopEditor({
   generators = [],
   systems = [],
   actions = [],
-  schema = {}
+  schema = {},
+  usageMap,
 }) {
   const containerRef = useRef(null);
   const graphRef = useRef(null);
@@ -329,16 +416,16 @@ export default function CausalLoopEditor({
 
   // Extract graph data
   const { nodes: graphNodes, links: graphLinks, warnings } = useMemo(
-    () => extractCausalGraph(pressures, generators, systems, actions, schema, showDisabled),
-    [pressures, generators, systems, actions, schema, showDisabled]
+    () => extractCausalGraph(pressures, generators, systems, actions, schema, showDisabled, usageMap),
+    [pressures, generators, systems, actions, schema, showDisabled, usageMap]
   );
   const graphData = useMemo(() => ({ nodes: graphNodes, links: graphLinks }), [graphNodes, graphLinks]);
 
   // Count disabled nodes for UI
   const disabledCount = useMemo(() => {
-    const allNodes = extractCausalGraph(pressures, generators, systems, actions, schema, true).nodes;
+    const allNodes = extractCausalGraph(pressures, generators, systems, actions, schema, true, usageMap).nodes;
     return allNodes.filter(n => n.isDisabled).length;
-  }, [pressures, generators, systems, actions, schema]);
+  }, [pressures, generators, systems, actions, schema, usageMap]);
 
   // Detect loops
   const loops = useMemo(() => detectLoops(graphData.nodes, graphData.links), [graphData]);

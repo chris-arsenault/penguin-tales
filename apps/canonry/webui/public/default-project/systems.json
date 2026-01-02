@@ -54,7 +54,7 @@
     "config": {
       "id": "conflict_contagion",
       "name": "Conflict Spread",
-      "description": "Spreads conflicts through alliance networks - allies of enemies become enemies",
+      "description": "Spreads conflicts through alliance networks - allies of enemies become enemies (but not between allies)",
       "contagion": {
         "type": "relationship",
         "relationshipKind": "at_war_with"
@@ -84,6 +84,7 @@
         "strength": 0.4,
         "bidirectional": true
       },
+      "excludeRelationships": ["allied_with"],
       "throttleChance": 0.1,
       "cooldown": 4,
       "pressureChanges": {
@@ -101,10 +102,10 @@
     "config": {
       "id": "alliance_formation",
       "name": "Alliance Formation",
-      "description": "Factions with shared enemies may form alliances",
+      "description": "Factions practicing the same abilities may form alliances",
       "metric": {
         "type": "shared_relationship",
-        "sharedRelationshipKind": "at_war_with",
+        "sharedRelationshipKind": "practitioner_of",
         "sharedDirection": "src"
       },
       "rules": [
@@ -125,6 +126,11 @@
           "betweenMatching": true
         }
       ],
+      "pairExcludeRelationships": ["at_war_with", "betrayed_by"],
+      "pairComponentSizeLimit": {
+        "relationshipKinds": ["allied_with"],
+        "max": 6
+      },
       "throttleChance": 0.15,
       "pressureChanges": {
         "harmony": 5
@@ -338,7 +344,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "statusFilter": "alive",
+        "status": "alive",
         "excludeSubtypes": [
           "hero",
           "mayor"
@@ -441,7 +447,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "statusFilter": "alive",
+        "status": "alive",
         "subtypes": [
           "hero"
         ]
@@ -519,7 +525,7 @@
           "select": {
             "from": {
               "relatedTo": "$self",
-              "relationship": "member_of",
+              "relationshipKind": "member_of",
               "direction": "src"
             },
             "kind": "faction",
@@ -532,7 +538,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "statusFilter": "alive"
+        "status": "alive"
       }
     },
     "enabled": true
@@ -546,7 +552,7 @@
       "conditions": [
         {
           "type": "time_elapsed",
-          "minTicks": 15,
+          "minTicks": 5,
           "since": "created"
         }
       ],
@@ -566,7 +572,7 @@
         "subtypes": [
           "war"
         ],
-        "statusFilter": "active",
+        "status": "active",
         "filters": [
           {
             "type": "lacks_tag",
@@ -586,7 +592,7 @@
       "conditions": [
         {
           "type": "time_elapsed",
-          "minTicks": 12,
+          "minTicks": 6,
           "since": "created"
         }
       ],
@@ -605,7 +611,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "occurrence",
-        "statusFilter": "active",
+        "status": "active",
         "excludeSubtypes": [
           "war"
         ]
@@ -666,7 +672,7 @@
     "config": {
       "id": "war_tie_cleanup",
       "name": "War Tie Cleanup",
-      "description": "Archives stale war ties when no active war occurrence remains",
+      "description": "Archives stale war ties when no active war occurrence remains and cleans up war-related state",
       "conditions": [
         {
           "type": "relationship_count",
@@ -696,13 +702,22 @@
           "entity": "$self",
           "relationshipKind": "at_war_with",
           "direction": "both"
+        },
+        {
+          "type": "remove_tag",
+          "entity": "$self",
+          "tag": "conflict"
+        },
+        {
+          "type": "remove_tag",
+          "entity": "$self",
+          "tag": "honor_bound"
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.6,
+      "throttleChance": 0.4,
       "pressureChanges": {
-        "harmony": 2,
-        "security": 2
+        "harmony": 4
       },
       "selection": {
         "strategy": "by_kind",
@@ -811,7 +826,7 @@
         "minimumScore": 5
       },
       "metaEntity": {
-        "kind": "abilities",
+        "kind": "ability",
         "subtypeFromMajority": true,
         "status": "active",
         "prominenceFromSize": {
@@ -840,7 +855,7 @@
       },
       "selection": {
         "strategy": "by_kind",
-        "kind": "abilities",
+        "kind": "ability",
         "subtypes": [
           "magic"
         ],
@@ -886,7 +901,7 @@
         "minimumScore": 5
       },
       "metaEntity": {
-        "kind": "abilities",
+        "kind": "ability",
         "subtypeFromMajority": true,
         "status": "active",
         "prominenceFromSize": {
@@ -917,7 +932,7 @@
       },
       "selection": {
         "strategy": "by_kind",
-        "kind": "abilities",
+        "kind": "ability",
         "subtypes": [
           "combat"
         ],
@@ -951,7 +966,7 @@
         "minimumScore": 5
       },
       "metaEntity": {
-        "kind": "rules",
+        "kind": "rule",
         "subtypeFromMajority": true,
         "status": "enacted",
         "prominenceFromSize": {
@@ -973,7 +988,7 @@
       },
       "selection": {
         "strategy": "by_kind",
-        "kind": "rules",
+        "kind": "rule",
         "subtypes": [
           "law"
         ]
@@ -1068,8 +1083,8 @@
           "descriptionSuffix": "This belief has spread widely and is now established tradition.",
           "selection": {
             "strategy": "by_kind",
-            "kind": "rules",
-            "statusFilter": "proposed"
+            "kind": "rule",
+            "status": "proposed"
           }
         }
       ],
@@ -1079,13 +1094,9 @@
         "lowAdoptionStatus": "contested",
         "sourceSelection": {
           "strategy": "by_kind",
-          "kind": "rules",
-          "statusFilter": "proposed"
+          "kind": "rule",
+          "status": "proposed"
         }
-      },
-      "pressureChanges": {
-        "harmony": 10,
-        "security": 5
       },
       "selection": {
         "strategy": "by_kind",
@@ -1304,7 +1315,7 @@
       "throttleChance": 0.2,
       "selection": {
         "strategy": "by_kind",
-        "kind": "abilities",
+        "kind": "ability",
         "statuses": [
           "active",
           "discovered",
@@ -1342,7 +1353,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
-        "statusFilter": "intact"
+        "status": "intact"
       }
     },
     "enabled": true
@@ -1375,7 +1386,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
-        "statusFilter": "damaged"
+        "status": "damaged"
       }
     },
     "enabled": true
@@ -1464,7 +1475,7 @@
         "strategy": "by_kind",
         "kind": "npc",
         "subtypes": ["hero"],
-        "statusFilter": "alive",
+        "status": "alive",
         "filters": [
           {
             "type": "lacks_tag",
@@ -1511,7 +1522,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
-        "statusFilter": "active"
+        "status": "active"
       }
     },
     "enabled": true
@@ -1594,7 +1605,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
-        "statusFilter": "active"
+        "status": "active"
       }
     },
     "enabled": true
@@ -1602,7 +1613,7 @@
   {
     "systemType": "thresholdTrigger",
     "config": {
-      "id": "control_coreview llapse",
+      "id": "control_collapse",
       "name": "Control Collapse",
       "description": "When a faction's control over a location weakens below threshold, they lose control entirely",
       "conditions": [
@@ -1622,7 +1633,7 @@
           "select": {
             "from": {
               "relatedTo": "$self",
-              "relationship": "controls",
+              "relationshipKind": "controls",
               "direction": "src"
             },
             "kind": "location",
@@ -1664,7 +1675,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
-        "statusFilter": "active"
+        "status": "active"
       }
     },
     "enabled": true
@@ -1717,7 +1728,7 @@
           "select": {
             "from": {
               "relatedTo": "$self",
-              "relationship": "allied_with",
+              "relationshipKind": "allied_with",
               "direction": "both"
             },
             "kind": "faction",
@@ -1736,10 +1747,17 @@
           "select": {
             "from": {
               "relatedTo": "$ally",
-              "relationship": "at_war_with",
+              "relationshipKind": "at_war_with",
               "direction": "both"
             },
             "kind": "faction",
+            "filters": [
+              {
+                "type": "lacks_relationship",
+                "kind": "allied_with",
+                "with": "$self"
+              }
+            ],
             "pickStrategy": "random"
           },
           "required": true
@@ -1780,7 +1798,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
-        "statusFilter": "active"
+        "status": "active"
       }
     },
     "enabled": true
@@ -1855,7 +1873,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
-        "statusFilter": "active"
+        "status": "active"
       }
     },
     "enabled": true
@@ -1907,7 +1925,70 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
-        "statusFilter": "active"
+        "status": "active"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "alliance_dissolution",
+      "name": "Alliance Dissolution",
+      "description": "Oath breakers eventually lose their alliances as trust erodes completely",
+      "conditions": [
+        {
+          "type": "tag_exists",
+          "tag": "oath_breaker"
+        },
+        {
+          "type": "relationship_exists",
+          "relationshipKind": "allied_with",
+          "direction": "both"
+        },
+        {
+          "type": "time_elapsed",
+          "minTicks": 3,
+          "since": "created"
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.4
+        }
+      ],
+      "variables": {
+        "$former_ally": {
+          "select": {
+            "from": {
+              "relatedTo": "$self",
+              "relationshipKind": "allied_with",
+              "direction": "both"
+            },
+            "kind": "faction",
+            "pickStrategy": "random"
+          },
+          "required": true
+        }
+      },
+      "actions": [
+        {
+          "type": "archive_relationship",
+          "entity": "$self",
+          "relationshipKind": "allied_with",
+          "with": "$former_ally"
+        },
+        {
+          "type": "remove_tag",
+          "entity": "$self",
+          "tag": "honor_bound"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.4,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "status": "active"
       }
     },
     "enabled": true
@@ -1943,7 +2024,7 @@
           "select": {
             "from": {
               "relatedTo": "$self",
-              "relationship": "resident_of",
+              "relationshipKind": "resident_of",
               "direction": "src"
             },
             "kind": "location",
@@ -2012,7 +2093,7 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "statusFilter": "alive"
+        "status": "alive"
       }
     },
     "enabled": true
@@ -2052,7 +2133,7 @@
         "strategy": "by_kind",
         "kind": "npc",
         "subtypes": ["hero"],
-        "statusFilter": "alive",
+        "status": "alive",
         "filters": [
           {
             "type": "has_tag",
@@ -2131,6 +2212,62 @@
   {
     "systemType": "thresholdTrigger",
     "config": {
+      "id": "cleansed_isolation_decay",
+      "name": "Sacred Ground Fades",
+      "description": "Cleansed locations without nearby sanctified neighbors lose their protection as the wards weaken",
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "location",
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "cleansed"
+          }
+        ]
+      },
+      "conditions": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "count_max",
+            "path": [
+              {
+                "via": "adjacent_to",
+                "direction": "any",
+                "targetKind": "location",
+                "targetSubtype": "any",
+                "filters": [
+                  {
+                    "type": "has_tag",
+                    "tag": "cleansed"
+                  }
+                ]
+              }
+            ],
+            "count": 0
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "remove_tag",
+          "entity": "$self",
+          "tag": "cleansed"
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "magical_stability",
+          "delta": -2
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.3
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
       "id": "ice_memory_witness",
       "name": "The Ice Remembers",
       "description": "The ice witnesses deeds at significant locations, annotating those present with echoes",
@@ -2138,7 +2275,7 @@
         "strategy": "by_kind",
         "kind": "npc",
         "subtypes": ["hero", "merchant", "outlaw", "mayor", "orca"],
-        "statusFilter": "alive"
+        "status": "alive"
       },
       "conditions": [
         {
@@ -2178,65 +2315,50 @@
     "enabled": true
   },
   {
-    "systemType": "graphContagion",
+    "systemType": "connectionEvolution",
     "config": {
-      "id": "anomaly_resonance",
-      "name": "Anomaly Resonance",
-      "description": "Anomalies radiate strangeness to nearby locations. Adjacent places become touched by the mystical, dangerous, or hidden qualities of their anomalous neighbors.",
-      "contagion": {
-        "type": "tag",
-        "tag": "mystical"
+      "id": "anomaly_mystical_gain",
+      "name": "Anomaly Stirs",
+      "description": "Anomalous locations gain mystical qualities over time. NPCs residing nearby dampen this effect through their stabilizing presence.",
+      "metric": {
+        "type": "neighbor_kind_count",
+        "via": ["adjacent_to", "contained_by", "contains"],
+        "viaDirection": "both",
+        "then": "resident_of",
+        "thenDirection": "dst",
+        "kind": "npc"
       },
-      "vectors": [
-        {
-          "relationshipKind": "adjacent_to",
-          "direction": "both",
-          "minStrength": 0.2
-        }
-      ],
-      "transmission": {
-        "baseRate": 0.2,
-        "contactMultiplier": 0.15,
-        "maxProbability": 0.6
-      },
-      "infectionAction": {
-        "type": "set_tag",
-        "tag": "mystical",
-        "value": true,
-        "entity": "$target"
-      },
-      "secondaryInfections": [
+      "rules": [
         {
           "condition": {
-            "type": "source_has_tag",
-            "tag": "dangerous"
+            "operator": "<=",
+            "threshold": 0
           },
+          "probability": 0.25,
           "action": {
             "type": "set_tag",
-            "tag": "dangerous",
+            "tag": "mystical",
             "value": true,
-            "entity": "$target"
-          },
-          "probability": 0.3
+            "entity": "$self"
+          }
         },
         {
           "condition": {
-            "type": "source_has_tag",
-            "tag": "secretive"
+            "operator": ">=",
+            "threshold": 1
           },
+          "probability": 0.06,
           "action": {
             "type": "set_tag",
-            "tag": "hidden",
+            "tag": "mystical",
             "value": true,
-            "entity": "$target"
-          },
-          "probability": 0.25
+            "entity": "$self"
+          }
         }
       ],
-      "throttleChance": 0.4,
-      "cooldown": 8,
+      "throttleChance": 0.3,
       "pressureChanges": {
-        "magical_stability": -3
+        "magical_stability": -2
       },
       "selection": {
         "strategy": "by_kind",
@@ -2245,9 +2367,321 @@
           {
             "type": "has_tag",
             "tag": "anomaly"
+          },
+          {
+            "type": "lacks_tag",
+            "tag": "mystical"
           }
         ]
       }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "connectionEvolution",
+    "config": {
+      "id": "mystical_decay",
+      "name": "Mystical Fades",
+      "description": "Mystical qualities fade from locations over time. NPCs residing nearby dampen this effect, stabilizing the mystical energy.",
+      "metric": {
+        "type": "neighbor_kind_count",
+        "via": ["adjacent_to", "contained_by", "contains"],
+        "viaDirection": "both",
+        "then": "resident_of",
+        "thenDirection": "dst",
+        "kind": "npc"
+      },
+      "rules": [
+        {
+          "condition": {
+            "operator": "<=",
+            "threshold": 0
+          },
+          "probability": 0.2,
+          "action": {
+            "type": "remove_tag",
+            "tag": "mystical",
+            "entity": "$self"
+          }
+        },
+        {
+          "condition": {
+            "operator": ">=",
+            "threshold": 1
+          },
+          "probability": 0.04,
+          "action": {
+            "type": "remove_tag",
+            "tag": "mystical",
+            "entity": "$self"
+          }
+        }
+      ],
+      "throttleChance": 0.3,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "location",
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "mystical"
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "anomaly_activation",
+      "name": "Anomaly Surges",
+      "description": "When multiple adjacent anomalies resonate without NPC interference, one surges to an active state capable of crystallizing power.",
+      "conditions": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "count_min",
+            "count": 1,
+            "path": [
+              {
+                "via": ["adjacent_to", "contained_by", "contains"],
+                "direction": "any",
+                "targetKind": "location",
+                "targetSubtype": "any",
+                "filters": [
+                  {
+                    "type": "has_tag",
+                    "tag": "anomaly"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "count_max",
+            "count": 0,
+            "path": [
+              {
+                "via": ["adjacent_to", "contained_by", "contains"],
+                "direction": "any",
+                "targetKind": "location",
+                "targetSubtype": "any"
+              },
+              {
+                "via": "resident_of",
+                "direction": "in",
+                "targetKind": "npc",
+                "targetSubtype": "any"
+              }
+            ]
+          }
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.2
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "entity": "$self",
+          "tag": "active",
+          "value": true
+        },
+        {
+          "type": "adjust_prominence",
+          "entity": "$self",
+          "delta": 0.3
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.4,
+      "pressureChanges": {
+        "magical_stability": -5
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "location",
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "anomaly"
+          },
+          {
+            "type": "has_tag",
+            "tag": "mystical"
+          },
+          {
+            "type": "lacks_tag",
+            "tag": "active"
+          },
+          {
+            "type": "lacks_tag",
+            "tag": "depleted"
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "depleted_recovery",
+      "name": "Anomaly Recovers",
+      "description": "Depleted anomalies slowly recover their potential over time.",
+      "conditions": [
+        {
+          "type": "time_elapsed",
+          "minTicks": 8,
+          "since": "updated"
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.25
+        }
+      ],
+      "actions": [
+        {
+          "type": "remove_tag",
+          "entity": "$self",
+          "tag": "depleted"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "location",
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "depleted"
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "border_friction",
+      "name": "Border Friction",
+      "description": "Factions controlling adjacent territories breed tension and reduce harmony.",
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "filters": [
+          {
+            "type": "has_relationship",
+            "kind": "controls",
+            "direction": "src"
+          }
+        ]
+      },
+      "conditions": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "controls",
+                "direction": "out",
+                "targetKind": "location",
+                "targetSubtype": "any"
+              },
+              {
+                "via": "adjacent_to",
+                "direction": "any",
+                "targetKind": "location",
+                "targetSubtype": "any"
+              },
+              {
+                "via": "controls",
+                "direction": "in",
+                "targetKind": "faction",
+                "targetSubtype": "any"
+              }
+            ],
+            "where": [
+              {
+                "type": "not_self"
+              }
+            ]
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "modify_pressure",
+          "pressureId": "harmony",
+          "delta": -2.0
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.6
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "artifact_covetousness",
+      "name": "Artifact Covetousness",
+      "description": "Factions covet powerful artifacts held in territories they do not control, breeding resentment.",
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "status": "active"
+      },
+      "conditions": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "practitioner_of",
+                "direction": "out",
+                "targetKind": "ability",
+                "targetSubtype": "any"
+              },
+              {
+                "via": "manifests_at",
+                "direction": "out",
+                "targetKind": "location",
+                "targetSubtype": "any"
+              },
+              {
+                "via": "stored_at",
+                "direction": "in",
+                "targetKind": "artifact",
+                "targetSubtype": "any"
+              }
+            ],
+            "where": [
+              {
+                "type": "not_self"
+              }
+            ]
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "modify_pressure",
+          "pressureId": "harmony",
+          "delta": -1.5
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5
     },
     "enabled": true
   }

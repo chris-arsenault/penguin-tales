@@ -110,11 +110,15 @@ export function normalizeInitialState(entities: any[]): HardState[] {
       tags = entity.tags || {};
     }
 
+    const narrativeHint = entity.narrativeHint ?? entity.summary ?? (entity.description ? entity.description : undefined);
+
     return {
       id: entity.id,
       kind: entity.kind as HardState['kind'],
       subtype: entity.subtype,
       name: entity.name,
+      summary: entity.summary,
+      narrativeHint,
       description: entity.description || '',
       status: entity.status,
       prominence: entity.prominence as HardState['prominence'],
@@ -201,6 +205,8 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
     ? explicitEraId
     : (entity.kind === FRAMEWORK_ENTITY_KINDS.ERA ? entity.subtype : currentEraEntity?.id);
 
+  const narrativeHint = entity.narrativeHint ?? entity.summary ?? (entity.description ? entity.description : undefined);
+
   const createdId = await graph.createEntity({
     id: entityId,
     kind: entity.kind,
@@ -210,6 +216,7 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
     eraId: resolvedEraId,
     name: entity.name,
     description: entity.description,
+    narrativeHint,
     status: entity.status,
     prominence: entity.prominence,
     culture: entity.culture,

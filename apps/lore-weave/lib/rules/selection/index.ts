@@ -95,8 +95,8 @@ export function applyEntityCriteria(
     result = result.filter((e) => !criteria.excludeSubtypes!.includes(e.subtype));
   }
 
-  if (criteria.statusFilter) {
-    result = result.filter((e) => e.status === criteria.statusFilter);
+  if (criteria.status) {
+    result = result.filter((e) => e.status === criteria.status);
   }
 
   if (criteria.statuses && criteria.statuses.length > 0) {
@@ -356,7 +356,7 @@ export function selectEntities(
   const kindLabel = kinds.length > 0 ? kinds.join('|') : 'any';
 
   // Include historical entities if the rule explicitly asks for them
-  const needsHistorical = rule.statusFilter === 'historical' || rule.statuses?.includes('historical');
+  const needsHistorical = rule.status === 'historical' || rule.statuses?.includes('historical');
 
   const getCandidatesByKind = (): HardState[] => {
     if (kinds.length === 0 || kinds.includes('any')) {
@@ -453,9 +453,9 @@ export function selectEntities(
     pushTrace(trace, `subtype not in [${rule.excludeSubtypes.join(', ')}]`, entities.length);
   }
 
-  if (rule.statusFilter) {
-    entities = entities.filter((e) => e.status === rule.statusFilter);
-    pushTrace(trace, `status=${rule.statusFilter}`, entities.length);
+  if (rule.status) {
+    entities = entities.filter((e) => e.status === rule.status);
+    pushTrace(trace, `status=${rule.status}`, entities.length);
   }
 
   if (rule.statuses && rule.statuses.length > 0) {
@@ -537,7 +537,7 @@ export function selectVariableEntities(
   let entities: HardState[];
 
   // Include historical entities if the rule explicitly asks for them
-  const needsHistorical = select.statusFilter === 'historical' || select.statuses?.includes('historical');
+  const needsHistorical = select.status === 'historical' || select.statuses?.includes('historical');
 
   if (select.from && select.from !== 'graph') {
     // Check if this is a path-based traversal
@@ -579,10 +579,10 @@ export function selectVariableEntities(
       const direction = normalizeDirection(select.from.direction);
       entities = graphView.getConnectedEntities(
         relatedTo.id,
-        select.from.relationship,
+        select.from.relationshipKind,
         direction
       );
-      pushTrace(trace, `via ${select.from.relationship} from ${relatedTo.name || relatedTo.id}`, entities.length);
+      pushTrace(trace, `via ${select.from.relationshipKind} from ${relatedTo.name || relatedTo.id}`, entities.length);
     }
   } else {
     if (select.kinds && select.kinds.length > 0) {
@@ -610,9 +610,9 @@ export function selectVariableEntities(
     pushTrace(trace, `subtype in [${select.subtypes.join(', ')}]`, entities.length);
   }
 
-  if (select.statusFilter) {
-    entities = entities.filter((e) => e.status === select.statusFilter);
-    pushTrace(trace, `status=${select.statusFilter}`, entities.length);
+  if (select.status) {
+    entities = entities.filter((e) => e.status === select.status);
+    pushTrace(trace, `status=${select.status}`, entities.length);
   }
 
   if (select.statuses && select.statuses.length > 0) {

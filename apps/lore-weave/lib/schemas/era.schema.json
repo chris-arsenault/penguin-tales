@@ -54,6 +54,162 @@
       "minLength": 1,
       "description": "Either the literal 'any' (meaning match all) or a specific non-empty value"
     },
+    "Prominence": { "enum": ["forgotten", "marginal", "recognized", "renowned", "mythic"] },
+
+    "SelectionFilter": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "entities"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "exclude" },
+            "entities": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "kind"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_relationship" },
+            "kind": { "$ref": "#/$defs/NonEmptyString" },
+            "with": { "$ref": "#/$defs/NonEmptyString" },
+            "direction": { "enum": ["src", "dst", "both"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "kind"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "lacks_relationship" },
+            "kind": { "$ref": "#/$defs/NonEmptyString" },
+            "with": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tag"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_tag" },
+            "tag": { "$ref": "#/$defs/NonEmptyString" },
+            "value": { "oneOf": [{ "type": "string" }, { "type": "boolean" }] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tags"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_tags" },
+            "tags": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tags"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_any_tag" },
+            "tags": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tag"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "lacks_tag" },
+            "tag": { "$ref": "#/$defs/NonEmptyString" },
+            "value": { "oneOf": [{ "type": "string" }, { "type": "boolean" }] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tags"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "lacks_any_tag" },
+            "tags": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "culture"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_culture" },
+            "culture": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "culture"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "not_has_culture" },
+            "culture": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "with"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "matches_culture" },
+            "with": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "with"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "not_matches_culture" },
+            "with": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "status"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_status" },
+            "status": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "minProminence"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_prominence" },
+            "minProminence": { "$ref": "#/$defs/Prominence" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "relationshipKind", "with"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "shares_related" },
+            "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
+            "with": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "assert"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "graph_path" },
+            "assert": { "$ref": "#/$defs/GraphPathAssertion" }
+          }
+        }
+      ]
+    },
 
     "Condition": {
       "oneOf": [

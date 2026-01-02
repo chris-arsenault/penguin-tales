@@ -93,20 +93,36 @@ function traverseStep(
   const direction = step.direction === 'out' ? 'src' :
                    step.direction === 'in' ? 'dst' : 'both';
 
-  let related = graphView.getConnectedEntities(entity.id, step.via, direction);
+  // Support both single relationship kind and array of kinds
+  const viaKinds = Array.isArray(step.via) ? step.via : [step.via];
+
+  // Collect entities connected via any of the specified relationship kinds
+  const relatedSet = new Set<string>();
+  const related: HardState[] = [];
+
+  for (const viaKind of viaKinds) {
+    const entities = graphView.getConnectedEntities(entity.id, viaKind, direction);
+    for (const e of entities) {
+      if (!relatedSet.has(e.id)) {
+        relatedSet.add(e.id);
+        related.push(e);
+      }
+    }
+  }
 
   // Filter by target kind/subtype/status ("any" means no filtering)
+  let filtered = related;
   if (step.targetKind && step.targetKind !== 'any') {
-    related = related.filter(e => e.kind === step.targetKind);
+    filtered = filtered.filter(e => e.kind === step.targetKind);
   }
   if (step.targetSubtype && step.targetSubtype !== 'any') {
-    related = related.filter(e => e.subtype === step.targetSubtype);
+    filtered = filtered.filter(e => e.subtype === step.targetSubtype);
   }
   if (step.targetStatus && step.targetStatus !== 'any') {
-    related = related.filter(e => e.status === step.targetStatus);
+    filtered = filtered.filter(e => e.status === step.targetStatus);
   }
 
-  return related;
+  return filtered;
 }
 
 /**

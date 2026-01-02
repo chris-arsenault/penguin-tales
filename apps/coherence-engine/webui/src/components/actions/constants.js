@@ -7,6 +7,7 @@ export const TABS = [
   { id: 'actor', label: 'Actor', icon: '🎭' },
   { id: 'instigator', label: 'Instigator', icon: '🧭' },
   { id: 'targeting', label: 'Targeting', icon: '🎯' },
+  { id: 'variables', label: 'Variables', icon: '📦' },
   { id: 'outcome', label: 'Outcome', icon: '⚡' },
   { id: 'probability', label: 'Probability', icon: '🎲' },
 ];

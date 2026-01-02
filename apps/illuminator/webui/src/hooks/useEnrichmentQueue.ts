@@ -35,6 +35,7 @@ export interface EnrichedEntity {
   status: string;
   description: string;
   summary?: string;
+  narrativeHint?: string;
   lockedSummary?: boolean;
   tags: Record<string, unknown>;
   createdAt?: number;
@@ -449,6 +450,7 @@ export function useEnrichmentQueue(
           entityCulture: entity.culture,
           entityLockedSummary: entity.lockedSummary,
           entityLockedSummaryText: entity.lockedSummary && entity.summary ? entity.summary : undefined,
+          entityNarrativeHintText: entity.narrativeHint,
           ...taskFields,
           simulationRunId: runId,
           status: 'queued' as const,

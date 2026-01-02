@@ -14,8 +14,8 @@
         "npc": 0.17,
         "location": 0.23,
         "faction": 0.19,
-        "rules": 0.15,
-        "abilities": 0.14,
+        "rule": 0.15,
+        "ability": 0.14,
         "artifact": 0.12
       },
       "tolerance": 0.05
@@ -123,8 +123,8 @@
     "The Clever Ice Age": {
       "comment": "Innovation era - more abilities, rules",
       "entityKindDistribution": {
-        "abilities": 0.22,
-        "rules": 0.24,
+        "ability": 0.22,
+        "rule": 0.24,
         "npc": 0.2
       },
       "relationshipDistribution": {
@@ -164,7 +164,7 @@
       "comment": "Reconstruction era - rebuilding, stabilization",
       "entityKindDistribution": {
         "location": 0.28,
-        "rules": 0.2
+        "rule": 0.2
       },
       "prominenceDistribution": {
         "recognized": 0.4,
@@ -242,7 +242,7 @@
           "comment": "Mystical factions"
         }
       },
-      "rules": {
+      "rule": {
         "social": {
           "target": 6,
           "comment": "Cultural norms and ideologies"
@@ -260,7 +260,7 @@
           "comment": "Legends and commemorations"
         }
       },
-      "abilities": {
+      "ability": {
         "magic": {
           "target": 7,
           "comment": "Mystical techniques"

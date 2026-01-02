@@ -124,7 +124,7 @@
       "imageAvoid": "Characters holding the artifact. Action scenes. The artifact as a small detail in a larger scene."
     },
 
-    "abilities": {
+    "ability": {
       "focus": "Focus on how the magic MANIFESTS and what it COSTS. Magic should feel dangerous or strange, not convenient.",
       "relationshipUse": "Who taught this? Who fears it? Who died learning it wrong?",
       "proseHint": "Show the physical sensation of magic - what it smells like, sounds like, what it takes from the user.",
@@ -142,7 +142,7 @@
       "imageAvoid": "Characters as the focus. Static representations of magic. Abstract symbols alone."
     },
 
-    "rules": {
+    "rule": {
       "focus": "Focus on how the rule CONSTRAINS or ENABLES. Magic systems should feel like they have costs and limits.",
       "relationshipUse": "Who enforces this rule? Who breaks it? What happens to those who test its limits?",
       "proseHint": "Show the rule through its exceptions - who has broken it, what happened when they did.",
@@ -254,8 +254,8 @@
       "location": ["SPECIES", "ARCHITECTURE"],
       "faction": ["SPECIES", "ATTIRE", "ARCHITECTURE", "TECH"],
       "occurrence": ["SPECIES", "WEATHER_ASSOCIATION", "COLOR_PALETTE"],
-      "abilities": ["TECH", "MAGIC"],
-      "rules": ["ARCHITECTURE", "TECH"],
+      "ability": ["TECH", "MAGIC"],
+      "rule": ["ARCHITECTURE", "TECH"],
       "artifact": ["ARTIFACT", "TECH", "MAGIC"],
       "era": ["ARCHITECTURE", "WEATHER_ASSOCIATION", "DECAY_PATTERN"]
     },
@@ -265,8 +265,8 @@
       "location": ["FEARS", "TABOOS"],
       "occurrence": ["SPEECH", "OUTSIDER_VIEW"],
       "era": ["GOVERNANCE", "SELF_VIEW"],
-      "abilities": ["SPEECH", "TABOOS"],
-      "rules": ["GOVERNANCE", "OUTSIDER_VIEW"],
+      "ability": ["SPEECH", "TABOOS"],
+      "rule": ["GOVERNANCE", "OUTSIDER_VIEW"],
       "artifact": ["SPEECH", "TABOOS"]
     }
   },

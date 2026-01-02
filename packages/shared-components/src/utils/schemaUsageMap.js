@@ -231,13 +231,17 @@ function scanGraphPathAssertion(assertion, usageMap, contextKey, ref, info) {
   if (!assertion) return;
   (assertion.path || []).forEach((step, idx) => {
     if (step.via) {
-      recordRelationshipKindRef(
-        usageMap,
-        step.via,
-        contextKey,
-        ref,
-        { ...info, field: `${info.field}.path[${idx}].via` }
-      );
+      // Support both single relationship kind and array of kinds
+      const viaKinds = Array.isArray(step.via) ? step.via : [step.via];
+      viaKinds.forEach((viaKind) => {
+        recordRelationshipKindRef(
+          usageMap,
+          viaKind,
+          contextKey,
+          ref,
+          { ...info, field: `${info.field}.path[${idx}].via` }
+        );
+      });
     }
     if (step.targetKind && step.targetKind !== 'any') {
       recordEntityKindRef(
@@ -342,8 +346,8 @@ function scanSelectionRule(selection, usageMap, contextKey, ref, info) {
   });
   (selection.subtypes || []).forEach(subtype => recordSubtypeRef(usageMap, subtype, contextKey, ref));
   (selection.excludeSubtypes || []).forEach(subtype => recordSubtypeRef(usageMap, subtype, contextKey, ref));
-  if (selection.statusFilter) {
-    recordStatusRef(usageMap, selection.statusFilter, contextKey, ref);
+  if (selection.status) {
+    recordStatusRef(usageMap, selection.status, contextKey, ref);
   }
   (selection.statuses || []).forEach(status => recordStatusRef(usageMap, status, contextKey, ref));
   if (selection.notStatus) {
@@ -374,9 +378,9 @@ function scanVariableSelectionRule(selection, usageMap, contextKey, ref, info) {
   if (!selection) return;
   const from = selection.from;
   if (from && typeof from === 'object') {
-    recordRelationshipKindRef(usageMap, from.relationship, contextKey, ref, {
+    recordRelationshipKindRef(usageMap, from.relationshipKind, contextKey, ref, {
       ...info,
-      field: `${info.field}.from.relationship`,
+      field: `${info.field}.from.relationshipKind`,
     });
   }
   if (selection.kind) {
@@ -386,8 +390,8 @@ function scanVariableSelectionRule(selection, usageMap, contextKey, ref, info) {
     recordEntityKindRef(usageMap, kind, contextKey, ref, { ...info, field: `${info.field}.kinds` });
   });
   (selection.subtypes || []).forEach(subtype => recordSubtypeRef(usageMap, subtype, contextKey, ref));
-  if (selection.statusFilter) {
-    recordStatusRef(usageMap, selection.statusFilter, contextKey, ref);
+  if (selection.status) {
+    recordStatusRef(usageMap, selection.status, contextKey, ref);
   }
   (selection.statuses || []).forEach(status => recordStatusRef(usageMap, status, contextKey, ref));
   if (selection.notStatus) {
@@ -523,6 +527,28 @@ function scanMetric(metric, usageMap, contextKey, ref, info) {
       break;
     case 'shared_relationship':
       recordRelationshipKindRef(usageMap, metric.sharedRelationshipKind, contextKey, ref, info);
+      break;
+    case 'neighbor_kind_count':
+    case 'neighbor_prominence':
+      // Support both single relationship kind and array of kinds for 'via'
+      if (metric.via) {
+        const viaKinds = Array.isArray(metric.via) ? metric.via : [metric.via];
+        viaKinds.forEach((kind) =>
+          recordRelationshipKindRef(usageMap, kind, contextKey, ref, info)
+        );
+      }
+      // Handle 'then' relationship if present
+      if (metric.then) {
+        recordRelationshipKindRef(usageMap, metric.then, contextKey, ref, info);
+      }
+      // Handle relationshipKinds array (for neighbor_prominence)
+      (metric.relationshipKinds || []).forEach((kind) =>
+        recordRelationshipKindRef(usageMap, kind, contextKey, ref, info)
+      );
+      // Handle kind filter for neighbor_kind_count
+      if (metric.kind) {
+        recordEntityKindRef(usageMap, metric.kind, contextKey, ref, info);
+      }
       break;
     default:
       break;

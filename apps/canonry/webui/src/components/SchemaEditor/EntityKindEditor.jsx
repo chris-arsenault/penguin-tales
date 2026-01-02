@@ -65,8 +65,8 @@ const DEFAULT_KIND_COLOR_MAP = {
   npc: '#6FB1FC',
   faction: '#FC6B6B',
   location: '#6BFC9C',
-  rules: '#FCA86B',
-  abilities: '#C76BFC',
+  rule: '#FCA86B',
+  ability: '#C76BFC',
   occurrence: '#FCD76B',
   era: '#FFD700',
 };

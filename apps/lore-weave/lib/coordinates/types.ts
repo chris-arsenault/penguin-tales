@@ -26,7 +26,7 @@ export type {
  * CRITICAL CONCEPT: SEMANTIC PLANES ARE PER-ENTITY-KIND
  * =============================================================================
  *
- * Each entity kind (npc, location, faction, abilities, rules, etc.) has its own
+ * Each entity kind (npc, location, faction, ability, rule, etc.) has its own
  * INDEPENDENT semantic plane. Coordinates represent SEMANTIC SIMILARITY within
  * that kind, NOT physical/spatial location.
  *

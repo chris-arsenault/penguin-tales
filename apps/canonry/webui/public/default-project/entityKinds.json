@@ -1,6 +1,6 @@
 [
   {
-    "kind": "abilities",
+    "kind": "ability",
     "description": "Abilities & Techniques",
     "category": "power",
     "subtypes": [
@@ -73,7 +73,7 @@
       },
       "regions": [
         {
-          "id": "abilities_nightshelf_moonweave",
+          "id": "ability_nightshelf_moonweave",
           "label": "Moonweave Mysteries",
           "color": "#9370DB",
           "culture": "nightshelf",
@@ -88,7 +88,7 @@
           }
         },
         {
-          "id": "abilities_aurora_prismcraft",
+          "id": "ability_aurora_prismcraft",
           "label": "Prismcraft Arts",
           "color": "#FFD700",
           "culture": "aurora-stack",
@@ -103,7 +103,7 @@
           }
         },
         {
-          "id": "abilities_orca_battleways",
+          "id": "ability_orca_battleways",
           "label": "Orca Battleways",
           "color": "#2F4F4F",
           "culture": "orca",
@@ -196,7 +196,7 @@
     }
   },
   {
-    "kind": "rules",
+    "kind": "rule",
     "description": "Laws & Traditions",
     "category": "concept",
     "subtypes": [
@@ -267,7 +267,7 @@
       },
       "regions": [
         {
-          "id": "rules_aurora_trade_edicts",
+          "id": "rule_aurora_trade_edicts",
           "label": "Trade Edicts",
           "color": "#FFD700",
           "culture": "aurora-stack",
@@ -282,7 +282,7 @@
           }
         },
         {
-          "id": "rules_orca_war_doctrines",
+          "id": "rule_orca_war_doctrines",
           "label": "War Doctrines",
           "color": "#2F4F4F",
           "culture": "orca",
@@ -297,7 +297,7 @@
           }
         },
         {
-          "id": "rules_nightshelf_shadow_codes",
+          "id": "rule_nightshelf_shadow_codes",
           "label": "Shadow Codes",
           "color": "#9370DB",
           "culture": "nightshelf",

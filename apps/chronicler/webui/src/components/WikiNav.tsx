@@ -67,7 +67,7 @@ interface WikiNavProps {
   chronicles: WikiPage[];
   staticPages: WikiPage[];
   confluxPages: PageIndexEntry[];
-  webPages: PageIndexEntry[];
+  huddlePages: PageIndexEntry[];
   currentPageId: string | null;
   onNavigate: (pageId: string) => void;
   onGoHome: () => void;
@@ -81,7 +81,7 @@ export default function WikiNav({
   chronicles,
   staticPages,
   confluxPages,
-  webPages,
+  huddlePages,
   currentPageId,
   onNavigate,
   onGoHome,
@@ -314,34 +314,34 @@ export default function WikiNav({
       )}
 
       {/* Huddles */}
-      {webPages.length > 0 && (
+      {huddlePages.length > 0 && (
         <div style={styles.section}>
           <div style={styles.sectionTitle}>Huddles</div>
           <button
             style={{
               ...styles.navItem,
-              ...(currentPageId === 'webs' ? styles.navItemActive : {}),
+              ...(currentPageId === 'huddles' ? styles.navItemActive : {}),
             }}
-            onClick={() => onNavigate('webs')}
+            onClick={() => onNavigate('huddles')}
             onMouseEnter={(e) => {
-              if (currentPageId !== 'webs') {
+              if (currentPageId !== 'huddles') {
                 e.currentTarget.style.backgroundColor = colors.hoverBg;
                 e.currentTarget.style.color = colors.accent;
               }
             }}
             onMouseLeave={(e) => {
-              if (currentPageId !== 'webs') {
+              if (currentPageId !== 'huddles') {
                 e.currentTarget.style.backgroundColor = 'transparent';
                 e.currentTarget.style.color = colors.textSecondary;
               }
             }}
           >
             All Huddles
-            <span style={styles.badge}>({webPages.length})</span>
+            <span style={styles.badge}>({huddlePages.length})</span>
           </button>
           {/* Show 5 largest huddle types */}
-          {webPages
-            .sort((a, b) => (b.webType?.largestSize ?? 0) - (a.webType?.largestSize ?? 0))
+          {huddlePages
+            .sort((a, b) => (b.huddleType?.largestSize ?? 0) - (a.huddleType?.largestSize ?? 0))
             .slice(0, 5)
             .map(page => (
               <button
@@ -365,7 +365,7 @@ export default function WikiNav({
                 }}
               >
                 {page.title}
-                <span style={styles.badge}>({page.webType?.largestSize ?? 0})</span>
+                <span style={styles.badge}>({page.huddleType?.largestSize ?? 0})</span>
               </button>
             ))}
         </div>

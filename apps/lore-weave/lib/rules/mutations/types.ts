@@ -24,6 +24,7 @@ export type Mutation =
   // Relationship mutations
   | CreateRelationshipMutation
   | ArchiveRelationshipMutation
+  | ArchiveAllRelationshipsMutation
   | AdjustRelationshipStrengthMutation
   | TransferRelationshipMutation
 
@@ -107,6 +108,20 @@ export interface ArchiveRelationshipMutation {
   relationshipKind: string;
   /** Other entity reference (optional - if not provided, archives all of this kind) */
   with?: string;
+  /** Direction: 'src', 'dst', or 'both' (default: 'both') */
+  direction?: Direction;
+}
+
+/**
+ * Archive all relationships of a kind involving an entity.
+ * Convenience alias for archive_relationship without 'with'.
+ */
+export interface ArchiveAllRelationshipsMutation {
+  type: 'archive_all_relationships';
+  /** Entity reference */
+  entity: string;
+  /** Relationship kind to archive */
+  relationshipKind: string;
   /** Direction: 'src', 'dst', or 'both' (default: 'both') */
   direction?: Direction;
 }

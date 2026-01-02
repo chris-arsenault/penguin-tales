@@ -59,7 +59,31 @@
                   "description": "Bonuses added to metric value based on entity subtype"
                 },
                 "throttleChance": { "type": "number", "minimum": 0, "maximum": 1 },
-                "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
+                "pressureChanges": { "$ref": "#/$defs/PressureChanges" },
+                "pairExcludeRelationships": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "For betweenMatching rules: exclude pairs with these relationship kinds"
+                },
+                "pairComponentSizeLimit": {
+                  "type": "object",
+                  "required": ["relationshipKinds", "max"],
+                  "additionalProperties": false,
+                  "description": "For betweenMatching rules: limit combined component size when pairing",
+                  "properties": {
+                    "relationshipKinds": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "minItems": 1,
+                      "description": "Relationship kind(s) to calculate component size"
+                    },
+                    "max": {
+                      "type": "integer",
+                      "minimum": 2,
+                      "description": "Maximum allowed component size after connecting the pair"
+                    }
+                  }
+                }
               }
             }
           ]
@@ -168,7 +192,12 @@
                 },
                 "cooldown": { "type": "number" },
                 "throttleChance": { "type": "number", "minimum": 0, "maximum": 1 },
-                "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
+                "pressureChanges": { "$ref": "#/$defs/PressureChanges" },
+                "excludeRelationships": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Exclude infections where entity and source have these relationship kinds"
+                }
               }
             }
           ]
@@ -197,6 +226,11 @@
                 "actions": {
                   "type": "array",
                   "items": { "$ref": "#/$defs/TriggerAction" }
+                },
+                "variables": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Variable definitions for use in actions"
                 },
                 "clusterMode": { "enum": ["individual", "all_matching", "by_relationship"] },
                 "clusterRelationshipKind": { "type": "string" },
@@ -760,6 +794,24 @@
             "type": { "const": "graph_path" },
             "assert": { "$ref": "#/$defs/GraphPathAssertion" }
           }
+        },
+        {
+          "type": "object",
+          "required": ["type", "relationshipKinds"],
+          "additionalProperties": false,
+          "description": "Filter entities based on connected component size",
+          "properties": {
+            "type": { "const": "component_size" },
+            "relationshipKinds": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/NonEmptyString" },
+              "minItems": 1,
+              "description": "Relationship kind(s) defining the subgraph edges"
+            },
+            "min": { "type": "integer", "minimum": 1, "description": "Minimum component size (inclusive)" },
+            "max": { "type": "integer", "minimum": 1, "description": "Maximum component size (inclusive)" },
+            "minStrength": { "type": "number", "minimum": 0, "maximum": 1, "description": "Minimum relationship strength to follow" }
+          }
         }
       ]
     },
@@ -790,7 +842,7 @@
         "kinds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "subtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "excludeSubtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
-        "statusFilter": { "$ref": "#/$defs/NonEmptyString" },
+        "status": { "$ref": "#/$defs/NonEmptyString" },
         "statuses": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "notStatus": { "$ref": "#/$defs/NonEmptyString" },
         "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
@@ -828,7 +880,13 @@
       "required": ["via", "direction", "targetKind", "targetSubtype"],
       "additionalProperties": false,
       "properties": {
-        "via": { "$ref": "#/$defs/NonEmptyString" },
+        "via": {
+          "oneOf": [
+            { "$ref": "#/$defs/NonEmptyString" },
+            { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          ],
+          "description": "Relationship kind(s) to traverse - single string or array"
+        },
         "direction": { "enum": ["out", "in", "any"] },
         "targetKind": { "$ref": "#/$defs/AnyOrString" },
         "targetSubtype": { "$ref": "#/$defs/AnyOrString" },
@@ -913,6 +971,7 @@
         { "$ref": "#/$defs/CooldownElapsedCondition" },
         { "$ref": "#/$defs/CreationsPerEpochCondition" },
         { "$ref": "#/$defs/GraphPathCondition" },
+        { "$ref": "#/$defs/ComponentSizeCondition" },
         { "$ref": "#/$defs/EntityExistsCondition" },
         { "$ref": "#/$defs/EntityHasRelationshipCondition" },
         { "$ref": "#/$defs/CompositeCondition" },
@@ -1101,6 +1160,25 @@
       "properties": {
         "type": { "const": "graph_path" },
         "assert": { "$ref": "#/$defs/GraphPathAssertion" }
+      }
+    },
+
+    "ComponentSizeCondition": {
+      "type": "object",
+      "required": ["type", "relationshipKinds"],
+      "additionalProperties": false,
+      "description": "Check connected component size via specified relationship kinds",
+      "properties": {
+        "type": { "const": "component_size" },
+        "relationshipKinds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/NonEmptyString" },
+          "minItems": 1,
+          "description": "Relationship kind(s) defining the subgraph edges"
+        },
+        "min": { "type": "integer", "minimum": 1, "description": "Minimum component size (inclusive)" },
+        "max": { "type": "integer", "minimum": 1, "description": "Maximum component size (inclusive)" },
+        "minStrength": { "type": "number", "minimum": 0, "maximum": 1, "description": "Minimum relationship strength to follow" }
       }
     },
 
@@ -1354,6 +1432,8 @@
         { "$ref": "#/$defs/CatalyzedEventsMetric" },
         { "$ref": "#/$defs/ProminenceMultiplierMetric" },
         { "$ref": "#/$defs/NeighborProminenceMetric" },
+        { "$ref": "#/$defs/NeighborKindCountMetric" },
+        { "$ref": "#/$defs/ComponentSizeMetric" },
         { "$ref": "#/$defs/DecayRateMetric" },
         { "$ref": "#/$defs/FalloffMetric" }
       ]
@@ -1524,7 +1604,13 @@
       "required": ["type", "sharedRelationshipKind"],
       "properties": {
         "type": { "const": "shared_relationship" },
-        "sharedRelationshipKind": { "$ref": "#/$defs/NonEmptyString" },
+        "sharedRelationshipKind": {
+          "oneOf": [
+            { "$ref": "#/$defs/NonEmptyString" },
+            { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          ],
+          "description": "Relationship kind(s) to check for shared targets"
+        },
         "sharedDirection": { "enum": ["src", "dst"] },
         "minStrength": { "type": "number", "minimum": 0, "maximum": 1 },
         "coefficient": { "type": "number" },
@@ -1564,6 +1650,51 @@
         "minStrength": { "type": "number", "minimum": 0, "maximum": 1 },
         "coefficient": { "type": "number" },
         "cap": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+
+    "NeighborKindCountMetric": {
+      "type": "object",
+      "required": ["type", "via", "kind"],
+      "properties": {
+        "type": { "const": "neighbor_kind_count" },
+        "via": {
+          "oneOf": [
+            { "$ref": "#/$defs/NonEmptyString" },
+            { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          ],
+          "description": "First relationship(s) to traverse - single string or array"
+        },
+        "viaDirection": { "enum": ["src", "dst", "both"], "description": "Direction for first relationship" },
+        "then": { "$ref": "#/$defs/NonEmptyString", "description": "Optional second relationship to traverse" },
+        "thenDirection": { "enum": ["src", "dst", "both"], "description": "Direction for second relationship" },
+        "kind": { "$ref": "#/$defs/NonEmptyString", "description": "Entity kind to count" },
+        "subtype": { "$ref": "#/$defs/NonEmptyString", "description": "Optional subtype filter" },
+        "status": { "$ref": "#/$defs/NonEmptyString", "description": "Optional status filter" },
+        "hasTag": { "$ref": "#/$defs/NonEmptyString", "description": "Optional tag filter" },
+        "minStrength": { "type": "number", "minimum": 0, "maximum": 1 },
+        "coefficient": { "type": "number" },
+        "cap": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+
+    "ComponentSizeMetric": {
+      "type": "object",
+      "required": ["type", "relationshipKinds"],
+      "description": "Size of the connected component containing an entity via specified relationship kinds",
+      "properties": {
+        "type": { "const": "component_size" },
+        "relationshipKinds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/NonEmptyString" },
+          "minItems": 1,
+          "description": "Relationship kind(s) defining the subgraph edges"
+        },
+        "minStrength": { "type": "number", "minimum": 0, "maximum": 1, "description": "Minimum relationship strength to follow" },
+        "coefficient": { "type": "number", "description": "Coefficient to multiply the result" },
+        "cap": { "type": "number", "description": "Maximum value cap" }
       },
       "additionalProperties": false
     },

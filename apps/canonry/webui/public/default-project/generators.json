@@ -204,7 +204,7 @@
       "$ability": {
         "select": {
           "from": "graph",
-          "kind": "abilities",
+          "kind": "ability",
           "pickStrategy": "random",
           "subtypes": [
             "magic"
@@ -215,11 +215,11 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "resident_of",
+            "relationshipKind": "resident_of",
             "direction": "dst"
           },
           "kind": "npc",
-          "statusFilter": "alive",
+          "status": "alive",
           "pickStrategy": "random"
         }
       },
@@ -227,7 +227,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "controls",
+            "relationshipKind": "controls",
             "direction": "dst"
           },
           "kind": "faction",
@@ -430,7 +430,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "leader_of",
+            "relationshipKind": "leader_of",
             "direction": "src"
           },
           "kind": "location",
@@ -445,7 +445,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "leader_of",
+            "relationshipKind": "leader_of",
             "direction": "both"
           },
           "kind": "faction",
@@ -683,7 +683,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "resident_of",
+            "relationshipKind": "resident_of",
             "direction": "dst"
           },
           "kind": "npc",
@@ -691,7 +691,7 @@
             "hero",
             "mayor"
           ],
-          "statusFilter": "alive",
+          "status": "alive",
           "pickStrategy": "random"
         }
       },
@@ -699,7 +699,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "controls",
+            "relationshipKind": "controls",
             "direction": "dst"
           },
           "kind": "faction",
@@ -709,7 +709,7 @@
       "$combatAbility": {
         "select": {
           "from": "graph",
-          "kind": "abilities",
+          "kind": "ability",
           "pickStrategy": "random",
           "subtypes": [
             "combat"
@@ -724,7 +724,7 @@
           "subtypes": [
             "orca"
           ],
-          "statusFilter": "alive"
+          "status": "alive"
         }
       }
     },
@@ -783,7 +783,7 @@
       "strategy": "by_kind",
       "kind": "npc",
       "subtypes": ["orca"],
-      "statusFilter": "alive",
+      "status": "alive",
       "pickStrategy": "random"
     },
     "creation": [
@@ -811,7 +811,7 @@
       },
       {
         "entityRef": "$battlePower",
-        "kind": "abilities",
+        "kind": "ability",
         "subtype": "combat",
         "status": "active",
         "prominence": "marginal",
@@ -964,7 +964,7 @@
           "from": "graph",
           "kind": "npc",
           "subtypes": ["orca"],
-          "statusFilter": "alive",
+          "status": "alive",
           "pickStrategy": "random",
           "filters": [
             {
@@ -1272,7 +1272,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "member_of",
+            "relationshipKind": "member_of",
             "direction": "dst"
           },
           "pickStrategy": "all"
@@ -1282,7 +1282,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "member_of",
+            "relationshipKind": "member_of",
             "direction": "dst"
           },
           "filters": [
@@ -1298,7 +1298,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "controls",
+            "relationshipKind": "controls",
             "direction": "src"
           },
           "pickStrategy": "random"
@@ -1331,7 +1331,13 @@
   {
     "id": "guild_establishment",
     "name": "Guild Formation",
-    "applicability": [],
+    "applicability": [
+      {
+        "type": "pressure",
+        "pressureId": "resource_availibility",
+        "min": -20
+      }
+    ],
     "selection": {
       "strategy": "by_kind",
       "kind": "location",
@@ -1425,7 +1431,7 @@
       },
       {
         "entityRef": "$charter",
-        "kind": "rules",
+        "kind": "rule",
         "subtype": "law",
         "status": "enacted",
         "prominence": "marginal",
@@ -1638,13 +1644,24 @@
         }
       }
     ],
-    "stateUpdates": [],
+    "stateUpdates": [
+      {
+        "type": "modify_pressure",
+        "pressureId": "resource_availibility",
+        "delta": -15
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "magical_stability",
+        "delta": 2
+      }
+    ],
     "variables": {
       "$tradeGoods": {
         "select": {
           "from": "graph",
           "kind": "artifact",
-          "statusFilter": "intact",
+          "status": "intact",
           "pickStrategy": "random",
           "filters": [
             {
@@ -1814,7 +1831,7 @@
       },
       {
         "entityRef": "$doctrine",
-        "kind": "rules",
+        "kind": "rule",
         "subtype": "ideology",
         "status": "proposed",
         "prominence": "marginal",
@@ -2075,7 +2092,7 @@
       "$magic": {
         "select": {
           "from": "graph",
-          "kind": "abilities",
+          "kind": "ability",
           "subtypes": [
             "magic"
           ],
@@ -2100,7 +2117,7 @@
         "select": {
           "from": "graph",
           "kind": "artifact",
-          "statusFilter": "intact",
+          "status": "intact",
           "pickStrategy": "random",
           "filters": [
             {
@@ -2111,7 +2128,7 @@
                   {
                     "via": "central_to",
                     "direction": "out",
-                    "targetKind": "rules",
+                    "targetKind": "rule",
                     "targetSubtype": "any"
                   }
                 ],
@@ -2155,18 +2172,162 @@
     }
   },
   {
+    "id": "dark_ritual",
+    "name": "Dark Ritual",
+    "applicability": [
+      {
+        "type": "pressure",
+        "pressureId": "magical_stability",
+        "min": -30
+      },
+      {
+        "type": "entity_count",
+        "kind": "faction",
+        "subtype": "cult",
+        "min": 1
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "subtypes": [
+        "cult"
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$ritual",
+        "kind": "occurrence",
+        "subtype": "disaster",
+        "status": "historical",
+        "prominence": "marginal",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A dark ritual performed by {cultName} at {locationName}, breaking the sanctity of cleansed ground",
+          "replacements": {
+            "cultName": "$target.name",
+            "locationName": "$location.name"
+          }
+        },
+        "tags": {
+          "ritual": true,
+          "dark_magic": true,
+          "desecration": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$location",
+            "stickToRegion": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "steps": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "desecrated",
+        "src": "$target",
+        "dst": "$location",
+        "strength": 0.9
+      },
+      {
+        "kind": "occurred_at",
+        "src": "$ritual",
+        "dst": "$location",
+        "strength": 1
+      },
+      {
+        "kind": "participant_in",
+        "src": "$target",
+        "dst": "$ritual",
+        "strength": 0.8
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "remove_tag",
+        "entity": "$location",
+        "tag": "cleansed"
+      },
+      {
+        "type": "set_tag",
+        "entity": "$location",
+        "tag": "corrupted",
+        "value": true
+      },
+      {
+        "type": "set_tag",
+        "entity": "$location",
+        "tag": "desecrated",
+        "value": true
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "magical_stability",
+        "delta": -15
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "security",
+        "delta": -5
+      }
+    ],
+    "variables": {
+      "$location": {
+        "select": {
+          "from": "graph",
+          "kind": "location",
+          "pickStrategy": "random",
+          "filters": [
+            {
+              "type": "has_tag",
+              "tag": "cleansed"
+            }
+          ]
+        },
+        "required": true
+      },
+      "$adjacentLocations": {
+        "select": {
+          "from": {
+            "relatedTo": "$location",
+            "relationshipKind": "adjacent_to",
+            "direction": "both"
+          },
+          "kind": "location",
+          "pickStrategy": "all",
+          "filters": [
+            {
+              "type": "has_tag",
+              "tag": "cleansed"
+            }
+          ]
+        },
+        "required": false
+      }
+    },
+    "enabled": true
+  },
+  {
     "id": "colony_founding",
     "name": "Colony Foundation",
     "applicability": [
       {
-        "type": "pressure_any_above",
-        "pressureIds": [
-          "resource_availibility",
-          "magical_stability",
-          "security",
-          "harmony"
-        ],
-        "threshold": 0
+        "type": "pressure",
+        "pressureId": "resource_availibility",
+        "min": -20
       },
       {
         "type": "entity_count",
@@ -2181,7 +2342,7 @@
       "subtypes": [
         "colony"
       ],
-      "statusFilter": "thriving",
+      "status": "thriving",
       "pickStrategy": "random",
       "saturationLimits": [
         {
@@ -2428,7 +2589,13 @@
         "strength": 0.8
       }
     ],
-    "stateUpdates": [],
+    "stateUpdates": [
+      {
+        "type": "modify_pressure",
+        "pressureId": "resource_availibility",
+        "delta": -25
+      }
+    ],
     "variables": {},
     "enabled": true
   },
@@ -2445,7 +2612,7 @@
         "merchant",
         "mayor"
       ],
-      "statusFilter": "alive",
+      "status": "alive",
       "pickStrategy": "random",
       "saturationLimits": [
         {
@@ -2566,7 +2733,7 @@
       {
         "type": "modify_pressure",
         "pressureId": "resource_availibility",
-        "delta": 10
+        "delta": 5
       }
     ],
     "variables": {
@@ -2689,14 +2856,7 @@
   {
     "id": "krill_bloom_migration",
     "name": "Krill Bloom Discovery",
-    "applicability": [
-      {
-        "type": "pressure",
-        "pressureId": "resource_availibility",
-        "min": -5,
-        "max": 100
-      }
-    ],
+    "applicability": [],
     "selection": {
       "strategy": "by_kind",
       "kind": "location",
@@ -2758,7 +2918,7 @@
       },
       {
         "entityRef": "$harvestTechnique",
-        "kind": "abilities",
+        "kind": "ability",
         "subtype": "technology",
         "status": "discovered",
         "prominence": "recognized",
@@ -2865,7 +3025,7 @@
       {
         "type": "modify_pressure",
         "pressureId": "resource_availibility",
-        "delta": 10
+        "delta": 5
       },
       {
         "type": "modify_pressure",
@@ -2887,7 +3047,7 @@
         {
           "relationshipKind": "participant_in",
           "direction": "out",
-          "maxCount": 2
+          "maxCount": 1
         }
       ],
       "filters": [
@@ -2995,6 +3155,36 @@
         }
       },
       {
+        "kind": "participant_in",
+        "src": "$enemy2",
+        "dst": "$war",
+        "strength": 0.85,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$enemy2"
+        }
+      },
+      {
+        "kind": "participant_in",
+        "src": "$ally1",
+        "dst": "$war",
+        "strength": 0.85,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$ally1"
+        }
+      },
+      {
+        "kind": "participant_in",
+        "src": "$ally2",
+        "dst": "$war",
+        "strength": 0.8,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$ally2"
+        }
+      },
+      {
         "kind": "epicenter_of",
         "src": "$war",
         "dst": "$warzone",
@@ -3030,6 +3220,67 @@
           "type": "entity_exists",
           "entity": "$enemy"
         }
+      },
+      {
+        "kind": "at_war_with",
+        "src": "$target",
+        "dst": "$enemy2",
+        "strength": 0.7,
+        "bidirectional": true,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$enemy2"
+        }
+      },
+      {
+        "kind": "at_war_with",
+        "src": "$ally1",
+        "dst": "$enemy",
+        "strength": 0.7,
+        "bidirectional": true,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$ally1"
+        }
+      },
+      {
+        "kind": "at_war_with",
+        "src": "$ally1",
+        "dst": "$enemy2",
+        "strength": 0.6,
+        "bidirectional": true,
+        "condition": {
+          "type": "and",
+          "conditions": [
+            { "type": "entity_exists", "entity": "$ally1" },
+            { "type": "entity_exists", "entity": "$enemy2" }
+          ]
+        }
+      },
+      {
+        "kind": "at_war_with",
+        "src": "$ally2",
+        "dst": "$target",
+        "strength": 0.7,
+        "bidirectional": true,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$ally2"
+        }
+      },
+      {
+        "kind": "at_war_with",
+        "src": "$ally2",
+        "dst": "$ally1",
+        "strength": 0.6,
+        "bidirectional": true,
+        "condition": {
+          "type": "and",
+          "conditions": [
+            { "type": "entity_exists", "entity": "$ally2" },
+            { "type": "entity_exists", "entity": "$ally1" }
+          ]
+        }
       }
     ],
     "stateUpdates": [
@@ -3061,7 +3312,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "at_war_with",
+            "relationshipKind": "at_war_with",
             "direction": "both"
           },
           "kind": "faction",
@@ -3069,11 +3320,53 @@
         },
         "required": true
       },
+      "$enemy2": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationshipKind": "at_war_with",
+            "direction": "both"
+          },
+          "kind": "faction",
+          "filters": [
+            { "type": "exclude", "entities": ["$enemy"] }
+          ],
+          "pickStrategy": "random"
+        }
+      },
+      "$ally1": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationshipKind": "allied_with",
+            "direction": "both"
+          },
+          "kind": "faction",
+          "filters": [
+            { "type": "exclude", "entities": ["$enemy", "$enemy2"] }
+          ],
+          "pickStrategy": "random"
+        }
+      },
+      "$ally2": {
+        "select": {
+          "from": {
+            "relatedTo": "$enemy",
+            "relationshipKind": "allied_with",
+            "direction": "both"
+          },
+          "kind": "faction",
+          "filters": [
+            { "type": "exclude", "entities": ["$target", "$enemy", "$enemy2", "$ally1"] }
+          ],
+          "pickStrategy": "random"
+        }
+      },
       "$warzone": {
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "controls",
+            "relationshipKind": "controls",
             "direction": "src"
           },
           "kind": "location",
@@ -3083,7 +3376,7 @@
       "$battle_style": {
         "select": {
           "from": "graph",
-          "kind": "abilities",
+          "kind": "ability",
           "subtypes": [
             "combat",
             "magic"
@@ -3124,7 +3417,7 @@
       "subtypes": [
         "war"
       ],
-      "statusFilter": "active",
+      "status": "active",
       "filters": [
         {
           "type": "not_has_culture",
@@ -3140,7 +3433,7 @@
     "creation": [
       {
         "entityRef": "$cataclysm",
-        "kind": "abilities",
+        "kind": "ability",
         "subtype": "magic",
         "status": "active",
         "prominence": "mythic",
@@ -3248,7 +3541,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "participant_in",
+            "relationshipKind": "participant_in",
             "direction": "dst"
           },
           "kind": "faction",
@@ -3282,7 +3575,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "epicenter_of",
+            "relationshipKind": "epicenter_of",
             "direction": "src"
           },
           "kind": "location",
@@ -3405,7 +3698,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "controls",
+            "relationshipKind": "controls",
             "direction": "src"
           },
           "kind": "location",
@@ -3432,13 +3725,13 @@
       "subtypes": [
         "hero"
       ],
-      "statusFilter": "historical",
+      "status": "historical",
       "pickStrategy": "random"
     },
     "creation": [
       {
         "entityRef": "$memorial",
-        "kind": "rules",
+        "kind": "rule",
         "subtype": "memorial",
         "status": "enacted",
         "prominence": "recognized",
@@ -3561,7 +3854,7 @@
           "kind": "location",
           "from": {
             "relatedTo": "$target",
-            "relationship": "resident_of",
+            "relationshipKind": "resident_of",
             "direction": "both"
           }
         }
@@ -3627,7 +3920,7 @@
     "creation": [
       {
         "entityRef": "$rule",
-        "kind": "rules",
+        "kind": "rule",
         "subtype": "law",
         "status": "enacted",
         "prominence": "recognized",
@@ -3695,7 +3988,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "originated_in",
+            "relationshipKind": "originated_in",
             "direction": "dst"
           },
           "notStatus": "repealed",
@@ -3720,7 +4013,7 @@
                   {
                     "via": "related_to",
                     "direction": "any",
-                    "targetKind": "rules",
+                    "targetKind": "rule",
                     "targetSubtype": "law"
                   }
                 ]
@@ -3760,7 +4053,7 @@
               {
                 "via": "celebrated_by",
                 "direction": "any",
-                "targetKind": "rules",
+                "targetKind": "rule",
                 "targetSubtype": "any"
               }
             ],
@@ -3772,7 +4065,7 @@
     "creation": [
       {
         "entityRef": "$festival",
-        "kind": "rules",
+        "kind": "rule",
         "subtype": "social",
         "status": "enacted",
         "prominence": "recognized",
@@ -3889,17 +4182,6 @@
         }
       },
       {
-        "kind": "allied_with",
-        "src": "$faction1",
-        "dst": "$faction2",
-        "strength": 0.5,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$faction2"
-        },
-        "bidirectional": true
-      },
-      {
         "kind": "central_to",
         "src": "$featuredArtifact",
         "dst": "$festival",
@@ -3914,7 +4196,7 @@
       {
         "type": "modify_pressure",
         "pressureId": "harmony",
-        "delta": 25
+        "delta": 5
       }
     ],
     "variables": {
@@ -3967,7 +4249,7 @@
         "select": {
           "from": "graph",
           "kind": "artifact",
-          "statusFilter": "intact",
+          "status": "intact",
           "pickStrategy": "random",
           "filters": [
             {
@@ -3978,7 +4260,7 @@
                   {
                     "via": "central_to",
                     "direction": "out",
-                    "targetKind": "rules",
+                    "targetKind": "rule",
                     "targetSubtype": "any"
                   }
                 ],
@@ -4021,7 +4303,7 @@
     "creation": [
       {
         "entityRef": "$tech",
-        "kind": "abilities",
+        "kind": "ability",
         "subtype": "technology",
         "status": "active",
         "prominence": "recognized",
@@ -4088,6 +4370,11 @@
         "type": "modify_pressure",
         "pressureId": "resource_availibility",
         "delta": 5
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "magical_stability",
+        "delta": -3
       }
     ],
     "variables": {
@@ -4095,7 +4382,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "originated_in",
+            "relationshipKind": "originated_in",
             "direction": "src"
           },
           "pickStrategy": "random"
@@ -4106,11 +4393,11 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "leader_of",
+            "relationshipKind": "leader_of",
             "direction": "dst"
           },
           "kind": "npc",
-          "statusFilter": "alive",
+          "status": "alive",
           "pickStrategy": "random"
         },
         "required": false
@@ -4118,7 +4405,7 @@
       "$parentTech": {
         "select": {
           "from": "graph",
-          "kind": "abilities",
+          "kind": "ability",
           "pickStrategy": "random",
           "subtypes": [
             "technology"
@@ -4134,7 +4421,7 @@
     "applicability": [
       {
         "type": "entity_count",
-        "kind": "abilities",
+        "kind": "ability",
         "subtype": "combat",
         "max": 15
       }
@@ -4162,7 +4449,7 @@
               {
                 "via": "practitioner_of",
                 "direction": "out",
-                "targetKind": "abilities",
+                "targetKind": "ability",
                 "targetSubtype": "any"
               }
             ]
@@ -4174,7 +4461,7 @@
     "creation": [
       {
         "entityRef": "$technique",
-        "kind": "abilities",
+        "kind": "ability",
         "subtype": "combat",
         "status": "active",
         "prominence": "marginal",
@@ -4258,7 +4545,7 @@
       "$parentTechnique": {
         "select": {
           "from": "graph",
-          "kind": "abilities",
+          "kind": "ability",
           "pickStrategy": "random",
           "subtypes": [
             "combat"
@@ -4274,7 +4561,7 @@
     "applicability": [
       {
         "type": "entity_count",
-        "kind": "abilities",
+        "kind": "ability",
         "subtype": "magic",
         "max": 20
       },
@@ -4294,7 +4581,7 @@
         "mayor",
         "outlaw"
       ],
-      "statusFilter": "alive",
+      "status": "alive",
       "saturationLimits": [
         {
           "relationshipKind": "practitioner_of",
@@ -4316,7 +4603,7 @@
               {
                 "via": "discovered_by",
                 "direction": "out",
-                "targetKind": "abilities",
+                "targetKind": "ability",
                 "targetSubtype": "magic"
               }
             ]
@@ -4328,7 +4615,7 @@
     "creation": [
       {
         "entityRef": "$magic",
-        "kind": "abilities",
+        "kind": "ability",
         "subtype": "magic",
         "status": "emergent",
         "prominence": "recognized",
@@ -4421,19 +4708,19 @@
       "$parentMagic": {
         "select": {
           "from": "graph",
-          "kind": "abilities",
+          "kind": "ability",
           "pickStrategy": "random",
           "subtypes": [
             "magic"
           ],
-          "statusFilter": "discovered"
+          "status": "discovered"
         }
       },
       "$empoweredArtifact": {
         "select": {
           "from": "graph",
           "kind": "artifact",
-          "statusFilter": "intact",
+          "status": "intact",
           "pickStrategy": "random",
           "filters": [
             {
@@ -4444,7 +4731,7 @@
                   {
                     "via": "empowered_by",
                     "direction": "out",
-                    "targetKind": "abilities",
+                    "targetKind": "ability",
                     "targetSubtype": "any"
                   }
                 ],
@@ -4478,7 +4765,7 @@
       "subtypePreferences": [
         "hero"
       ],
-      "statusFilter": "alive",
+      "status": "alive",
       "pickStrategy": "random",
       "minProminence": "renowned",
       "saturationLimits": [
@@ -4508,7 +4795,7 @@
     "creation": [
       {
         "entityRef": "$ideology",
-        "kind": "rules",
+        "kind": "rule",
         "subtype": "ideology",
         "status": "proposed",
         "prominence": "marginal",
@@ -4607,7 +4894,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "resident_of",
+            "relationshipKind": "resident_of",
             "direction": "src"
           },
           "pickStrategy": "first",
@@ -4619,7 +4906,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "member_of",
+            "relationshipKind": "member_of",
             "direction": "src"
           },
           "pickStrategy": "first",
@@ -4631,7 +4918,7 @@
         "select": {
           "from": {
             "relatedTo": "$championFaction",
-            "relationship": "member_of",
+            "relationshipKind": "member_of",
             "direction": "dst"
           },
           "filters": [
@@ -4649,7 +4936,7 @@
       "$existingIdeology": {
         "select": {
           "from": "graph",
-          "kind": "rules",
+          "kind": "rule",
           "pickStrategy": "random",
           "subtypes": [
             "ideology"
@@ -4660,7 +4947,7 @@
         "select": {
           "from": "graph",
           "kind": "artifact",
-          "statusFilter": "intact",
+          "status": "intact",
           "pickStrategy": "random",
           "filters": [
             {
@@ -4671,7 +4958,7 @@
                   {
                     "via": "central_to",
                     "direction": "out",
-                    "targetKind": "rules",
+                    "targetKind": "rule",
                     "targetSubtype": "any"
                   }
                 ],
@@ -4708,7 +4995,7 @@
         "resource_node",
         "anomaly"
       ],
-      "statusFilter": "thriving",
+      "status": "thriving",
       "saturationLimits": [
         {
           "relationshipKind": "epicenter_of",
@@ -4812,7 +5099,7 @@
         "resource_node",
         "anomaly"
       ],
-      "statusFilter": "waning",
+      "status": "waning",
       "saturationLimits": [
         {
           "relationshipKind": "epicenter_of",
@@ -4946,11 +5233,11 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "resident_of",
+            "relationshipKind": "resident_of",
             "direction": "dst"
           },
           "kind": "npc",
-          "statusFilter": "alive",
+          "status": "alive",
           "pickStrategy": "random"
         },
         "required": true
@@ -4961,7 +5248,7 @@
           "subtypes": [
             "colony"
           ],
-          "statusFilter": "thriving",
+          "status": "thriving",
           "filters": [
             {
               "type": "lacks_tag",
@@ -5087,8 +5374,8 @@
     "variables": {
       "$frozen_ability": {
         "select": {
-          "kind": "abilities",
-          "statusFilter": "active",
+          "kind": "ability",
+          "status": "active",
           "filters": [
             {
               "type": "lacks_relationship",
@@ -5235,14 +5522,20 @@
   {
     "id": "economic_colony_decline",
     "name": "Colony Economic Decline",
-    "applicability": [],
+    "applicability": [
+      {
+        "type": "pressure",
+        "pressureId": "resource_availibility",
+        "min": -20
+      }
+    ],
     "selection": {
       "strategy": "by_kind",
       "kind": "location",
       "subtypes": [
         "colony"
       ],
-      "statusFilter": "thriving",
+      "status": "thriving",
       "filters": [
         {
           "type": "has_tag",
@@ -5318,6 +5611,11 @@
         "type": "remove_tag",
         "entity": "$target",
         "tag": "thriving"
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "resource_availibility",
+        "delta": -8
       }
     ],
     "enabled": true
@@ -5332,7 +5630,7 @@
       "subtypes": [
         "colony"
       ],
-      "statusFilter": "waning",
+      "status": "waning",
       "filters": [
         {
           "type": "has_any_tag",
@@ -5405,6 +5703,11 @@
         "type": "remove_tag",
         "entity": "$target",
         "tag": "stressed"
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "resource_availibility",
+        "delta": 5
       }
     ],
     "enabled": true
@@ -5421,7 +5724,7 @@
       },
       {
         "type": "entity_count",
-        "kind": "abilities",
+        "kind": "ability",
         "subtype": "magic",
         "max": 15
       }
@@ -5453,7 +5756,7 @@
               {
                 "via": "manifests_at",
                 "direction": "any",
-                "targetKind": "abilities",
+                "targetKind": "ability",
                 "targetSubtype": "any"
               }
             ],
@@ -5465,7 +5768,7 @@
     "creation": [
       {
         "entityRef": "$magic",
-        "kind": "abilities",
+        "kind": "ability",
         "subtype": "magic",
         "status": "secret",
         "prominence": "recognized",
@@ -5570,7 +5873,7 @@
         "hero",
         "mayor"
       ],
-      "statusFilter": "alive",
+      "status": "alive",
       "pickStrategy": "random",
       "saturationLimits": [
         {
@@ -5665,10 +5968,10 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "practitioner_of",
+            "relationshipKind": "practitioner_of",
             "direction": "src"
           },
-          "kind": "abilities",
+          "kind": "ability",
           "pickStrategy": "random"
         }
       },
@@ -5676,7 +5979,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "resident_of",
+            "relationshipKind": "resident_of",
             "direction": "src"
           },
           "kind": "location",
@@ -5787,15 +6090,483 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "explorer_of",
+            "relationshipKind": "explorer_of",
             "direction": "dst"
           },
           "kind": "npc",
-          "statusFilter": "alive",
+          "status": "alive",
           "pickStrategy": "random"
         }
       }
     },
+    "enabled": true
+  },
+  {
+    "id": "crystallized_power",
+    "name": "Power Crystallizes",
+    "applicability": [],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "filters": [
+        {
+          "type": "has_tag",
+          "tag": "active"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$event",
+        "kind": "occurrence",
+        "subtype": "disaster",
+        "status": "active",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A surge of ancient power at {locationName} - the ice cracked, light poured from the fissures, and something crystallized from the raw energy",
+          "replacements": {
+            "locationName": "$target.name"
+          }
+        },
+        "tags": {
+          "power_surge": true,
+          "crystallization": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$target",
+            "stickToRegion": true
+          },
+          "steps": ["anchor_region", "sparse", "random"]
+        }
+      },
+      {
+        "entityRef": "$artifact",
+        "kind": "artifact",
+        "subtype": "relic",
+        "status": "intact",
+        "prominence": "marginal",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A crystallized fragment of raw power that emerged from {locationName} during the surge",
+          "replacements": {
+            "locationName": "$target.name"
+          }
+        },
+        "tags": {
+          "crystallized": true,
+          "power_fragment": true,
+          "anomaly_born": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$target",
+            "stickToRegion": true
+          },
+          "steps": ["anchor_region", "sparse", "random"]
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "occurred_at",
+        "src": "$event",
+        "dst": "$target",
+        "strength": 1.0
+      },
+      {
+        "kind": "stored_at",
+        "src": "$artifact",
+        "dst": "$target",
+        "strength": 0.9
+      },
+      {
+        "kind": "catalyst_of",
+        "src": "$event",
+        "dst": "$artifact",
+        "strength": 0.8
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "remove_tag",
+        "entity": "$target",
+        "tag": "active"
+      },
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "depleted",
+        "value": true
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "magical_stability",
+        "delta": -8
+      }
+    ],
+    "enabled": true
+  },
+  {
+    "id": "war_declaration",
+    "name": "War Declaration",
+    "applicability": [
+      {
+        "type": "pressure",
+        "pressureId": "harmony",
+        "max": 20
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "saturationLimits": [
+        {
+          "relationshipKind": "participant_in",
+          "direction": "out",
+          "maxCount": 1
+        }
+      ],
+      "filters": [
+        {
+          "type": "has_relationship",
+          "kind": "controls",
+          "direction": "src"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "variables": {
+      "$enemy": {
+        "select": {
+          "from": "graph",
+          "kind": "faction",
+          "filters": [
+            {
+              "type": "exclude",
+              "entities": ["$target"]
+            },
+            {
+              "type": "lacks_relationship",
+              "kind": "allied_with",
+              "with": "$target"
+            },
+            {
+              "type": "lacks_relationship",
+              "kind": "at_war_with",
+              "with": "$target"
+            }
+          ],
+          "pickStrategy": "random"
+        },
+        "required": true
+      },
+      "$ally1": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationshipKind": "allied_with",
+            "direction": "both"
+          },
+          "kind": "faction",
+          "filters": [
+            { "type": "exclude", "entities": ["$enemy"] }
+          ],
+          "pickStrategy": "random"
+        }
+      },
+      "$ally2": {
+        "select": {
+          "from": {
+            "relatedTo": "$enemy",
+            "relationshipKind": "allied_with",
+            "direction": "both"
+          },
+          "kind": "faction",
+          "filters": [
+            { "type": "exclude", "entities": ["$target", "$ally1"] }
+          ],
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "creation": [
+      {
+        "entityRef": "$war",
+        "kind": "occurrence",
+        "subtype": "war",
+        "status": "active",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A war declared by {aggressor} against {defender}",
+          "replacements": {
+            "aggressor": "$target.name",
+            "defender": "$enemy.name"
+          }
+        },
+        "tags": {
+          "declared_war": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "refs_centroid",
+            "refs": ["$target", "$enemy"],
+            "jitter": 0.1
+          },
+          "steps": ["anchor_region", "sparse", "random"]
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "participant_in",
+        "src": "$target",
+        "dst": "$war",
+        "strength": 0.9
+      },
+      {
+        "kind": "participant_in",
+        "src": "$enemy",
+        "dst": "$war",
+        "strength": 0.9
+      },
+      {
+        "kind": "participant_in",
+        "src": "$ally1",
+        "dst": "$war",
+        "strength": 0.85,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$ally1"
+        }
+      },
+      {
+        "kind": "participant_in",
+        "src": "$ally2",
+        "dst": "$war",
+        "strength": 0.85,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$ally2"
+        }
+      },
+      {
+        "kind": "at_war_with",
+        "src": "$target",
+        "dst": "$enemy",
+        "strength": 0.9,
+        "bidirectional": true
+      },
+      {
+        "kind": "at_war_with",
+        "src": "$ally1",
+        "dst": "$enemy",
+        "strength": 0.8,
+        "bidirectional": true,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$ally1"
+        }
+      },
+      {
+        "kind": "at_war_with",
+        "src": "$ally1",
+        "dst": "$ally2",
+        "strength": 0.7,
+        "bidirectional": true,
+        "condition": {
+          "type": "and",
+          "conditions": [
+            { "type": "entity_exists", "entity": "$ally1" },
+            { "type": "entity_exists", "entity": "$ally2" }
+          ]
+        }
+      },
+      {
+        "kind": "at_war_with",
+        "src": "$target",
+        "dst": "$ally2",
+        "strength": 0.8,
+        "bidirectional": true,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$ally2"
+        }
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "conflict",
+        "value": true
+      },
+      {
+        "type": "set_tag",
+        "entity": "$enemy",
+        "tag": "conflict",
+        "value": true
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "harmony",
+        "delta": -6
+      }
+    ],
+    "enabled": true
+  },
+  {
+    "id": "alliance_betrayal",
+    "name": "Alliance Betrayal",
+    "applicability": [
+      {
+        "type": "pressure",
+        "pressureId": "harmony",
+        "max": 20
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "saturationLimits": [
+        {
+          "relationshipKind": "participant_in",
+          "direction": "out",
+          "maxCount": 1
+        }
+      ],
+      "filters": [
+        {
+          "type": "has_relationship",
+          "kind": "allied_with",
+          "direction": "both"
+        },
+        {
+          "type": "lacks_tag",
+          "tag": "oath_breaker"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "variables": {
+      "$ally": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationshipKind": "allied_with",
+            "direction": "both"
+          },
+          "kind": "faction",
+          "pickStrategy": "random"
+        },
+        "required": true
+      }
+    },
+    "creation": [
+      {
+        "entityRef": "$war",
+        "kind": "occurrence",
+        "subtype": "war",
+        "status": "active",
+        "prominence": "renowned",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A betrayal war when {betrayer} turned against their ally {victim}",
+          "replacements": {
+            "betrayer": "$target.name",
+            "victim": "$ally.name"
+          }
+        },
+        "tags": {
+          "betrayal_war": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "refs_centroid",
+            "refs": ["$target", "$ally"],
+            "jitter": 0.1
+          },
+          "steps": ["anchor_region", "sparse", "random"]
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "participant_in",
+        "src": "$target",
+        "dst": "$war",
+        "strength": 0.9
+      },
+      {
+        "kind": "participant_in",
+        "src": "$ally",
+        "dst": "$war",
+        "strength": 0.9
+      },
+      {
+        "kind": "at_war_with",
+        "src": "$target",
+        "dst": "$ally",
+        "strength": 0.95,
+        "bidirectional": true
+      },
+      {
+        "kind": "betrayed_by",
+        "src": "$ally",
+        "dst": "$target",
+        "strength": 0.95
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "archive_relationship",
+        "entity": "$target",
+        "relationshipKind": "allied_with",
+        "with": "$ally"
+      },
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "oath_breaker",
+        "value": true
+      },
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "conflict",
+        "value": true
+      },
+      {
+        "type": "set_tag",
+        "entity": "$ally",
+        "tag": "betrayed",
+        "value": true
+      },
+      {
+        "type": "set_tag",
+        "entity": "$ally",
+        "tag": "conflict",
+        "value": true
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "harmony",
+        "delta": -15
+      }
+    ],
     "enabled": true
   }
 ]

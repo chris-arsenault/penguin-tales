@@ -190,6 +190,49 @@ export function applySelectionFilter(
       );
     }
 
+    case 'component_size': {
+      const graphView = resolver.getGraphView();
+      const rels = graphView.getAllRelationships();
+      const minStrength = filter.minStrength ?? 0;
+
+      // Build adjacency index for the specified relationship kinds
+      const adjacency = new Map<string, Set<string>>();
+      for (const link of rels) {
+        if (!filter.relationshipKinds.includes(link.kind)) continue;
+        if ((link.strength ?? 0) < minStrength) continue;
+
+        // Bidirectional edges (undirected graph)
+        if (!adjacency.has(link.src)) adjacency.set(link.src, new Set());
+        if (!adjacency.has(link.dst)) adjacency.set(link.dst, new Set());
+        adjacency.get(link.src)!.add(link.dst);
+        adjacency.get(link.dst)!.add(link.src);
+      }
+
+      return entities.filter(entity => {
+        // DFS to find component size
+        const visited = new Set<string>([entity.id]);
+        const stack = [entity.id];
+
+        while (stack.length > 0) {
+          const current = stack.pop()!;
+          const neighbors = adjacency.get(current);
+          if (neighbors) {
+            for (const neighborId of neighbors) {
+              if (!visited.has(neighborId)) {
+                visited.add(neighborId);
+                stack.push(neighborId);
+              }
+            }
+          }
+        }
+
+        const componentSize = visited.size;
+        const minOk = filter.min === undefined || componentSize >= filter.min;
+        const maxOk = filter.max === undefined || componentSize <= filter.max;
+        return minOk && maxOk;
+      });
+    }
+
     default:
       return entities;
   }

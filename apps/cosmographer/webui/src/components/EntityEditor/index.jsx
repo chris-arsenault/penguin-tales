@@ -276,6 +276,8 @@ export default function EntityEditor({ project, onSave, onAddTag, schemaUsage = 
       kind: defaultKind.kind,
       subtype: defaultKind.subtypes[0]?.id || '',
       name: 'New Entity',
+      summary: '',
+      narrativeHint: '',
       description: '',
       status: defaultKind.statuses[0]?.id || 'active',
       prominence: 'recognized',
@@ -557,12 +559,12 @@ export default function EntityEditor({ project, onSave, onAddTag, schemaUsage = 
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Description</label>
+              <label style={styles.label}>Summary</label>
               <textarea
                 style={styles.textarea}
-                value={selectedEntity.description || ''}
-                onChange={(e) => updateEntity({ description: e.target.value })}
-                placeholder="Optional description..."
+                value={selectedEntity.summary ?? selectedEntity.narrativeHint ?? selectedEntity.description ?? ''}
+                onChange={(e) => updateEntity({ summary: e.target.value, narrativeHint: e.target.value })}
+                placeholder="Optional summary..."
               />
             </div>
 

@@ -9,7 +9,7 @@ import { HardState, Relationship } from '../core/worldTypes';
 import { WorldRuntime } from '../runtime/worldRuntime';
 import type { Condition, RuleContext } from '../rules';
 import type { Mutation } from '../rules';
-import type { SelectionRule, VariableSelectionRule } from '../rules';
+import type { SelectionRule, VariableSelectionRule, VariableDefinitionForResolution } from '../rules';
 import {
   applyPickStrategy,
   createActionContext,
@@ -17,6 +17,8 @@ import {
   prepareMutation,
   selectEntities,
   selectVariableEntities,
+  resolveVariablesForEntity,
+  createSystemContext,
 } from '../rules';
 
 // =============================================================================
@@ -108,6 +110,12 @@ export interface DeclarativeAction {
   actor: ActionActorConfig;
   /** How to find valid targets */
   targeting: SelectionRule;
+  /**
+   * Optional variables to resolve before executing mutations.
+   * Variables can reference $actor, $target, $instigator and each other.
+   * Resolved variables are available in mutations as $varName.
+   */
+  variables?: Record<string, VariableDefinitionForResolution>;
   /** What happens on success */
   outcome: ActionOutcomeConfig;
   /** Probability settings */
@@ -311,6 +319,25 @@ function createActionHandler(action: DeclarativeAction): ExecutableAction['handl
     const target2 = targets[1];
     bindings.target = target;
     bindings.target2 = target2;
+
+    // Resolve optional variables
+    if (action.variables) {
+      const varCtx = createActionContext(graph, bindings, actor);
+      const resolvedVars = resolveVariablesForEntity(action.variables, varCtx, actor);
+      if (resolvedVars === null) {
+        // A required variable couldn't be resolved
+        return {
+          success: false,
+          relationships: [],
+          description: 'required variable could not be resolved',
+          failureReason: 'no_target',
+        };
+      }
+      // Add resolved variables to bindings (with $ prefix stripped by resolveVariablesForEntity)
+      for (const [varName, entity] of Object.entries(resolvedVars)) {
+        bindings[varName] = entity;
+      }
+    }
 
     const mutationCtx = createActionContext(graph, bindings, actor);
     const prepared = (action.outcome.mutations ?? []).map((mutation) => prepareMutation(mutation, mutationCtx));

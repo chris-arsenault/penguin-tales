@@ -20,7 +20,7 @@
         "y": 75,
         "z": 60
       },
-      "abilities": {
+      "ability": {
         "x": 60,
         "y": 69,
         "z": 69
@@ -46,90 +46,94 @@
           "id": "aurora_domain",
           "phonology": {
             "consonants": [
-              "s",
+              "zh",
+              "sh",
+              "ch",
+              "x",
+              "q",
+              "j",
               "l",
-              "r",
-              "k",
-              "n",
               "m",
-              "p",
-              "t",
+              "n",
+              "h",
+              "f",
               "w",
-              "v"
+              "y"
             ],
             "vowels": [
               "a",
+              "o",
               "e",
               "i",
-              "o",
               "u",
-              "ae",
-              "ei"
+              "ai",
+              "ei",
+              "ou",
+              "ong",
+              "ang",
+              "ing"
             ],
             "syllableTemplates": [
               "CV",
-              "CVC",
-              "VCV",
               "V"
             ],
             "lengthRange": [
               2,
               3
             ],
-            "favoredClusters": [
-              "sk",
-              "kr",
-              "st",
-              "tr"
-            ],
-            "forbiddenClusters": [
-              "gg",
-              "kk"
-            ],
-            "favoredClusterBoost": 1.3,
+            "favoredClusters": [],
+            "forbiddenClusters": [],
+            "favoredClusterBoost": 1.0,
             "consonantWeights": [
-              1,
+              1.3,
               1.2,
+              1.1,
               1.2,
-              1,
-              1,
-              1,
-              1,
-              1,
-              1,
-              1
+              1.0,
+              1.1,
+              1.0,
+              0.9,
+              1.0,
+              0.9,
+              0.8,
+              0.7,
+              0.7
             ],
             "vowelWeights": [
               1.2,
-              1,
-              1,
-              1,
-              1,
-              0.8,
-              0.8
+              1.1,
+              1.0,
+              1.3,
+              1.1,
+              1.0,
+              0.9,
+              0.9,
+              1.1,
+              1.0,
+              1.0
             ],
             "templateWeights": [
-              1,
-              1.2,
-              0.8,
-              0.6
+              1.5,
+              0.5
             ]
           },
           "morphology": {
             "prefixes": [
-              "Ska",
-              "Kri",
-              "Nal",
-              "Pel",
-              "Vor"
+              "Xue",
+              "Zhi",
+              "Lian",
+              "Feng",
+              "Ming",
+              "Qing",
+              "Shan",
+              "Yun"
             ],
             "suffixes": [
-              "ik",
-              "ak",
-              "en",
-              "ar",
-              "ok",
-              "um"
+              "long",
+              "hua",
+              "wei",
+              "lin",
+              "jun"
             ],
             "structure": [
               "root",
@@ -137,20 +141,21 @@
               "prefix-root"
             ],
             "structureWeights": [
-              0.3,
               0.4,
+              0.3,
               0.3
             ]
           },
           "style": {
             "capitalization": "title",
-            "apostropheRate": 0.05,
-            "hyphenRate": 0.02,
+            "apostropheRate": 0,
+            "hyphenRate": 0,
             "preferredEndings": [
-              "ik",
-              "ak",
-              "en",
-              "ar"
+              "ng",
+              "n",
+              "i",
+              "o",
+              "a"
             ],
             "preferredEndingBoost": 1.3,
             "rhythmBias": "neutral"
@@ -212,90 +217,83 @@
           "id": "aurora_domain_short",
           "phonology": {
             "consonants": [
-              "s",
+              "zh",
+              "sh",
+              "ch",
+              "x",
+              "q",
+              "j",
               "l",
-              "r",
-              "k",
-              "n",
               "m",
-              "p",
-              "t",
-              "w",
-              "v"
+              "n",
+              "h",
+              "f"
             ],
             "vowels": [
               "a",
+              "o",
               "e",
               "i",
-              "o",
               "u",
-              "ae",
-              "ei"
+              "ai",
+              "ei",
+              "ang",
+              "ing"
             ],
             "syllableTemplates": [
               "CV",
-              "CVC",
-              "VCV",
               "V"
             ],
             "lengthRange": [
               1,
               1
             ],
-            "favoredClusters": [
-              "sk",
-              "kr",
-              "st",
-              "tr"
-            ],
-            "forbiddenClusters": [
-              "gg",
-              "kk"
-            ],
-            "favoredClusterBoost": 1.3,
+            "favoredClusters": [],
+            "forbiddenClusters": [],
+            "favoredClusterBoost": 1.0,
             "consonantWeights": [
-              1,
+              1.3,
               1.2,
+              1.1,
               1.2,
-              1,
-              1,
-              1,
-              1,
-              1,
-              1,
-              1
+              1.0,
+              1.1,
+              1.0,
+              0.9,
+              1.0,
+              0.9,
+              0.8
             ],
             "vowelWeights": [
               1.2,
-              1,
-              1,
-              1,
-              1,
-              0.8,
-              0.8
+              1.1,
+              1.0,
+              1.3,
+              1.1,
+              1.0,
+              0.9,
+              1.0,
+              1.0
             ],
             "templateWeights": [
-              1,
-              1.2,
-              0.8,
-              0.6
+              1.5,
+              0.5
             ]
           },
           "morphology": {
             "prefixes": [
-              "Ska",
-              "Kri",
-              "Nal",
-              "Pel",
-              "Vor"
+              "Xue",
+              "Zhi",
+              "Lian",
+              "Feng",
+              "Ming",
+              "Qing"
             ],
             "suffixes": [
-              "ik",
-              "ak",
-              "en",
-              "ar",
-              "ok",
-              "um"
+              "long",
+              "hua",
+              "wei",
+              "lin"
             ],
             "structure": [
               "root",
@@ -303,20 +301,20 @@
               "prefix-root"
             ],
             "structureWeights": [
-              0.3,
-              0.4,
-              0.3
+              0.5,
+              0.25,
+              0.25
             ]
           },
           "style": {
             "capitalization": "title",
-            "apostropheRate": 0.05,
-            "hyphenRate": 0.02,
+            "apostropheRate": 0,
+            "hyphenRate": 0,
             "preferredEndings": [
-              "ik",
-              "ak",
-              "en",
-              "ar"
+              "ng",
+              "n",
+              "i",
+              "a"
             ],
             "preferredEndingBoost": 1.3,
             "rhythmBias": "neutral"
@@ -1772,7 +1770,7 @@
               "priority": 50,
               "conditions": {
                 "entityKinds": [
-                  "abilities"
+                  "ability"
                 ],
                 "prominence": [],
                 "subtypes": [],
@@ -2046,7 +2044,7 @@
               "priority": 60,
               "conditions": {
                 "entityKinds": [
-                  "rules"
+                  "rule"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -2069,7 +2067,7 @@
               "priority": 55,
               "conditions": {
                 "entityKinds": [
-                  "rules"
+                  "rule"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -2097,7 +2095,7 @@
               "priority": 55,
               "conditions": {
                 "entityKinds": [
-                  "rules"
+                  "rule"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -2120,7 +2118,7 @@
               "priority": 50,
               "conditions": {
                 "entityKinds": [
-                  "rules"
+                  "rule"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -2140,7 +2138,7 @@
               "priority": 60,
               "conditions": {
                 "entityKinds": [
-                  "rules"
+                  "rule"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -2156,7 +2154,7 @@
             }
           ],
           "entityKinds": [
-            "rules"
+            "rule"
           ]
         },
         {
@@ -2166,7 +2164,7 @@
               "name": "Meta-Entity Schools",
               "priority": 80,
               "conditions": {
-                "entityKinds": ["abilities"],
+                "entityKinds": ["ability"],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
@@ -2186,7 +2184,7 @@
               "priority": 50,
               "conditions": {
                 "entityKinds": [
-                  "abilities"
+                  "ability"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -2209,7 +2207,7 @@
               "priority": 50,
               "conditions": {
                 "entityKinds": [
-                  "abilities"
+                  "ability"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -2232,7 +2230,7 @@
               "priority": 50,
               "conditions": {
                 "entityKinds": [
-                  "abilities"
+                  "ability"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -2257,13 +2255,32 @@
             }
           ],
           "entityKinds": [
-            "abilities"
+            "ability"
           ]
         },
         {
           "id": "aurora_artifacts",
           "name": "Aurora Artifacts",
           "strategyGroups": [
+            {
+              "name": "Anomaly-Born Artifacts",
+              "priority": 65,
+              "conditions": {
+                "entityKinds": ["artifact"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": ["anomaly_born"],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_artifact"
+                }
+              ]
+            },
             {
               "name": "Ancient Relics",
               "priority": 60,
@@ -2516,9 +2533,7 @@
               "n",
               "l",
               "r",
-              "t",
-              "x",
-              "qu"
+              "t"
             ],
             "vowels": [
               "a",
@@ -2527,7 +2542,6 @@
               "o",
               "u",
               "ae",
-              "iu",
               "ia"
             ],
             "syllableTemplates": [
@@ -2542,40 +2556,43 @@
             "favoredClusters": [
               "ct",
               "nt",
-              "lv",
-              "rv",
+              "st",
+              "sc",
               "nc",
               "rm",
-              "st"
+              "lv",
+              "rv"
             ],
             "forbiddenClusters": [
-              "xx",
-              "ququ",
               "cc",
-              "xc",
-              "cx",
-              "xs",
-              "sx",
-              "tt"
+              "tt",
+              "ss",
+              "mm",
+              "nn",
+              "ll",
+              "rr",
+              "vv",
+              "aa",
+              "ee",
+              "ii",
+              "oo",
+              "uu"
             ],
-            "favoredClusterBoost": 1.5,
+            "favoredClusterBoost": 1.4,
             "consonantWeights": [
-              1.5,
               1.4,
+              1.5,
               1.3,
               1.1,
               1.2,
               1.3,
               1.2,
-              1.3,
-              0.7,
-              0.6
+              1.3
             ],
             "vowelWeights": [
               1.3,
               1.4,
-              1.5,
-              1.2,
+              1.3,
               1.1,
               1.0,
               0.9,
@@ -2583,31 +2600,27 @@
             ],
             "templateWeights": [
               1.4,
-              1.3,
-              0.7
+              1.2,
+              0.6
             ]
           },
           "morphology": {
             "prefixes": [
               "Umbr",
               "Noct",
-              "Tene",
               "Silv",
-              "Caeli",
-              "Sanct",
-              "Luc"
+              "Tene",
+              "Luc",
+              "Sanct"
             ],
             "suffixes": [
               "us",
-              "ius",
               "is",
               "a",
               "ae",
               "ia",
-              "inus",
-              "anus",
               "um",
-              "ium"
+              "ius"
             ],
             "structure": [
               "root-suffix",
@@ -2615,8 +2628,8 @@
               "root"
             ],
             "structureWeights": [
-              0.55,
-              0.30,
+              0.5,
+              0.35,
               0.15
             ]
           },
@@ -2626,13 +2639,12 @@
             "hyphenRate": 0,
             "preferredEndings": [
               "us",
-              "ius",
               "is",
               "ia",
               "ae",
-              "inus"
+              "um"
             ],
-            "preferredEndingBoost": 1.8,
+            "preferredEndingBoost": 1.6,
             "rhythmBias": "flowing"
           }
         }
@@ -3908,7 +3920,7 @@
               "priority": 60,
               "conditions": {
                 "entityKinds": [
-                  "rules"
+                  "rule"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -3931,7 +3943,7 @@
               "priority": 55,
               "conditions": {
                 "entityKinds": [
-                  "rules"
+                  "rule"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -3959,7 +3971,7 @@
               "priority": 55,
               "conditions": {
                 "entityKinds": [
-                  "rules"
+                  "rule"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -3982,7 +3994,7 @@
               "priority": 50,
               "conditions": {
                 "entityKinds": [
-                  "rules"
+                  "rule"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -4002,7 +4014,7 @@
               "priority": 60,
               "conditions": {
                 "entityKinds": [
-                  "rules"
+                  "rule"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -4019,7 +4031,7 @@
           ],
           "isDefault": false,
           "entityKinds": [
-            "rules"
+            "rule"
           ]
         },
         {
@@ -4070,7 +4082,7 @@
               "name": "Meta-Entity Schools",
               "priority": 80,
               "conditions": {
-                "entityKinds": ["abilities"],
+                "entityKinds": ["ability"],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
@@ -4090,7 +4102,7 @@
               "priority": 50,
               "conditions": {
                 "entityKinds": [
-                  "abilities"
+                  "ability"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -4113,7 +4125,7 @@
               "priority": 50,
               "conditions": {
                 "entityKinds": [
-                  "abilities"
+                  "ability"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -4136,7 +4148,7 @@
               "priority": 50,
               "conditions": {
                 "entityKinds": [
-                  "abilities"
+                  "ability"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -4156,13 +4168,32 @@
             }
           ],
           "entityKinds": [
-            "abilities"
+            "ability"
           ]
         },
         {
           "id": "nightshelf_artifacts",
           "name": "Nightshelf Artifacts",
           "strategyGroups": [
+            {
+              "name": "Anomaly-Born Artifacts",
+              "priority": 65,
+              "conditions": {
+                "entityKinds": ["artifact"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": ["anomaly_born"],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_artifact"
+                }
+              ]
+            },
             {
               "name": "Ancient Relics",
               "priority": 60,
@@ -5770,7 +5801,7 @@
               "name": "Meta-Entity Schools",
               "priority": 80,
               "conditions": {
-                "entityKinds": ["abilities"],
+                "entityKinds": ["ability"],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
@@ -5790,7 +5821,7 @@
               "priority": 60,
               "conditions": {
                 "entityKinds": [
-                  "abilities"
+                  "ability"
                 ],
                 "prominence": [],
                 "subtypes": [
@@ -5828,13 +5859,36 @@
           ],
           "isDefault": false,
           "entityKinds": [
-            "abilities"
+            "ability"
           ]
         },
         {
           "id": "orca_artifacts",
           "name": "Orca Artifacts",
           "strategyGroups": [
+            {
+              "name": "Anomaly-Born Artifacts",
+              "priority": 65,
+              "conditions": {
+                "entityKinds": [
+                  "artifact"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [
+                  "anomaly_born"
+                ],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "orca_artifact"
+                }
+              ]
+            },
             {
               "name": "Ancient Relics",
               "priority": 60,
@@ -5985,7 +6039,7 @@
               "name": "Laws and Traditions",
               "priority": 50,
               "conditions": {
-                "entityKinds": ["rules"],
+                "entityKinds": ["rule"],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
@@ -6002,7 +6056,7 @@
               "name": "Region Names",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["rules"],
+                "entityKinds": ["rule"],
                 "prominence": [],
                 "subtypes": ["region"],
                 "subtypeMatchAll": false,
@@ -6015,7 +6069,7 @@
             }
           ],
           "isDefault": false,
-          "entityKinds": ["rules"]
+          "entityKinds": ["rule"]
         }
       ]
     }
