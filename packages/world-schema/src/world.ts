@@ -312,38 +312,11 @@ export interface Validation {
 }
 
 /**
- * Distribution metrics (optional)
- */
-export interface GraphMetrics {
-  clusters: number;
-  avgClusterSize: number;
-  intraClusterDensity: number;
-  interClusterDensity: number;
-  isolatedNodes: number;
-  isolatedNodeRatio: number;
-}
-
-/**
  * Reachability metrics (pure connectivity, no clustering thresholds)
  */
 export interface ReachabilityMetrics {
   connectedComponents: number;
   fullyConnectedTick?: number | null;
-}
-
-export interface DistributionMetrics {
-  entityKindRatios?: Record<string, number>;
-  prominenceRatios?: Record<string, number>;
-  relationshipTypeRatios?: Record<string, number>;
-  graphMetrics?: GraphMetrics;
-  deviation?: {
-    overall: number;
-    entityKind: number;
-    prominence: number;
-    relationship: number;
-    connectivity: number;
-  };
-  targets?: Record<string, unknown>;
 }
 
 /**
@@ -384,7 +357,6 @@ export interface WorldOutput {
   history: HistoryEvent[];
   /** Narrative events for story generation (optional, enabled via config) */
   narrativeHistory?: NarrativeEvent[];
-  distributionMetrics?: DistributionMetrics;
   coordinateState?: CoordinateState;
   validation?: Validation;
 }

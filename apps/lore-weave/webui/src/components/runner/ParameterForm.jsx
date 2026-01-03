@@ -69,17 +69,6 @@ export default function ParameterForm({ params, onParamChange }) {
         />
       </div>
       <div className="lw-form-group">
-        <label className="lw-label">Target / Kind</label>
-        <NumberInput
-          min={5}
-          max={500}
-          value={params.targetEntitiesPerKind}
-          onChange={(v) => onParamChange('targetEntitiesPerKind', v ?? 20)}
-          className="lw-input"
-          integer
-        />
-      </div>
-      <div className="lw-form-group">
         <label className="lw-label">Max Ticks</label>
         <NumberInput
           min={100}

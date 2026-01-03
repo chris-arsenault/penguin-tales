@@ -356,14 +356,14 @@ function findNextEra(
   return null;
 }
 
-interface TransitionConditionResult {
+export interface TransitionConditionResult {
   type: string;
   passed: boolean;
   diagnostic: string;
   details: Record<string, unknown>;
 }
 
-interface TransitionCheckResult {
+export interface TransitionCheckResult {
   shouldTransition: boolean;
   conditionResults: TransitionConditionResult[];
 }
@@ -394,7 +394,7 @@ function collectEffectPressureChanges(
  * Check if conditions are met for era transition.
  * ALL conditions must pass for the check to succeed.
  */
-function checkTransitionConditions(
+export function checkTransitionConditions(
   currentEra: HardState,
   graphView: WorldRuntime,
   conditions: TransitionCondition[]

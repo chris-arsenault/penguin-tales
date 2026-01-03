@@ -55,7 +55,12 @@ const BLOCK_MAPPINGS: Record<string, BlockMapping> = {
     nameKey: 'name',
     buildItem: (block, diagnostics) => buildPressureItem(block, diagnostics)
   },
-  era: { target: 'eras', idKey: 'id', nameKey: 'name' },
+  era: {
+    target: 'eras',
+    idKey: 'id',
+    nameKey: 'name',
+    buildItem: (block, diagnostics) => buildEraItem(block, diagnostics)
+  },
   entity_kind: {
     target: 'entityKinds',
     idKey: 'kind',
@@ -82,7 +87,11 @@ const BLOCK_MAPPINGS: Record<string, BlockMapping> = {
     buildItem: (block, diagnostics) => buildAxisItem(block, diagnostics)
   },
   ui: { target: 'uiConfig', singleton: true },
-  distribution_targets: { target: 'distributionTargets', singleton: true },
+  distribution_targets: {
+    target: 'distributionTargets',
+    singleton: true,
+    buildItem: (block, diagnostics) => buildDistributionTargetsItem(block, diagnostics)
+  },
   seed_entity: {
     target: 'seedEntities',
     idKey: 'id',
@@ -1243,15 +1252,6 @@ function inlineBlockFromAttribute(
 ): BlockNode | null {
   if (!stmt.labels || stmt.labels.length === 0) return null;
   if (!INLINE_ITEM_KEYS.has(stmt.key)) return null;
-  if (isObjectValue(stmt.value)) {
-    return {
-      type: 'block',
-      name: stmt.key,
-      labels: stmt.labels,
-      body: objectValueToStatements(stmt.value),
-      span: stmt.span
-    };
-  }
   if (isArrayValue(stmt.value)) {
     const body = positionalInlineStatements(stmt, diagnostics);
     if (!body) return null;
@@ -1265,7 +1265,7 @@ function inlineBlockFromAttribute(
   }
   diagnostics.push({
     severity: 'error',
-    message: `Inline ${stmt.key} entries must use key:value pairs or positional fields`,
+    message: `Inline ${stmt.key} entries must use positional fields`,
     span: stmt.span
   });
   return null;
@@ -1295,7 +1295,7 @@ function positionalInlineStatements(stmt: AttributeNode, diagnostics: Diagnostic
   }
   diagnostics.push({
     severity: 'error',
-    message: `Inline ${stmt.key} entries must use key:value pairs`,
+    message: `Inline ${stmt.key} entries must use positional fields`,
     span: stmt.span
   });
   return null;
@@ -1483,20 +1483,6 @@ function parseTagInline(
           span: stmt.span
         });
         return null;
-      }
-      if (isArrayValue(next)) {
-        if (next.items.length < 2) {
-          diagnostics.push({
-            severity: 'error',
-            message: 'usage requires min and max values',
-            span: stmt.span
-          });
-          return null;
-        }
-        statements.push(makeAttributeStatement('minUsage', next.items[0], stmt.span));
-        statements.push(makeAttributeStatement('maxUsage', next.items[1], stmt.span));
-        index += 2;
-        continue;
       }
       const minValue = items[index + 1];
       const maxValue = items[index + 2];
@@ -1945,7 +1931,7 @@ const SYSTEM_CONDITION_KEYS = new Set([
   'not_self'
 ]);
 
-const SYSTEM_OPERATOR_KEYWORDS = new Set(['gt', 'gte', 'lt', 'lte', 'eq', 'between']);
+const SYSTEM_OPERATOR_KEYWORDS = new Set(['gt', 'gte', 'lt', 'lte', 'eq', 'between', '>', '>=', '<', '<=', '==']);
 
 function applySystemCommonAttribute(
   stmt: Extract<StatementNode, { type: 'attribute' }>,
@@ -1996,6 +1982,16 @@ function parseOperatorKeyword(
   ctx: GeneratorContext,
   span: BlockNode['span']
 ): string | null {
+  if (typeof token === 'string') {
+    const mapped = token === '>' ? 'gt'
+      : token === '>=' ? 'gte'
+        : token === '<' ? 'lt'
+          : token === '<=' ? 'lte'
+            : token === '==' ? 'eq'
+              : null;
+    if (mapped) return mapped;
+    if (SYSTEM_OPERATOR_KEYWORDS.has(token)) return token;
+  }
   if (typeof token !== 'string' || !SYSTEM_OPERATOR_KEYWORDS.has(token)) {
     ctx.diagnostics.push({
       severity: 'error',
@@ -2023,6 +2019,175 @@ function parseSystemConditionTokens(
 
   const type = tokens[0];
   const rest = tokens.slice(1);
+
+  if (type === 'pressure') {
+    const pressureId = rest[0];
+    if (typeof pressureId !== 'string') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'pressure requires a pressure id',
+        span
+      });
+      return null;
+    }
+    const opToken = rest[1];
+    const op = parseOperatorKeyword(opToken, ctx, span);
+    if (!op) return null;
+    if (op === 'between') {
+      const minValue = rest[2];
+      const maxValue = rest[3];
+      if (typeof minValue !== 'number' || typeof maxValue !== 'number') {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'pressure between requires two numeric values',
+          span
+        });
+        return null;
+      }
+      return { type: 'pressure', pressureId, min: minValue, max: maxValue };
+    }
+    const value = rest[2];
+    if (typeof value !== 'number') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'pressure requires a numeric threshold',
+        span
+      });
+      return null;
+    }
+    if (op === 'eq') {
+      return { type: 'pressure', pressureId, min: value, max: value };
+    }
+    if (op === 'gt' || op === 'gte') {
+      return { type: 'pressure', pressureId, min: value };
+    }
+    if (op === 'lt' || op === 'lte') {
+      return { type: 'pressure', pressureId, max: value };
+    }
+  }
+
+  if (type === 'cap') {
+    const field = rest[0];
+    const kind = rest[1];
+    if (field !== 'kind' || typeof kind !== 'string') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'cap requires: cap kind <kind> <operator> <value>',
+        span
+      });
+      return null;
+    }
+    const opToken = rest[2];
+    const op = parseOperatorKeyword(opToken, ctx, span);
+    if (!op) return null;
+    if (op === 'between') {
+      const minValue = rest[3];
+      const maxValue = rest[4];
+      if (typeof minValue !== 'number' || typeof maxValue !== 'number') {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'cap between requires two numeric values',
+          span
+        });
+        return null;
+      }
+      return { type: 'entity_count', kind, min: minValue, max: maxValue };
+    }
+    const value = rest[3];
+    if (typeof value !== 'number') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'cap requires a numeric threshold',
+        span
+      });
+      return null;
+    }
+    if (op === 'eq') {
+      return { type: 'entity_count', kind, min: value, max: value };
+    }
+    if (op === 'gt' || op === 'gte') {
+      return { type: 'entity_count', kind, min: value };
+    }
+    if (op === 'lt' || op === 'lte') {
+      return { type: 'entity_count', kind, max: value };
+    }
+  }
+
+  if (type === 'entity_count') {
+    if (rest[0] !== 'kind' || typeof rest[1] !== 'string') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'entity_count requires: entity_count kind <kind> [subtype <subtype>] [status <status>] <operator> <value>',
+        span
+      });
+      return null;
+    }
+    const kind = rest[1];
+    let idx = 2;
+    let subtype: string | undefined;
+    let status: string | undefined;
+    while (idx < rest.length) {
+      const token = rest[idx];
+      const next = rest[idx + 1];
+      if (token === 'subtype' && typeof next === 'string') {
+        subtype = next;
+        idx += 2;
+        continue;
+      }
+      if (token === 'status' && typeof next === 'string') {
+        status = next;
+        idx += 2;
+        continue;
+      }
+      break;
+    }
+    const opToken = rest[idx];
+    const op = parseOperatorKeyword(opToken, ctx, span);
+    if (!op) return null;
+    idx += 1;
+    const condition: Record<string, unknown> = { type: 'entity_count', kind };
+    if (subtype) condition.subtype = subtype;
+    if (status) condition.status = status;
+
+    if (op === 'between') {
+      const minValue = rest[idx];
+      const maxValue = rest[idx + 1];
+      if (typeof minValue !== 'number' || typeof maxValue !== 'number') {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'entity_count between requires two numeric values',
+          span
+        });
+        return null;
+      }
+      condition.min = minValue;
+      condition.max = maxValue;
+      return condition;
+    }
+
+    const value = rest[idx];
+    if (typeof value !== 'number') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'entity_count requires a numeric threshold',
+        span
+      });
+      return null;
+    }
+    if (op === 'eq') {
+      condition.min = value;
+      condition.max = value;
+      return condition;
+    }
+    if (op === 'gt' || op === 'gte') {
+      condition.min = value;
+      return condition;
+    }
+    if (op === 'lt' || op === 'lte') {
+      condition.max = value;
+      return condition;
+    }
+  }
 
   if (type === 'tag_exists') {
     const tag = rest[0];
@@ -2179,7 +2344,12 @@ function parseSystemConditionTokens(
   }
 
   if (type === 'time_elapsed') {
-    const minTicks = rest[0];
+    let index = 0;
+    let minTicks = rest[index];
+    if (minTicks === 'min') {
+      index += 1;
+      minTicks = rest[index];
+    }
     if (typeof minTicks !== 'number') {
       ctx.diagnostics.push({
         severity: 'error',
@@ -2189,9 +2359,10 @@ function parseSystemConditionTokens(
       return null;
     }
     const condition: Record<string, unknown> = { type: 'time_elapsed', minTicks };
-    if (rest.length > 1) {
-      if (rest[1] === 'since' && typeof rest[2] === 'string') {
-        condition.since = rest[2];
+    const nextIndex = index + 1;
+    if (rest.length > nextIndex) {
+      if (rest[nextIndex] === 'since' && typeof rest[nextIndex + 1] === 'string') {
+        condition.since = rest[nextIndex + 1];
       } else {
         ctx.diagnostics.push({
           severity: 'error',
@@ -2202,6 +2373,19 @@ function parseSystemConditionTokens(
       }
     }
     return condition;
+  }
+
+  if (type === 'era_match') {
+    const eras = rest.filter((entry) => entry !== undefined);
+    if (eras.length === 0 || eras.some((entry) => typeof entry !== 'string')) {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'era_match requires one or more era identifiers',
+        span
+      });
+      return null;
+    }
+    return { type: 'era_match', eras };
   }
 
   if (type === 'prominence') {
@@ -2864,6 +3048,19 @@ function parseRuleBlock(
         rule.betweenMatching = valueToJson(child.value, ctx.diagnostics, ctx.parent);
         continue;
       }
+      const actionFromAttribute = parseSystemActionStatement(child, ctx);
+      if (actionFromAttribute) {
+        if (action) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'rule supports a single action',
+            span: child.span
+          });
+          continue;
+        }
+        action = actionFromAttribute;
+        continue;
+      }
       ctx.diagnostics.push({
         severity: 'error',
         message: `Unsupported rule attribute "${child.key}"`,
@@ -3180,11 +3377,9 @@ function buildThresholdTriggerSystem(
         applyPressureChangeValue(stmt.value, ctx, stmt.span, pressureChanges);
         continue;
       }
-      if (SYSTEM_CONDITION_KEYS.has(stmt.key)) {
-        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
-        if (!tokens) continue;
-        const condition = parseSystemConditionTokens([stmt.key, ...tokens], ctx, stmt.span);
-        if (condition) conditions.push(condition);
+      const condition = parseSystemConditionStatement(stmt, ctx);
+      if (condition) {
+        conditions.push(condition);
         continue;
       }
       ctx.diagnostics.push({
@@ -6046,6 +6241,12 @@ function buildPhonologyFromStatements(
   parent: BlockNode
 ): Record<string, unknown> {
   const phonology: Record<string, unknown> = {};
+  const consonantWeights: number[] = [];
+  const vowelWeights: number[] = [];
+  const templateWeights: number[] = [];
+  let sawConsonantWeights = false;
+  let sawVowelWeights = false;
+  let sawTemplateWeights = false;
 
   for (const stmt of statements) {
     if (stmt.type !== 'attribute') {
@@ -6077,16 +6278,51 @@ function buildPhonologyFromStatements(
       phonology.favoredClusterBoost = value;
       continue;
     }
-    if (stmt.key === 'consonant_weights') {
-      phonology.consonantWeights = value;
+    if (stmt.key === 'consonant_weights' || stmt.key === 'vowel_weights' || stmt.key === 'template_weights') {
+      diagnostics.push({
+        severity: 'error',
+        message: `${stmt.key} is not supported; use ${stmt.key.replace('_weights', '_weight')} entries`,
+        span: stmt.span
+      });
       continue;
     }
-    if (stmt.key === 'vowel_weights') {
-      phonology.vowelWeights = value;
+    if (stmt.key === 'consonant_weight') {
+      if (typeof value !== 'number') {
+        diagnostics.push({
+          severity: 'error',
+          message: 'consonant_weight requires a numeric value',
+          span: stmt.span
+        });
+        continue;
+      }
+      sawConsonantWeights = true;
+      consonantWeights.push(value);
       continue;
     }
-    if (stmt.key === 'template_weights') {
-      phonology.templateWeights = value;
+    if (stmt.key === 'vowel_weight') {
+      if (typeof value !== 'number') {
+        diagnostics.push({
+          severity: 'error',
+          message: 'vowel_weight requires a numeric value',
+          span: stmt.span
+        });
+        continue;
+      }
+      sawVowelWeights = true;
+      vowelWeights.push(value);
+      continue;
+    }
+    if (stmt.key === 'template_weight') {
+      if (typeof value !== 'number') {
+        diagnostics.push({
+          severity: 'error',
+          message: 'template_weight requires a numeric value',
+          span: stmt.span
+        });
+        continue;
+      }
+      sawTemplateWeights = true;
+      templateWeights.push(value);
       continue;
     }
     if (stmt.key === 'max_cluster') {
@@ -6104,6 +6340,16 @@ function buildPhonologyFromStatements(
     setObjectValue(phonology, stmt.key, value);
   }
 
+  if (sawConsonantWeights) {
+    phonology.consonantWeights = consonantWeights;
+  }
+  if (sawVowelWeights) {
+    phonology.vowelWeights = vowelWeights;
+  }
+  if (sawTemplateWeights) {
+    phonology.templateWeights = templateWeights;
+  }
+
   return phonology;
 }
 
@@ -6113,6 +6359,12 @@ function buildMorphologyFromStatements(
   parent: BlockNode
 ): Record<string, unknown> {
   const morphology: Record<string, unknown> = {};
+  const prefixWeights: number[] = [];
+  const suffixWeights: number[] = [];
+  const structureWeights: number[] = [];
+  let sawPrefixWeights = false;
+  let sawSuffixWeights = false;
+  let sawStructureWeights = false;
 
   for (const stmt of statements) {
     if (stmt.type !== 'attribute') {
@@ -6128,19 +6380,64 @@ function buildMorphologyFromStatements(
       morphology.wordRoots = value;
       continue;
     }
-    if (stmt.key === 'prefix_weights') {
-      morphology.prefixWeights = value;
+    if (stmt.key === 'prefix_weights' || stmt.key === 'suffix_weights' || stmt.key === 'structure_weights') {
+      diagnostics.push({
+        severity: 'error',
+        message: `${stmt.key} is not supported; use ${stmt.key.replace('_weights', '_weight')} entries`,
+        span: stmt.span
+      });
       continue;
     }
-    if (stmt.key === 'suffix_weights') {
-      morphology.suffixWeights = value;
+    if (stmt.key === 'prefix_weight') {
+      if (typeof value !== 'number') {
+        diagnostics.push({
+          severity: 'error',
+          message: 'prefix_weight requires a numeric value',
+          span: stmt.span
+        });
+        continue;
+      }
+      sawPrefixWeights = true;
+      prefixWeights.push(value);
       continue;
     }
-    if (stmt.key === 'structure_weights') {
-      morphology.structureWeights = value;
+    if (stmt.key === 'suffix_weight') {
+      if (typeof value !== 'number') {
+        diagnostics.push({
+          severity: 'error',
+          message: 'suffix_weight requires a numeric value',
+          span: stmt.span
+        });
+        continue;
+      }
+      sawSuffixWeights = true;
+      suffixWeights.push(value);
+      continue;
+    }
+    if (stmt.key === 'structure_weight') {
+      if (typeof value !== 'number') {
+        diagnostics.push({
+          severity: 'error',
+          message: 'structure_weight requires a numeric value',
+          span: stmt.span
+        });
+        continue;
+      }
+      sawStructureWeights = true;
+      structureWeights.push(value);
       continue;
     }
     setObjectValue(morphology, stmt.key, value);
+  }
+
+  if (sawPrefixWeights) {
+    morphology.prefixWeights = prefixWeights;
+  }
+  if (sawSuffixWeights) {
+    morphology.suffixWeights = suffixWeights;
+  }
+  if (sawStructureWeights) {
+    morphology.structureWeights = structureWeights;
   }
 
   return morphology;
@@ -6284,42 +6581,53 @@ function buildLexemeSpec(block: BlockNode, diagnostics: Diagnostic[]): Record<st
   const spec: Record<string, unknown> = {};
 
   for (const stmt of block.body) {
-    if (stmt.type !== 'attribute') {
-      diagnostics.push({
-        severity: 'error',
-        message: 'lexeme_spec only supports attributes',
-        span: stmt.span
-      });
-      continue;
-    }
-    if (stmt.key === 'culture' || stmt.key === 'culture_id') {
-      const ref = parseResourceReferenceValue(stmt.value, diagnostics, block, 'culture', {
-        allowArray: true,
-        allowedTypes: ['culture']
-      });
-      if (ref !== null) {
-        spec.cultureId = ref;
+    if (stmt.type === 'attribute') {
+      if (stmt.key === 'culture' || stmt.key === 'culture_id') {
+        const ref = parseResourceReferenceValue(stmt.value, diagnostics, block, 'culture', {
+          allowArray: true,
+          allowedTypes: ['culture']
+        });
+        if (ref !== null) {
+          spec.cultureId = ref;
+        }
+        continue;
       }
+      const value = valueToJson(stmt.value, diagnostics, block);
+      if (stmt.key === 'target') {
+        spec.targetCount = value;
+        continue;
+      }
+      if (stmt.key === 'quality' && Array.isArray(value) && value.length >= 2) {
+        spec.qualityFilter = { minLength: value[0], maxLength: value[1] };
+        continue;
+      }
+      if (stmt.key === 'max_words') {
+        spec.maxWords = value;
+        continue;
+      }
+      if (stmt.key === 'word_style') {
+        spec.wordStyle = value;
+        continue;
+      }
+      setObjectValue(spec, stmt.key, value);
       continue;
     }
-    const value = valueToJson(stmt.value, diagnostics, block);
-    if (stmt.key === 'target') {
-      spec.targetCount = value;
+
+    if (stmt.type === 'block') {
+      if (stmt.name === 'word_style') {
+        spec.wordStyle = buildObjectFromStatements(stmt.body, diagnostics, stmt);
+        continue;
+      }
+      const child = buildObjectFromStatements(stmt.body, diagnostics, stmt);
+      setObjectValue(spec, stmt.name, child);
       continue;
     }
-    if (stmt.key === 'quality' && Array.isArray(value) && value.length >= 2) {
-      spec.qualityFilter = { minLength: value[0], maxLength: value[1] };
-      continue;
-    }
-    if (stmt.key === 'max_words') {
-      spec.maxWords = value;
-      continue;
-    }
-    if (stmt.key === 'word_style') {
-      spec.wordStyle = value;
-      continue;
-    }
-    setObjectValue(spec, stmt.key, value);
+
+    diagnostics.push({
+      severity: 'error',
+      message: 'lexeme_spec only supports attributes or blocks',
+      span: stmt.span
+    });
   }
 
   if (!applyLabelField(spec, 'id', block.labels[0], diagnostics, block)) return null;
@@ -7566,6 +7874,319 @@ function buildRegionsFromStatements(
   return regions;
 }
 
+function buildEraItem(block: BlockNode, diagnostics: Diagnostic[]): Record<string, unknown> | null {
+  const item: Record<string, unknown> = {};
+  const ctx = createSystemContext(diagnostics, block);
+  const templateWeights: Record<string, number> = {};
+  const systemModifiers: Record<string, number> = {};
+  const entryConditions: Record<string, unknown>[] = [];
+  const exitConditions: Record<string, unknown>[] = [];
+  const entryEffects: Record<string, unknown>[] = [];
+  const exitEffects: Record<string, unknown>[] = [];
+  let sawTemplateWeights = false;
+  let sawSystemModifiers = false;
+  let sawEntryConditions = false;
+  let sawExitConditions = false;
+  let sawEntryEffects = false;
+  let sawExitEffects = false;
+
+  for (const stmt of block.body) {
+    if (stmt.type === 'attribute') {
+      if (stmt.labels && stmt.labels.length > 0) {
+        diagnostics.push({
+          severity: 'error',
+          message: 'era attributes do not support labels',
+          span: stmt.span
+        });
+        continue;
+      }
+      if (stmt.key === 'template_weight') {
+        const raw = valueToJson(stmt.value, diagnostics, block);
+        const tokens = Array.isArray(raw) ? raw : [raw];
+        if (tokens.length !== 2) {
+          diagnostics.push({
+            severity: 'error',
+            message: 'template_weight requires: template_weight <template> <weight>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const [templateId, weight] = tokens;
+        if (typeof templateId !== 'string' || typeof weight !== 'number') {
+          diagnostics.push({
+            severity: 'error',
+            message: 'template_weight requires a template id and numeric weight',
+            span: stmt.span
+          });
+          continue;
+        }
+        if (Object.prototype.hasOwnProperty.call(templateWeights, templateId)) {
+          diagnostics.push({
+            severity: 'error',
+            message: `Duplicate template_weight "${templateId}"`,
+            span: stmt.span
+          });
+          continue;
+        }
+        sawTemplateWeights = true;
+        templateWeights[templateId] = weight;
+        continue;
+      }
+      if (stmt.key === 'system_modifier') {
+        const raw = valueToJson(stmt.value, diagnostics, block);
+        const tokens = Array.isArray(raw) ? raw : [raw];
+        if (tokens.length !== 2) {
+          diagnostics.push({
+            severity: 'error',
+            message: 'system_modifier requires: system_modifier <system> <multiplier>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const [systemId, multiplier] = tokens;
+        if (typeof systemId !== 'string' || typeof multiplier !== 'number') {
+          diagnostics.push({
+            severity: 'error',
+            message: 'system_modifier requires a system id and numeric multiplier',
+            span: stmt.span
+          });
+          continue;
+        }
+        if (Object.prototype.hasOwnProperty.call(systemModifiers, systemId)) {
+          diagnostics.push({
+            severity: 'error',
+            message: `Duplicate system_modifier "${systemId}"`,
+            span: stmt.span
+          });
+          continue;
+        }
+        sawSystemModifiers = true;
+        systemModifiers[systemId] = multiplier;
+        continue;
+      }
+      if (stmt.key === 'entry_condition' || stmt.key === 'exit_condition') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens) continue;
+        const condition = parseSystemConditionTokens(tokens, ctx, stmt.span);
+        if (condition) {
+          normalizeRefsInObject(condition, ctx);
+          if (stmt.key === 'entry_condition') {
+            sawEntryConditions = true;
+            entryConditions.push(condition);
+          } else {
+            sawExitConditions = true;
+            exitConditions.push(condition);
+          }
+        }
+        continue;
+      }
+      if (stmt.key === 'entry_effect' || stmt.key === 'exit_effect') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens) continue;
+        const mutation = parseEraEffectTokens(tokens, diagnostics, stmt.span);
+        if (mutation) {
+          if (stmt.key === 'entry_effect') {
+            sawEntryEffects = true;
+            entryEffects.push(mutation);
+          } else {
+            sawExitEffects = true;
+            exitEffects.push(mutation);
+          }
+        }
+        continue;
+      }
+      if (applySetFieldAttribute(stmt, item, diagnostics, block)) {
+        continue;
+      }
+      const value = valueToJson(stmt.value, diagnostics, block);
+      setObjectValue(item, stmt.key, value);
+      continue;
+    }
+
+    if (stmt.type === 'block') {
+      if (applySetFieldBlock(stmt, item, diagnostics)) continue;
+      const child = buildObjectFromStatements(stmt.body, diagnostics, stmt);
+      if (stmt.labels.length > 0) {
+        const existingId = child.id;
+        if (existingId === undefined) {
+          child.id = stmt.labels[0];
+        } else if (typeof existingId !== 'string') {
+          diagnostics.push({
+            severity: 'error',
+            message: 'block id must be a string',
+            span: stmt.span
+          });
+        } else if (existingId !== stmt.labels[0]) {
+          diagnostics.push({
+            severity: 'error',
+            message: `block id mismatch: label "${stmt.labels[0]}" vs id "${existingId}"`,
+            span: stmt.span
+          });
+        }
+      }
+      if (stmt.labels.length > 1) {
+        const existingName = child.name;
+        if (existingName === undefined) {
+          child.name = stmt.labels[1];
+        } else if (typeof existingName !== 'string') {
+          diagnostics.push({
+            severity: 'error',
+            message: 'block name must be a string',
+            span: stmt.span
+          });
+        } else if (existingName !== stmt.labels[1]) {
+          diagnostics.push({
+            severity: 'error',
+            message: `block name mismatch: label "${stmt.labels[1]}" vs name "${existingName}"`,
+            span: stmt.span
+          });
+        }
+      }
+      setObjectValue(item, stmt.name, child);
+      continue;
+    }
+
+    if (stmt.type === 'predicate' && (stmt.keyword === 'entry_condition' || stmt.keyword === 'exit_condition')) {
+      if (!stmt.field) {
+        diagnostics.push({
+          severity: 'error',
+          message: `${stmt.keyword} requires a condition type`,
+          span: stmt.span
+        });
+        continue;
+      }
+      const predicate = {
+        type: 'predicate',
+        keyword: stmt.field,
+        subject: stmt.subject,
+        operator: stmt.operator,
+        value: stmt.value,
+        span: stmt.span
+      } as Extract<StatementNode, { type: 'predicate' }>;
+      const condition = conditionFromPredicate(predicate, ctx);
+      if (condition) {
+        normalizeRefsInObject(condition, ctx);
+        if (stmt.keyword === 'entry_condition') {
+          sawEntryConditions = true;
+          entryConditions.push(condition);
+        } else {
+          sawExitConditions = true;
+          exitConditions.push(condition);
+        }
+      }
+      continue;
+    }
+
+    if (stmt.type === 'bare') {
+      diagnostics.push({
+        severity: 'error',
+        message: 'bare statements are not valid in era blocks',
+        span: stmt.span
+      });
+    }
+  }
+
+  if (sawTemplateWeights) {
+    item.templateWeights = templateWeights;
+  }
+  if (sawSystemModifiers) {
+    item.systemModifiers = systemModifiers;
+  }
+  if (sawEntryConditions) {
+    item.entryConditions = entryConditions;
+  }
+  if (sawExitConditions) {
+    item.exitConditions = exitConditions;
+  }
+  if (sawEntryEffects) {
+    item.entryEffects = { mutations: entryEffects };
+  }
+  if (sawExitEffects) {
+    item.exitEffects = { mutations: exitEffects };
+  }
+
+  return item;
+}
+
+function buildDistributionTargetsItem(
+  block: BlockNode,
+  diagnostics: Diagnostic[]
+): Record<string, unknown> | null {
+  const item = buildObjectFromStatements(block.body, diagnostics, block);
+
+  const perEraRaw = item.per_era;
+  if (perEraRaw !== undefined) {
+    const entries = Array.isArray(perEraRaw) ? perEraRaw : [perEraRaw];
+    const perEra: Record<string, unknown> = {};
+    for (const entry of entries) {
+      if (!isRecord(entry)) {
+        diagnostics.push({
+          severity: 'error',
+          message: 'per_era entries must be blocks',
+          span: block.span
+        });
+        continue;
+      }
+      const id = entry.id;
+      if (typeof id !== 'string') {
+        diagnostics.push({
+          severity: 'error',
+          message: 'per_era blocks require an era label',
+          span: block.span
+        });
+        continue;
+      }
+      if (perEra[id]) {
+        diagnostics.push({
+          severity: 'error',
+          message: `duplicate per_era entry: ${id}`,
+          span: block.span
+        });
+        continue;
+      }
+      const { id: _id, ...rest } = entry;
+      perEra[id] = rest;
+    }
+    item.perEra = perEra;
+    delete item.per_era;
+  }
+
+  return item;
+}
+
+function parseEraEffectTokens(
+  tokens: unknown[],
+  diagnostics: Diagnostic[],
+  span: BlockNode['span']
+): Record<string, unknown> | null {
+  if (tokens.length !== 3 || typeof tokens[0] !== 'string') {
+    diagnostics.push({
+      severity: 'error',
+      message: 'effect requires: effect <type> <pressure> <delta>',
+      span
+    });
+    return null;
+  }
+  const [type, pressureId, delta] = tokens;
+  if (type !== 'modify_pressure') {
+    diagnostics.push({
+      severity: 'error',
+      message: `Unsupported effect type "${type}"`,
+      span
+    });
+    return null;
+  }
+  if (typeof pressureId !== 'string' || typeof delta !== 'number') {
+    diagnostics.push({
+      severity: 'error',
+      message: 'modify_pressure requires a pressure id and numeric delta',
+      span
+    });
+    return null;
+  }
+  return { type: 'modify_pressure', pressureId, delta };
+}
+
 function buildRegionFromBlock(block: BlockNode, diagnostics: Diagnostic[]): Record<string, unknown> | null {
   const region: Record<string, unknown> = {};
 
@@ -8492,15 +9113,8 @@ function buildActionRelationshipMutation(
   stmt: Extract<StatementNode, { type: 'rel' }>,
   ctx: ActionContext
 ): Record<string, unknown> | null {
-  const value = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
-  if (!isRecord(value)) {
-    ctx.diagnostics.push({
-      severity: 'error',
-      message: 'rel mutation requires attributes',
-      span: stmt.span
-    });
-    return null;
-  }
+  const value = parseInlineKeyValuePairs(stmt.value, ctx.diagnostics, ctx.parent, 'rel mutation');
+  if (!value) return null;
   const mutation: Record<string, unknown> = {
     kind: stmt.kind,
     src: normalizeRefName(stmt.src, ctx),
@@ -8898,6 +9512,13 @@ function applyGeneratorStatement(
       addApplicabilityEntry(stmt.labels, buildObjectFromStatements(stmt.body, ctx.diagnostics, stmt), obj, ctx.diagnostics, stmt);
       return;
     }
+    if (stmt.name === 'variants') {
+      const variants = buildVariantsFromBlock(stmt, ctx);
+      if (variants) {
+        obj.variants = variants;
+      }
+      return;
+    }
 
     const child = buildObjectFromStatements(stmt.body, ctx.diagnostics, stmt);
     if (stmt.labels.length > 0) {
@@ -8968,8 +9589,203 @@ function applyGeneratorStatement(
   }
 }
 
+function buildVariantsFromBlock(block: BlockNode, ctx: GeneratorContext): Record<string, unknown> | null {
+  const variants: Record<string, unknown> = {};
+  const options: Record<string, unknown>[] = [];
+
+  for (const stmt of block.body) {
+    if (stmt.type === 'attribute') {
+      if (stmt.key === 'selection') {
+        variants.selection = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      const value = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+      setObjectValue(variants, stmt.key, value);
+      continue;
+    }
+
+    if (stmt.type === 'block') {
+      if (stmt.name === 'options') {
+        const option = buildVariantOptionFromBlock(stmt, ctx);
+        if (option) options.push(option);
+        continue;
+      }
+      const child = buildObjectFromStatements(stmt.body, ctx.diagnostics, stmt);
+      setObjectValue(variants, stmt.name, child);
+      continue;
+    }
+
+    if (stmt.type === 'bare') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'bare statements are not allowed in variants',
+        span: stmt.span
+      });
+    }
+  }
+
+  if (options.length > 0) {
+    variants.options = options;
+  }
+
+  return variants;
+}
+
+function buildVariantOptionFromBlock(block: BlockNode, ctx: GeneratorContext): Record<string, unknown> | null {
+  const option: Record<string, unknown> = {};
+
+  for (const stmt of block.body) {
+    if (stmt.type === 'attribute') {
+      if (stmt.key === 'name') {
+        option.name = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      const value = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+      setObjectValue(option, stmt.key, value);
+      continue;
+    }
+
+    if (stmt.type === 'block') {
+      if (stmt.name === 'when') {
+        option.when = buildObjectFromStatements(stmt.body, ctx.diagnostics, stmt);
+        continue;
+      }
+      if (stmt.name === 'apply') {
+        const apply = buildVariantApplyFromBlock(stmt, ctx);
+        if (apply) option.apply = apply;
+        continue;
+      }
+      const child = buildObjectFromStatements(stmt.body, ctx.diagnostics, stmt);
+      setObjectValue(option, stmt.name, child);
+      continue;
+    }
+
+    if (stmt.type === 'bare') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'bare statements are not allowed in variant options',
+        span: stmt.span
+      });
+    }
+  }
+
+  return option;
+}
+
+function buildVariantApplyFromBlock(block: BlockNode, ctx: GeneratorContext): Record<string, unknown> | null {
+  const apply: Record<string, unknown> = {};
+  const tags: Record<string, Record<string, boolean>> = {};
+  const subtypes: Record<string, string> = {};
+  const stateUpdates: Record<string, unknown>[] = [];
+
+  for (const stmt of block.body) {
+    if (stmt.type === 'attribute') {
+      if (stmt.key === 'tag_assign') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 3) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'tag_assign requires: tag_assign <entity> <tag> <true|false>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const [entity, tag, enabled] = tokens;
+        if (typeof entity !== 'string' || typeof tag !== 'string' || typeof enabled !== 'boolean') {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'tag_assign requires: tag_assign <entity> <tag> <true|false>',
+            span: stmt.span
+          });
+          continue;
+        }
+        if (!tags[entity]) tags[entity] = {};
+        tags[entity][tag] = enabled;
+        continue;
+      }
+      if (stmt.key === 'subtype') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 2) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'subtype requires: subtype <entity> <subtype>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const [entity, subtype] = tokens;
+        if (typeof entity !== 'string' || typeof subtype !== 'string') {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'subtype requires: subtype <entity> <subtype>',
+            span: stmt.span
+          });
+          continue;
+        }
+        subtypes[entity] = subtype;
+        continue;
+      }
+      const value = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+      setObjectValue(apply, stmt.key, value);
+      continue;
+    }
+
+    if (stmt.type === 'block') {
+      if (stmt.name === 'stateUpdates') {
+        const child = buildObjectFromStatements(stmt.body, ctx.diagnostics, stmt);
+        stateUpdates.push(child);
+        continue;
+      }
+      if (stmt.name === 'tags' || stmt.name === 'subtype') {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: `${stmt.name} blocks are not supported here; use tag_assign or subtype statements`,
+          span: stmt.span
+        });
+        continue;
+      }
+      const child = buildObjectFromStatements(stmt.body, ctx.diagnostics, stmt);
+      setObjectValue(apply, stmt.name, child);
+      continue;
+    }
+
+    if (stmt.type === 'bare') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'bare statements are not allowed in apply blocks',
+        span: stmt.span
+      });
+    }
+  }
+
+  if (Object.keys(tags).length > 0) {
+    apply.tags = tags;
+  }
+  if (Object.keys(subtypes).length > 0) {
+    apply.subtype = subtypes;
+  }
+  if (stateUpdates.length > 0) {
+    apply.stateUpdates = stateUpdates;
+  }
+
+  return apply;
+}
+
 function buildConditionsFromStatements(statements: StatementNode[], ctx: GeneratorContext): Record<string, unknown>[] {
   const conditions: Record<string, unknown>[] = [];
+  const conditionKeys = new Set([
+    'pressure',
+    'cap',
+    'entity_count',
+    'relationship_count',
+    'relationship_exists',
+    'tag_exists',
+    'random_chance',
+    'time_elapsed',
+    'entity_exists',
+    'not_self',
+    'era_match'
+  ]);
 
   for (const stmt of statements) {
     if (stmt.type === 'predicate') {
@@ -8980,6 +9796,16 @@ function buildConditionsFromStatements(statements: StatementNode[], ctx: Generat
     if (stmt.type === 'block' && (stmt.name === 'path' || stmt.name === 'graph_path' || stmt.name === 'filter')) {
       const condition = parseGraphPathBlock(stmt, ctx);
       if (condition) conditions.push(condition);
+      continue;
+    }
+    if (stmt.type === 'attribute' && conditionKeys.has(stmt.key)) {
+      const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+      if (!tokens) continue;
+      const condition = parseSystemConditionTokens([stmt.key, ...tokens], ctx, stmt.span);
+      if (condition) {
+        normalizeRefsInObject(condition, ctx);
+        conditions.push(condition);
+      }
       continue;
     }
     if (stmt.type === 'attribute' && stmt.key === 'condition') {
@@ -9494,7 +10320,25 @@ function parseGraphPathStepTokens(
     });
     return null;
   }
-  const [viaToken, direction, targetKind, targetSubtype, statusLabel, statusValue] = tokens;
+  const directionIndex = tokens.findIndex(
+    (token) => typeof token === 'string' && ['in', 'out', 'any', 'both'].includes(token)
+  );
+  if (directionIndex < 1 || directionIndex + 2 >= tokens.length) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'step requires: step <via> <direction> <kind> <subtype> [status <status>]',
+      span
+    });
+    return null;
+  }
+
+  const viaToken = directionIndex === 1 ? tokens[0] : tokens.slice(0, directionIndex);
+  const direction = tokens[directionIndex];
+  const targetKind = tokens[directionIndex + 1];
+  const targetSubtype = tokens[directionIndex + 2];
+  const statusLabel = tokens[directionIndex + 3];
+  const statusValue = tokens[directionIndex + 4];
+
   const via = parseViaToken(viaToken, ctx, span);
   if (!via || typeof direction !== 'string' || typeof targetKind !== 'string' || typeof targetSubtype !== 'string') {
     ctx.diagnostics.push({
@@ -9504,12 +10348,14 @@ function parseGraphPathStepTokens(
     });
     return null;
   }
+
   const step: Record<string, unknown> = {
     via,
     direction,
     targetKind,
     targetSubtype
   };
+
   if (statusLabel !== undefined) {
     if (statusLabel !== 'status' || typeof statusValue !== 'string') {
       ctx.diagnostics.push({
@@ -9521,6 +10367,7 @@ function parseGraphPathStepTokens(
     }
     step.targetStatus = statusValue;
   }
+
   return step;
 }
 
@@ -9528,7 +10375,8 @@ function parseGraphPathStepBlock(
   stmt: BlockNode,
   ctx: GeneratorContext
 ): Record<string, unknown> | null {
-  const step: Record<string, unknown> = {};
+  const baseStep = stmt.labels.length > 0 ? parseGraphPathStepTokens(stmt.labels, ctx, stmt.span) : {};
+  const step: Record<string, unknown> = baseStep ?? {};
   const filters: Record<string, unknown>[] = [];
 
   for (const child of stmt.body) {
@@ -9806,10 +10654,21 @@ function buildSelectionFromStatements(
         });
         continue;
       }
+      const relationshipKind = child.field ? child.field : child.subject;
+      const fromKind = child.field ? child.subject : undefined;
+      if (!relationshipKind) {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'Saturation limit requires a relationship kind',
+          span: child.span
+        });
+        continue;
+      }
       saturationLimits.push({
-        relationshipKind: child.subject,
+        relationshipKind,
         direction,
-        maxCount: Math.floor(child.value)
+        maxCount: Math.floor(child.value),
+        ...(fromKind ? { fromKind } : {})
       });
       continue;
     }
@@ -9952,6 +10811,31 @@ function buildVariableFromStatements(
     }
 
     if (child.type === 'block') {
+      if (child.name === 'from') {
+        const path: Record<string, unknown>[] = [];
+        for (const entry of child.body) {
+          if (entry.type === 'block' && entry.name === 'path') {
+            const step = buildObjectFromStatements(entry.body, ctx.diagnostics, entry);
+            path.push(step);
+            continue;
+          }
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: `Unsupported from block statement "${entry.type}"`,
+            span: entry.span
+          });
+        }
+        if (path.length === 0) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'from block requires at least one path',
+            span: child.span
+          });
+        } else {
+          select.from = { path };
+        }
+        continue;
+      }
       if (child.name === 'filter' || child.name === 'path' || child.name === 'graph_path') {
         const filter = parseGraphPathBlock(child, ctx);
         if (filter) {
@@ -10111,15 +10995,8 @@ function addCreationEntryDsl(
 
   const value = isRecord(rawValue)
     ? rawValue
-    : valueToJson(rawValue as Value, ctx.diagnostics, ctx.parent);
-  if (!isRecord(value)) {
-    ctx.diagnostics.push({
-      severity: 'error',
-      message: 'create entries must be objects',
-      span: ctx.parent.span
-    });
-    return true;
-  }
+    : parseInlineKeyValuePairs(rawValue as Value, ctx.diagnostics, ctx.parent, 'create');
+  if (!value) return true;
 
   value.entityRef = normalizedLabel;
   normalizeRefsInObject(value, ctx);
@@ -10145,15 +11022,8 @@ function addRelationshipEntryDsl(
 
   const value = isRecord(rawValue)
     ? rawValue
-    : valueToJson(rawValue as Value, ctx.diagnostics, ctx.parent);
-  if (!isRecord(value)) {
-    ctx.diagnostics.push({
-      severity: 'error',
-      message: 'relationship entries must be objects',
-      span: ctx.parent.span
-    });
-    return true;
-  }
+    : parseInlineKeyValuePairs(rawValue as Value, ctx.diagnostics, ctx.parent, 'relationship');
+  if (!value) return true;
 
   const normalizedSrc = resolveRequiredRefName(src, ctx, ctx.parent.span, 'src');
   const normalizedDst = resolveRequiredRefName(dst, ctx, ctx.parent.span, 'dst');
@@ -10196,15 +11066,8 @@ function addVariableEntryDsl(
 
   const value = isRecord(rawValue)
     ? rawValue
-    : valueToJson(rawValue as Value, ctx.diagnostics, ctx.parent);
-  if (!isRecord(value)) {
-    ctx.diagnostics.push({
-      severity: 'error',
-      message: 'let entries must be objects',
-      span: ctx.parent.span
-    });
-    return true;
-  }
+    : parseInlineKeyValuePairs(rawValue as Value, ctx.diagnostics, ctx.parent, 'variable');
+  if (!value) return true;
 
   normalizeRefsInObject(value, ctx);
 
@@ -10598,18 +11461,6 @@ function normalizeExistingSetValue(
     }
     return value as string[];
   }
-  if (isRecord(value)) {
-    const entries = Object.entries(value);
-    if (!entries.every(([, entry]) => entry === true)) {
-      diagnostics.push({
-        severity: 'error',
-        message: 'set fields only support boolean maps when using object syntax',
-        span
-      });
-      return null;
-    }
-    return entries.map(([key]) => key);
-  }
   diagnostics.push({
     severity: 'error',
     message: 'set fields only support identifiers or strings',
@@ -10675,25 +11526,13 @@ function applySetFieldAttribute(
 ): boolean {
   const key = stmt.key;
   if (!SET_FIELD_KEYS.has(key)) return false;
-  if (isArrayValue(stmt.value) || isObjectValue(stmt.value)) {
+  if (isObjectValue(stmt.value)) {
     diagnostics.push({
       severity: 'error',
-      message: 'set fields do not support array or object literals',
+      message: 'set fields do not support object literals',
       span: stmt.span
     });
     return true;
-  }
-  if (Array.isArray(stmt.value)) {
-    for (const entry of stmt.value) {
-      if (isArrayValue(entry) || isObjectValue(entry)) {
-        diagnostics.push({
-          severity: 'error',
-          message: 'set fields do not support array or object literals',
-          span: stmt.span
-        });
-        return true;
-      }
-    }
   }
   const raw = valueToJson(stmt.value, diagnostics, parent);
   const tokens = Array.isArray(raw) ? raw : [raw];
@@ -10720,6 +11559,66 @@ function applySetFieldBlock(
   return mergeSetFieldValue(obj, stmt.name, parsed, diagnostics, stmt.span);
 }
 
+function parseInlineKeyValuePairs(
+  rawValue: Value | Record<string, unknown>,
+  diagnostics: Diagnostic[],
+  parent: BlockNode,
+  context: string
+): Record<string, unknown> | null {
+  if (isRecord(rawValue)) return rawValue;
+  if (!isArrayValue(rawValue)) {
+    diagnostics.push({
+      severity: 'error',
+      message: `${context} entries must use key value pairs`,
+      span: parent.span
+    });
+    return null;
+  }
+
+  const items = rawValue.items;
+  if (items.length === 0 || items.length % 2 !== 0) {
+    diagnostics.push({
+      severity: 'error',
+      message: `${context} entries must use key value pairs`,
+      span: parent.span
+    });
+    return null;
+  }
+
+  const obj: Record<string, unknown> = {};
+  for (let index = 0; index < items.length; index += 2) {
+    const key = coerceStringValue(items[index]);
+    if (!key) {
+      diagnostics.push({
+        severity: 'error',
+        message: `${context} keys must be identifiers or strings`,
+        span: parent.span
+      });
+      return null;
+    }
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      diagnostics.push({
+        severity: 'error',
+        message: `${context} key "${key}" is duplicated`,
+        span: parent.span
+      });
+      return null;
+    }
+    const valueNode = items[index + 1];
+    if (isArrayValue(valueNode) || isObjectValue(valueNode)) {
+      diagnostics.push({
+        severity: 'error',
+        message: `${context} values must be single values`,
+        span: parent.span
+      });
+      return null;
+    }
+    obj[key] = valueToJson(valueNode, diagnostics, parent);
+  }
+
+  return obj;
+}
+
 function addCreationEntry(
   labels: string[],
   rawValue: Value | Record<string, unknown>,
@@ -10739,15 +11638,8 @@ function addCreationEntry(
 
   const value = isRecord(rawValue)
     ? rawValue
-    : valueToJson(rawValue as Value, diagnostics, parent);
-  if (!isRecord(value)) {
-    diagnostics.push({
-      severity: 'error',
-      message: 'create entries must be objects',
-      span: parent.span
-    });
-    return true;
-  }
+    : parseInlineKeyValuePairs(rawValue as Value, diagnostics, parent, 'create');
+  if (!value) return true;
 
   const existingRef = value.entityRef;
   if (existingRef !== undefined) {
@@ -10794,15 +11686,8 @@ function addRelationshipEntry(
 
   const value = isRecord(rawValue)
     ? rawValue
-    : valueToJson(rawValue as Value, diagnostics, parent);
-  if (!isRecord(value)) {
-    diagnostics.push({
-      severity: 'error',
-      message: 'relationship entries must be objects',
-      span: parent.span
-    });
-    return true;
-  }
+    : parseInlineKeyValuePairs(rawValue as Value, diagnostics, parent, 'relationship');
+  if (!value) return true;
 
   if (!applyLabelField(value, 'kind', kind, diagnostics, parent)) return true;
   if (!applyLabelField(value, 'src', src, diagnostics, parent)) return true;
@@ -10831,15 +11716,8 @@ function addVariableEntry(
 
   const value = isRecord(rawValue)
     ? rawValue
-    : valueToJson(rawValue as Value, diagnostics, parent);
-  if (!isRecord(value)) {
-    diagnostics.push({
-      severity: 'error',
-      message: 'var entries must be objects',
-      span: parent.span
-    });
-    return true;
-  }
+    : parseInlineKeyValuePairs(rawValue as Value, diagnostics, parent, 'variable');
+  if (!value) return true;
 
   if (!isRecord(value.select)) {
     const select: Record<string, unknown> = {};
@@ -10962,15 +11840,8 @@ function addApplicabilityEntry(
 
   const value = isRecord(rawValue)
     ? rawValue
-    : valueToJson(rawValue as Value, diagnostics, parent);
-  if (!isRecord(value)) {
-    diagnostics.push({
-      severity: 'error',
-      message: 'applicability entries must be objects',
-      span: parent.span
-    });
-    return true;
-  }
+    : parseInlineKeyValuePairs(rawValue as Value, diagnostics, parent, 'applicability');
+  if (!value) return true;
 
   if (!applyLabelField(value, 'type', typeLabel, diagnostics, parent)) return true;
 

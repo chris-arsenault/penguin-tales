@@ -188,7 +188,7 @@ const config: EngineConfig = {
 
   epochLength: 20,              // Ticks per epoch
   simulationTicksPerGrowth: 15, // Balance between growth and simulation
-  targetEntitiesPerKind: 30,    // Final size
+  distributionTargets: targets, // Per-subtype growth targets
   maxTicks: 500                 // Maximum simulation ticks
 };
 ```
@@ -288,7 +288,7 @@ Run `./scripts/check-escape-hatches.sh` before committing. It checks for:
 
 ## Debugging Tips
 
-1. Set small targets first: `targetEntitiesPerKind: 5` in simulation parameters
+1. Set small distribution targets first (lower subtype targets in `distributionTargets`)
 2. Enable verbose logging: Add `console.log` in templates/systems
 3. Check sample history events and notable entities in output
 4. Use `scaleFactor` parameter to control world size

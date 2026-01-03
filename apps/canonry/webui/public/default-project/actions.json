@@ -264,13 +264,7 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "faction",
-        "filters": [
-          {
-            "type": "has_tag",
-            "tag": "conflict"
-          }
-        ]
+        "kind": "faction"
       },
       "instigator": {
         "from": {
@@ -474,7 +468,8 @@
       "strategy": "by_kind",
       "kind": "location",
       "statuses": [
-        "thriving"
+        "thriving",
+        "waning"
       ],
       "maxResults": 2,
       "filters": [
@@ -597,7 +592,7 @@
       ],
       "descriptionTemplate": "corrupted {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.20,
+        "onSuccess": 0.2,
         "onFailure": 0.07
       }
     },
@@ -1333,7 +1328,7 @@
       ],
       "descriptionTemplate": "echoed through the event of {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.20,
+        "onSuccess": 0.2,
         "onFailure": 0.07
       }
     },
@@ -1769,7 +1764,10 @@
         "subtypes": [
           "weapon"
         ],
-        "status": "intact",
+        "statuses": [
+          "intact",
+          "damaged"
+        ],
         "filters": [
           {
             "type": "lacks_relationship",
@@ -2115,7 +2113,12 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "occurrence",
-        "subtypes": ["war", "disaster", "celebration", "succession_crisis"],
+        "subtypes": [
+          "war",
+          "disaster",
+          "celebration",
+          "succession_crisis"
+        ],
         "status": "active",
         "minProminence": "marginal"
       }
@@ -2181,7 +2184,12 @@
     "targeting": {
       "strategy": "by_kind",
       "kind": "rule",
-      "subtypes": ["ideology", "law", "social", "memorial"],
+      "subtypes": [
+        "ideology",
+        "law",
+        "social",
+        "memorial"
+      ],
       "filters": [
         {
           "type": "matches_culture",
@@ -2211,7 +2219,7 @@
         "onFailure": 0.1
       },
       "targetProminenceDelta": {
-        "onSuccess": 0.30,
+        "onSuccess": 0.3,
         "onFailure": 0.09
       }
     },
@@ -2229,14 +2237,24 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "rule",
-        "subtypes": ["ideology", "law", "social", "memorial"],
+        "subtypes": [
+          "ideology",
+          "law",
+          "social",
+          "memorial"
+        ],
         "minProminence": "marginal"
       }
     },
     "targeting": {
       "strategy": "by_kind",
       "kind": "occurrence",
-      "subtypes": ["war", "disaster", "celebration", "succession_crisis"],
+      "subtypes": [
+        "war",
+        "disaster",
+        "celebration",
+        "succession_crisis"
+      ],
       "filters": [
         {
           "type": "matches_culture",
@@ -2266,7 +2284,7 @@
         "onFailure": 0.06
       },
       "targetProminenceDelta": {
-        "onSuccess": 0.20,
+        "onSuccess": 0.2,
         "onFailure": 0.06
       }
     },
@@ -2350,7 +2368,10 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "rule",
-        "subtypes": ["ideology", "law"],
+        "subtypes": [
+          "ideology",
+          "law"
+        ],
         "minProminence": "marginal"
       },
       "conditions": [
@@ -2425,7 +2446,11 @@
     "targeting": {
       "strategy": "by_kind",
       "kind": "npc",
-      "subtypes": ["mayor", "merchant", "hero"],
+      "subtypes": [
+        "mayor",
+        "merchant",
+        "hero"
+      ],
       "status": "alive",
       "filters": [
         {
@@ -2474,7 +2499,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
-        "subtypes": ["tome"],
+        "subtypes": [
+          "tome"
+        ],
         "status": "intact",
         "filters": [
           {
@@ -2539,7 +2566,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
-        "subtypes": ["tome"],
+        "subtypes": [
+          "tome"
+        ],
         "status": "intact",
         "filters": [
           {
@@ -2604,7 +2633,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
-        "subtypes": ["tome"],
+        "subtypes": [
+          "tome"
+        ],
         "status": "intact",
         "filters": [
           {

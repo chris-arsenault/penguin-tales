@@ -464,16 +464,6 @@ function DetailPanel({ selectedTick, lockedTick, breakdownsByTick, pressureIds, 
                     </div>
                   )}
 
-                  {/* Distribution */}
-                  {breakdown.distributionFeedback !== 0 && (
-                    <div className="lw-trace-view-detail-row">
-                      <span className="lw-trace-view-detail-label">Distribution</span>
-                      <span className={breakdown.distributionFeedback >= 0 ? 'positive' : 'negative'}>
-                        {breakdown.distributionFeedback >= 0 ? '+' : ''}{breakdown.distributionFeedback.toFixed(3)}
-                      </span>
-                    </div>
-                  )}
-
                   {/* Era modifier if not 1 */}
                   {breakdown.eraModifier && breakdown.eraModifier !== 1 && (
                     <div className="lw-trace-view-detail-row lw-trace-view-detail-row-muted">

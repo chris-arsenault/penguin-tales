@@ -183,13 +183,11 @@ export interface SimulationStatistics {
   // Configuration snapshot (for reproducibility)
   configSnapshot: {
     ticksPerEpoch: number;
-    targetEntitiesPerKind: number;
     maxTicks: number;
     relationshipBudget?: {
       maxPerSimulationTick: number;
       maxPerGrowthPhase: number;
     };
-    distributionTargetsEnabled: boolean;
   };
 }
 
@@ -198,104 +196,17 @@ export interface SimulationStatistics {
 // ============================================================================
 
 /**
- * Statistical distribution targets for world generation tuning
+ * Per-subtype targets for homeostatic template weighting
  */
 export interface DistributionTargets {
   $schema?: string;
   version: string;
-  global: GlobalTargets;
-  perEra: Record<string, EraTargetOverrides>;
-  tuning: TuningParameters;
-  relationshipCategories: Record<string, string[] | string>;  // Allow comment field
+  entities: Record<string, Record<string, EntityTarget>>;
 }
 
-export interface GlobalTargets {
-  totalEntities: {
-    target: number;
-    tolerance: number;
-    comment?: string;
-  };
-  entityKindDistribution: {
-    type: 'uniform' | 'normal' | 'custom';
-    targets: Record<string, number>;
-    tolerance: number;
-    comment?: string;
-  };
-  prominenceDistribution: {
-    type: 'normal' | 'uniform' | 'powerlaw';
-    mean?: string;
-    stdDev?: number;
-    targets: Record<ProminenceLabel, number>;
-    perKind?: {
-      enabled: boolean;
-      comment?: string;
-    };
-    comment?: string;
-  };
-  relationshipDistribution: {
-    type: 'diverse' | 'concentrated' | 'custom';
-    maxSingleTypeRatio: number;
-    minTypesPresent: number;
-    minTypeRatio: number;
-    preferredDiversity?: Record<string, number>;
-    comment?: string;
-  };
-  graphConnectivity: {
-    type: 'clustered' | 'uniform' | 'hierarchical';
-    clusteringStrengthThreshold?: number;
-    clusteringComment?: string;
-    targetClusters: {
-      min: number;
-      max: number;
-      preferred: number;
-    };
-    clusterSizeDistribution: {
-      type: 'powerlaw' | 'normal' | 'uniform';
-      alpha?: number;
-      comment?: string;
-    };
-    densityTargets: {
-      intraCluster: number;
-      interCluster: number;
-      comment?: string;
-    };
-    isolatedNodeRatio: {
-      max: number;
-      comment?: string;
-    };
-    comment?: string;
-  };
-}
-
-export interface EraTargetOverrides {
+export interface EntityTarget {
+  target: number;
   comment?: string;
-  entityKindDistribution?: Partial<Record<string, number | string>>;
-  prominenceDistribution?: Partial<Record<ProminenceLabel | string, number | string>>;
-  relationshipDistribution?: {
-    preferredTypes?: string[];
-    preferredRatio?: number;
-    comment?: string;
-  };
-  graphConnectivity?: {
-    interCluster?: number;
-    comment?: string;
-  };
-}
-
-export interface TuningParameters {
-  comment?: string;
-  adjustmentSpeed: number;
-  deviationSensitivity: number;
-  minTemplateWeight: number;
-  maxTemplateWeight: number;
-  convergenceThreshold: number;
-  measurementInterval: number;
-  correctionStrength: {
-    entityKind: number;
-    prominence: number;
-    relationship: number;
-    connectivity: number;
-  };
 }
 
 /**

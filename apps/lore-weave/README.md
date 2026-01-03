@@ -19,7 +19,7 @@ const engine = new WorldEngine({
   systems: allSystems,
   domain: penguinSchema,
   initialState: normalizeInitialState(seedData),
-  targetEntitiesPerKind: 30,
+  distributionTargets: penguinDistributionTargets,
   maxTicks: 500,
 });
 

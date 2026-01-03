@@ -1,0 +1,79 @@
+[
+  {
+    "lowTag": "hostile",
+    "highTag": "friendly",
+    "id": "alignment",
+    "name": "Alignment",
+    "description": ""
+  },
+  {
+    "lowTag": "follower",
+    "highTag": "leader",
+    "id": "authority",
+    "name": "Authority",
+    "description": ""
+  },
+  {
+    "lowTag": "authoritarian",
+    "highTag": "libertarian",
+    "id": "autonomy",
+    "name": "Autonomy",
+    "description": ""
+  },
+  {
+    "lowTag": "ice",
+    "highTag": "fire",
+    "id": "element",
+    "name": "Element",
+    "description": ""
+  },
+  {
+    "lowTag": "south",
+    "highTag": "north",
+    "id": "latitude",
+    "name": "Latitude",
+    "description": ""
+  },
+  {
+    "lowTag": "west",
+    "highTag": "east",
+    "id": "longitude",
+    "name": "Longitude",
+    "description": ""
+  },
+  {
+    "lowTag": "emergent",
+    "highTag": "legendary",
+    "id": "power",
+    "name": "Power",
+    "description": ""
+  },
+  {
+    "lowTag": "mundane",
+    "highTag": "mystical",
+    "id": "pragmatism",
+    "name": "Pragmatism",
+    "description": ""
+  },
+  {
+    "description": "The intended use of the artifact",
+    "lowTag": "destructive",
+    "highTag": "protective",
+    "id": "purpose",
+    "name": "Purpose"
+  },
+  {
+    "lowTag": "chaotic",
+    "highTag": "organized",
+    "id": "structure",
+    "name": "Structure",
+    "description": ""
+  },
+  {
+    "lowTag": "hidden",
+    "highTag": "central",
+    "id": "visibility",
+    "name": "Visibility",
+    "description": ""
+  }
+]

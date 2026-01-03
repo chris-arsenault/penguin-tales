@@ -14,7 +14,6 @@
     ],
     "tone": "Dark, war-weary fantasy in the tradition of Malazan Book of the Fallen, Brent Weeks, and the Powder Mage trilogy. History is written by survivors who remember the cost. Tragedy happens without ceremony - important figures die in half-sentences, battles end mid-action, and not everything resolves.\n\nSTYLE PRINCIPLES:\n- Specificity over abstraction: Not 'a weapon' but 'a fire-core hammer with a cracked head.' Not 'he felt sad' but 'his flippers wouldn't stop shaking.'\n- Show through action and object, not introspection: Characters reveal themselves by what they do, carry, avoid, or destroy - not by what they 'realize' or 'understand.'\n- Subtext over statement: Let implications land. If someone betrayed their colony, don't say they feel guilty - mention they haven't visited the memorial.\n- Uncomfortable details: Include the ugly, inconvenient, or unresolved. A hero's hands might be scarred from something shameful. A victory might cost more than it was worth.\n- Trust the reader: Don't explain metaphors. Don't summarize lessons. End on images, not morals.\n\nSYNTACTIC POETRY:\nAim for the compressed power of 'First in; last out; for the last time.' Sentences that carry weight through rhythm and omission. Not fragmented violence, but poetic compression - where what's left unsaid hits harder than what's spoken. Semicolons can do the work of paragraphs. Repetition with variation creates resonance.\n\nBITTER CAMARADERIE:\nThis is essential. Grimness alone is exhausting. Include:\n- Dark humor between allies - jokes that wouldn't be funny if you hadn't been there\n- Loyalty that persists despite betrayal, stupidity, or failure\n- Small kindnesses in terrible contexts - sharing rations, remembering names, carrying someone's token\n- Soldiers/workers who mock the causes they'll die for\n- The way people become family through shared suffering, not shared values\n- Irony that isn't cruel - the bitter laugh, not the sneer\n- Heroic sacrifice that EARNS its weight - not cheap martyrdom, but the moment someone trades their life for something they actually loved. Make it cost. Make it matter.\n\nExample: Don't just say 'he died in the raid.' Say 'He died in the raid. Kaela still sets out two cups when she brews fire-tea.'\n\nSTRUCTURAL VARIETY:\n- Not every entity needs a death beat. Some are alive. Some mysteries stay mysteries.\n- Some endings are mid-action, unresolved. Some are quiet. Some are bitter-funny.\n- Vary the emotional shape: tragedy, irony, stubborn hope, grim humor, unearned survival.\n\nAVOID THESE AI TELLS:\n- Balance words: yet, however, still, ultimately, in the end, nevertheless\n- Introspection clichés: 'couldn't help but feel,' 'realized that,' 'in that moment,' 'understood that'\n- Polite diction: gentle, quiet, subtle, bittersweet, meaningful, profound\n- Vague sensory: warm, soft, heavy silence, cool breeze (anchor these to specifics or cut them)\n- Flat metaphors: light=hope, darkness=fear, storms=turmoil (find stranger, more specific images)\n- Clean resolutions: Not everything works out. Some things stay broken.\n- Time-skipping without texture: Don't write 'days passed' - either skip entirely or make the waiting hurt\n- RELENTLESS GRIMNESS: If everything is dark, nothing is. Leaven tragedy with dark humor, bitter irony, or stubborn human connection.\n\nDescriptions should read as if written by a war-chronicle keeper or a faction historian with biases, blind spots, and something to prove."
   },
-
   "entityGuidance": {
     "npc": {
       "focus": "Reveal personality through concrete details: what they carry, wear, or refuse to touch. Physical tics, scars, or habits that tell a story. What they've lost or what they're protecting. How others react to them (fear, respect, pity, avoidance). No one is purely good or evil - everyone has costs, compromises, or things they won't talk about. Include one uncomfortable or unglamorous detail: a coward's streak, a cruel habit, an old shame. Characters should feel like they existed before this moment and will continue after it.",
@@ -33,7 +32,6 @@
       "imageInstructions": "The main subject is a CHARACTER. Create a portrait that showcases their individual traits as the focal point. The character should feel like a distinct individual, not a generic representative of their species or role.",
       "imageAvoid": "Flipper/wing gestures as the SOLE identifying element (raised flipper, wing pressed to chest). Characters defined ONLY by body language with no distinctive gear, clothing, or equipment. NOTE: Upright poses are FINE when combined with distinctive structural elements - the issue is poses WITHOUT distinguishing features, not upright poses themselves."
     },
-
     "location": {
       "focus": "Anchor in ONE specific sensory detail first - a smell, a sound, a texture underfoot. Not 'cold' but 'the kind of cold that makes your beak ache.' Show what HAPPENED here: scars, stains, cracks that were never repaired, repairs made with wrong materials. Who controls it NOW vs who BUILT it - layers of history in one place. Not every location is haunted or dangerous. Some are just tired. Some are beloved despite being ugly.",
       "relationshipUse": "Show how people USE this place - the regulars, the rituals, the unwritten rules. Include one detail of stubborn life: graffiti, offerings, someone's initials carved where they shouldn't be. What joke do locals tell about this place? What do they refuse to call it by its official name?",
@@ -51,7 +49,6 @@
       "imageInstructions": "The main subject is a PLACE. Create an environmental shot that captures the atmosphere and character of this location. Include architectural or natural details that make it feel like a real, lived-in space.",
       "imageAvoid": "Characters as primary focus. Empty sterile spaces without signs of use or history."
     },
-
     "faction": {
       "focus": "Every faction has a founding wound - the injustice, defeat, or loss that forged them. Reference it. Show the internal tensions: what do hardliners want vs pragmatists? Include what the faction has DONE - not just what they believe. Actions, not mission statements. Outsiders' views should include fear, contempt, or grudging respect - not neutral acknowledgment. Some factions survive on stubbornness more than purpose. Some on dark humor. Some on spite.",
       "relationshipUse": "Show the culture of belonging - the in-jokes, the shared complaints, the rituals that outsiders find baffling. Include one detail of loyalty that persists despite everything: members who hate the leadership but won't leave, rivals who'd still fight for each other. What do members say about the faction when they're drunk? What do they never say?",
@@ -69,7 +66,6 @@
       "imageInstructions": "The main subject is an ORGANIZATION. Choose one of: a council of leaders, the faction's headquarters, their banner or symbol, or a representative member in ceremonial attire. The image should convey collective identity and purpose.",
       "imageAvoid": "Generic group shots. Individual portraits that don't convey faction identity."
     },
-
     "occurrence": {
       "focus": "Focus on what was LOST, BROKEN, or CHANGED FOREVER - not lessons learned. Name the dead or the cost. History is paid for. Capture one visceral detail - the smell, the sound, the thing someone dropped and never picked up. Don't explain significance - let the facts do the work. Not every event is tragedy. Some are darkly comic. Some are just exhausting.",
       "relationshipUse": "Show how survivors remember it - the dark jokes they tell, the things they won't discuss. Include one detail of stubborn loyalty or absurd kindness amid chaos. Someone carried someone else. Someone went back. Someone still flinches at a certain sound.",
@@ -87,7 +83,6 @@
       "imageInstructions": "The main subject is an EVENT. Create a dramatic scene capturing the pivotal moment. Show the action as if witnessed firsthand - triumphant, tragic, or transformative.",
       "imageAvoid": "Static posed scenes. Before/after comparisons. Abstract representations of events."
     },
-
     "era": {
       "focus": "Eras are defined by what they cost, not what they achieved. Name the central tension that couldn't be resolved - the thing everyone argued about, the wound that wouldn't close. Don't frame eras as 'dark' or 'golden' - show the texture. Golden ages have rot beneath. Dark ages have stubborn hope. Some eras are remembered fondly by exactly the wrong people.",
       "relationshipUse": "What did people hold onto? A song, a ritual, a grudge, a joke that stopped being funny. Show the absurdity of endurance - the things people did to stay sane, the dark humor that got them through. Include one detail of connection that persisted: a trade that continued despite war, a friendship across enemy lines, a tradition no one remembers the origin of.",
@@ -105,7 +100,6 @@
       "imageInstructions": "The main subject is a TIME PERIOD. Create a symbolic or panoramic scene that captures the spirit of this era. Use visual metaphor - rising sun, gathering storm, crumbling walls - to convey the age's defining mood.",
       "imageAvoid": "Specific dated events. Individual character portraits. Literal historical scenes."
     },
-
     "artifact": {
       "focus": "Focus on what it HAS DONE, not just what it IS. Start with a physical detail that tells a story - a notch in the blade, a stain that won't come out, a crack that appeared after a specific use. Artifacts earn their legends. What did this object DO that made it famous? Name a death, a victory, a betrayal. Include the cost - powerful things demand something. What has this artifact taken from its wielders? Show the weight of history: who held it last, who refuses to touch it, what happens to those who carry it too long.",
       "relationshipUse": "If it's lost, show why no one has retrieved it. If it's held, show why no one has stolen it. The relationships around an artifact reveal its true nature.",
@@ -123,7 +117,6 @@
       "imageInstructions": "The main subject is an ARTIFACT or magical object. Create a detailed study of the item as if it were being catalogued in a museum or bestiary. Show the object in isolation or on a pedestal/display, emphasizing its unique features and craftsmanship.",
       "imageAvoid": "Characters holding the artifact. Action scenes. The artifact as a small detail in a larger scene."
     },
-
     "ability": {
       "focus": "Focus on how the magic MANIFESTS and what it COSTS. Magic should feel dangerous or strange, not convenient.",
       "relationshipUse": "Who taught this? Who fears it? Who died learning it wrong?",
@@ -141,7 +134,6 @@
       "imageInstructions": "The main subject is a MAGICAL POWER or ability. Focus on the manifestation of the power itself, not on characters using it. Show energy, effects, or the visual signature of this magic in action.",
       "imageAvoid": "Characters as the focus. Static representations of magic. Abstract symbols alone."
     },
-
     "rule": {
       "focus": "Focus on how the rule CONSTRAINS or ENABLES. Magic systems should feel like they have costs and limits.",
       "relationshipUse": "Who enforces this rule? Who breaks it? What happens to those who test its limits?",
@@ -160,7 +152,6 @@
       "imageAvoid": "Specific characters. Narrative scenes. Literal depictions of magic use."
     }
   },
-
   "cultureIdentities": {
     "visual": {
       "orca": {
@@ -250,27 +241,85 @@
       }
     },
     "visualKeysByKind": {
-      "npc": ["SPECIES", "ATTIRE", "MAGIC", "TECH"],
-      "location": ["SPECIES", "ARCHITECTURE"],
-      "faction": ["SPECIES", "ATTIRE", "ARCHITECTURE", "TECH"],
-      "occurrence": ["SPECIES", "WEATHER_ASSOCIATION", "COLOR_PALETTE"],
-      "ability": ["TECH", "MAGIC"],
-      "rule": ["ARCHITECTURE", "TECH"],
-      "artifact": ["ARTIFACT", "TECH", "MAGIC"],
-      "era": ["ARCHITECTURE", "WEATHER_ASSOCIATION", "DECAY_PATTERN"]
+      "npc": [
+        "SPECIES",
+        "ATTIRE",
+        "MAGIC",
+        "TECH"
+      ],
+      "location": [
+        "SPECIES",
+        "ARCHITECTURE"
+      ],
+      "faction": [
+        "SPECIES",
+        "ATTIRE",
+        "ARCHITECTURE",
+        "TECH"
+      ],
+      "occurrence": [
+        "SPECIES",
+        "WEATHER_ASSOCIATION",
+        "COLOR_PALETTE"
+      ],
+      "ability": [
+        "TECH",
+        "MAGIC"
+      ],
+      "rule": [
+        "ARCHITECTURE",
+        "TECH"
+      ],
+      "artifact": [
+        "ARTIFACT",
+        "TECH",
+        "MAGIC"
+      ],
+      "era": [
+        "ARCHITECTURE",
+        "WEATHER_ASSOCIATION",
+        "DECAY_PATTERN"
+      ]
     },
     "descriptiveKeysByKind": {
-      "npc": ["VALUES", "SPEECH", "FEARS", "TABOOS"],
-      "faction": ["VALUES", "GOVERNANCE", "SELF_VIEW", "OUTSIDER_VIEW"],
-      "location": ["FEARS", "TABOOS"],
-      "occurrence": ["SPEECH", "OUTSIDER_VIEW"],
-      "era": ["GOVERNANCE", "SELF_VIEW"],
-      "ability": ["SPEECH", "TABOOS"],
-      "rule": ["GOVERNANCE", "OUTSIDER_VIEW"],
-      "artifact": ["SPEECH", "TABOOS"]
+      "npc": [
+        "VALUES",
+        "SPEECH",
+        "FEARS",
+        "TABOOS"
+      ],
+      "faction": [
+        "VALUES",
+        "GOVERNANCE",
+        "SELF_VIEW",
+        "OUTSIDER_VIEW"
+      ],
+      "location": [
+        "FEARS",
+        "TABOOS"
+      ],
+      "occurrence": [
+        "SPEECH",
+        "OUTSIDER_VIEW"
+      ],
+      "era": [
+        "GOVERNANCE",
+        "SELF_VIEW"
+      ],
+      "ability": [
+        "SPEECH",
+        "TABOOS"
+      ],
+      "rule": [
+        "GOVERNANCE",
+        "OUTSIDER_VIEW"
+      ],
+      "artifact": [
+        "SPEECH",
+        "TABOOS"
+      ]
     }
   },
-
   "enrichmentConfig": {
     "textModel": "claude-haiku-4-5-20251001",
     "chronicleModel": "claude-haiku-4-5-20251001",
@@ -283,7 +332,6 @@
     "useClaudeForImagePrompt": true,
     "claudeImagePromptTemplate": "Transform the structured prompt below into a single, coherent image prompt for {{modelName}}. Do NOT simply reformat—actively synthesize and reshape:\n\nHonor the VISUAL THESIS: This is the primary visual signal. The thesis describes the dominant silhouette feature that makes this entity instantly recognizable. Build the entire image around it.\n\nSynthesize, don't list:\n- Merge SUBJECT + CONTEXT + CULTURAL IDENTITY into a unified visual\n- Apply STYLE (artistic approach) and COMPOSITION (framing/perspective) to shape the rendering\n- Translate SUPPORTING TRAITS into concrete visual details that reinforce the thesis\n- Incorporate COLOR PALETTE if provided\n\nEstablish clear composition and perspective:\n- Honor the COMPOSITION directive for framing and vantage point\n- Use environmental storytelling (objects, weathering, traces) to convey history\n- The SETTING provides world context but the subject is the focus\n\nCreate specific visual instructions: Rather than listing adjectives, use concrete visual language: \"weathered by decades of X,\" \"visible scars of Y,\" \"rendered in the style of Z\"\n\nRespect the AVOID list: These are hard constraints—elements that break the visual language.\n\nCondense to a single, authoritative prompt: Output should be 150-300 words, reading as clear artistic direction that could be handed to a concept artist—not a bulleted list.\n\nOriginal prompt:\n{{prompt}}"
   },
-
   "styleSelection": {
     "artisticStyleId": "hdr-nature-photography",
     "compositionStyleId": "action-battle"

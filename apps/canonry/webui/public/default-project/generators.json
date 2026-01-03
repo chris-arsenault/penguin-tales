@@ -268,23 +268,8 @@
         "max": 16
       },
       {
-        "type": "or",
-        "conditions": [
-          {
-            "type": "pressure",
-            "pressureId": "security",
-            "max": 10
-          },
-          {
-            "type": "pressure",
-            "pressureId": "harmony",
-            "max": -20
-          }
-        ]
-      },
-      {
         "type": "random_chance",
-        "chance": 0.4
+        "chance": 0.7
       }
     ],
     "selection": {
@@ -476,7 +461,7 @@
           {
             "type": "era_match",
             "eras": [
-              "invasion"
+              "the-orca-incursion"
             ]
           }
         ]
@@ -764,7 +749,9 @@
     "applicability": [
       {
         "type": "era_match",
-        "eras": ["invasion"]
+        "eras": [
+          "the-orca-incursion"
+        ]
       },
       {
         "type": "entity_count",
@@ -782,7 +769,9 @@
     "selection": {
       "strategy": "by_kind",
       "kind": "npc",
-      "subtypes": ["orca"],
+      "subtypes": [
+        "orca"
+      ],
       "status": "alive",
       "pickStrategy": "random"
     },
@@ -806,7 +795,10 @@
           "anchor": {
             "type": "sparse"
           },
-          "steps": ["sparse", "random"]
+          "steps": [
+            "sparse",
+            "random"
+          ]
         }
       },
       {
@@ -827,7 +819,10 @@
           "anchor": {
             "type": "sparse"
           },
-          "steps": ["sparse", "random"]
+          "steps": [
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -861,7 +856,9 @@
     "applicability": [
       {
         "type": "era_match",
-        "eras": ["invasion"]
+        "eras": [
+          "the-orca-incursion"
+        ]
       },
       {
         "type": "entity_count",
@@ -879,7 +876,9 @@
     "selection": {
       "strategy": "by_kind",
       "kind": "location",
-      "subtypes": ["colony"],
+      "subtypes": [
+        "colony"
+      ],
       "pickStrategy": "random",
       "filters": [
         {
@@ -924,7 +923,11 @@
             "type": "entity",
             "ref": "$target"
           },
-          "steps": ["anchor_region", "sparse", "random"]
+          "steps": [
+            "anchor_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -933,7 +936,7 @@
         "kind": "occurred_at",
         "src": "$offensive",
         "dst": "$target",
-        "strength": 1.0
+        "strength": 1
       },
       {
         "kind": "instigated_by",
@@ -963,7 +966,9 @@
         "select": {
           "from": "graph",
           "kind": "npc",
-          "subtypes": ["orca"],
+          "subtypes": [
+            "orca"
+          ],
           "status": "alive",
           "pickStrategy": "random",
           "filters": [
@@ -3053,7 +3058,7 @@
       "filters": [
         {
           "type": "has_relationship",
-          "kind": "allied_with",
+          "kind": "at_war_with",
           "direction": "both"
         }
       ],
@@ -3076,8 +3081,7 @@
           }
         },
         "tags": {
-          "conflict": true,
-          "artifact_war": true
+          "conflict": true
         },
         "placement": {
           "anchor": {
@@ -3253,8 +3257,14 @@
         "condition": {
           "type": "and",
           "conditions": [
-            { "type": "entity_exists", "entity": "$ally1" },
-            { "type": "entity_exists", "entity": "$enemy2" }
+            {
+              "type": "entity_exists",
+              "entity": "$ally1"
+            },
+            {
+              "type": "entity_exists",
+              "entity": "$enemy2"
+            }
           ]
         }
       },
@@ -3278,8 +3288,14 @@
         "condition": {
           "type": "and",
           "conditions": [
-            { "type": "entity_exists", "entity": "$ally2" },
-            { "type": "entity_exists", "entity": "$ally1" }
+            {
+              "type": "entity_exists",
+              "entity": "$ally2"
+            },
+            {
+              "type": "entity_exists",
+              "entity": "$ally1"
+            }
           ]
         }
       }
@@ -3311,23 +3327,31 @@
     "variables": {
       "$enemy": {
         "select": {
-          "from": "graph",
+          "from": {
+            "relatedTo": "$target",
+            "relationshipKind": "at_war_with",
+            "direction": "both"
+          },
           "kind": "faction",
-          "filters": [
-            { "type": "exclude", "entities": ["$target"] },
-            { "type": "lacks_relationship", "kind": "allied_with", "with": "$target" }
-          ],
           "pickStrategy": "random"
         },
         "required": true
       },
       "$enemy2": {
         "select": {
-          "from": "graph",
+          "from": {
+            "relatedTo": "$target",
+            "relationshipKind": "at_war_with",
+            "direction": "both"
+          },
           "kind": "faction",
           "filters": [
-            { "type": "exclude", "entities": ["$target", "$enemy"] },
-            { "type": "lacks_relationship", "kind": "allied_with", "with": "$target" }
+            {
+              "type": "exclude",
+              "entities": [
+                "$enemy"
+              ]
+            }
           ],
           "pickStrategy": "random"
         }
@@ -3341,7 +3365,13 @@
           },
           "kind": "faction",
           "filters": [
-            { "type": "exclude", "entities": ["$enemy", "$enemy2"] }
+            {
+              "type": "exclude",
+              "entities": [
+                "$enemy",
+                "$enemy2"
+              ]
+            }
           ],
           "pickStrategy": "random"
         }
@@ -3355,7 +3385,15 @@
           },
           "kind": "faction",
           "filters": [
-            { "type": "exclude", "entities": ["$target", "$enemy", "$enemy2", "$ally1"] }
+            {
+              "type": "exclude",
+              "entities": [
+                "$target",
+                "$enemy",
+                "$enemy2",
+                "$ally1"
+              ]
+            }
           ],
           "pickStrategy": "random"
         }
@@ -6140,7 +6178,11 @@
             "ref": "$target",
             "stickToRegion": true
           },
-          "steps": ["anchor_region", "sparse", "random"]
+          "steps": [
+            "anchor_region",
+            "sparse",
+            "random"
+          ]
         }
       },
       {
@@ -6169,7 +6211,11 @@
             "ref": "$target",
             "stickToRegion": true
           },
-          "steps": ["anchor_region", "sparse", "random"]
+          "steps": [
+            "anchor_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -6178,7 +6224,7 @@
         "kind": "occurred_at",
         "src": "$event",
         "dst": "$target",
-        "strength": 1.0
+        "strength": 1
       },
       {
         "kind": "stored_at",
@@ -6226,6 +6272,7 @@
     "selection": {
       "strategy": "by_kind",
       "kind": "faction",
+      "notStatus": "waning",
       "saturationLimits": [
         {
           "relationshipKind": "participant_in",
@@ -6235,9 +6282,19 @@
       ],
       "filters": [
         {
-          "type": "has_relationship",
-          "kind": "controls",
-          "direction": "src"
+          "type": "graph_path",
+          "assert": {
+            "check": "count_min",
+            "path": [
+              {
+                "via": "controls",
+                "direction": "any",
+                "targetKind": "location",
+                "targetSubtype": "any"
+              }
+            ],
+            "count": 2
+          }
         }
       ],
       "pickStrategy": "random"
@@ -6250,7 +6307,9 @@
           "filters": [
             {
               "type": "exclude",
-              "entities": ["$target"]
+              "entities": [
+                "$target"
+              ]
             },
             {
               "type": "lacks_relationship",
@@ -6291,10 +6350,17 @@
         "placement": {
           "anchor": {
             "type": "refs_centroid",
-            "refs": ["$target", "$enemy"],
+            "refs": [
+              "$target",
+              "$enemy"
+            ],
             "jitter": 0.1
           },
-          "steps": ["anchor_region", "sparse", "random"]
+          "steps": [
+            "anchor_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -6338,7 +6404,7 @@
         "delta": -6
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "alliance_betrayal",
@@ -6353,6 +6419,7 @@
     "selection": {
       "strategy": "by_kind",
       "kind": "faction",
+      "notStatus": "waning",
       "saturationLimits": [
         {
           "relationshipKind": "participant_in",
@@ -6410,10 +6477,17 @@
         "placement": {
           "anchor": {
             "type": "refs_centroid",
-            "refs": ["$target", "$ally"],
+            "refs": [
+              "$target",
+              "$ally"
+            ],
             "jitter": 0.1
           },
-          "steps": ["anchor_region", "sparse", "random"]
+          "steps": [
+            "anchor_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],

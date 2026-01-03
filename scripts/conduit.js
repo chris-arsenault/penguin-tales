@@ -2,20 +2,15 @@
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
-import Ajv from 'ajv';
 import {
   compileCanonProject,
   compileCanonStaticPages,
-} from '../packages/canonry-dsl/dist/compile.js';
+} from '../packages/canonry-dsl-v2/dist/compile.js';
 import {
   serializeCanonProject,
   serializeCanonStaticPages,
-} from '../packages/canonry-dsl/dist/serialize.js';
+} from '../packages/canonry-dsl-v2/dist/serialize.js';
 import { computeUsageMap } from '../packages/shared-components/src/utils/schemaUsageMap.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = path.resolve(__dirname, '..');
 
 const JSON_FILE_MAP = {
   entityKinds: 'entityKinds.json',
@@ -24,6 +19,7 @@ const JSON_FILE_MAP = {
   tagRegistry: 'tagRegistry.json',
   axisDefinitions: 'axisDefinitions.json',
   uiConfig: 'uiConfig.json',
+  illuminatorConfig: 'illuminatorConfig.json',
   eras: 'eras.json',
   pressures: 'pressures.json',
   generators: 'generators.json',
@@ -41,6 +37,7 @@ const PROJECT_DEFAULTS = {
   tagRegistry: [],
   axisDefinitions: [],
   uiConfig: null,
+  illuminatorConfig: null,
   eras: [],
   pressures: [],
   generators: [],
@@ -68,7 +65,7 @@ Options:
   --to        Output format: canon or json
   --canon     Alias for --to canon
   --json      Alias for --to json
-  --lint      Validate syntax, schema, and references without converting
+  --lint      Validate syntax and references without converting
   --overview  Print a summary of project contents
   --registry  Print the resource registry
   --registry-export Write the resource registry to ${REGISTRY_EXPORT_FILENAME}
@@ -428,205 +425,11 @@ function collectRegistry(config) {
   return output;
 }
 
-function sanitizeIdSuffix(value) {
-  return String(value).replace(/[^A-Za-z0-9_-]/g, '_');
-}
-
-function makeUniqueId(baseId, suffix, used) {
-  const root = `${baseId}__${suffix}`;
-  if (!used.has(root)) {
-    used.add(root);
-    return root;
-  }
-  let index = 2;
-  let candidate = `${root}_${index}`;
-  while (used.has(candidate)) {
-    index += 1;
-    candidate = `${root}_${index}`;
-  }
-  used.add(candidate);
-  return candidate;
-}
-
-function replaceNamingToken(token, domainMap, lexemeMap) {
-  let result = token;
-  if (domainMap.size > 0) {
-    result = result.replace(/\bdomain:([A-Za-z0-9_-]+)/g, (match, id) => {
-      const replacement = domainMap.get(id);
-      return replacement ? `domain:${replacement}` : match;
-    });
-  }
-  if (lexemeMap.size > 0) {
-    result = result.replace(/\bslot:([A-Za-z0-9_-]+)/g, (match, id) => {
-      const replacement = lexemeMap.get(id);
-      return replacement ? `slot:${replacement}` : match;
-    });
-  }
-  return result;
-}
-
-function updateGrammarTokens(grammar, domainMap, lexemeMap) {
-  if (!isRecord(grammar)) return;
-  const rules = grammar.rules;
-  if (!isRecord(rules)) return;
-  Object.values(rules).forEach((ruleOptions) => {
-    if (!Array.isArray(ruleOptions)) return;
-    ruleOptions.forEach((option) => {
-      if (!Array.isArray(option)) return;
-      option.forEach((token, index) => {
-        if (typeof token !== 'string') return;
-        option[index] = replaceNamingToken(token, domainMap, lexemeMap);
-      });
-    });
-  });
-}
-
-function updateProfileStrategies(profile, grammarMap, domainMap) {
-  if (!isRecord(profile)) return;
-  const groups = Array.isArray(profile.strategyGroups) ? profile.strategyGroups : [];
-  groups.forEach((group) => {
-    if (!isRecord(group)) return;
-    const strategies = Array.isArray(group.strategies) ? group.strategies : [];
-    strategies.forEach((strategy) => {
-      if (!isRecord(strategy)) return;
-      if (typeof strategy.grammarId === 'string') {
-        const updated = grammarMap.get(strategy.grammarId);
-        if (updated) strategy.grammarId = updated;
-      }
-      if (typeof strategy.domainId === 'string') {
-        const updated = domainMap.get(strategy.domainId);
-        if (updated) strategy.domainId = updated;
-      }
-    });
-  });
-}
-
-function collectNamingIds(value, output) {
-  if (!value) return;
-  if (Array.isArray(value)) {
-    value.forEach((entry) => {
-      if (isRecord(entry) && typeof entry.id === 'string') {
-        output.push(entry.id);
-      }
-    });
-  } else if (isRecord(value)) {
-    Object.keys(value).forEach((key) => output.push(key));
-  }
-}
-
-function ensureUniqueNamingResourceIds(config) {
-  if (!config || !Array.isArray(config.cultures)) return;
-
-  const counts = {
-    domains: new Map(),
-    grammars: new Map(),
-    profiles: new Map(),
-    lexemeSpecs: new Map(),
-    lexemeLists: new Map(),
-  };
-  const used = {
-    domains: new Set(),
-    grammars: new Set(),
-    profiles: new Set(),
-    lexemeSpecs: new Set(),
-    lexemeLists: new Set(),
-  };
-
-  config.cultures.forEach((culture) => {
-    if (!isRecord(culture)) return;
-    const naming = isRecord(culture.naming) ? culture.naming : null;
-    if (!naming) return;
-
-    const ids = {
-      domains: [],
-      grammars: [],
-      profiles: [],
-      lexemeSpecs: [],
-      lexemeLists: [],
-    };
-
-    collectNamingIds(naming.domains, ids.domains);
-    collectNamingIds(naming.grammars, ids.grammars);
-    collectNamingIds(naming.profiles, ids.profiles);
-    collectNamingIds(naming.lexemeSpecs, ids.lexemeSpecs);
-    collectNamingIds(naming.lexemeLists, ids.lexemeLists);
-
-    Object.entries(ids).forEach(([key, values]) => {
-      const map = counts[key];
-      const set = used[key];
-      values.forEach((id) => {
-        map.set(id, (map.get(id) || 0) + 1);
-        set.add(id);
-      });
-    });
-  });
-
-  config.cultures.forEach((culture, index) => {
-    if (!isRecord(culture)) return;
-    const naming = isRecord(culture.naming) ? culture.naming : null;
-    if (!naming) return;
-    const cultureId = typeof culture.id === 'string' && culture.id.length > 0
-      ? culture.id
-      : `culture_${index + 1}`;
-    const suffix = sanitizeIdSuffix(cultureId);
-
-    const domainMap = new Map();
-    const grammarMap = new Map();
-    const lexemeMap = new Map();
-
-    const renameEntries = (items, mapKey, renameMap) => {
-      if (!Array.isArray(items)) return;
-      items.forEach((entry) => {
-        if (!isRecord(entry) || typeof entry.id !== 'string') return;
-        const count = counts[mapKey].get(entry.id) || 0;
-        if (count <= 1) return;
-        const newId = makeUniqueId(entry.id, suffix, used[mapKey]);
-        renameMap.set(entry.id, newId);
-        entry.id = newId;
-      });
-    };
-
-    renameEntries(naming.domains, 'domains', domainMap);
-    renameEntries(naming.grammars, 'grammars', grammarMap);
-    renameEntries(naming.profiles, 'profiles', new Map());
-    renameEntries(naming.lexemeSpecs, 'lexemeSpecs', new Map());
-
-    if (isRecord(naming.lexemeLists)) {
-      const updated = {};
-      Object.entries(naming.lexemeLists).forEach(([id, entry]) => {
-        const count = counts.lexemeLists.get(id) || 0;
-        if (count <= 1) {
-          updated[id] = entry;
-          return;
-        }
-        const newId = makeUniqueId(id, suffix, used.lexemeLists);
-        lexemeMap.set(id, newId);
-        updated[newId] = entry;
-      });
-      naming.lexemeLists = updated;
-    } else if (Array.isArray(naming.lexemeLists)) {
-      naming.lexemeLists.forEach((entry) => {
-        if (!isRecord(entry) || typeof entry.id !== 'string') return;
-        const count = counts.lexemeLists.get(entry.id) || 0;
-        if (count <= 1) return;
-        const newId = makeUniqueId(entry.id, suffix, used.lexemeLists);
-        lexemeMap.set(entry.id, newId);
-        entry.id = newId;
-      });
-    }
-
-    if (Array.isArray(naming.profiles)) {
-      naming.profiles.forEach((profile) => updateProfileStrategies(profile, grammarMap, domainMap));
-    }
-    if (Array.isArray(naming.grammars)) {
-      naming.grammars.forEach((grammar) => updateGrammarTokens(grammar, domainMap, lexemeMap));
-    }
-  });
-}
 
 function collectSubtypesFromSpec(value, output) {
   if (!value) return;
   if (typeof value === 'string') {
+    if (value.startsWith('$')) return;
     output.add(value);
     return;
   }
@@ -635,15 +438,15 @@ function collectSubtypesFromSpec(value, output) {
     return;
   }
   if (isRecord(value)) {
-    if (typeof value.inherit === 'string') output.add(value.inherit);
+    if (typeof value.inherit === 'string' && !value.inherit.startsWith('$')) output.add(value.inherit);
     if (Array.isArray(value.random)) {
       value.random.forEach((entry) => {
-        if (typeof entry === 'string') output.add(entry);
+        if (typeof entry === 'string' && !entry.startsWith('$')) output.add(entry);
       });
     }
     if (isRecord(value.fromPressure)) {
       Object.values(value.fromPressure).forEach((entry) => {
-        if (typeof entry === 'string') output.add(entry);
+        if (typeof entry === 'string' && !entry.startsWith('$')) output.add(entry);
       });
     }
   }
@@ -708,76 +511,6 @@ function scanForSubtypeStatus(value, subtypeSet, statusSet) {
   walk(value);
 }
 
-async function loadSchemaValidators() {
-  const schemaDir = path.join(ROOT_DIR, 'apps', 'lore-weave', 'lib', 'schemas');
-  const schemaFiles = {
-    generator: 'generator.schema.json',
-    pressure: 'pressure.schema.json',
-    system: 'system.schema.json',
-    era: 'era.schema.json',
-    action: 'action.schema.json',
-    entity: 'entity.schema.json',
-  };
-  const schemas = {};
-  for (const [key, filename] of Object.entries(schemaFiles)) {
-    const filePath = path.join(schemaDir, filename);
-    const raw = await readFile(filePath, 'utf8');
-    schemas[key] = JSON.parse(raw);
-  }
-
-  const ajv = new Ajv({ allErrors: true, strict: false, verbose: true });
-  return {
-    generator: ajv.compile(schemas.generator),
-    pressure: ajv.compile(schemas.pressure),
-    system: ajv.compile(schemas.system),
-    era: ajv.compile(schemas.era),
-    action: ajv.compile(schemas.action),
-    entity: ajv.compile(schemas.entity),
-  };
-}
-
-function formatAjvErrors(errors, label, id) {
-  if (!errors || errors.length === 0) return [];
-  return errors.map((error) => {
-    const path = error.instancePath || '/';
-    const idLabel = id ? ` "${id}"` : '';
-    return `${label}${idLabel}: ${error.message} at ${path}`;
-  });
-}
-
-function resolveItemId(item, idKey) {
-  if (!isRecord(item)) return undefined;
-  if (typeof idKey === 'function') {
-    return idKey(item);
-  }
-  if (typeof idKey === 'string') {
-    if (idKey.includes('.')) {
-      const parts = idKey.split('.');
-      let value = item;
-      for (const part of parts) {
-        if (!isRecord(value)) return undefined;
-        value = value[part];
-      }
-      return typeof value === 'string' ? value : undefined;
-    }
-    return typeof item[idKey] === 'string' ? item[idKey] : undefined;
-  }
-  return undefined;
-}
-
-function validateSchemaArray(items, validator, label, idKey, errors) {
-  if (!Array.isArray(items)) {
-    errors.push(`${label}: expected array`);
-    return;
-  }
-  items.forEach((item, index) => {
-    if (!validator(item)) {
-      const id = resolveItemId(item, idKey) || `[${index}]`;
-      errors.push(...formatAjvErrors(validator.errors, label, id));
-    }
-  });
-}
-
 function validateReferentialIntegrity(config, errors, warnings) {
   const entityKinds = Array.isArray(config.entityKinds) ? config.entityKinds : [];
   const relationshipKinds = Array.isArray(config.relationshipKinds) ? config.relationshipKinds : [];
@@ -827,12 +560,12 @@ function validateReferentialIntegrity(config, errors, warnings) {
     const dstKinds = Array.isArray(rel.dstKinds) ? rel.dstKinds : [];
     srcKinds.forEach((kind) => {
       if (!kindSet.has(kind)) {
-        errors.push(`relationship_kind "${rel.kind}": unknown srcKind "${kind}"`);
+        errors.push(`relationship_kind "${rel.kind}": srcKind ${kind} is not a valid entity kind`);
       }
     });
     dstKinds.forEach((kind) => {
       if (!kindSet.has(kind)) {
-        errors.push(`relationship_kind "${rel.kind}": unknown dstKind "${kind}"`);
+        errors.push(`relationship_kind "${rel.kind}": dstKind ${kind} is not a valid entity kind`);
       }
     });
   });
@@ -849,27 +582,27 @@ function validateReferentialIntegrity(config, errors, warnings) {
     if (!entity || typeof entity.id !== 'string') return;
     const kind = entity.kind;
     if (typeof kind !== 'string' || !kindSet.has(kind)) {
-      errors.push(`seed_entity "${entity.id}": unknown kind "${kind}"`);
+      errors.push(`seed_entity "${entity.id}": kind ${kind} is not a valid entity kind`);
       return;
     }
     const subtype = entity.subtype;
     if (typeof subtype === 'string') {
       const allowed = subtypeByKind.get(kind);
       if (!allowed || !allowed.has(subtype)) {
-        errors.push(`seed_entity "${entity.id}": unknown subtype "${subtype}" for kind "${kind}"`);
+        errors.push(`seed_entity "${entity.id}": subtype ${subtype} is not a valid ${kind} subtype`);
       }
     }
     const status = entity.status;
     if (typeof status === 'string') {
       const allowed = statusByKind.get(kind);
       if (!allowed || !allowed.has(status)) {
-        errors.push(`seed_entity "${entity.id}": unknown status "${status}" for kind "${kind}"`);
+        errors.push(`seed_entity "${entity.id}": status ${status} is not a valid ${kind} status`);
       }
     }
     const tags = extractTagKeys(entity.tags);
     tags.forEach((tag) => {
       if (!tagSet.has(tag)) {
-        errors.push(`seed_entity "${entity.id}": unknown tag "${tag}"`);
+        errors.push(`seed_entity "${entity.id}": tag ${tag} is not a valid tag`);
       }
     });
   });
@@ -878,15 +611,15 @@ function validateReferentialIntegrity(config, errors, warnings) {
     if (!rel) return;
     const kind = rel.kind;
     if (typeof kind !== 'string' || !relationshipSet.has(kind)) {
-      errors.push(`seed_relationship[${idx}]: unknown relationship kind "${kind}"`);
+      errors.push(`seed_relationship[${idx}]: kind ${kind} is not a valid relationship kind`);
     }
     const src = rel.src;
     const dst = rel.dst;
     if (typeof src === 'string' && !seedEntityKinds.has(src)) {
-      errors.push(`seed_relationship[${idx}]: src "${src}" does not match any seed_entity id`);
+      errors.push(`seed_relationship[${idx}]: src ${src} is not a valid seed_entity id`);
     }
     if (typeof dst === 'string' && !seedEntityKinds.has(dst)) {
-      errors.push(`seed_relationship[${idx}]: dst "${dst}" does not match any seed_entity id`);
+      errors.push(`seed_relationship[${idx}]: dst ${dst} is not a valid seed_entity id`);
     }
     const relDef = relationshipKinds.find((entry) => entry?.kind === kind);
     if (relDef && typeof src === 'string' && typeof dst === 'string') {
@@ -894,12 +627,12 @@ function validateReferentialIntegrity(config, errors, warnings) {
       const dstKind = seedEntityKinds.get(dst);
       if (Array.isArray(relDef.srcKinds) && relDef.srcKinds.length > 0 && srcKind) {
         if (!relDef.srcKinds.includes(srcKind)) {
-          errors.push(`seed_relationship[${idx}]: "${kind}" src kind "${srcKind}" not in [${relDef.srcKinds.join(', ')}]`);
+          errors.push(`seed_relationship[${idx}]: srcKind ${srcKind} is not valid for relationship_kind "${kind}"`);
         }
       }
       if (Array.isArray(relDef.dstKinds) && relDef.dstKinds.length > 0 && dstKind) {
         if (!relDef.dstKinds.includes(dstKind)) {
-          errors.push(`seed_relationship[${idx}]: "${kind}" dst kind "${dstKind}" not in [${relDef.dstKinds.join(', ')}]`);
+          errors.push(`seed_relationship[${idx}]: dstKind ${dstKind} is not valid for relationship_kind "${kind}"`);
         }
       }
     }
@@ -917,7 +650,7 @@ function validateReferentialIntegrity(config, errors, warnings) {
 
   usageMap.validation.invalidRefs.forEach((ref) => {
     const location = ref.location ? `${ref.location}: ` : '';
-    errors.push(`${location}${ref.refType} "${ref.refId}" referenced in ${ref.type} ${ref.id} (${ref.field})`);
+    errors.push(`${location}${ref.type} "${ref.id}": ${ref.field} ${ref.refId} is not a valid ${ref.refType}`);
   });
 
   const usedTags = Object.entries(usageMap.tags || {})
@@ -933,7 +666,7 @@ function validateReferentialIntegrity(config, errors, warnings) {
 
   usedTags.forEach((tag) => {
     if (!tagSet.has(tag)) {
-      errors.push(`unknown tag "${tag}" referenced outside schema`);
+      errors.push(`tag ${tag} is not a valid tag`);
     }
   });
 
@@ -956,13 +689,13 @@ function validateReferentialIntegrity(config, errors, warnings) {
   subtypeRefs.forEach((subtype) => {
     if (subtype === 'any') return;
     if (!allSubtypes.has(subtype)) {
-      errors.push(`unknown subtype "${subtype}" referenced in config`);
+      errors.push(`subtype ${subtype} is not a valid entity subtype`);
     }
   });
   statusRefs.forEach((status) => {
     if (status === 'any') return;
     if (!allStatuses.has(status)) {
-      errors.push(`unknown status "${status}" referenced in config`);
+      errors.push(`status ${status} is not a valid entity status`);
     }
   });
 }
@@ -972,15 +705,7 @@ async function lintProject(dir) {
   const allErrors = [...errors];
   const allWarnings = [...warnings];
 
-  if (config) {
-    const validators = await loadSchemaValidators();
-    validateSchemaArray(config.generators, validators.generator, 'generator', 'id', allErrors);
-    validateSchemaArray(config.pressures, validators.pressure, 'pressure', 'id', allErrors);
-    validateSchemaArray(config.systems, validators.system, 'system', (item) => item?.config?.id, allErrors);
-    validateSchemaArray(config.eras, validators.era, 'era', 'id', allErrors);
-    validateSchemaArray(config.actions, validators.action, 'action', 'id', allErrors);
-    validateSchemaArray(config.seedEntities, validators.entity, 'seedEntity', 'id', allErrors);
-
+  if (config && allErrors.length === 0) {
     validateReferentialIntegrity(config, allErrors, allWarnings);
   }
 
@@ -1051,8 +776,6 @@ async function convertCanonToJson(dir, outDir) {
   if (!config || diagnostics.some((diag) => diag.severity === 'error')) {
     throw new Error(`Invalid .canon project:\n${formatCanonDiagnostics(diagnostics)}`);
   }
-
-  ensureUniqueNamingResourceIds(config);
 
   const manifest = {};
   for (const [key, value] of Object.entries(config)) {

@@ -390,7 +390,6 @@ export interface PressureChangeDetail {
     homeostasis: number;    // Homeostatic factor for this pressure
     homeostaticDelta: number; // Per-tick pull toward equilibrium (0)
     eraModifier: number;
-    distributionFeedback: number;
     rawDelta: number;       // Before smoothing
     smoothedDelta: number;  // After smoothing (max ±2)
   };

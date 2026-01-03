@@ -30,8 +30,8 @@
       "description": "Enables agents (NPCs, factions) to perform domain-defined actions. Manages action selection and success/failure.",
       "actionAttemptRate": 0.18,
       "pressureMultiplier": 1.1,
-      "prominenceUpChanceOnSuccess": 1.0,
-      "prominenceDownChanceOnFailure": 1.0
+      "prominenceUpChanceOnSuccess": 1,
+      "prominenceDownChanceOnFailure": 1
     },
     "enabled": true
   },
@@ -84,7 +84,9 @@
         "strength": 0.4,
         "bidirectional": true
       },
-      "excludeRelationships": ["allied_with"],
+      "excludeRelationships": [
+        "allied_with"
+      ],
       "throttleChance": 0.1,
       "cooldown": 4,
       "pressureChanges": {
@@ -126,9 +128,14 @@
           "betweenMatching": true
         }
       ],
-      "pairExcludeRelationships": ["at_war_with", "betrayed_by"],
+      "pairExcludeRelationships": [
+        "at_war_with",
+        "betrayed_by"
+      ],
       "pairComponentSizeLimit": {
-        "relationshipKinds": ["allied_with"],
+        "relationshipKinds": [
+          "allied_with"
+        ],
         "max": 6
       },
       "throttleChance": 0.15,
@@ -202,7 +209,7 @@
         {
           "condition": {
             "operator": ">=",
-            "threshold": 3.0
+            "threshold": 3
           },
           "probability": 0.4,
           "action": {
@@ -214,7 +221,7 @@
         {
           "condition": {
             "operator": "<=",
-            "threshold": 2.0
+            "threshold": 2
           },
           "probability": 0.4,
           "action": {
@@ -840,13 +847,20 @@
       },
       "masterSelection": {
         "filters": [
-          { "type": "matches_culture", "with": "$meta" }
+          {
+            "type": "matches_culture",
+            "with": "$meta"
+          }
         ],
         "pickStrategy": "weighted",
         "maxResults": 2
       },
       "memberUpdates": [
-        { "type": "change_status", "entity": "$member", "newStatus": "subsumed" }
+        {
+          "type": "change_status",
+          "entity": "$member",
+          "newStatus": "subsumed"
+        }
       ],
       "postProcess": {
         "pressureChanges": {
@@ -860,7 +874,10 @@
           "magic"
         ],
         "filters": [
-          { "type": "lacks_tag", "tag": "meta-entity" }
+          {
+            "type": "lacks_tag",
+            "tag": "meta-entity"
+          }
         ]
       }
     },
@@ -917,13 +934,20 @@
       },
       "masterSelection": {
         "filters": [
-          { "type": "matches_culture", "with": "$meta" }
+          {
+            "type": "matches_culture",
+            "with": "$meta"
+          }
         ],
         "pickStrategy": "weighted",
         "maxResults": 2
       },
       "memberUpdates": [
-        { "type": "change_status", "entity": "$member", "newStatus": "subsumed" }
+        {
+          "type": "change_status",
+          "entity": "$member",
+          "newStatus": "subsumed"
+        }
       ],
       "postProcess": {
         "pressureChanges": {
@@ -937,7 +961,10 @@
           "combat"
         ],
         "filters": [
-          { "type": "lacks_tag", "tag": "meta-entity" }
+          {
+            "type": "lacks_tag",
+            "tag": "meta-entity"
+          }
         ]
       }
     },
@@ -1474,7 +1501,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "subtypes": ["hero"],
+        "subtypes": [
+          "hero"
+        ],
         "status": "alive",
         "filters": [
           {
@@ -2132,7 +2161,9 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "subtypes": ["hero"],
+        "subtypes": [
+          "hero"
+        ],
         "status": "alive",
         "filters": [
           {
@@ -2274,7 +2305,13 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
-        "subtypes": ["hero", "merchant", "outlaw", "mayor", "orca"],
+        "subtypes": [
+          "hero",
+          "merchant",
+          "outlaw",
+          "mayor",
+          "orca"
+        ],
         "status": "alive"
       },
       "conditions": [
@@ -2322,7 +2359,11 @@
       "description": "Anomalous locations gain mystical qualities over time. NPCs residing nearby dampen this effect through their stabilizing presence.",
       "metric": {
         "type": "neighbor_kind_count",
-        "via": ["adjacent_to", "contained_by", "contains"],
+        "via": [
+          "adjacent_to",
+          "contained_by",
+          "contains"
+        ],
         "viaDirection": "both",
         "then": "resident_of",
         "thenDirection": "dst",
@@ -2334,7 +2375,7 @@
             "operator": "<=",
             "threshold": 0
           },
-          "probability": 0.25,
+          "probability": 0.5,
           "action": {
             "type": "set_tag",
             "tag": "mystical",
@@ -2347,7 +2388,7 @@
             "operator": ">=",
             "threshold": 1
           },
-          "probability": 0.06,
+          "probability": 0.25,
           "action": {
             "type": "set_tag",
             "tag": "mystical",
@@ -2385,7 +2426,11 @@
       "description": "Mystical qualities fade from locations over time. NPCs residing nearby dampen this effect, stabilizing the mystical energy.",
       "metric": {
         "type": "neighbor_kind_count",
-        "via": ["adjacent_to", "contained_by", "contains"],
+        "via": [
+          "adjacent_to",
+          "contained_by",
+          "contains"
+        ],
         "viaDirection": "both",
         "then": "resident_of",
         "thenDirection": "dst",
@@ -2445,7 +2490,11 @@
             "count": 1,
             "path": [
               {
-                "via": ["adjacent_to", "contained_by", "contains"],
+                "via": [
+                  "adjacent_to",
+                  "contained_by",
+                  "contains"
+                ],
                 "direction": "any",
                 "targetKind": "location",
                 "targetSubtype": "any",
@@ -2466,7 +2515,11 @@
             "count": 0,
             "path": [
               {
-                "via": ["adjacent_to", "contained_by", "contains"],
+                "via": [
+                  "adjacent_to",
+                  "contained_by",
+                  "contains"
+                ],
                 "direction": "any",
                 "targetKind": "location",
                 "targetSubtype": "any"
@@ -2564,124 +2617,6 @@
           }
         ]
       }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "border_friction",
-      "name": "Border Friction",
-      "description": "Factions controlling adjacent territories breed tension and reduce harmony.",
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "filters": [
-          {
-            "type": "has_relationship",
-            "kind": "controls",
-            "direction": "src"
-          }
-        ]
-      },
-      "conditions": [
-        {
-          "type": "graph_path",
-          "assert": {
-            "check": "exists",
-            "path": [
-              {
-                "via": "controls",
-                "direction": "out",
-                "targetKind": "location",
-                "targetSubtype": "any"
-              },
-              {
-                "via": "adjacent_to",
-                "direction": "any",
-                "targetKind": "location",
-                "targetSubtype": "any"
-              },
-              {
-                "via": "controls",
-                "direction": "in",
-                "targetKind": "faction",
-                "targetSubtype": "any"
-              }
-            ],
-            "where": [
-              {
-                "type": "not_self"
-              }
-            ]
-          }
-        }
-      ],
-      "actions": [
-        {
-          "type": "modify_pressure",
-          "pressureId": "harmony",
-          "delta": -1.0
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.6
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "artifact_covetousness",
-      "name": "Artifact Covetousness",
-      "description": "Factions covet powerful artifacts held in territories they do not control, breeding resentment.",
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "status": "active"
-      },
-      "conditions": [
-        {
-          "type": "graph_path",
-          "assert": {
-            "check": "exists",
-            "path": [
-              {
-                "via": "practitioner_of",
-                "direction": "out",
-                "targetKind": "ability",
-                "targetSubtype": "any"
-              },
-              {
-                "via": "manifests_at",
-                "direction": "out",
-                "targetKind": "location",
-                "targetSubtype": "any"
-              },
-              {
-                "via": "stored_at",
-                "direction": "in",
-                "targetKind": "artifact",
-                "targetSubtype": "any"
-              }
-            ],
-            "where": [
-              {
-                "type": "not_self"
-              }
-            ]
-          }
-        }
-      ],
-      "actions": [
-        {
-          "type": "modify_pressure",
-          "pressureId": "harmony",
-          "delta": -1.0
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.5
     },
     "enabled": true
   }

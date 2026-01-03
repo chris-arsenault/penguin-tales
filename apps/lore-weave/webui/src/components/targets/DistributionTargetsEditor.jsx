@@ -1,89 +1,34 @@
 /**
- * DistributionTargetsEditor - Editor for statistical distribution targets
+ * DistributionTargetsEditor - Editor for per-subtype homeostatic targets
  *
- * Allows editing of distribution targets that guide the simulation toward
- * desired statistical outcomes for entity kinds, prominence, relationships,
- * and graph connectivity.
+ * Allows editing of per-subtype targets used to weight template selection.
  */
 
-import React, { useState, useCallback } from 'react';
-import { SUBTABS } from './constants';
-import GlobalTargets from './GlobalTargets';
+import React, { useCallback } from 'react';
 import EntityTargets from './EntityTargets';
-import EraOverrides from './EraOverrides';
-import TuningParameters from './TuningParameters';
 
 export default function DistributionTargetsEditor({
   distributionTargets,
   schema,
   onDistributionTargetsChange,
 }) {
-  const [activeSubtab, setActiveSubtab] = useState('global');
-
   // Create default targets if none exist
   const createDefaultTargets = useCallback(() => {
     const defaultTargets = {
-      $schema: 'Distribution targets for statistical world generation tuning',
+      $schema: 'Per-subtype targets for homeostatic template weighting',
       version: '1.0.0',
-      global: {
-        totalEntities: { target: 150, tolerance: 0.1 },
-        entityKindDistribution: {
-          type: 'uniform',
-          targets: {},
-          tolerance: 0.05,
-        },
-        prominenceDistribution: {
-          type: 'normal',
-          mean: 'recognized',
-          stdDev: 1.0,
-          targets: {
-            forgotten: 0.10,
-            marginal: 0.25,
-            recognized: 0.30,
-            renowned: 0.25,
-            mythic: 0.10,
-          },
-        },
-        relationshipDistribution: {
-          type: 'diverse',
-          maxSingleTypeRatio: 0.15,
-          minTypesPresent: 12,
-          minTypeRatio: 0.02,
-        },
-        graphConnectivity: {
-          type: 'clustered',
-          clusteringStrengthThreshold: 0.6,
-          targetClusters: { min: 3, max: 8, preferred: 5 },
-          clusterSizeDistribution: { type: 'powerlaw', alpha: 2.5 },
-          densityTargets: { intraCluster: 0.65, interCluster: 0.12 },
-          isolatedNodeRatio: { max: 0.05 },
-        },
-      },
-      perEra: {},
-      entities: [{}],
-      tuning: {
-        adjustmentSpeed: 0.3,
-        deviationSensitivity: 1.5,
-        minTemplateWeight: 0.05,
-        maxTemplateWeight: 3.0,
-        convergenceThreshold: 0.08,
-        measurementInterval: 5,
-        correctionStrength: {
-          entityKind: 1.2,
-          prominence: 0.8,
-          relationship: 1.5,
-          connectivity: 1.0,
-        },
-      },
-      relationshipCategories: {},
+      entities: {},
     };
 
-    // Populate entity kind targets from schema
+    // Populate per-subtype targets from schema (default 0)
     if (schema?.entityKinds) {
-      const count = schema.entityKinds.length;
-      const ratio = count > 0 ? 1.0 / count : 0;
       schema.entityKinds.forEach((ek) => {
-        defaultTargets.global.entityKindDistribution.targets[ek.kind] = parseFloat(ratio.toFixed(2));
+        if (!defaultTargets.entities[ek.kind]) {
+          defaultTargets.entities[ek.kind] = {};
+        }
+        ek.subtypes?.forEach((subtype) => {
+          defaultTargets.entities[ek.kind][subtype.id] = { target: 0 };
+        });
       });
     }
 
@@ -110,21 +55,19 @@ export default function DistributionTargetsEditor({
   }, [distributionTargets, onDistributionTargetsChange]);
 
   // If no targets exist, show empty state
-  if (!distributionTargets) {
+  if (!distributionTargets || !distributionTargets.entities || Array.isArray(distributionTargets.entities)) {
     return (
       <div className="lw-container">
         <div className="lw-header">
           <h1 className="lw-title">Distribution Targets</h1>
           <p className="lw-subtitle">
-            Configure statistical targets to guide world generation
+            Configure per-subtype targets for homeostatic template weighting
           </p>
         </div>
         <div className="lw-empty-state" style={{ height: 'auto', padding: '40px 20px' }}>
           <div className="lw-empty-title">No Distribution Targets Configured</div>
           <div className="lw-empty-text">
-            Distribution targets guide the simulation toward desired statistical outcomes.
-            They control entity kind ratios, prominence distribution, relationship diversity,
-            and graph connectivity.
+            Set per-subtype targets used for homeostatic template weighting.
           </div>
           <button className="lw-btn lw-btn-primary" onClick={createDefaultTargets}>
             Create Default Targets
@@ -139,47 +82,17 @@ export default function DistributionTargetsEditor({
       <div className="lw-header">
         <h1 className="lw-title">Distribution Targets</h1>
         <p className="lw-subtitle">
-          Configure statistical targets to guide world generation toward desired outcomes
+          Configure per-subtype targets for homeostatic template weighting
         </p>
-      </div>
-
-      {/* Sub-tabs */}
-      <div className="lw-tabs">
-        {SUBTABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveSubtab(tab.id)}
-            className={`lw-tab ${activeSubtab === tab.id ? 'active' : ''}`}
-          >
-            {tab.label}
-          </button>
-        ))}
       </div>
 
       {/* Content */}
       <div className="lw-section">
-        {activeSubtab === 'global' && (
-          <GlobalTargets
-            global={distributionTargets.global || {}}
-            updateTargets={updateTargets}
-          />
-        )}
-        {activeSubtab === 'entities' && (
-          <EntityTargets
-            entities={distributionTargets.entities?.[0] || {}}
-            updateTargets={updateTargets}
-            distributionTargets={distributionTargets}
-          />
-        )}
-        {activeSubtab === 'eras' && (
-          <EraOverrides perEra={distributionTargets.perEra || {}} />
-        )}
-        {activeSubtab === 'tuning' && (
-          <TuningParameters
-            tuning={distributionTargets.tuning || {}}
-            updateTargets={updateTargets}
-          />
-        )}
+        <EntityTargets
+          entities={distributionTargets.entities}
+          updateTargets={updateTargets}
+          distributionTargets={distributionTargets}
+        />
       </div>
     </div>
   );

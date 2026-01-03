@@ -83,17 +83,17 @@
             ],
             "favoredClusters": [],
             "forbiddenClusters": [],
-            "favoredClusterBoost": 1.0,
+            "favoredClusterBoost": 1,
             "consonantWeights": [
               1.3,
               1.2,
               1.1,
               1.2,
-              1.0,
+              1,
               1.1,
-              1.0,
+              1,
               0.9,
-              1.0,
+              1,
               0.9,
               0.8,
               0.7,
@@ -102,15 +102,15 @@
             "vowelWeights": [
               1.2,
               1.1,
-              1.0,
+              1,
               1.3,
               1.1,
-              1.0,
+              1,
               0.9,
               0.9,
               1.1,
-              1.0,
-              1.0
+              1,
+              1
             ],
             "templateWeights": [
               1.5,
@@ -164,10 +164,46 @@
         {
           "id": "ancient_tech_prefix",
           "phonology": {
-            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
-            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
-            "syllableTemplates": ["CV", "VC"],
-            "lengthRange": [1, 1],
+            "consonants": [
+              "X",
+              "V",
+              "N",
+              "K",
+              "R",
+              "Z",
+              "T",
+              "M",
+              "B",
+              "D",
+              "G",
+              "H",
+              "J",
+              "L",
+              "Q",
+              "W",
+              "Y",
+              "P"
+            ],
+            "vowels": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "VC"
+            ],
+            "lengthRange": [
+              1,
+              1
+            ],
             "favoredClusters": [],
             "forbiddenClusters": [],
             "favoredClusterBoost": 1
@@ -175,8 +211,12 @@
           "morphology": {
             "prefixes": [],
             "suffixes": [],
-            "structure": ["root"],
-            "structureWeights": [1]
+            "structure": [
+              "root"
+            ],
+            "structureWeights": [
+              1
+            ]
           },
           "style": {
             "capitalization": "",
@@ -190,10 +230,47 @@
         {
           "id": "ancient_tech_serial",
           "phonology": {
-            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
-            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
-            "syllableTemplates": ["CV", "CVC", "VC"],
-            "lengthRange": [2, 3],
+            "consonants": [
+              "X",
+              "V",
+              "N",
+              "K",
+              "R",
+              "Z",
+              "T",
+              "M",
+              "B",
+              "D",
+              "G",
+              "H",
+              "J",
+              "L",
+              "Q",
+              "W",
+              "Y",
+              "P"
+            ],
+            "vowels": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "CVC",
+              "VC"
+            ],
+            "lengthRange": [
+              2,
+              3
+            ],
             "favoredClusters": [],
             "forbiddenClusters": [],
             "favoredClusterBoost": 1
@@ -201,8 +278,12 @@
           "morphology": {
             "prefixes": [],
             "suffixes": [],
-            "structure": ["root"],
-            "structureWeights": [1]
+            "structure": [
+              "root"
+            ],
+            "structureWeights": [
+              1
+            ]
           },
           "style": {
             "capitalization": "",
@@ -250,30 +331,30 @@
             ],
             "favoredClusters": [],
             "forbiddenClusters": [],
-            "favoredClusterBoost": 1.0,
+            "favoredClusterBoost": 1,
             "consonantWeights": [
               1.3,
               1.2,
               1.1,
               1.2,
-              1.0,
+              1,
               1.1,
-              1.0,
+              1,
               0.9,
-              1.0,
+              1,
               0.9,
               0.8
             ],
             "vowelWeights": [
               1.2,
               1.1,
-              1.0,
+              1,
               1.3,
               1.1,
-              1.0,
+              1,
               0.9,
-              1.0,
-              1.0
+              1,
+              1
             ],
             "templateWeights": [
               1.5,
@@ -1284,9 +1365,19 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["domain:aurora_domain~cap", "slot:aurora_faction_groups", "(^slot:aurora_place_echoes^)"],
-              ["The", "slot:aurora_faction_groups", "(^slot:aurora_gen_trade^-bound)"],
-              ["domain:aurora_domain_short~cap^'^slot:aurora_faction_groups"]
+              [
+                "domain:aurora_domain~cap",
+                "slot:aurora_faction_groups",
+                "(^slot:aurora_place_echoes^)"
+              ],
+              [
+                "The",
+                "slot:aurora_faction_groups",
+                "(^slot:aurora_gen_trade^-bound)"
+              ],
+              [
+                "domain:aurora_domain_short~cap^'^slot:aurora_faction_groups"
+              ]
             ]
           }
         },
@@ -1295,9 +1386,18 @@
           "start": "name",
           "rules": {
             "name": [
-              ["slot:aurora_nature~cap^span", "(^slot:aurora_place_echoes^)"],
-              ["slot:aurora_nature~cap^reach", "(^slot:aurora_place_echoes^)"],
-              ["domain:aurora_domain~cap^hold", "(^slot:aurora_place_echoes^)"]
+              [
+                "slot:aurora_nature~cap^span",
+                "(^slot:aurora_place_echoes^)"
+              ],
+              [
+                "slot:aurora_nature~cap^reach",
+                "(^slot:aurora_place_echoes^)"
+              ],
+              [
+                "domain:aurora_domain~cap^hold",
+                "(^slot:aurora_place_echoes^)"
+              ]
             ]
           },
           "capitalization": "titleWords"
@@ -1320,8 +1420,15 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["domain:aurora_domain~cap", "(^slot:aurora_ice_echoes^)"],
-              ["domain:aurora_domain~cap", "(^slot:aurora_ice_echoes^)", "slot:aurora_clan_markers^'^slot:aurora_gen_nouns~cap"]
+              [
+                "domain:aurora_domain~cap",
+                "(^slot:aurora_ice_echoes^)"
+              ],
+              [
+                "domain:aurora_domain~cap",
+                "(^slot:aurora_ice_echoes^)",
+                "slot:aurora_clan_markers^'^slot:aurora_gen_nouns~cap"
+              ]
             ]
           }
         },
@@ -1331,8 +1438,17 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["domain:aurora_domain~cap", "(^slot:aurora_ice_echoes^,", "echo:", "domain:aurora_domain_short~cap^)"],
-              ["domain:aurora_domain~cap", "(^slot:aurora_ice_echoes^)", "slot:aurora_clan_markers^'^slot:aurora_nature~cap"]
+              [
+                "domain:aurora_domain~cap",
+                "(^slot:aurora_ice_echoes^,",
+                "echo:",
+                "domain:aurora_domain_short~cap^)"
+              ],
+              [
+                "domain:aurora_domain~cap",
+                "(^slot:aurora_ice_echoes^)",
+                "slot:aurora_clan_markers^'^slot:aurora_nature~cap"
+              ]
             ]
           }
         },
@@ -1342,8 +1458,17 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["domain:aurora_domain~cap", "(^slot:aurora_ice_echoes^)", "of", "context:region"],
-              ["domain:aurora_domain~cap", "(^slot:aurora_ice_echoes^)", "slot:aurora_clan_markers^'^context:region"]
+              [
+                "domain:aurora_domain~cap",
+                "(^slot:aurora_ice_echoes^)",
+                "of",
+                "context:region"
+              ],
+              [
+                "domain:aurora_domain~cap",
+                "(^slot:aurora_ice_echoes^)",
+                "slot:aurora_clan_markers^'^context:region"
+              ]
             ]
           }
         },
@@ -1353,8 +1478,15 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["context:region^'", "slot:aurora_faction_groups", "(^slot:aurora_place_echoes^)"],
-              ["slot:aurora_faction_groups", "(^context:region^-born)"]
+              [
+                "context:region^'",
+                "slot:aurora_faction_groups",
+                "(^slot:aurora_place_echoes^)"
+              ],
+              [
+                "slot:aurora_faction_groups",
+                "(^context:region^-born)"
+              ]
             ]
           }
         },
@@ -1382,9 +1514,18 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["slot:aurora_law_terms", "(^slot:aurora_gen_trade^-sworn)"],
-              ["slot:aurora_gen_trade~cap^-^slot:aurora_law_terms", "(^slot:aurora_place_echoes^)"],
-              ["slot:aurora_law_terms", "(^slot:aurora_ice_echoes^)"]
+              [
+                "slot:aurora_law_terms",
+                "(^slot:aurora_gen_trade^-sworn)"
+              ],
+              [
+                "slot:aurora_gen_trade~cap^-^slot:aurora_law_terms",
+                "(^slot:aurora_place_echoes^)"
+              ],
+              [
+                "slot:aurora_law_terms",
+                "(^slot:aurora_ice_echoes^)"
+              ]
             ]
           }
         },
@@ -1394,8 +1535,15 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["context:region^'", "slot:aurora_law_terms", "(^slot:aurora_place_echoes^)"],
-              ["slot:aurora_law_terms", "(^context:region^-sworn)"]
+              [
+                "context:region^'",
+                "slot:aurora_law_terms",
+                "(^slot:aurora_place_echoes^)"
+              ],
+              [
+                "slot:aurora_law_terms",
+                "(^context:region^-sworn)"
+              ]
             ]
           }
         },
@@ -1458,15 +1606,41 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["The", "tradition", "Way of the", "slot:aurora_magic_part_a~cap", "slot:aurora_magic_part_c~cap"],
-              ["tradition", "slot:aurora_magic_part_a~cap^-^slot:aurora_magic_partb~er", "Discipline"],
-              ["The", "slot:aurora_magic_part_c~cap", "School"],
-              ["tradition", "slot:aurora_place_echoes~cap", "Arts"],
-              ["Path of", "slot:aurora_magic_partb~ing", "slot:aurora_magic_part_c~cap"]
+              [
+                "The",
+                "tradition",
+                "Way of the",
+                "slot:aurora_magic_part_a~cap",
+                "slot:aurora_magic_part_c~cap"
+              ],
+              [
+                "tradition",
+                "slot:aurora_magic_part_a~cap^-^slot:aurora_magic_partb~er",
+                "Discipline"
+              ],
+              [
+                "The",
+                "slot:aurora_magic_part_c~cap",
+                "School"
+              ],
+              [
+                "tradition",
+                "slot:aurora_place_echoes~cap",
+                "Arts"
+              ],
+              [
+                "Path of",
+                "slot:aurora_magic_partb~ing",
+                "slot:aurora_magic_part_c~cap"
+              ]
             ],
             "tradition": [
-              ["domain:aurora_domain~cap^'^s"],
-              [""]
+              [
+                "domain:aurora_domain~cap^'^s"
+              ],
+              [
+                ""
+              ]
             ]
           }
         },
@@ -1810,117 +1984,198 @@
               "name": "Legendary Heroes",
               "priority": 75,
               "conditions": {
-                "entityKinds": ["npc"],
-                "prominence": ["mythic"],
-                "subtypes": ["hero"],
+                "entityKinds": [
+                  "npc"
+                ],
+                "prominence": [
+                  "mythic"
+                ],
+                "subtypes": [
+                  "hero"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.7, "grammarId": "aurora_hero_legendary" },
-                { "type": "grammar", "weight": 0.3, "grammarId": "aurora_hero_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.7,
+                  "grammarId": "aurora_hero_legendary"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.3,
+                  "grammarId": "aurora_hero_npc"
+                }
               ]
             },
             {
               "name": "Heroes",
               "priority": 70,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["hero"],
+                "subtypes": [
+                  "hero"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.6, "grammarId": "aurora_hero_npc" },
-                { "type": "grammar", "weight": 0.4, "grammarId": "aurora_hero_legendary" }
+                {
+                  "type": "grammar",
+                  "weight": 0.6,
+                  "grammarId": "aurora_hero_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.4,
+                  "grammarId": "aurora_hero_legendary"
+                }
               ]
             },
             {
               "name": "Mayors and Leaders",
               "priority": 68,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["mayor"],
+                "subtypes": [
+                  "mayor"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "aurora_noble_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_noble_npc"
+                }
               ]
             },
             {
               "name": "Merchants",
               "priority": 65,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["merchant"],
+                "subtypes": [
+                  "merchant"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.7, "grammarId": "aurora_merchant_npc" },
-                { "type": "grammar", "weight": 0.3, "grammarId": "aurora_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.7,
+                  "grammarId": "aurora_merchant_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.3,
+                  "grammarId": "aurora_npc"
+                }
               ]
             },
             {
               "name": "Outlaws and Criminals",
               "priority": 65,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["outlaw"],
+                "subtypes": [
+                  "outlaw"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.8, "grammarId": "aurora_outlaw_npc" },
-                { "type": "grammar", "weight": 0.2, "grammarId": "aurora_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.8,
+                  "grammarId": "aurora_outlaw_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.2,
+                  "grammarId": "aurora_npc"
+                }
               ]
             },
             {
               "name": "Elite NPCs",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["npc"],
-                "prominence": ["mythic", "renowned"],
+                "entityKinds": [
+                  "npc"
+                ],
+                "prominence": [
+                  "mythic",
+                  "renowned"
+                ],
                 "subtypes": [],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.6, "grammarId": "aurora_elite_npc" },
-                { "type": "grammar", "weight": 0.4, "grammarId": "aurora_noble_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.6,
+                  "grammarId": "aurora_elite_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.4,
+                  "grammarId": "aurora_noble_npc"
+                }
               ]
             },
             {
               "name": "NPC Regions (Families)",
               "priority": 50,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["region"],
+                "subtypes": [
+                  "region"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "aurora_family_names" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_family_names"
+                }
               ]
             },
             {
               "name": "Default NPC Names",
               "priority": 0,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
@@ -1928,16 +2183,38 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.25, "grammarId": "aurora_npc" },
-                { "type": "grammar", "weight": 0.35, "grammarId": "aurora_npc_echo" },
-                { "type": "grammar", "weight": 0.15, "grammarId": "aurora_npc_clan_echo" },
-                { "type": "grammar", "weight": 0.1, "grammarId": "aurora_elite_npc" },
-                { "type": "grammar", "weight": 0.15, "grammarId": "aurora_npc_regional" }
+                {
+                  "type": "grammar",
+                  "weight": 0.25,
+                  "grammarId": "aurora_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.35,
+                  "grammarId": "aurora_npc_echo"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.15,
+                  "grammarId": "aurora_npc_clan_echo"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.1,
+                  "grammarId": "aurora_elite_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.15,
+                  "grammarId": "aurora_npc_regional"
+                }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": ["npc"]
+          "entityKinds": [
+            "npc"
+          ]
         },
         {
           "id": "aurora_factions",
@@ -1957,23 +2234,39 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.85, "grammarId": "aurora_faction" },
-                { "type": "grammar", "weight": 0.15, "grammarId": "aurora_faction_regional" }
+                {
+                  "type": "grammar",
+                  "weight": 0.85,
+                  "grammarId": "aurora_faction"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.15,
+                  "grammarId": "aurora_faction_regional"
+                }
               ]
             },
             {
               "name": "Region Names",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["faction"],
+                "entityKinds": [
+                  "faction"
+                ],
                 "prominence": [],
-                "subtypes": ["region"],
+                "subtypes": [
+                  "region"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "aurora_region" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_region"
+                }
               ]
             }
           ],
@@ -2129,8 +2422,16 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.85, "grammarId": "aurora_law" },
-                { "type": "grammar", "weight": 0.15, "grammarId": "aurora_rules_regional" }
+                {
+                  "type": "grammar",
+                  "weight": 0.85,
+                  "grammarId": "aurora_law"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.15,
+                  "grammarId": "aurora_rules_regional"
+                }
               ]
             },
             {
@@ -2149,7 +2450,11 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "aurora_region" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_region"
+                }
               ]
             }
           ],
@@ -2164,11 +2469,15 @@
               "name": "Meta-Entity Schools",
               "priority": 80,
               "conditions": {
-                "entityKinds": ["ability"],
+                "entityKinds": [
+                  "ability"
+                ],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
-                "tags": ["meta-entity"],
+                "tags": [
+                  "meta-entity"
+                ],
                 "tagMatchAll": false
               },
               "strategies": [
@@ -2266,11 +2575,15 @@
               "name": "Anomaly-Born Artifacts",
               "priority": 65,
               "conditions": {
-                "entityKinds": ["artifact"],
+                "entityKinds": [
+                  "artifact"
+                ],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
-                "tags": ["anomaly_born"],
+                "tags": [
+                  "anomaly_born"
+                ],
                 "tagMatchAll": false
               },
               "strategies": [
@@ -2367,66 +2680,107 @@
               "name": "Wars and Conflicts",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["war", "conflict"],
+                "subtypes": [
+                  "war",
+                  "conflict"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "aurora_war_name" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_war_name"
+                }
               ]
             },
             {
               "name": "Disasters",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["disaster"],
+                "subtypes": [
+                  "disaster"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "aurora_disaster_name" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_disaster_name"
+                }
               ]
             },
             {
               "name": "Celebrations and Memorials",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["celebration", "memorial", "social"],
+                "subtypes": [
+                  "celebration",
+                  "memorial",
+                  "social"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "aurora_holidays" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_holidays"
+                }
               ]
             },
             {
               "name": "Succession Crises",
               "priority": 55,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["succession_crisis"],
+                "subtypes": [
+                  "succession_crisis"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.6, "grammarId": "aurora_war_name" },
-                { "type": "grammar", "weight": 0.4, "grammarId": "aurora_law" }
+                {
+                  "type": "grammar",
+                  "weight": 0.6,
+                  "grammarId": "aurora_war_name"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.4,
+                  "grammarId": "aurora_law"
+                }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": ["occurrence"]
+          "entityKinds": [
+            "occurrence"
+          ]
         }
       ]
     }
@@ -2473,10 +2827,46 @@
         {
           "id": "ancient_tech_prefix",
           "phonology": {
-            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
-            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
-            "syllableTemplates": ["CV", "VC"],
-            "lengthRange": [1, 1],
+            "consonants": [
+              "X",
+              "V",
+              "N",
+              "K",
+              "R",
+              "Z",
+              "T",
+              "M",
+              "B",
+              "D",
+              "G",
+              "H",
+              "J",
+              "L",
+              "Q",
+              "W",
+              "Y",
+              "P"
+            ],
+            "vowels": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "VC"
+            ],
+            "lengthRange": [
+              1,
+              1
+            ],
             "favoredClusters": [],
             "forbiddenClusters": [],
             "favoredClusterBoost": 1
@@ -2484,8 +2874,12 @@
           "morphology": {
             "prefixes": [],
             "suffixes": [],
-            "structure": ["root"],
-            "structureWeights": [1]
+            "structure": [
+              "root"
+            ],
+            "structureWeights": [
+              1
+            ]
           },
           "style": {
             "capitalization": "",
@@ -2499,10 +2893,47 @@
         {
           "id": "ancient_tech_serial",
           "phonology": {
-            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
-            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
-            "syllableTemplates": ["CV", "CVC", "VC"],
-            "lengthRange": [2, 3],
+            "consonants": [
+              "X",
+              "V",
+              "N",
+              "K",
+              "R",
+              "Z",
+              "T",
+              "M",
+              "B",
+              "D",
+              "G",
+              "H",
+              "J",
+              "L",
+              "Q",
+              "W",
+              "Y",
+              "P"
+            ],
+            "vowels": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "CVC",
+              "VC"
+            ],
+            "lengthRange": [
+              2,
+              3
+            ],
             "favoredClusters": [],
             "forbiddenClusters": [],
             "favoredClusterBoost": 1
@@ -2510,8 +2941,12 @@
           "morphology": {
             "prefixes": [],
             "suffixes": [],
-            "structure": ["root"],
-            "structureWeights": [1]
+            "structure": [
+              "root"
+            ],
+            "structureWeights": [
+              1
+            ]
           },
           "style": {
             "capitalization": "",
@@ -2594,7 +3029,7 @@
               1.4,
               1.3,
               1.1,
-              1.0,
+              1,
               0.9,
               0.8
             ],
@@ -3351,8 +3786,12 @@
           "start": "name",
           "rules": {
             "name": [
-              ["☽'^slot:nightshelf_latin_roots^slot:nightshelf_whisper_ends"],
-              ["slot:nightshelf_latin_roots~cap^slot:nightshelf_whisper_ends^~"]
+              [
+                "☽'^slot:nightshelf_latin_roots^slot:nightshelf_whisper_ends"
+              ],
+              [
+                "slot:nightshelf_latin_roots~cap^slot:nightshelf_whisper_ends^~"
+              ]
             ]
           }
         },
@@ -3361,10 +3800,19 @@
           "start": "name",
           "rules": {
             "name": [
-              ["☽'^domain:nightshelf_domain~chopL"],
-              ["domain:nightshelf_domain~chopR^☽"],
-              ["domain:nightshelf_domain^~"],
-              ["☽'^slot:nightshelf_shadow_gen~chopL^'", "slot:nightshelf_faction_groups"]
+              [
+                "☽'^domain:nightshelf_domain~chopL"
+              ],
+              [
+                "domain:nightshelf_domain~chopR^☽"
+              ],
+              [
+                "domain:nightshelf_domain^~"
+              ],
+              [
+                "☽'^slot:nightshelf_shadow_gen~chopL^'",
+                "slot:nightshelf_faction_groups"
+              ]
             ]
           }
         },
@@ -3374,8 +3822,15 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["☽'^domain:nightshelf_domain", "context:region^'born"],
-              ["domain:nightshelf_domain^~", "of", "☽'^context:region"]
+              [
+                "☽'^domain:nightshelf_domain",
+                "context:region^'born"
+              ],
+              [
+                "domain:nightshelf_domain^~",
+                "of",
+                "☽'^context:region"
+              ]
             ]
           }
         },
@@ -3385,8 +3840,15 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["☽'^context:region^'", "slot:nightshelf_faction_groups"],
-              ["slot:nightshelf_faction_groups^☽", "of", "context:region"]
+              [
+                "☽'^context:region^'",
+                "slot:nightshelf_faction_groups"
+              ],
+              [
+                "slot:nightshelf_faction_groups^☽",
+                "of",
+                "context:region"
+              ]
             ]
           }
         },
@@ -3396,8 +3858,16 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["☽'^slot:nightshelf_shadow_gen", "Code of", "context:region^~"],
-              ["context:region^'", "☽'^slot:nightshelf_shadow_gen^☽", "Covenant"]
+              [
+                "☽'^slot:nightshelf_shadow_gen",
+                "Code of",
+                "context:region^~"
+              ],
+              [
+                "context:region^'",
+                "☽'^slot:nightshelf_shadow_gen^☽",
+                "Covenant"
+              ]
             ]
           }
         },
@@ -3505,12 +3975,31 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["slot:nightshelf_war_names^~", "context:selected~gen"],
-              ["context:selected~poss", "☽'^slot:nightshelf_war_names"],
-              ["slot:nightshelf_war_names^☽", "context:target~gen"],
-              ["The", "slot:nightshelf_whisper_roots^~", "slot:nightshelf_war_names"],
-              ["☽'^slot:nightshelf_war_names", "slot:nightshelf_whisper_roots^~"],
-              ["slot:nightshelf_shadow_gen^∴^slot:nightshelf_shadow_gen", "slot:nightshelf_war_names"]
+              [
+                "slot:nightshelf_war_names^~",
+                "context:selected~gen"
+              ],
+              [
+                "context:selected~poss",
+                "☽'^slot:nightshelf_war_names"
+              ],
+              [
+                "slot:nightshelf_war_names^☽",
+                "context:target~gen"
+              ],
+              [
+                "The",
+                "slot:nightshelf_whisper_roots^~",
+                "slot:nightshelf_war_names"
+              ],
+              [
+                "☽'^slot:nightshelf_war_names",
+                "slot:nightshelf_whisper_roots^~"
+              ],
+              [
+                "slot:nightshelf_shadow_gen^∴^slot:nightshelf_shadow_gen",
+                "slot:nightshelf_war_names"
+              ]
             ]
           }
         },
@@ -3520,12 +4009,31 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["slot:nightshelf_disaster_types^~", "context:target~gen"],
-              ["context:selected~poss", "☽'^slot:nightshelf_disaster_types"],
-              ["slot:nightshelf_disaster_types^☽", "context:selected~gen"],
-              ["The", "slot:nightshelf_shadow_gen^~", "slot:nightshelf_disaster_types"],
-              ["☽'^slot:nightshelf_disaster_types", "slot:nightshelf_whisper_roots^~"],
-              ["☽'^domain:nightshelf_domain~lower^'", "slot:nightshelf_disaster_types~cap^~"]
+              [
+                "slot:nightshelf_disaster_types^~",
+                "context:target~gen"
+              ],
+              [
+                "context:selected~poss",
+                "☽'^slot:nightshelf_disaster_types"
+              ],
+              [
+                "slot:nightshelf_disaster_types^☽",
+                "context:selected~gen"
+              ],
+              [
+                "The",
+                "slot:nightshelf_shadow_gen^~",
+                "slot:nightshelf_disaster_types"
+              ],
+              [
+                "☽'^slot:nightshelf_disaster_types",
+                "slot:nightshelf_whisper_roots^~"
+              ],
+              [
+                "☽'^domain:nightshelf_domain~lower^'",
+                "slot:nightshelf_disaster_types~cap^~"
+              ]
             ]
           }
         },
@@ -3556,11 +4064,30 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["☽The", "slot:nightshelf_shadow_gen~cap", "Rite☽"],
-              ["Order of the", "slot:nightshelf_magic_part_c~cap", "slot:nightshelf_magic_partb~er~cap^s"],
-              ["The", "slot:nightshelf_whisper_ends~cap", "Doctrine"],
-              ["☽^slot:nightshelf_latin_roots~cap^-^slot:nightshelf_magic_part_a^☽", "Arts"],
-              ["School of", "slot:nightshelf_shadow_gen~cap", "slot:nightshelf_magic_part_c~cap"]
+              [
+                "☽The",
+                "slot:nightshelf_shadow_gen~cap",
+                "Rite☽"
+              ],
+              [
+                "Order of the",
+                "slot:nightshelf_magic_part_c~cap",
+                "slot:nightshelf_magic_partb~er~cap^s"
+              ],
+              [
+                "The",
+                "slot:nightshelf_whisper_ends~cap",
+                "Doctrine"
+              ],
+              [
+                "☽^slot:nightshelf_latin_roots~cap^-^slot:nightshelf_magic_part_a^☽",
+                "Arts"
+              ],
+              [
+                "School of",
+                "slot:nightshelf_shadow_gen~cap",
+                "slot:nightshelf_magic_part_c~cap"
+              ]
             ]
           }
         },
@@ -3569,10 +4096,18 @@
           "start": "name",
           "rules": {
             "name": [
-              ["☽'^slot:nightshelf_latin_roots^slot:nightshelf_whisper_ends"],
-              ["slot:nightshelf_shadow_gen~cap^'depths^~"],
-              ["domain:nightshelf_domain~cap^☽"],
-              ["slot:nightshelf_latin_roots~cap^slot:nightshelf_whisper_ends^☽"]
+              [
+                "☽'^slot:nightshelf_latin_roots^slot:nightshelf_whisper_ends"
+              ],
+              [
+                "slot:nightshelf_shadow_gen~cap^'depths^~"
+              ],
+              [
+                "domain:nightshelf_domain~cap^☽"
+              ],
+              [
+                "slot:nightshelf_latin_roots~cap^slot:nightshelf_whisper_ends^☽"
+              ]
             ]
           },
           "capitalization": "titleWords"
@@ -3605,10 +4140,22 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["☽'^slot:nightshelf_latin_roots~chopL^'", "slot:nightshelf_faction_groups"],
-              ["slot:nightshelf_faction_groups^∴^slot:nightshelf_shadow_gen~chopR^-bound~"],
-              ["slot:nightshelf_shadow_gen~cap^'", "slot:nightshelf_faction_groups^~"],
-              ["The", "slot:nightshelf_faction_groups", "(^slot:nightshelf_shadow_gen~chopL^-sworn)"]
+              [
+                "☽'^slot:nightshelf_latin_roots~chopL^'",
+                "slot:nightshelf_faction_groups"
+              ],
+              [
+                "slot:nightshelf_faction_groups^∴^slot:nightshelf_shadow_gen~chopR^-bound~"
+              ],
+              [
+                "slot:nightshelf_shadow_gen~cap^'",
+                "slot:nightshelf_faction_groups^~"
+              ],
+              [
+                "The",
+                "slot:nightshelf_faction_groups",
+                "(^slot:nightshelf_shadow_gen~chopL^-sworn)"
+              ]
             ]
           }
         },
@@ -3728,117 +4275,198 @@
               "name": "Legendary Heroes",
               "priority": 75,
               "conditions": {
-                "entityKinds": ["npc"],
-                "prominence": ["mythic"],
-                "subtypes": ["hero"],
+                "entityKinds": [
+                  "npc"
+                ],
+                "prominence": [
+                  "mythic"
+                ],
+                "subtypes": [
+                  "hero"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.7, "grammarId": "nightshelf_hero_legendary" },
-                { "type": "grammar", "weight": 0.3, "grammarId": "nightshelf_hero_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.7,
+                  "grammarId": "nightshelf_hero_legendary"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.3,
+                  "grammarId": "nightshelf_hero_npc"
+                }
               ]
             },
             {
               "name": "Heroes",
               "priority": 70,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["hero"],
+                "subtypes": [
+                  "hero"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.6, "grammarId": "nightshelf_hero_npc" },
-                { "type": "grammar", "weight": 0.4, "grammarId": "nightshelf_hero_legendary" }
+                {
+                  "type": "grammar",
+                  "weight": 0.6,
+                  "grammarId": "nightshelf_hero_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.4,
+                  "grammarId": "nightshelf_hero_legendary"
+                }
               ]
             },
             {
               "name": "Mayors and Leaders",
               "priority": 68,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["mayor"],
+                "subtypes": [
+                  "mayor"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_noble_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_noble_npc"
+                }
               ]
             },
             {
               "name": "Merchants",
               "priority": 65,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["merchant"],
+                "subtypes": [
+                  "merchant"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.7, "grammarId": "nightshelf_merchant_npc" },
-                { "type": "grammar", "weight": 0.3, "grammarId": "nightshelf_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.7,
+                  "grammarId": "nightshelf_merchant_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.3,
+                  "grammarId": "nightshelf_npc"
+                }
               ]
             },
             {
               "name": "Outlaws and Criminals",
               "priority": 65,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["outlaw"],
+                "subtypes": [
+                  "outlaw"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.8, "grammarId": "nightshelf_outlaw_npc" },
-                { "type": "grammar", "weight": 0.2, "grammarId": "nightshelf_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.8,
+                  "grammarId": "nightshelf_outlaw_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.2,
+                  "grammarId": "nightshelf_npc"
+                }
               ]
             },
             {
               "name": "Elite NPCs",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["npc"],
-                "prominence": ["mythic", "renowned"],
+                "entityKinds": [
+                  "npc"
+                ],
+                "prominence": [
+                  "mythic",
+                  "renowned"
+                ],
                 "subtypes": [],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.6, "grammarId": "nightshelf_elite_npc" },
-                { "type": "grammar", "weight": 0.4, "grammarId": "nightshelf_noble_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.6,
+                  "grammarId": "nightshelf_elite_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.4,
+                  "grammarId": "nightshelf_noble_npc"
+                }
               ]
             },
             {
               "name": "Region Names",
               "priority": 55,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["region"],
+                "subtypes": [
+                  "region"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_region" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_region"
+                }
               ]
             },
             {
               "name": "Default NPC Names",
               "priority": 0,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
@@ -3846,16 +4474,38 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.35, "grammarId": "nightshelf_npc" },
-                { "type": "grammar", "weight": 0.30, "grammarId": "nightshelf_npc_whisper" },
-                { "type": "grammar", "weight": 0.15, "grammarId": "nightshelf_elite_npc" },
-                { "type": "grammar", "weight": 0.10, "grammarId": "nightshelf_merchant_npc" },
-                { "type": "grammar", "weight": 0.10, "grammarId": "nightshelf_npc_regional" }
+                {
+                  "type": "grammar",
+                  "weight": 0.35,
+                  "grammarId": "nightshelf_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.3,
+                  "grammarId": "nightshelf_npc_whisper"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.15,
+                  "grammarId": "nightshelf_elite_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.1,
+                  "grammarId": "nightshelf_merchant_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.1,
+                  "grammarId": "nightshelf_npc_regional"
+                }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": ["npc"]
+          "entityKinds": [
+            "npc"
+          ]
         },
         {
           "id": "nightshelf_locations",
@@ -4005,8 +4655,16 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.85, "grammarId": "nightshelf_magic" },
-                { "type": "grammar", "weight": 0.15, "grammarId": "nightshelf_rules_regional" }
+                {
+                  "type": "grammar",
+                  "weight": 0.85,
+                  "grammarId": "nightshelf_magic"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.15,
+                  "grammarId": "nightshelf_rules_regional"
+                }
               ]
             },
             {
@@ -4025,7 +4683,11 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_region" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_region"
+                }
               ]
             }
           ],
@@ -4051,23 +4713,39 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.85, "grammarId": "nightshelf_faction" },
-                { "type": "grammar", "weight": 0.15, "grammarId": "nightshelf_faction_regional" }
+                {
+                  "type": "grammar",
+                  "weight": 0.85,
+                  "grammarId": "nightshelf_faction"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.15,
+                  "grammarId": "nightshelf_faction_regional"
+                }
               ]
             },
             {
               "name": "Region Names",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["faction"],
+                "entityKinds": [
+                  "faction"
+                ],
                 "prominence": [],
-                "subtypes": ["region"],
+                "subtypes": [
+                  "region"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_region" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_region"
+                }
               ]
             }
           ],
@@ -4082,11 +4760,15 @@
               "name": "Meta-Entity Schools",
               "priority": 80,
               "conditions": {
-                "entityKinds": ["ability"],
+                "entityKinds": [
+                  "ability"
+                ],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
-                "tags": ["meta-entity"],
+                "tags": [
+                  "meta-entity"
+                ],
                 "tagMatchAll": false
               },
               "strategies": [
@@ -4179,11 +4861,15 @@
               "name": "Anomaly-Born Artifacts",
               "priority": 65,
               "conditions": {
-                "entityKinds": ["artifact"],
+                "entityKinds": [
+                  "artifact"
+                ],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
-                "tags": ["anomaly_born"],
+                "tags": [
+                  "anomaly_born"
+                ],
                 "tagMatchAll": false
               },
               "strategies": [
@@ -4280,66 +4966,107 @@
               "name": "Wars and Conflicts",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["war", "conflict"],
+                "subtypes": [
+                  "war",
+                  "conflict"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_war_name" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_war_name"
+                }
               ]
             },
             {
               "name": "Disasters",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["disaster"],
+                "subtypes": [
+                  "disaster"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_disaster_name" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_disaster_name"
+                }
               ]
             },
             {
               "name": "Celebrations and Memorials",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["celebration", "memorial", "social"],
+                "subtypes": [
+                  "celebration",
+                  "memorial",
+                  "social"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "nightshelf_holidays" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_holidays"
+                }
               ]
             },
             {
               "name": "Succession Crises",
               "priority": 55,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["succession_crisis"],
+                "subtypes": [
+                  "succession_crisis"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.6, "grammarId": "nightshelf_war_name" },
-                { "type": "grammar", "weight": 0.4, "grammarId": "nightshelf_magic" }
+                {
+                  "type": "grammar",
+                  "weight": 0.6,
+                  "grammarId": "nightshelf_war_name"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.4,
+                  "grammarId": "nightshelf_magic"
+                }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": ["occurrence"]
+          "entityKinds": [
+            "occurrence"
+          ]
         }
       ]
     }
@@ -4381,10 +5108,46 @@
         {
           "id": "ancient_tech_prefix",
           "phonology": {
-            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
-            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
-            "syllableTemplates": ["CV", "VC"],
-            "lengthRange": [1, 1],
+            "consonants": [
+              "X",
+              "V",
+              "N",
+              "K",
+              "R",
+              "Z",
+              "T",
+              "M",
+              "B",
+              "D",
+              "G",
+              "H",
+              "J",
+              "L",
+              "Q",
+              "W",
+              "Y",
+              "P"
+            ],
+            "vowels": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "VC"
+            ],
+            "lengthRange": [
+              1,
+              1
+            ],
             "favoredClusters": [],
             "forbiddenClusters": [],
             "favoredClusterBoost": 1
@@ -4392,8 +5155,12 @@
           "morphology": {
             "prefixes": [],
             "suffixes": [],
-            "structure": ["root"],
-            "structureWeights": [1]
+            "structure": [
+              "root"
+            ],
+            "structureWeights": [
+              1
+            ]
           },
           "style": {
             "capitalization": "",
@@ -4407,10 +5174,47 @@
         {
           "id": "ancient_tech_serial",
           "phonology": {
-            "consonants": ["X", "V", "N", "K", "R", "Z", "T", "M", "B", "D", "G", "H", "J", "L", "Q", "W", "Y", "P"],
-            "vowels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
-            "syllableTemplates": ["CV", "CVC", "VC"],
-            "lengthRange": [2, 3],
+            "consonants": [
+              "X",
+              "V",
+              "N",
+              "K",
+              "R",
+              "Z",
+              "T",
+              "M",
+              "B",
+              "D",
+              "G",
+              "H",
+              "J",
+              "L",
+              "Q",
+              "W",
+              "Y",
+              "P"
+            ],
+            "vowels": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "CVC",
+              "VC"
+            ],
+            "lengthRange": [
+              2,
+              3
+            ],
             "favoredClusters": [],
             "forbiddenClusters": [],
             "favoredClusterBoost": 1
@@ -4418,8 +5222,12 @@
           "morphology": {
             "prefixes": [],
             "suffixes": [],
-            "structure": ["root"],
-            "structureWeights": [1]
+            "structure": [
+              "root"
+            ],
+            "structureWeights": [
+              1
+            ]
           },
           "style": {
             "capitalization": "",
@@ -5236,9 +6044,15 @@
           "start": "name",
           "rules": {
             "name": [
-              ["slot:orca_territory_glyph^-^slot:orca_prey_glyph^grund"],
-              ["slot:orca_deed_root^-^slot:orca_territory_glyph"],
-              ["slot:orca_prey_glyph^-^slot:orca_territory_glyph^-^slot:orca_deed_root^maw"]
+              [
+                "slot:orca_territory_glyph^-^slot:orca_prey_glyph^grund"
+              ],
+              [
+                "slot:orca_deed_root^-^slot:orca_territory_glyph"
+              ],
+              [
+                "slot:orca_prey_glyph^-^slot:orca_territory_glyph^-^slot:orca_deed_root^maw"
+              ]
             ]
           },
           "capitalization": "titleWords"
@@ -5267,11 +6081,30 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["The", "slot:orca_prey_glyph~cap^-^slot:orca_territory_glyph", "School"],
-              ["slot:orca_deed_root~cap^-^slot:orca_prey_glyph", "Tradition"],
-              ["Way of the", "slot:orca_territory_glyph~cap", "slot:orca_prey_glyph~cap^s"],
-              ["The", "slot:orca_deed_root~cap^-^slot:orca_territory_glyph^-blood", "Arts"],
-              ["slot:orca_prey_glyph~cap", "slot:orca_deed_root~cap^-masters'", "Path"]
+              [
+                "The",
+                "slot:orca_prey_glyph~cap^-^slot:orca_territory_glyph",
+                "School"
+              ],
+              [
+                "slot:orca_deed_root~cap^-^slot:orca_prey_glyph",
+                "Tradition"
+              ],
+              [
+                "Way of the",
+                "slot:orca_territory_glyph~cap",
+                "slot:orca_prey_glyph~cap^s"
+              ],
+              [
+                "The",
+                "slot:orca_deed_root~cap^-^slot:orca_territory_glyph^-blood",
+                "Arts"
+              ],
+              [
+                "slot:orca_prey_glyph~cap",
+                "slot:orca_deed_root~cap^-masters'",
+                "Path"
+              ]
             ]
           }
         },
@@ -5280,9 +6113,15 @@
           "start": "name",
           "rules": {
             "name": [
-              ["slot:orca_prey_glyph^-^slot:orca_deed_root"],
-              ["slot:orca_deed_root^-^slot:orca_prey_glyph^-^slot:orca_deed_root"],
-              ["slot:orca_territory_glyph^-^slot:orca_prey_glyph^-^slot:orca_deed_root"]
+              [
+                "slot:orca_prey_glyph^-^slot:orca_deed_root"
+              ],
+              [
+                "slot:orca_deed_root^-^slot:orca_prey_glyph^-^slot:orca_deed_root"
+              ],
+              [
+                "slot:orca_territory_glyph^-^slot:orca_prey_glyph^-^slot:orca_deed_root"
+              ]
             ]
           },
           "capitalization": "titleWords"
@@ -5292,8 +6131,12 @@
           "start": "name",
           "rules": {
             "name": [
-              ["slot:orca_prey_glyph^-^slot:orca_prey_glyph^-^slot:orca_deed_root"],
-              ["slot:orca_territory_glyph^-^slot:orca_deed_root^-^slot:orca_prey_glyph"]
+              [
+                "slot:orca_prey_glyph^-^slot:orca_prey_glyph^-^slot:orca_deed_root"
+              ],
+              [
+                "slot:orca_territory_glyph^-^slot:orca_deed_root^-^slot:orca_prey_glyph"
+              ]
             ]
           },
           "capitalization": "titleWords"
@@ -5304,7 +6147,9 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["slot:orca_deed_root^-^slot:orca_prey_glyph^-^context:region"],
+              [
+                "slot:orca_deed_root^-^slot:orca_prey_glyph^-^context:region"
+              ],
               [
                 "domain:orca_domain_short~cap",
                 "context:region"
@@ -5318,8 +6163,16 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["The", "context:region", "slot:orca_faction_types"],
-              ["context:region^'s", "slot:orca_power_words", "slot:orca_faction_types"]
+              [
+                "The",
+                "context:region",
+                "slot:orca_faction_types"
+              ],
+              [
+                "context:region^'s",
+                "slot:orca_power_words",
+                "slot:orca_faction_types"
+              ]
             ]
           }
         },
@@ -5329,8 +6182,17 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["context:region^'s", "slot:orca_power_words", "Law"],
-              ["The", "slot:orca_power_words", "Code of", "context:region"]
+              [
+                "context:region^'s",
+                "slot:orca_power_words",
+                "Law"
+              ],
+              [
+                "The",
+                "slot:orca_power_words",
+                "Code of",
+                "context:region"
+              ]
             ]
           }
         },
@@ -5400,12 +6262,33 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["context:selected~poss", "slot:orca_war_epithets"],
-              ["The", "slot:orca_war_epithets", "of", "context:target"],
-              ["context:selected^-^context:target", "slot:orca_war_epithets"],
-              ["The", "slot:orca_power_words^-^slot:orca_war_epithets"],
-              ["slot:orca_war_epithets", "of", "slot:orca_region_names"],
-              ["slot:orca_power_words^-^slot:orca_power_words", "slot:orca_war_epithets"]
+              [
+                "context:selected~poss",
+                "slot:orca_war_epithets"
+              ],
+              [
+                "The",
+                "slot:orca_war_epithets",
+                "of",
+                "context:target"
+              ],
+              [
+                "context:selected^-^context:target",
+                "slot:orca_war_epithets"
+              ],
+              [
+                "The",
+                "slot:orca_power_words^-^slot:orca_war_epithets"
+              ],
+              [
+                "slot:orca_war_epithets",
+                "of",
+                "slot:orca_region_names"
+              ],
+              [
+                "slot:orca_power_words^-^slot:orca_power_words",
+                "slot:orca_war_epithets"
+              ]
             ]
           }
         },
@@ -5415,12 +6298,33 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["context:target~poss", "slot:orca_disaster_epithets"],
-              ["The", "slot:orca_disaster_epithets", "of", "context:selected"],
-              ["context:selected^-^slot:orca_disaster_epithets"],
-              ["The", "slot:orca_region_names", "slot:orca_disaster_epithets"],
-              ["slot:orca_disaster_epithets", "of", "slot:orca_region_names"],
-              ["domain:orca_domain_short^'s", "slot:orca_disaster_epithets"]
+              [
+                "context:target~poss",
+                "slot:orca_disaster_epithets"
+              ],
+              [
+                "The",
+                "slot:orca_disaster_epithets",
+                "of",
+                "context:selected"
+              ],
+              [
+                "context:selected^-^slot:orca_disaster_epithets"
+              ],
+              [
+                "The",
+                "slot:orca_region_names",
+                "slot:orca_disaster_epithets"
+              ],
+              [
+                "slot:orca_disaster_epithets",
+                "of",
+                "slot:orca_region_names"
+              ],
+              [
+                "domain:orca_domain_short^'s",
+                "slot:orca_disaster_epithets"
+              ]
             ]
           }
         },
@@ -5494,9 +6398,15 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["slot:orca_prey_glyph^-^slot:orca_deed_root^-pod"],
-              ["slot:orca_deed_root^-^slot:orca_territory_glyph^-pack"],
-              ["slot:orca_territory_glyph^-^slot:orca_prey_glyph^-hunters"]
+              [
+                "slot:orca_prey_glyph^-^slot:orca_deed_root^-pod"
+              ],
+              [
+                "slot:orca_deed_root^-^slot:orca_territory_glyph^-pack"
+              ],
+              [
+                "slot:orca_territory_glyph^-^slot:orca_prey_glyph^-hunters"
+              ]
             ]
           }
         },
@@ -5506,9 +6416,15 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["slot:orca_prey_glyph^-^slot:orca_deed_root^-law"],
-              ["slot:orca_territory_glyph^-code"],
-              ["slot:orca_deed_root^-^slot:orca_territory_glyph^-pact"]
+              [
+                "slot:orca_prey_glyph^-^slot:orca_deed_root^-law"
+              ],
+              [
+                "slot:orca_territory_glyph^-code"
+              ],
+              [
+                "slot:orca_deed_root^-^slot:orca_territory_glyph^-pact"
+              ]
             ]
           }
         },
@@ -5596,118 +6512,203 @@
               "name": "Legendary Heroes",
               "priority": 75,
               "conditions": {
-                "entityKinds": ["npc"],
-                "prominence": ["mythic"],
-                "subtypes": ["hero"],
+                "entityKinds": [
+                  "npc"
+                ],
+                "prominence": [
+                  "mythic"
+                ],
+                "subtypes": [
+                  "hero"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.7, "grammarId": "orca_hero_legendary" },
-                { "type": "grammar", "weight": 0.3, "grammarId": "orca_hero_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.7,
+                  "grammarId": "orca_hero_legendary"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.3,
+                  "grammarId": "orca_hero_npc"
+                }
               ]
             },
             {
               "name": "Heroes",
               "priority": 70,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["hero"],
+                "subtypes": [
+                  "hero"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.6, "grammarId": "orca_hero_npc" },
-                { "type": "grammar", "weight": 0.4, "grammarId": "orca_hero_legendary" }
+                {
+                  "type": "grammar",
+                  "weight": 0.6,
+                  "grammarId": "orca_hero_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.4,
+                  "grammarId": "orca_hero_legendary"
+                }
               ]
             },
             {
               "name": "Chieftains and Mayors",
               "priority": 68,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["mayor"],
+                "subtypes": [
+                  "mayor"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.7, "grammarId": "orca_chieftain_npc" },
-                { "type": "grammar", "weight": 0.3, "grammarId": "orca_hero_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.7,
+                  "grammarId": "orca_chieftain_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.3,
+                  "grammarId": "orca_hero_npc"
+                }
               ]
             },
             {
               "name": "Merchants",
               "priority": 65,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["merchant"],
+                "subtypes": [
+                  "merchant"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.5, "grammarId": "orca_npc" },
-                { "type": "phonotactic", "weight": 0.5, "domainId": "orca_domain" }
+                {
+                  "type": "grammar",
+                  "weight": 0.5,
+                  "grammarId": "orca_npc"
+                },
+                {
+                  "type": "phonotactic",
+                  "weight": 0.5,
+                  "domainId": "orca_domain"
+                }
               ]
             },
             {
               "name": "Outlaws and Criminals",
               "priority": 65,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["outlaw"],
+                "subtypes": [
+                  "outlaw"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.8, "grammarId": "orca_outlaw_npc" },
-                { "type": "grammar", "weight": 0.2, "grammarId": "orca_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.8,
+                  "grammarId": "orca_outlaw_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.2,
+                  "grammarId": "orca_npc"
+                }
               ]
             },
             {
               "name": "Elite NPCs",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["npc"],
-                "prominence": ["mythic", "renowned"],
+                "entityKinds": [
+                  "npc"
+                ],
+                "prominence": [
+                  "mythic",
+                  "renowned"
+                ],
                 "subtypes": [],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.5, "grammarId": "orca_hero_npc" },
-                { "type": "grammar", "weight": 0.5, "grammarId": "orca_npc" }
+                {
+                  "type": "grammar",
+                  "weight": 0.5,
+                  "grammarId": "orca_hero_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.5,
+                  "grammarId": "orca_npc"
+                }
               ]
             },
             {
               "name": "Region Names",
               "priority": 55,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
-                "subtypes": ["region"],
+                "subtypes": [
+                  "region"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "orca_region" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "orca_region"
+                }
               ]
             },
             {
               "name": "Default NPC Names",
               "priority": 0,
               "conditions": {
-                "entityKinds": ["npc"],
+                "entityKinds": [
+                  "npc"
+                ],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
@@ -5715,14 +6716,28 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.50, "grammarId": "orca_npc" },
-                { "type": "grammar", "weight": 0.35, "grammarId": "orca_npc_deed" },
-                { "type": "grammar", "weight": 0.15, "grammarId": "orca_npc_regional" }
+                {
+                  "type": "grammar",
+                  "weight": 0.5,
+                  "grammarId": "orca_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.35,
+                  "grammarId": "orca_npc_deed"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.15,
+                  "grammarId": "orca_npc_regional"
+                }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": ["npc"]
+          "entityKinds": [
+            "npc"
+          ]
         },
         {
           "id": "orca_occurrences",
@@ -5732,66 +6747,105 @@
               "name": "Wars and Conflicts",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["war", "conflict"],
+                "subtypes": [
+                  "war",
+                  "conflict"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "orca_war_name" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "orca_war_name"
+                }
               ]
             },
             {
               "name": "Disasters",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["disaster"],
+                "subtypes": [
+                  "disaster"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "orca_disaster_name" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "orca_disaster_name"
+                }
               ]
             },
             {
               "name": "Celebrations",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["celebration"],
+                "subtypes": [
+                  "celebration"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "orca_celebration" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "orca_celebration"
+                }
               ]
             },
             {
               "name": "Succession Crises",
               "priority": 55,
               "conditions": {
-                "entityKinds": ["occurrence"],
+                "entityKinds": [
+                  "occurrence"
+                ],
                 "prominence": [],
-                "subtypes": ["succession_crisis"],
+                "subtypes": [
+                  "succession_crisis"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.7, "grammarId": "orca_war_name" },
-                { "type": "grammar", "weight": 0.3, "grammarId": "orca_law" }
+                {
+                  "type": "grammar",
+                  "weight": 0.7,
+                  "grammarId": "orca_war_name"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.3,
+                  "grammarId": "orca_law"
+                }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": ["occurrence"]
+          "entityKinds": [
+            "occurrence"
+          ]
         },
         {
           "id": "orca_combat_techs",
@@ -5801,11 +6855,15 @@
               "name": "Meta-Entity Schools",
               "priority": 80,
               "conditions": {
-                "entityKinds": ["ability"],
+                "entityKinds": [
+                  "ability"
+                ],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
-                "tags": ["meta-entity"],
+                "tags": [
+                  "meta-entity"
+                ],
                 "tagMatchAll": false
               },
               "strategies": [
@@ -5975,7 +7033,9 @@
               "name": "Location Names",
               "priority": 50,
               "conditions": {
-                "entityKinds": ["location"],
+                "entityKinds": [
+                  "location"
+                ],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
@@ -5983,13 +7043,23 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.6, "grammarId": "orca_location" },
-                { "type": "phonotactic", "weight": 0.4, "domainId": "orca_domain" }
+                {
+                  "type": "grammar",
+                  "weight": 0.6,
+                  "grammarId": "orca_location"
+                },
+                {
+                  "type": "phonotactic",
+                  "weight": 0.4,
+                  "domainId": "orca_domain"
+                }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": ["location"]
+          "entityKinds": [
+            "location"
+          ]
         },
         {
           "id": "orca_factions",
@@ -5999,7 +7069,9 @@
               "name": "Faction Names",
               "priority": 50,
               "conditions": {
-                "entityKinds": ["faction"],
+                "entityKinds": [
+                  "faction"
+                ],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
@@ -6007,29 +7079,51 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.55, "grammarId": "orca_faction" },
-                { "type": "phonotactic", "weight": 0.3, "domainId": "orca_domain" },
-                { "type": "grammar", "weight": 0.15, "grammarId": "orca_faction_regional" }
+                {
+                  "type": "grammar",
+                  "weight": 0.55,
+                  "grammarId": "orca_faction"
+                },
+                {
+                  "type": "phonotactic",
+                  "weight": 0.3,
+                  "domainId": "orca_domain"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.15,
+                  "grammarId": "orca_faction_regional"
+                }
               ]
             },
             {
               "name": "Region Names",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["faction"],
+                "entityKinds": [
+                  "faction"
+                ],
                 "prominence": [],
-                "subtypes": ["region"],
+                "subtypes": [
+                  "region"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "orca_region" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "orca_region"
+                }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": ["faction"]
+          "entityKinds": [
+            "faction"
+          ]
         },
         {
           "id": "orca_rules",
@@ -6039,7 +7133,9 @@
               "name": "Laws and Traditions",
               "priority": 50,
               "conditions": {
-                "entityKinds": ["rule"],
+                "entityKinds": [
+                  "rule"
+                ],
                 "prominence": [],
                 "subtypes": [],
                 "subtypeMatchAll": false,
@@ -6047,29 +7143,51 @@
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 0.55, "grammarId": "orca_law" },
-                { "type": "phonotactic", "weight": 0.3, "domainId": "orca_domain" },
-                { "type": "grammar", "weight": 0.15, "grammarId": "orca_rules_regional" }
+                {
+                  "type": "grammar",
+                  "weight": 0.55,
+                  "grammarId": "orca_law"
+                },
+                {
+                  "type": "phonotactic",
+                  "weight": 0.3,
+                  "domainId": "orca_domain"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.15,
+                  "grammarId": "orca_rules_regional"
+                }
               ]
             },
             {
               "name": "Region Names",
               "priority": 60,
               "conditions": {
-                "entityKinds": ["rule"],
+                "entityKinds": [
+                  "rule"
+                ],
                 "prominence": [],
-                "subtypes": ["region"],
+                "subtypes": [
+                  "region"
+                ],
                 "subtypeMatchAll": false,
                 "tags": [],
                 "tagMatchAll": false
               },
               "strategies": [
-                { "type": "grammar", "weight": 1, "grammarId": "orca_region" }
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "orca_region"
+                }
               ]
             }
           ],
           "isDefault": false,
-          "entityKinds": ["rule"]
+          "entityKinds": [
+            "rule"
+          ]
         }
       ]
     }
@@ -6214,9 +7332,17 @@
           "start": "name",
           "rules": {
             "name": [
-              ["domain:world_domain"],
-              ["slot:world_generic_titles", "domain:world_domain"],
-              ["domain:world_domain", "slot:world_generic_epithets"]
+              [
+                "domain:world_domain"
+              ],
+              [
+                "slot:world_generic_titles",
+                "domain:world_domain"
+              ],
+              [
+                "domain:world_domain",
+                "slot:world_generic_epithets"
+              ]
             ]
           },
           "capitalization": "titleWords"
@@ -6227,8 +7353,16 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["The", "domain:world_domain", "slot:world_war_types"],
-              ["slot:world_war_types", "of", "domain:world_domain"]
+              [
+                "The",
+                "domain:world_domain",
+                "slot:world_war_types"
+              ],
+              [
+                "slot:world_war_types",
+                "of",
+                "domain:world_domain"
+              ]
             ]
           }
         },
@@ -6238,8 +7372,16 @@
           "capitalization": "titleWords",
           "rules": {
             "name": [
-              ["The", "domain:world_domain", "slot:world_disaster_types"],
-              ["slot:world_disaster_types", "of", "domain:world_domain"]
+              [
+                "The",
+                "domain:world_domain",
+                "slot:world_disaster_types"
+              ],
+              [
+                "slot:world_disaster_types",
+                "of",
+                "domain:world_domain"
+              ]
             ]
           }
         }

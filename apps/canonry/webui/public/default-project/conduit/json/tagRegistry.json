@@ -1,0 +1,807 @@
+[
+  {
+    "category": "location",
+    "rarity": "rare",
+    "description": "Strange, supernatural, or reality-bending phenomenon",
+    "tag": "anomaly",
+    "entityKinds": [
+      "location",
+      "ability",
+      "occurrence"
+    ],
+    "relatedTags": [
+      "mystical"
+    ],
+    "conflictingTags": [
+      "mundane"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "trait",
+    "rarity": "common",
+    "description": "Rule through power and might",
+    "templates": [],
+    "tag": "authoritarian",
+    "entityKinds": [
+      "rule"
+    ],
+    "relatedTags": [],
+    "conflictingTags": [
+      "libertarian"
+    ],
+    "mutuallyExclusiveWith": [
+      "libertarian"
+    ],
+    "isAxis": true,
+    "minUsage": 1,
+    "maxUsage": 50,
+    "usageCount": 0
+  },
+  {
+    "category": "location",
+    "rarity": "common",
+    "description": "At the heart of civilization, well-connected, accessible",
+    "tag": "central",
+    "entityKinds": [
+      "location"
+    ],
+    "relatedTags": [
+      "trade",
+      "safe"
+    ],
+    "conflictingTags": [
+      "hidden"
+    ],
+    "mutuallyExclusiveWith": [
+      "hidden"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "trait",
+    "rarity": "uncommon",
+    "description": "Disorganized, unpredictable, or anarchic",
+    "tag": "chaotic",
+    "entityKinds": [
+      "faction",
+      "npc"
+    ],
+    "relatedTags": [
+      "criminal"
+    ],
+    "conflictingTags": [
+      "organized"
+    ],
+    "mutuallyExclusiveWith": [
+      "organized"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "location",
+    "rarity": "common",
+    "description": "New tag description",
+    "templates": [],
+    "tag": "colony",
+    "entityKinds": [],
+    "relatedTags": [],
+    "conflictingTags": [],
+    "mutuallyExclusiveWith": [
+      "ice"
+    ],
+    "isAxis": true,
+    "minUsage": 1,
+    "maxUsage": 50,
+    "usageCount": 0
+  },
+  {
+    "category": "trait",
+    "rarity": "uncommon",
+    "description": "Combat-focused style or doctrine",
+    "tag": "combat-style",
+    "entityKinds": [
+      "ability"
+    ],
+    "relatedTags": [],
+    "conflictingTags": []
+  },
+  {
+    "category": "status",
+    "rarity": "uncommon",
+    "description": "Involved in or caused by warfare, strife, or crisis",
+    "tag": "conflict",
+    "entityKinds": [
+      "npc",
+      "faction",
+      "occurrence",
+      "rule"
+    ],
+    "relatedTags": [
+      "hostile",
+      "crisis"
+    ],
+    "conflictingTags": [
+      "peaceful"
+    ]
+  },
+  {
+    "category": "status",
+    "rarity": "rare",
+    "description": "Emergency situation requiring urgent response",
+    "tag": "crisis",
+    "entityKinds": [
+      "occurrence",
+      "rule",
+      "faction"
+    ],
+    "relatedTags": [
+      "conflict",
+      "power_vacuum"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "theme",
+    "rarity": "common",
+    "description": "Related to traditions, festivals, or social customs",
+    "tag": "cultural",
+    "entityKinds": [
+      "rule",
+      "occurrence",
+      "faction"
+    ],
+    "relatedTags": [
+      "legendary",
+      "political"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "trait",
+    "rarity": "uncommon",
+    "description": "Hazardous, risky, or threatening environment",
+    "tag": "dangerous",
+    "entityKinds": [
+      "location"
+    ],
+    "relatedTags": [
+      "anomaly",
+      "external"
+    ],
+    "conflictingTags": [
+      "safe"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "status",
+    "rarity": "common",
+    "description": "Recently found, explored, or uncovered",
+    "tag": "discovered",
+    "entityKinds": [
+      "location",
+      "ability"
+    ],
+    "relatedTags": [
+      "emergent",
+      "resource"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "trait",
+    "rarity": "common",
+    "description": "",
+    "tag": "east",
+    "mutuallyExclusiveWith": [
+      "west"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "location",
+    "rarity": "uncommon",
+    "description": "Recently risen, discovered, or newly prominent",
+    "tag": "emergent",
+    "entityKinds": [
+      "npc",
+      "location",
+      "faction",
+      "ability"
+    ],
+    "relatedTags": [
+      "discovered"
+    ],
+    "conflictingTags": [
+      "legendary"
+    ],
+    "mutuallyExclusiveWith": [
+      "legendary"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "affiliation",
+    "rarity": "rare",
+    "description": "Comes from outside the penguin colonies - outsider or invader",
+    "tag": "external",
+    "entityKinds": [
+      "npc",
+      "faction"
+    ],
+    "relatedTags": [
+      "hostile",
+      "raider",
+      "orca"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "trait",
+    "rarity": "common",
+    "description": "Hot as a Hamburgler",
+    "templates": [],
+    "tag": "fire",
+    "entityKinds": [],
+    "relatedTags": [],
+    "conflictingTags": [
+      "ice"
+    ],
+    "mutuallyExclusiveWith": [
+      "ice"
+    ],
+    "isAxis": true,
+    "minUsage": 1,
+    "maxUsage": 50,
+    "usageCount": 0
+  },
+  {
+    "category": "trait",
+    "rarity": "common",
+    "description": "Follows or supports others rather than leading",
+    "tag": "follower",
+    "entityKinds": [
+      "npc"
+    ],
+    "relatedTags": [],
+    "conflictingTags": [
+      "leader"
+    ],
+    "mutuallyExclusiveWith": [
+      "leader"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "behavior",
+    "rarity": "common",
+    "description": "Cooperative, peaceful, or allied disposition",
+    "tag": "friendly",
+    "entityKinds": [
+      "npc",
+      "faction"
+    ],
+    "relatedTags": [
+      "trade",
+      "diplomatic"
+    ],
+    "conflictingTags": [
+      "hostile"
+    ],
+    "mutuallyExclusiveWith": [
+      "hostile"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "trait",
+    "rarity": "uncommon",
+    "description": "Remote, hard to find, or off the beaten path",
+    "tag": "hidden",
+    "entityKinds": [
+      "location"
+    ],
+    "relatedTags": [
+      "secretive",
+      "anomaly"
+    ],
+    "conflictingTags": [
+      "central"
+    ],
+    "mutuallyExclusiveWith": [
+      "central"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "behavior",
+    "rarity": "uncommon",
+    "description": "Aggressive, threatening, or antagonistic disposition",
+    "tag": "hostile",
+    "entityKinds": [
+      "npc",
+      "faction"
+    ],
+    "relatedTags": [
+      "external",
+      "raider"
+    ],
+    "conflictingTags": [
+      "friendly"
+    ],
+    "mutuallyExclusiveWith": [
+      "friendly"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "trait",
+    "rarity": "common",
+    "description": "Dang that shit is coooooold",
+    "templates": [],
+    "tag": "ice",
+    "entityKinds": [],
+    "relatedTags": [],
+    "conflictingTags": [
+      "fire"
+    ],
+    "mutuallyExclusiveWith": [
+      "fire",
+      "colony"
+    ],
+    "isAxis": true,
+    "minUsage": 1,
+    "maxUsage": 50,
+    "usageCount": 0
+  },
+  {
+    "category": "status",
+    "rarity": "uncommon",
+    "description": "Resistant to contagion or ideological spread",
+    "tag": "immune",
+    "entityKinds": [
+      "npc"
+    ],
+    "relatedTags": [],
+    "conflictingTags": []
+  },
+  {
+    "category": "behavior",
+    "rarity": "uncommon",
+    "description": "Has significant power or sway over others",
+    "tag": "influential",
+    "entityKinds": [
+      "npc",
+      "faction"
+    ],
+    "relatedTags": [
+      "leader",
+      "political",
+      "legendary"
+    ],
+    "conflictingTags": [],
+    "isAxis": true
+  },
+  {
+    "category": "trait",
+    "rarity": "uncommon",
+    "description": "Breakthrough or novel discovery",
+    "tag": "innovation",
+    "entityKinds": [
+      "ability",
+      "rule"
+    ],
+    "relatedTags": [
+      "technology",
+      "emergent"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "trait",
+    "rarity": "uncommon",
+    "description": "Holds authority or leads others",
+    "tag": "leader",
+    "entityKinds": [
+      "npc"
+    ],
+    "relatedTags": [
+      "influential",
+      "political"
+    ],
+    "conflictingTags": [
+      "follower"
+    ],
+    "mutuallyExclusiveWith": [
+      "follower"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "trait",
+    "rarity": "rare",
+    "description": "Subject of legends, myths, or historical significance",
+    "tag": "legendary",
+    "entityKinds": [
+      "npc",
+      "location",
+      "faction",
+      "ability",
+      "occurrence"
+    ],
+    "relatedTags": [
+      "influential",
+      "cultural"
+    ],
+    "conflictingTags": [
+      "emergent"
+    ],
+    "mutuallyExclusiveWith": [
+      "emergent"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "trait",
+    "rarity": "common",
+    "description": "Rule through respect and information exchange",
+    "templates": [],
+    "tag": "libertarian",
+    "entityKinds": [
+      "rule"
+    ],
+    "relatedTags": [],
+    "conflictingTags": [
+      "authoritarian"
+    ],
+    "mutuallyExclusiveWith": [
+      "authoritarian"
+    ],
+    "isAxis": true,
+    "minUsage": 1,
+    "maxUsage": 50,
+    "usageCount": 0
+  },
+  {
+    "category": "theme",
+    "rarity": "common",
+    "description": "Practical, non-magical, everyday nature",
+    "tag": "mundane",
+    "entityKinds": [
+      "npc",
+      "location",
+      "faction",
+      "ability"
+    ],
+    "relatedTags": [
+      "technology"
+    ],
+    "conflictingTags": [
+      "mystical"
+    ],
+    "mutuallyExclusiveWith": [
+      "mystical"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "theme",
+    "rarity": "uncommon",
+    "description": "Associated with magic, anomalies, or the supernatural",
+    "tag": "mystical",
+    "entityKinds": [
+      "npc",
+      "location",
+      "faction",
+      "ability"
+    ],
+    "relatedTags": [
+      "anomaly"
+    ],
+    "conflictingTags": [
+      "mundane"
+    ],
+    "mutuallyExclusiveWith": [
+      "mundane"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "trait",
+    "rarity": "common",
+    "description": "",
+    "tag": "north",
+    "mutuallyExclusiveWith": [
+      "south"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "affiliation",
+    "rarity": "rare",
+    "description": "Associated with Orca Raiders - fearsome predators",
+    "tag": "orca",
+    "entityKinds": [
+      "npc",
+      "faction",
+      "ability"
+    ],
+    "relatedTags": [
+      "external",
+      "hostile",
+      "raider"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "trait",
+    "rarity": "common",
+    "description": "Well-structured, disciplined, or hierarchical",
+    "tag": "organized",
+    "entityKinds": [
+      "faction",
+      "npc"
+    ],
+    "relatedTags": [
+      "political"
+    ],
+    "conflictingTags": [
+      "chaotic"
+    ],
+    "mutuallyExclusiveWith": [
+      "chaotic"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "affiliation",
+    "rarity": "common",
+    "description": "Involved in governance, succession, or political maneuvering",
+    "tag": "political",
+    "entityKinds": [
+      "npc",
+      "faction",
+      "rule"
+    ],
+    "relatedTags": [
+      "leader",
+      "influential"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "status",
+    "rarity": "rare",
+    "description": "Leadership void creating instability",
+    "tag": "power_vacuum",
+    "entityKinds": [
+      "faction",
+      "location"
+    ],
+    "relatedTags": [
+      "crisis",
+      "political"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "behavior",
+    "rarity": "rare",
+    "description": "Engages in raiding, plundering, or predatory activities",
+    "tag": "raider",
+    "entityKinds": [
+      "npc",
+      "faction"
+    ],
+    "relatedTags": [
+      "hostile",
+      "external",
+      "orca"
+    ],
+    "conflictingTags": [
+      "trade"
+    ]
+  },
+  {
+    "category": "location",
+    "rarity": "common",
+    "description": "Source of valuable materials, food, or strategic value",
+    "tag": "resource",
+    "entityKinds": [
+      "location"
+    ],
+    "relatedTags": [
+      "discovered",
+      "trade"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "trait",
+    "rarity": "common",
+    "description": "Protected, secure, low danger",
+    "tag": "safe",
+    "entityKinds": [
+      "location"
+    ],
+    "relatedTags": [
+      "central",
+      "trade"
+    ],
+    "conflictingTags": [
+      "dangerous"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "behavior",
+    "rarity": "uncommon",
+    "description": "Operates in shadows, hidden, or clandestine",
+    "tag": "secretive",
+    "entityKinds": [
+      "npc",
+      "faction",
+      "location"
+    ],
+    "relatedTags": [
+      "mystical",
+      "hidden"
+    ],
+    "conflictingTags": [
+      "central"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "trait",
+    "rarity": "common",
+    "description": "",
+    "tag": "south",
+    "mutuallyExclusiveWith": [
+      "north"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "status",
+    "rarity": "rare",
+    "description": "Split off from a parent organization",
+    "tag": "splinter",
+    "entityKinds": [
+      "faction"
+    ],
+    "relatedTags": [
+      "conflict",
+      "political"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "status",
+    "rarity": "uncommon",
+    "description": "Under environmental, economic, or social pressure",
+    "tag": "stressed",
+    "entityKinds": [
+      "location",
+      "faction"
+    ],
+    "relatedTags": [
+      "crisis",
+      "resource"
+    ],
+    "conflictingTags": [
+      "thriving"
+    ]
+  },
+  {
+    "category": "status",
+    "rarity": "common",
+    "description": "sys tag for tracking diffusin",
+    "templates": [],
+    "tag": "sys_resource_value",
+    "entityKinds": [],
+    "relatedTags": [],
+    "conflictingTags": [],
+    "minUsage": 1,
+    "maxUsage": 50,
+    "usageCount": 0
+  },
+  {
+    "category": "theme",
+    "rarity": "common",
+    "description": "Involves practical innovation, tools, or engineering",
+    "tag": "technology",
+    "entityKinds": [
+      "ability",
+      "faction"
+    ],
+    "relatedTags": [
+      "mundane",
+      "innovation"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "status",
+    "rarity": "common",
+    "description": "Thermal diffusion value tag",
+    "tag": "temperature",
+    "entityKinds": [
+      "location"
+    ],
+    "relatedTags": [],
+    "conflictingTags": []
+  },
+  {
+    "category": "status",
+    "rarity": "common",
+    "description": "Prosperous, growing, or flourishing",
+    "tag": "thriving",
+    "entityKinds": [
+      "location",
+      "faction"
+    ],
+    "relatedTags": [
+      "trade",
+      "safe"
+    ],
+    "conflictingTags": [
+      "stressed"
+    ]
+  },
+  {
+    "category": "behavior",
+    "rarity": "common",
+    "description": "Engages in commerce, trade routes, or economic activity",
+    "tag": "trade",
+    "entityKinds": [
+      "npc",
+      "faction",
+      "location"
+    ],
+    "relatedTags": [
+      "friendly"
+    ],
+    "conflictingTags": [
+      "raider"
+    ]
+  },
+  {
+    "category": "status",
+    "rarity": "rare",
+    "description": "Exhausted by prolonged conflict and ready to resolve",
+    "tag": "war_weary",
+    "entityKinds": [
+      "occurrence"
+    ],
+    "relatedTags": [
+      "conflict",
+      "crisis"
+    ],
+    "conflictingTags": []
+  },
+  {
+    "category": "trait",
+    "rarity": "common",
+    "description": "",
+    "tag": "west",
+    "mutuallyExclusiveWith": [
+      "east"
+    ],
+    "isAxis": true
+  },
+  {
+    "category": "trait",
+    "rarity": "rare",
+    "description": "New magic appears at random",
+    "templates": [],
+    "tag": "wild",
+    "entityKinds": [],
+    "relatedTags": [],
+    "conflictingTags": [],
+    "minUsage": 1,
+    "maxUsage": 50,
+    "usageCount": 0
+  }
+]

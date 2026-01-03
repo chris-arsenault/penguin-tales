@@ -1,0 +1,766 @@
+[
+  {
+    "description": "Active During",
+    "srcKinds": [],
+    "dstKinds": [
+      "era"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became active during",
+      "ended": "became inactive during"
+    },
+    "kind": "active_during"
+  },
+  {
+    "description": "Adjacent To",
+    "srcKinds": [
+      "location"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became adjacent to",
+      "ended": "separated from"
+    },
+    "kind": "adjacent_to"
+  },
+  {
+    "description": "Allied With",
+    "srcKinds": [
+      "faction",
+      "npc"
+    ],
+    "dstKinds": [
+      "faction",
+      "npc"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "allied with",
+      "ended": "broke alliance with"
+    },
+    "kind": "allied_with"
+  },
+  {
+    "description": "At War With",
+    "srcKinds": [
+      "faction"
+    ],
+    "dstKinds": [
+      "faction"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "negative",
+    "verbs": {
+      "formed": "declared war on",
+      "ended": "made peace with"
+    },
+    "kind": "at_war_with"
+  },
+  {
+    "description": "Believer Of",
+    "srcKinds": [
+      "npc",
+      "faction"
+    ],
+    "dstKinds": [
+      "rule",
+      "faction",
+      "npc"
+    ],
+    "cullable": true,
+    "decayRate": "medium",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "became a believer in",
+      "ended": "lost faith in"
+    },
+    "kind": "believer_of"
+  },
+  {
+    "description": "Betrayed By",
+    "srcKinds": [
+      "faction"
+    ],
+    "dstKinds": [
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "negative",
+    "verbs": {
+      "formed": "was betrayed by",
+      "ended": "forgave"
+    },
+    "kind": "betrayed_by"
+  },
+  {
+    "description": "Blessed By",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "artifact"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "was blessed by",
+      "ended": "lost the blessing of"
+    },
+    "kind": "blessed_by"
+  },
+  {
+    "description": "Catalyst Of",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "occurrence"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "catalyzed",
+      "ended": "was absolved of catalyzing"
+    },
+    "kind": "catalyst_of"
+  },
+  {
+    "description": "Celebrated By",
+    "srcKinds": [
+      "rule",
+      "occurrence"
+    ],
+    "dstKinds": [
+      "faction",
+      "npc",
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "medium",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "began to be celebrated by",
+      "ended": "was no longer celebrated by"
+    },
+    "kind": "celebrated_by"
+  },
+  {
+    "description": "Central To",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "rule"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became central to",
+      "ended": "was removed from"
+    },
+    "kind": "central_to"
+  },
+  {
+    "description": "Commemorates",
+    "srcKinds": [
+      "rule",
+      "location"
+    ],
+    "dstKinds": [
+      "npc",
+      "occurrence"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "began commemorating",
+      "ended": "stopped commemorating"
+    },
+    "kind": "commemorates"
+  },
+  {
+    "description": "Contained By",
+    "srcKinds": [
+      "location"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became part of",
+      "ended": "separated from"
+    },
+    "kind": "contained_by"
+  },
+  {
+    "description": "Contains",
+    "srcKinds": [],
+    "dstKinds": [],
+    "cullable": true,
+    "decayRate": "medium",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "began containing",
+      "ended": "released"
+    },
+    "kind": "contains"
+  },
+  {
+    "description": "Controls",
+    "srcKinds": [
+      "faction"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "gained control of",
+      "ended": "lost control of"
+    },
+    "kind": "controls"
+  },
+  {
+    "description": "Corrupted By",
+    "srcKinds": [
+      "location"
+    ],
+    "dstKinds": [
+      "location",
+      "ability"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "negative",
+    "verbs": {
+      "formed": "fell under corruption from",
+      "ended": "was cleansed of corruption from"
+    },
+    "kind": "corrupted_by"
+  },
+  {
+    "description": "Created By",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was created by",
+      "ended": "was disowned by"
+    },
+    "kind": "created_by"
+  },
+  {
+    "description": "Created During",
+    "srcKinds": [],
+    "dstKinds": [
+      "era"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was created during",
+      "ended": "was destroyed during"
+    },
+    "kind": "created_during"
+  },
+  {
+    "description": "Derived From",
+    "srcKinds": [
+      "ability",
+      "rule",
+      "npc"
+    ],
+    "dstKinds": [
+      "ability",
+      "rule",
+      "npc",
+      "occurrence"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "derived from",
+      "ended": "diverged from"
+    },
+    "kind": "derived_from"
+  },
+  {
+    "description": "Discovered By",
+    "srcKinds": [
+      "location",
+      "ability",
+      "artifact"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was discovered by",
+      "ended": "was forgotten by"
+    },
+    "kind": "discovered_by"
+  },
+  {
+    "description": "Empowered By",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "ability"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "became empowered by",
+      "ended": "lost empowerment from"
+    },
+    "kind": "empowered_by"
+  },
+  {
+    "description": "Enemy Of",
+    "srcKinds": [
+      "npc",
+      "faction"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": true,
+    "decayRate": "medium",
+    "polarity": "negative",
+    "verbs": {
+      "formed": "became enemies with",
+      "ended": "reconciled with"
+    },
+    "kind": "enemy_of"
+  },
+  {
+    "description": "Epicenter Of",
+    "srcKinds": [
+      "occurrence"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became the epicenter of",
+      "ended": "ceased being the epicenter of"
+    },
+    "kind": "epicenter_of"
+  },
+  {
+    "description": "Explorer Of",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "began exploring",
+      "ended": "ceased exploring"
+    },
+    "kind": "explorer_of"
+  },
+  {
+    "description": "Instigated By",
+    "srcKinds": [
+      "occurrence"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was instigated by",
+      "ended": "was disavowed by"
+    },
+    "kind": "instigated_by"
+  },
+  {
+    "description": "Leader Of",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "faction",
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "slow",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "assumed leadership of",
+      "ended": "relinquished leadership of"
+    },
+    "kind": "leader_of"
+  },
+  {
+    "description": "Manifests At",
+    "srcKinds": [
+      "ability",
+      "occurrence"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "medium",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "began manifesting at",
+      "ended": "ceased manifesting at"
+    },
+    "kind": "manifests_at"
+  },
+  {
+    "description": "Member Of",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "slow",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "joined",
+      "ended": "left"
+    },
+    "kind": "member_of"
+  },
+  {
+    "description": "Occupies",
+    "srcKinds": [
+      "faction",
+      "npc"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "medium",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "occupied",
+      "ended": "withdrew from"
+    },
+    "kind": "occupies"
+  },
+  {
+    "description": "Occurred At",
+    "srcKinds": [
+      "occurrence"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "occurred at",
+      "ended": "concluded at"
+    },
+    "kind": "occurred_at"
+  },
+  {
+    "description": "Originated In",
+    "srcKinds": [
+      "ability",
+      "rule",
+      "faction"
+    ],
+    "dstKinds": [
+      "location",
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "originated in",
+      "ended": "distanced from origins in"
+    },
+    "kind": "originated_in"
+  },
+  {
+    "description": "Owned By",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "came into possession of",
+      "ended": "was lost by"
+    },
+    "kind": "owned_by"
+  },
+  {
+    "description": "Part Of",
+    "srcKinds": [],
+    "dstKinds": [],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "became part of",
+      "ended": "separated from"
+    },
+    "kind": "part_of"
+  },
+  {
+    "description": "Participant In",
+    "srcKinds": [],
+    "dstKinds": [
+      "occurrence"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "participated in",
+      "ended": "withdrew from"
+    },
+    "kind": "participant_in"
+  },
+  {
+    "description": "Practitioner Of",
+    "srcKinds": [
+      "npc",
+      "faction"
+    ],
+    "dstKinds": [
+      "ability"
+    ],
+    "cullable": false,
+    "decayRate": "slow",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "learned to practice",
+      "ended": "abandoned practice of"
+    },
+    "kind": "practitioner_of"
+  },
+  {
+    "description": "Related To",
+    "srcKinds": [
+      "npc",
+      "faction",
+      "ability",
+      "rule",
+      "location"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction",
+      "ability",
+      "rule",
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "became connected to",
+      "ended": "severed ties with"
+    },
+    "kind": "related_to"
+  },
+  {
+    "description": "Resident Of",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "slow",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "settled in",
+      "ended": "departed from"
+    },
+    "kind": "resident_of"
+  },
+  {
+    "description": "Splinter Of",
+    "srcKinds": [
+      "faction"
+    ],
+    "dstKinds": [
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "splintered from",
+      "ended": "reunited with"
+    },
+    "kind": "splinter_of"
+  },
+  {
+    "description": "Stored At",
+    "srcKinds": [
+      "artifact"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "medium",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was stored at",
+      "ended": "was removed from"
+    },
+    "kind": "stored_at"
+  },
+  {
+    "description": "Subsumes",
+    "srcKinds": [
+      "ability",
+      "rule",
+      "faction"
+    ],
+    "dstKinds": [
+      "ability",
+      "rule",
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "subsumed",
+      "ended": "released"
+    },
+    "kind": "subsumes"
+  },
+  {
+    "description": "Supersedes",
+    "srcKinds": [
+      "era"
+    ],
+    "dstKinds": [
+      "era"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "superseded",
+      "ended": "was unseated as successor of"
+    },
+    "kind": "supersedes"
+  },
+  {
+    "description": "Taught By",
+    "srcKinds": [
+      "npc",
+      "faction"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": true,
+    "decayRate": "medium",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "became a student of",
+      "ended": "concluded studies under"
+    },
+    "kind": "taught_by"
+  },
+  {
+    "description": "Trades With",
+    "srcKinds": [
+      "faction",
+      "npc",
+      "location"
+    ],
+    "dstKinds": [
+      "faction",
+      "npc",
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "medium",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "established trade with",
+      "ended": "ceased trade with"
+    },
+    "kind": "trades_with"
+  },
+  {
+    "description": "Triggered By",
+    "srcKinds": [
+      "occurrence"
+    ],
+    "dstKinds": [],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "neutral",
+    "verbs": {
+      "formed": "was triggered by",
+      "ended": "was resolved despite"
+    },
+    "kind": "triggered_by"
+  }
+]

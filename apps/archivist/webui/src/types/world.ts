@@ -1,7 +1,6 @@
 import type {
   CanonrySchemaSlice,
   CultureDefinition,
-  DistributionMetrics,
   EntityKindDefinition,
   HistoryEvent,
   Prominence as CanonryProminence,
@@ -117,7 +116,6 @@ export interface ImageMetadata {
 export type {
   CanonrySchemaSlice,
   CultureDefinition,
-  DistributionMetrics,
   EntityKindDefinition,
   HistoryEvent,
   Validation,

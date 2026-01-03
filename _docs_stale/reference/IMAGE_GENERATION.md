@@ -210,7 +210,7 @@ When image generation is enabled, you'll see:
 **Cause**: No entities reached mythic prominence
 
 **Solution**: Either:
-- Run a longer simulation (increase `targetEntitiesPerKind`)
+- Run a longer simulation (increase distribution target totals)
 - Manually boost entity prominence in initial state
 - Check enrichment analytics to see if locations/factions became mythic
 

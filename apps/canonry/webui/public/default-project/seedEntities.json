@@ -187,7 +187,6 @@
     "createdAt": 0,
     "updatedAt": 0
   },
-
   {
     "id": "loc_drowned_ledge",
     "kind": "location",
@@ -258,7 +257,6 @@
     "createdAt": 0,
     "updatedAt": 0
   },
-
   {
     "id": "loc_corpse_current",
     "kind": "location",
@@ -354,7 +352,6 @@
     "createdAt": 0,
     "updatedAt": 0
   },
-
   {
     "id": "loc_still_pools",
     "kind": "location",

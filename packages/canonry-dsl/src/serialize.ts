@@ -300,6 +300,34 @@ function formatNamingResourceBlocks(resources: NamingResourceBuckets): string[] 
   return blocks;
 }
 
+function formatDistributionTargetsBlock(value: Record<string, unknown>): string | null {
+  const lines = ['distribution_targets do'];
+  const remaining = cloneAndStripRefs(value) as Record<string, unknown>;
+  const perEraValue = remaining.perEra;
+  delete remaining.perEra;
+
+  const bodyLines = formatAttributeLines(remaining, 1);
+  if (bodyLines.length > 0) {
+    lines.push(...bodyLines);
+  }
+
+  if (isRecord(perEraValue)) {
+    const entries = Object.entries(perEraValue).sort(([a], [b]) => a.localeCompare(b));
+    for (const [name, entry] of entries) {
+      if (!isRecord(entry)) continue;
+      const blockLines = formatBlockBody(`per_era ${formatLabel(name)}`, entry, 1);
+      if (blockLines) {
+        lines.push(...blockLines);
+      }
+    }
+  } else if (perEraValue !== undefined) {
+    pushAttributeLine(lines, 'perEra', perEraValue, 1);
+  }
+
+  lines.push('end');
+  return lines.join('\n');
+}
+
 export function serializeCanonProject(
   project: Record<string, unknown>,
   options: SerializeOptions = {}
@@ -328,10 +356,12 @@ export function serializeCanonProject(
       continue;
     }
     const body = isRecord(value) ? value : { value };
-    files.push({
-      path: def.file,
-      content: formatBlock(def.block, [], body)
-    });
+    if (def.block === 'distribution_targets') {
+      const content = isRecord(body) ? formatDistributionTargetsBlock(body) : null;
+      files.push({ path: def.file, content: content ?? '' });
+      continue;
+    }
+    files.push({ path: def.file, content: formatBlock(def.block, [], body) });
   }
 
   for (const def of COLLECTIONS) {
@@ -402,6 +432,11 @@ export function serializeCanonProject(
       }
       if (def.block === 'entity_kind') {
         const block = formatEntityKindBlock(item);
+        if (block) blocks.push(block);
+        continue;
+      }
+      if (def.block === 'era') {
+        const block = formatEraBlock(item);
         if (block) blocks.push(block);
         continue;
       }
@@ -502,7 +537,7 @@ export function serializeCanonStaticPages(
       blockLines.push(...extraLines);
     }
 
-    blockLines.push(`${indent(1)}content:read(${quoteString(outputPath)})`);
+    blockLines.push(`${indent(1)}content read(${quoteString(outputPath)})`);
     blockLines.push('end');
     blocks.push(blockLines.join('\n'));
 
@@ -2020,6 +2055,129 @@ function formatRelationshipMaintenanceSystem(config: Record<string, unknown>, in
   return lines;
 }
 
+function formatVariantApplyBlock(value: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(value)) return null;
+  const apply = cloneAndStripRefs(value) as Record<string, unknown>;
+  const lines: string[] = [`${indent(indentLevel)}apply do`];
+  const innerIndent = indentLevel + 1;
+
+  const tags = apply.tags;
+  delete apply.tags;
+  if (isRecord(tags)) {
+    const entries = Object.entries(tags).sort(([a], [b]) => a.localeCompare(b));
+    for (const [entity, map] of entries) {
+      if (!isRecord(map)) continue;
+      const tagEntries = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+      for (const [tag, enabled] of tagEntries) {
+        if (typeof enabled !== 'boolean') continue;
+        lines.push(
+          `${indent(innerIndent)}tag_assign ${formatLabel(entity)} ${formatLabel(tag)} ${enabled}`
+        );
+      }
+    }
+  } else if (tags !== undefined) {
+    pushAttributeLine(lines, 'tags', tags, innerIndent);
+  }
+
+  const subtype = apply.subtype;
+  delete apply.subtype;
+  if (isRecord(subtype)) {
+    const entries = Object.entries(subtype).sort(([a], [b]) => a.localeCompare(b));
+    for (const [entity, value] of entries) {
+      if (typeof value !== 'string') continue;
+      lines.push(`${indent(innerIndent)}subtype ${formatLabel(entity)} ${formatLabel(value)}`);
+    }
+  } else if (subtype !== undefined) {
+    pushAttributeLine(lines, 'subtype', subtype, innerIndent);
+  }
+
+  if (apply.stateUpdates !== undefined) {
+    pushAttributeLine(lines, 'stateUpdates', apply.stateUpdates, innerIndent);
+    delete apply.stateUpdates;
+  }
+
+  const extraLines = formatAttributeLines(apply, innerIndent);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatVariantOptionBlock(option: Record<string, unknown>, indentLevel: number): string[] | null {
+  const lines: string[] = [`${indent(indentLevel)}options do`];
+  const innerIndent = indentLevel + 1;
+  const remaining = cloneAndStripRefs(option) as Record<string, unknown>;
+
+  if (remaining.name !== undefined) {
+    pushInlinePairLine(lines, 'name', remaining.name, innerIndent);
+    delete remaining.name;
+  }
+
+  if (remaining.when !== undefined) {
+    if (isRecord(remaining.when)) {
+      const blockLines = formatBlockBody('when', remaining.when as Record<string, unknown>, innerIndent);
+      if (blockLines) {
+        lines.push(...blockLines);
+      }
+    } else {
+      pushAttributeLine(lines, 'when', remaining.when, innerIndent);
+    }
+    delete remaining.when;
+  }
+
+  if (remaining.apply !== undefined) {
+    const applyLines = formatVariantApplyBlock(remaining.apply, innerIndent);
+    if (applyLines) {
+      lines.push(...applyLines);
+    } else {
+      pushAttributeLine(lines, 'apply', remaining.apply, innerIndent);
+    }
+    delete remaining.apply;
+  }
+
+  const extraLines = formatAttributeLines(remaining, innerIndent);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatVariantsBlock(value: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(value)) return null;
+  const variants = cloneAndStripRefs(value) as Record<string, unknown>;
+  const lines: string[] = [`${indent(indentLevel)}variants do`];
+  const innerIndent = indentLevel + 1;
+
+  if (variants.selection !== undefined) {
+    pushInlinePairLine(lines, 'selection', variants.selection, innerIndent);
+    delete variants.selection;
+  }
+
+  const options = Array.isArray(variants.options) ? variants.options : null;
+  delete variants.options;
+  if (options) {
+    for (const option of options) {
+      if (!isRecord(option)) continue;
+      const optionLines = formatVariantOptionBlock(option, innerIndent);
+      if (optionLines) {
+        lines.push(...optionLines);
+      }
+    }
+  }
+
+  const extraLines = formatAttributeLines(variants, innerIndent);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
 function formatGeneratorBlock(labels: string[], body: Record<string, unknown>): string {
   const header = `generator${labels.length > 0 ? ' ' + labels.map(formatLabel).join(' ') : ''} do`;
   const lines = [header];
@@ -2101,9 +2259,14 @@ function formatGeneratorBlock(labels: string[], body: Record<string, unknown>): 
   }
 
   if (remaining.variants !== undefined) {
-    const value = cloneAndStripRefs(remaining.variants);
+    const variantsLines = formatVariantsBlock(remaining.variants, 1);
     delete remaining.variants;
-    pushAttributeLine(lines, 'variants', value, 1);
+    if (variantsLines && variantsLines.length > 0) {
+      lines.push(...variantsLines);
+    } else {
+      const value = cloneAndStripRefs(remaining.variants);
+      pushAttributeLine(lines, 'variants', value, 1);
+    }
   }
 
   if (remaining.enabled !== undefined) {
@@ -4180,6 +4343,96 @@ function formatCultureBlock(item: Record<string, unknown>): string | null {
   return lines.join('\n');
 }
 
+function formatEraBlock(item: Record<string, unknown>): string | null {
+  const id = item.id;
+  if (typeof id !== 'string') return null;
+  const name = typeof item.name === 'string' ? item.name : undefined;
+  const labels = [formatLabel(id)];
+  if (name) labels.push(quoteString(name));
+
+  const lines = [`era ${labels.join(' ')} do`];
+  const remaining = { ...item };
+  delete remaining.id;
+  delete remaining.name;
+
+  const templateWeights = remaining.templateWeights;
+  delete remaining.templateWeights;
+  const systemModifiers = remaining.systemModifiers;
+  delete remaining.systemModifiers;
+  const entryConditions = remaining.entryConditions;
+  delete remaining.entryConditions;
+  const exitConditions = remaining.exitConditions;
+  delete remaining.exitConditions;
+  const entryEffects = remaining.entryEffects;
+  delete remaining.entryEffects;
+  const exitEffects = remaining.exitEffects;
+  delete remaining.exitEffects;
+
+  const extraLines = formatAttributeLines(remaining, 1);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  if (Array.isArray(entryConditions)) {
+    for (const condition of entryConditions) {
+      lines.push(...formatConditionLinesWithKeyword(condition, 1, 'entry_condition'));
+    }
+  } else if (entryConditions !== undefined) {
+    pushAttributeLine(lines, 'entryConditions', entryConditions, 1);
+  }
+
+  if (Array.isArray(exitConditions)) {
+    for (const condition of exitConditions) {
+      lines.push(...formatConditionLinesWithKeyword(condition, 1, 'exit_condition'));
+    }
+  } else if (exitConditions !== undefined) {
+    pushAttributeLine(lines, 'exitConditions', exitConditions, 1);
+  }
+
+  const entryEffectLines = formatEraEffectLines(entryEffects, 1, 'entry_effect');
+  if (entryEffectLines) {
+    lines.push(...entryEffectLines);
+  } else if (entryEffects !== undefined) {
+    pushAttributeLine(lines, 'entryEffects', entryEffects, 1);
+  }
+
+  const exitEffectLines = formatEraEffectLines(exitEffects, 1, 'exit_effect');
+  if (exitEffectLines) {
+    lines.push(...exitEffectLines);
+  } else if (exitEffects !== undefined) {
+    pushAttributeLine(lines, 'exitEffects', exitEffects, 1);
+  }
+
+  if (isRecord(templateWeights)) {
+    const entries = Object.entries(templateWeights).sort(([a], [b]) => a.localeCompare(b));
+    for (const [templateId, weight] of entries) {
+      if (typeof weight !== 'number') {
+        pushAttributeLine(lines, 'templateWeights', templateWeights, 1);
+        break;
+      }
+      lines.push(`${indent(1)}template_weight ${formatLabel(templateId)} ${weight}`);
+    }
+  } else if (templateWeights !== undefined) {
+    pushAttributeLine(lines, 'templateWeights', templateWeights, 1);
+  }
+
+  if (isRecord(systemModifiers)) {
+    const entries = Object.entries(systemModifiers).sort(([a], [b]) => a.localeCompare(b));
+    for (const [systemId, multiplier] of entries) {
+      if (typeof multiplier !== 'number') {
+        pushAttributeLine(lines, 'systemModifiers', systemModifiers, 1);
+        break;
+      }
+      lines.push(`${indent(1)}system_modifier ${formatLabel(systemId)} ${multiplier}`);
+    }
+  } else if (systemModifiers !== undefined) {
+    pushAttributeLine(lines, 'systemModifiers', systemModifiers, 1);
+  }
+
+  lines.push('end');
+  return lines.join('\n');
+}
+
 function formatNamingBlock(naming: Record<string, unknown>, indentLevel: number): string[] {
   const lines = [`${indent(indentLevel)}naming do`];
   const remaining = { ...naming };
@@ -4420,14 +4673,38 @@ function formatPhonologyBlock(phonology: Record<string, unknown>, indentLevel: n
   if (favoredClusterBoost !== undefined) {
     pushInlinePairLine(lines, 'favored_cluster_boost', favoredClusterBoost, indentLevel + 1);
   }
-  if (consonantWeights !== undefined) {
-    pushInlinePairLine(lines, 'consonant_weights', consonantWeights, indentLevel + 1);
+  if (Array.isArray(consonantWeights)) {
+    for (const weight of consonantWeights) {
+      if (typeof weight !== 'number') {
+        pushAttributeLine(lines, 'consonantWeights', consonantWeights, indentLevel + 1);
+        break;
+      }
+      lines.push(`${indent(indentLevel + 1)}consonant_weight ${weight}`);
+    }
+  } else if (consonantWeights !== undefined) {
+    pushAttributeLine(lines, 'consonantWeights', consonantWeights, indentLevel + 1);
   }
-  if (vowelWeights !== undefined) {
-    pushInlinePairLine(lines, 'vowel_weights', vowelWeights, indentLevel + 1);
+  if (Array.isArray(vowelWeights)) {
+    for (const weight of vowelWeights) {
+      if (typeof weight !== 'number') {
+        pushAttributeLine(lines, 'vowelWeights', vowelWeights, indentLevel + 1);
+        break;
+      }
+      lines.push(`${indent(indentLevel + 1)}vowel_weight ${weight}`);
+    }
+  } else if (vowelWeights !== undefined) {
+    pushAttributeLine(lines, 'vowelWeights', vowelWeights, indentLevel + 1);
   }
-  if (templateWeights !== undefined) {
-    pushInlinePairLine(lines, 'template_weights', templateWeights, indentLevel + 1);
+  if (Array.isArray(templateWeights)) {
+    for (const weight of templateWeights) {
+      if (typeof weight !== 'number') {
+        pushAttributeLine(lines, 'templateWeights', templateWeights, indentLevel + 1);
+        break;
+      }
+      lines.push(`${indent(indentLevel + 1)}template_weight ${weight}`);
+    }
+  } else if (templateWeights !== undefined) {
+    pushAttributeLine(lines, 'templateWeights', templateWeights, indentLevel + 1);
   }
   if (maxCluster !== undefined) {
     pushInlinePairLine(lines, 'max_cluster', maxCluster, indentLevel + 1);
@@ -4474,14 +4751,38 @@ function formatMorphologyBlock(morphology: Record<string, unknown>, indentLevel:
     }
   }
 
-  if (prefixWeights !== undefined) {
-    pushInlinePairLine(lines, 'prefix_weights', prefixWeights, indentLevel + 1);
+  if (Array.isArray(prefixWeights)) {
+    for (const weight of prefixWeights) {
+      if (typeof weight !== 'number') {
+        pushAttributeLine(lines, 'prefixWeights', prefixWeights, indentLevel + 1);
+        break;
+      }
+      lines.push(`${indent(indentLevel + 1)}prefix_weight ${weight}`);
+    }
+  } else if (prefixWeights !== undefined) {
+    pushAttributeLine(lines, 'prefixWeights', prefixWeights, indentLevel + 1);
   }
-  if (suffixWeights !== undefined) {
-    pushInlinePairLine(lines, 'suffix_weights', suffixWeights, indentLevel + 1);
+  if (Array.isArray(suffixWeights)) {
+    for (const weight of suffixWeights) {
+      if (typeof weight !== 'number') {
+        pushAttributeLine(lines, 'suffixWeights', suffixWeights, indentLevel + 1);
+        break;
+      }
+      lines.push(`${indent(indentLevel + 1)}suffix_weight ${weight}`);
+    }
+  } else if (suffixWeights !== undefined) {
+    pushAttributeLine(lines, 'suffixWeights', suffixWeights, indentLevel + 1);
   }
-  if (structureWeights !== undefined) {
-    pushInlinePairLine(lines, 'structure_weights', structureWeights, indentLevel + 1);
+  if (Array.isArray(structureWeights)) {
+    for (const weight of structureWeights) {
+      if (typeof weight !== 'number') {
+        pushAttributeLine(lines, 'structureWeights', structureWeights, indentLevel + 1);
+        break;
+      }
+      lines.push(`${indent(indentLevel + 1)}structure_weight ${weight}`);
+    }
+  } else if (structureWeights !== undefined) {
+    pushAttributeLine(lines, 'structureWeights', structureWeights, indentLevel + 1);
   }
 
   const extraLines = formatAttributeLines(remaining, indentLevel + 1);
@@ -4689,7 +4990,7 @@ function formatGrammarBlock(grammar: Record<string, unknown>, indentLevel: numbe
           if (!inline) return null;
           tokens.push(inline);
         }
-        lines.push(`${indent(indentLevel + 1)}rule ${formatLabel(name)} [${tokens.join(' ')}]`);
+        lines.push(`${indent(indentLevel + 1)}rule ${formatLabel(name)} ${tokens.join(' ')}`);
       }
     }
   } else if (rulesValue !== undefined) {
@@ -4816,7 +5117,14 @@ function formatStrategyEntry(strategy: Record<string, unknown>, indentLevel: num
     delete body.domainId;
   }
 
-  return formatEntryLineOrBlock('strategy', labels, body, indentLevel);
+  const header = `${indent(indentLevel)}strategy${labels.length ? ' ' + labels.map(formatLabel).join(' ') : ''} do`;
+  const lines = [header];
+  const bodyLines = formatAttributeLines(body, indentLevel + 1);
+  if (bodyLines.length > 0) {
+    lines.push(...bodyLines);
+  }
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
 }
 
 function formatAttributeLines(obj: Record<string, unknown>, indentLevel: number): string[] {
@@ -4852,20 +5160,7 @@ function formatAttributeLines(obj: Record<string, unknown>, indentLevel: number)
         continue;
       }
     }
-    const setLine = formatSetFieldLine(key, value, indentLevel);
-    if (setLine) {
-      lines.push(...setLine);
-      continue;
-    }
-    const valueLines = formatValueLines(value, indentLevel + 1);
-    const valueIndent = indent(indentLevel + 1);
-    const first = valueLines[0].startsWith(valueIndent)
-      ? valueLines[0].slice(valueIndent.length)
-      : valueLines[0];
-    lines.push(`${indent(indentLevel)}${formatAttributeKey(key)}:${first}`);
-    if (valueLines.length > 1) {
-      lines.push(...valueLines.slice(1));
-    }
+    pushAttributeLine(lines, key, value, indentLevel);
   }
 
   return lines;
@@ -4912,6 +5207,9 @@ function formatConditionLines(condition: unknown, indentLevel: number): string[]
     if (typeof min === 'number' && typeof max === 'number' && min === max) {
       return [`${indent(indentLevel)}pressure ${cleaned.pressureId} == ${min}`];
     }
+    if (typeof min === 'number' && typeof max === 'number' && min !== max) {
+      return [`${indent(indentLevel)}pressure ${cleaned.pressureId} between ${min} ${max}`];
+    }
     if (typeof min === 'number' && max === undefined) {
       return [`${indent(indentLevel)}pressure ${cleaned.pressureId} >= ${min}`];
     }
@@ -4933,6 +5231,26 @@ function formatConditionLines(condition: unknown, indentLevel: number): string[]
       if (typeof max === 'number' && min === undefined) {
         return [`${indent(indentLevel)}cap kind ${cleaned.kind} <= ${max}`];
       }
+    } else {
+      const parts = [`${indent(indentLevel)}entity_count`, 'kind', cleaned.kind];
+      if (typeof cleaned.subtype === 'string') {
+        parts.push('subtype', formatLabel(cleaned.subtype));
+      }
+      if (typeof cleaned.status === 'string') {
+        parts.push('status', formatLabel(cleaned.status));
+      }
+      if (typeof min === 'number' && typeof max === 'number' && min !== max) {
+        parts.push('between', String(min), String(max));
+      } else if (typeof min === 'number' && typeof max === 'number' && min === max) {
+        parts.push('==', String(min));
+      } else if (typeof min === 'number') {
+        parts.push('>=', String(min));
+      } else if (typeof max === 'number') {
+        parts.push('<=', String(max));
+      } else {
+        return formatEntryLineOrBlock('condition', [], cleaned, indentLevel);
+      }
+      return [parts.join(' ')];
     }
   }
 
@@ -4958,6 +5276,24 @@ function formatConditionLines(condition: unknown, indentLevel: number): string[]
     }
   }
 
+  if (type === 'relationship_exists' && typeof cleaned.relationshipKind === 'string') {
+    if (typeof cleaned.direction !== 'string') {
+      return formatEntryLineOrBlock('condition', [], cleaned, indentLevel);
+    }
+    const parts = [
+      `${indent(indentLevel)}relationship_exists`,
+      formatLabel(cleaned.relationshipKind),
+      cleaned.direction
+    ];
+    if (typeof cleaned.targetKind === 'string') {
+      parts.push('target_kind', formatLabel(cleaned.targetKind));
+    }
+    if (typeof cleaned.targetStatus === 'string') {
+      parts.push('target_status', formatLabel(cleaned.targetStatus));
+    }
+    return [parts.join(' ')];
+  }
+
   if (type === 'prominence') {
     if (typeof cleaned.min === 'string' && cleaned.max === undefined) {
       return [`${indent(indentLevel)}prominence min ${formatLabel(cleaned.min)}`];
@@ -4967,6 +5303,10 @@ function formatConditionLines(condition: unknown, indentLevel: number): string[]
     }
   }
 
+  if (type === 'tag_exists' && typeof cleaned.tag === 'string') {
+    return [`${indent(indentLevel)}tag_exists ${formatLabel(cleaned.tag)}`];
+  }
+
   if (type === 'lacks_tag' && typeof cleaned.tag === 'string') {
     if (typeof cleaned.entity === 'string') {
       return [
@@ -4974,6 +5314,33 @@ function formatConditionLines(condition: unknown, indentLevel: number): string[]
       ];
     }
     return [`${indent(indentLevel)}lacks_tag ${formatLabel(cleaned.tag)}`];
+  }
+
+  if (type === 'random_chance' && typeof cleaned.chance === 'number') {
+    return [`${indent(indentLevel)}random_chance ${cleaned.chance}`];
+  }
+
+  if (type === 'time_elapsed' && typeof cleaned.minTicks === 'number') {
+    const parts = [`${indent(indentLevel)}time_elapsed`, String(cleaned.minTicks)];
+    if (typeof cleaned.since === 'string') {
+      parts.push('since', cleaned.since);
+    }
+    return [parts.join(' ')];
+  }
+
+  if (type === 'entity_exists' && typeof cleaned.entity === 'string') {
+    return [`${indent(indentLevel)}entity_exists ${formatLabel(stripBinding(cleaned.entity))}`];
+  }
+
+  if (type === 'not_self') {
+    return [`${indent(indentLevel)}not_self`];
+  }
+
+  if (type === 'era_match' && Array.isArray(cleaned.eras)) {
+    const inline = formatSetInlineValue(cleaned.eras);
+    if (inline) {
+      return [`${indent(indentLevel)}era_match ${inline}`];
+    }
   }
 
   if (type === 'graph_path' && isRecord(cleaned.assert)) {
@@ -5133,6 +5500,39 @@ function formatSelectionBlock(value: unknown, indentLevel: number): string[] | n
 
   lines.push(`${indent(indentLevel)}end`);
   return lines;
+}
+
+function formatConditionLinesWithKeyword(
+  condition: unknown,
+  indentLevel: number,
+  keyword: string
+): string[] {
+  const lines = formatConditionLines(condition, indentLevel);
+  const baseIndent = indent(indentLevel);
+  const prefix = `${baseIndent}${keyword} `;
+  return lines.map((line) =>
+    line.startsWith(baseIndent) ? `${prefix}${line.slice(baseIndent.length)}` : `${prefix}${line}`
+  );
+}
+
+function formatEraEffectLines(
+  effects: unknown,
+  indentLevel: number,
+  keyword: string
+): string[] | null {
+  if (!isRecord(effects)) return null;
+  const mutations = effects.mutations;
+  if (!Array.isArray(mutations)) return null;
+  const lines: string[] = [];
+  for (const mutation of mutations) {
+    if (!isRecord(mutation)) return null;
+    if (mutation.type !== 'modify_pressure') return null;
+    const pressureId = mutation.pressureId;
+    const delta = mutation.delta;
+    if (typeof pressureId !== 'string' || typeof delta !== 'number') return null;
+    lines.push(`${indent(indentLevel)}${keyword} modify_pressure ${pressureId} ${delta}`);
+  }
+  return lines.length > 0 ? lines : null;
 }
 
 function formatFilterLines(value: unknown, indentLevel: number, keyword: 'filter' | 'prefer'): string[] | null {
@@ -5314,7 +5714,7 @@ function formatSaturationLines(items: unknown[], indentLevel: number): string[] 
     const cleaned = cloneAndStripRefs(item) as Record<string, unknown>;
     const kind = cleaned.relationshipKind;
     if (typeof kind !== 'string') return null;
-    if (cleaned.fromKind !== undefined) return null;
+    const fromKind = cleaned.fromKind;
     const maxCount = cleaned.maxCount;
     if (typeof maxCount !== 'number') return null;
     const direction = cleaned.direction;
@@ -5323,7 +5723,11 @@ function formatSaturationLines(items: unknown[], indentLevel: number): string[] 
     else if (direction === 'out') keyword = 'outbound';
     else if (direction === 'both' || direction === undefined) keyword = 'both';
     else return null;
-    lines.push(`${indent(indentLevel)}${keyword} ${kind} <= ${Math.floor(maxCount)}`);
+    if (typeof fromKind === 'string') {
+      lines.push(`${indent(indentLevel)}${keyword} ${kind} ${fromKind} <= ${Math.floor(maxCount)}`);
+    } else {
+      lines.push(`${indent(indentLevel)}${keyword} ${kind} <= ${Math.floor(maxCount)}`);
+    }
   }
   return lines;
 }
@@ -5474,14 +5878,45 @@ function pushAttributeLine(lines: string[], key: string, value: unknown, indentL
       return;
     }
   }
-  const valueLines = formatValueLines(value, indentLevel + 1);
-  const valueIndent = indent(indentLevel + 1);
-  const first = valueLines[0].startsWith(valueIndent)
-    ? valueLines[0].slice(valueIndent.length)
-    : valueLines[0];
-  lines.push(`${indent(indentLevel)}${formatAttributeKey(key)}:${first}`);
-  if (valueLines.length > 1) {
-    lines.push(...valueLines.slice(1));
+  if (value === undefined) return;
+  if (isCallValue(value)) {
+    const inline = formatCallValue(value);
+    if (inline) {
+      lines.push(`${indent(indentLevel)}${formatAttributeKey(key)} ${inline}`);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    const inline = formatInlineValue(value);
+    if (inline) {
+      lines.push(`${indent(indentLevel)}${formatAttributeKey(key)} ${inline}`);
+      return;
+    }
+    for (const entry of value) {
+      if (isRecord(entry) && !isCallValue(entry)) {
+        const blockLines = formatBlockBody(formatAttributeKey(key), entry, indentLevel);
+        if (blockLines) {
+          lines.push(...blockLines);
+        }
+        continue;
+      }
+      const entryInline = formatInlineValue(entry);
+      if (entryInline) {
+        lines.push(`${indent(indentLevel)}${formatAttributeKey(key)} ${entryInline}`);
+      }
+    }
+    return;
+  }
+  if (isRecord(value) && !isCallValue(value)) {
+    const blockLines = formatBlockBody(formatAttributeKey(key), value, indentLevel);
+    if (blockLines) {
+      lines.push(...blockLines);
+    }
+    return;
+  }
+  const inline = formatInlineValue(value);
+  if (inline) {
+    lines.push(`${indent(indentLevel)}${formatAttributeKey(key)} ${inline}`);
   }
 }
 
@@ -5501,73 +5936,43 @@ function pushInlinePairLine(lines: string[], key: string, value: unknown, indent
   lines.push(`${indent(indentLevel)}${formatAttributeKey(key)} ${inline}`);
 }
 
+function formatBlockBody(name: string, body: Record<string, unknown>, indentLevel: number): string[] | null {
+  if (!name) return null;
+  const header = `${indent(indentLevel)}${name} do`;
+  const lines = [header];
+  const bodyLines = formatAttributeLines(body, indentLevel + 1);
+  if (bodyLines.length > 0) {
+    lines.push(...bodyLines);
+  }
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
 function formatValueLines(value: unknown, indentLevel: number): string[] {
-  if (value === null) {
-    return [indent(indentLevel) + 'null'];
+  const inline = formatInlineValue(value);
+  if (inline) {
+    return [indent(indentLevel) + inline];
   }
-  if (isCallValue(value)) {
-    const formatted = formatCallValue(value);
-    if (!formatted) return [indent(indentLevel) + 'null'];
-    return [indent(indentLevel) + formatted];
-  }
-  if (typeof value === 'string') {
-    return [indent(indentLevel) + formatScalarString(value)];
-  }
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return [indent(indentLevel) + String(value)];
-  }
-  if (Array.isArray(value)) {
-    const inlineValue = formatInlineValue(value);
-    if (inlineValue) return [indent(indentLevel) + inlineValue];
-    return formatArrayLines(value, indentLevel);
-  }
-  if (isRecord(value)) {
-    const inlineValue = formatInlineValue(value);
-    if (inlineValue) return [indent(indentLevel) + inlineValue];
-    return formatObjectLines(value, indentLevel);
-  }
-  return [indent(indentLevel) + 'null'];
+  return [];
 }
 
 function formatArrayLines(items: unknown[], indentLevel: number): string[] {
-  if (items.length === 0) {
-    return [indent(indentLevel) + '[]'];
-  }
-
   const lines: string[] = [];
-  lines.push(indent(indentLevel) + '[');
-
-  items.forEach((item) => {
-    const itemLines = formatValueLines(item, indentLevel + 1);
-    lines.push(...itemLines);
-  });
-
-  lines.push(indent(indentLevel) + ']');
+  for (const item of items) {
+    const inline = formatInlineValue(item);
+    if (inline) {
+      lines.push(indent(indentLevel) + inline);
+    }
+  }
   return lines;
 }
 
 function formatObjectLines(obj: Record<string, unknown>, indentLevel: number): string[] {
-  const entries = Object.entries(obj).filter(([, value]) => value !== undefined);
-  if (entries.length === 0) {
-    return [indent(indentLevel) + '{}'];
-  }
-
   const lines: string[] = [];
-  lines.push(indent(indentLevel) + '{');
-
-  entries.forEach(([key, value]) => {
-    const valueLines = formatValueLines(value, indentLevel + 1);
-    const valueIndent = indent(indentLevel + 1);
-    const first = valueLines[0].startsWith(valueIndent)
-      ? valueLines[0].slice(valueIndent.length)
-      : valueLines[0];
-    lines.push(`${indent(indentLevel + 1)}${formatObjectKey(key)}:${first}`);
-    if (valueLines.length > 1) {
-      lines.push(...valueLines.slice(1));
-    }
-  });
-
-  lines.push(indent(indentLevel) + '}');
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined) continue;
+    pushAttributeLine(lines, key, value, indentLevel);
+  }
   return lines;
 }
 
@@ -5807,9 +6212,11 @@ function formatInlinePairs(body: Record<string, unknown>): string | null {
   const parts: string[] = [];
   for (const [key, value] of entries) {
     if (SET_FIELD_KEYS.has(key)) return null;
+    if (Array.isArray(value)) return null;
+    if (isRecord(value) && !isCallValue(value)) return null;
     const inlineValue = formatInlineValue(value);
     if (!inlineValue) return null;
-    parts.push(`${formatAttributeKey(key)}:${inlineValue}`);
+    parts.push(`${formatAttributeKey(key)} ${inlineValue}`);
   }
   return parts.join(' ');
 }
@@ -5835,21 +6242,10 @@ function formatInlineValue(value: unknown): string | null {
   if (typeof value === 'string') return formatScalarString(value);
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   if (Array.isArray(value)) {
-    if (value.length === 0) return '[]';
+    if (value.length === 0) return null;
     const parts = value.map(item => formatInlineValue(item));
     if (parts.some(part => part === null)) return null;
-    return `[${parts.join(' ')}]`;
-  }
-  if (isRecord(value)) {
-    const entries = Object.entries(value).filter(([, entry]) => entry !== undefined);
-    if (entries.length === 0) return '{}';
-    const parts: string[] = [];
-    for (const [key, entry] of entries) {
-      const inlineEntry = formatInlineValue(entry);
-      if (!inlineEntry) return null;
-      parts.push(`${formatObjectKey(key)}:${inlineEntry}`);
-    }
-    return `{ ${parts.join(' ')} }`;
+    return parts.join(' ');
   }
   return null;
 }
@@ -5943,9 +6339,10 @@ function isCallValue(value: unknown): value is { type: 'call'; name: string; arg
 }
 
 function formatCallValue(value: { name: string; args: unknown[] }): string | null {
+  if (value.args.some((arg) => Array.isArray(arg))) return null;
   const args = value.args.map((arg) => formatInlineValue(arg));
   if (args.some((arg) => arg === null)) return null;
-  return `${value.name}(${args.join(', ')})`;
+  return `${value.name}(${args.join(' ')})`;
 }
 
 function normalizeStaticPageDir(value: string | undefined | null): string {

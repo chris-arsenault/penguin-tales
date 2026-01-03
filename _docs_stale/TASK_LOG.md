@@ -174,7 +174,7 @@ Successfully implemented the catalyst model framework and domain configuration:
 - [x] Verify systems execute in correct order (defined in allSystems array)
 
 ### Testing
-- [ ] Smoke test: Run with targetEntitiesPerKind: 5
+- [ ] Smoke test: Run with small distribution targets
 - [x] Verify no TypeScript errors (build successful)
 - [ ] Verify entity distribution (~20% NPCs)
 - [ ] Verify relationship distribution (~80% world)

@@ -88,12 +88,6 @@ function PressureTooltip({ detail, discreteModifications, tickCount }) {
             <span>×{breakdown.eraModifier.toFixed(2)}</span>
           </div>
         )}
-        {breakdown.distributionFeedback !== 0 && (
-          <div className="lw-tooltip-row">
-            <span>Distribution feedback</span>
-            <span className={breakdown.distributionFeedback >= 0 ? 'positive' : 'negative'}>{fmt(breakdown.distributionFeedback)}</span>
-          </div>
-        )}
       </div>
 
       {Object.keys(groupedMods).length > 0 && (

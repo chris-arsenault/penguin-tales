@@ -1,7 +1,0 @@
-project do
-  id:project_1765083188592
-  name:"Penguin Colony World"
-  version:"1.0"
-  createdAt:"2025-12-28T06:58:37.394Z"
-  updatedAt:"2025-12-28T06:58:37.394Z"
-end

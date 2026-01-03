@@ -9,6 +9,4 @@
 // Higher-level selectors remain here (not moved to rules/)
 export { TargetSelector } from './targetSelector';
 export type { SelectionBias, SelectionResult } from './targetSelector';
-export { TemplateSelector } from './templateSelector';
-export { SystemSelector } from './systemSelector';
 export { DynamicWeightCalculator } from './dynamicWeightCalculator';

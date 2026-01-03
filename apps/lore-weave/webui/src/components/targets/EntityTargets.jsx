@@ -32,9 +32,10 @@ export default function EntityTargets({ entities, updateTargets, distributionTar
                   className="lw-input-small"
                   value={config.target || 0}
                   onChange={(v) => {
-                    const newEntities = JSON.parse(JSON.stringify(distributionTargets.entities));
-                    if (!newEntities[0][kind]) newEntities[0][kind] = {};
-                    newEntities[0][kind][subtype] = { ...config, target: v ?? 0 };
+                    const currentEntities = distributionTargets.entities;
+                    const newEntities = JSON.parse(JSON.stringify(currentEntities));
+                    if (!newEntities[kind]) newEntities[kind] = {};
+                    newEntities[kind][subtype] = { ...config, target: v ?? 0 };
                     updateTargets('entities', newEntities);
                   }}
                   integer

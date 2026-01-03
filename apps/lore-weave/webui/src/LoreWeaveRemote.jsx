@@ -169,19 +169,20 @@ export default function LoreWeaveRemote({
         );
       case 'run':
         return (
-          <SimulationRunner
-            projectId={projectId}
-            schema={schema}
-            eras={eras}
-            pressures={pressures}
-            generators={generators}
-            systems={systems}
-            actions={actions}
-            seedEntities={seedEntities}
-            seedRelationships={seedRelationships}
-            validation={configValidation}
-            isRunning={isRunning}
-            setIsRunning={setIsRunning}
+            <SimulationRunner
+              projectId={projectId}
+              schema={schema}
+              eras={eras}
+              pressures={pressures}
+              generators={generators}
+              systems={systems}
+              actions={actions}
+              seedEntities={seedEntities}
+              seedRelationships={seedRelationships}
+              distributionTargets={distributionTargets}
+              validation={configValidation}
+              isRunning={isRunning}
+              setIsRunning={setIsRunning}
             onComplete={handleSimulationComplete}
             onViewResults={() => setActiveTab('results')}
             externalSimulationState={externalSimulationState}

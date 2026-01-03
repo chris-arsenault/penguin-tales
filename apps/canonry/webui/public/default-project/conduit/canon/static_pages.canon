@@ -1,0 +1,209 @@
+static_page "Lore:The Languages of The Berg" do
+  summary <<SUMMARY
+A comprehensive guide to how names work in each culture - Aurora's ice-memory echoes, Nightshelf's whispered fragments, and Orca's deed-chains.
+  SUMMARY
+  status published
+  slug lore-languages
+  pageId static_1767431858351_66m1v4
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 860
+  content read("page/lore-languages.md")
+end
+
+static_page "World:The Berg" do
+  summary <<SUMMARY
+An overview of The Berg - the vast frozen continent where penguin civilization thrives in the eternal dance between light and dark.
+  SUMMARY
+  status published
+  slug world-the-berg
+  pageId static_1767431858351_7yvf98
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 998
+  content read("page/world-the-berg.md")
+end
+
+static_page "Cultures:Nightshelf" do
+  summary <<SUMMARY
+The Nightshelf penguins - shadow-dwellers who believe names hold power and secrets are the true currency of existence.
+  SUMMARY
+  status published
+  slug cultures-nightshelf
+  pageId static_1767431858351_97mv5r
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 1032
+  content read("page/cultures-nightshelf.md")
+end
+
+static_page "Cultures:Aurora Stack" do
+  summary <<SUMMARY
+The Aurora Stack penguins - traders, builders, and keepers of ice-memory who believe identity is accumulated through witnessed deeds.
+  SUMMARY
+  status published
+  slug cultures-aurora-stack
+  pageId static_1767431858351_ivnaz5
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 992
+  content read("page/cultures-aurora-stack.md")
+end
+
+static_page "Lore:The Long Dark" do
+  summary <<SUMMARY
+The four-month polar winter when the sun never rises, survival becomes paramount, and the boundary between worlds grows thin.
+  SUMMARY
+  status published
+  slug lore-long-dark
+  pageId static_1767431858352_5e2u9v
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 1231
+  content read("page/lore-long-dark.md")
+end
+
+static_page "System:Name Forge" do
+  summary <<SUMMARY
+The procedural naming system that gives everything culture-appropriate names - from Aurora's ice-memory echoes to Orca's kill-chains.
+  SUMMARY
+  status published
+  slug system-name-forge
+  pageId static_1767431858352_758npz
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 719
+  content read("page/system-name-forge.md")
+end
+
+static_page "System:Chronicler" do
+  summary <<SUMMARY
+The wiki viewer you're using right now - presenting generated content as explorable, interconnected pages.
+  SUMMARY
+  status published
+  slug system-chronicler
+  pageId static_1767431858352_9ej48c
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 549
+  content read("page/system-chronicler.md")
+end
+
+static_page "Cultures:Orca" do
+  summary <<SUMMARY
+The Orca - apex predators whose identity is defined purely by their kills and their place in the eternal hunt.
+  SUMMARY
+  status published
+  slug cultures-orca
+  pageId static_1767431858352_b4i54u
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 1173
+  content read("page/cultures-orca.md")
+end
+
+static_page "System:About This Project" do
+  summary <<SUMMARY
+What is Penguin Tales? A procedurally generated world of ice, darkness, and surprisingly complex penguin politics.
+  SUMMARY
+  status published
+  slug system-about
+  pageId static_1767431858352_ehwju4
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 654
+  content read("page/system-about.md")
+end
+
+static_page "Lore:The Ice Remembers" do
+  summary <<SUMMARY
+The metaphysical nature of The Berg's ice and how it records, preserves, and sometimes speaks the memories of all who have lived upon it.
+  SUMMARY
+  status published
+  slug lore-ice-remembers
+  pageId static_1767431858352_ijgryp
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 1222
+  content read("page/lore-ice-remembers.md")
+end
+
+static_page "System:Illuminator" do
+  summary <<SUMMARY
+The AI enrichment layer that transforms raw generated data into readable prose, backstories, and descriptions.
+  SUMMARY
+  status published
+  slug system-illuminator
+  pageId static_1767431858352_ird3vm
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 696
+  content read("page/system-illuminator.md")
+end
+
+static_page "Lore:The Before Times" do
+  summary <<SUMMARY
+Ancient artifacts bearing alien serial numbers surface from the deep ice - relics of something that existed before penguins, before The Berg, perhaps before everything.
+  SUMMARY
+  status published
+  slug lore-before-times
+  pageId static_1767431858352_izjtsj
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 988
+  content read("page/lore-before-times.md")
+end
+
+static_page "System:Lore Weave" do
+  summary <<SUMMARY
+The simulation engine that generates world history through templates, systems, and the patient accumulation of procedural chaos.
+  SUMMARY
+  status published
+  slug system-lore-weave
+  pageId static_1767431858352_tkfq5n
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 773
+  content read("page/system-lore-weave.md")
+end
+
+static_page "System:Narrative Design Loops" do
+  summary <<SUMMARY
+The design philosophy and specific gameplay loops that make generated content feel like interconnected stories rather than random events.
+  SUMMARY
+  status published
+  slug system-narrative-loops
+  pageId static_1767431858352_udfox3
+  projectId project_1765083188592
+  createdAt 1767431858351
+  updatedAt 1767431858351
+  linkedEntityIds none
+  wordCount 3439
+  content read("page/system-narrative-loops.md")
+end

@@ -571,7 +571,6 @@ export interface EngineConfig {
   // Configuration
   ticksPerEpoch: number;  // simulation ticks per epoch
   maxEpochs: number;      // maximum epochs to run
-  targetEntitiesPerKind: number;
   maxTicks: number;
   maxRelationshipsPerType: number;  // max relationships of same type per entity
   relationshipBudget?: {
@@ -595,7 +594,7 @@ export interface EngineConfig {
   // llmConfig?: LLMConfig;
   // enrichmentConfig?: EnrichmentConfig;
   // loreIndex?: LoreIndex;
-  distributionTargets?: DistributionTargets;  // Optional statistical distribution targets for guided template selection
+  distributionTargets?: DistributionTargets;  // Optional per-subtype targets for homeostatic template weighting
 
   // Name generation service - created by WorldEngine from cultures, then set here
   // Graph uses this for entity name generation

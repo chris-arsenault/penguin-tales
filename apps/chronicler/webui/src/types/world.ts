@@ -1,7 +1,6 @@
 import type {
   CanonrySchemaSlice,
   CultureDefinition,
-  DistributionMetrics,
   EntityKindDefinition,
   HistoryEvent,
   NarrativeEvent,
@@ -451,7 +450,6 @@ export interface HuddleInstancePageData {
 export type {
   CanonrySchemaSlice,
   CultureDefinition,
-  DistributionMetrics,
   EntityKindDefinition,
   HistoryEvent,
   NarrativeEvent,

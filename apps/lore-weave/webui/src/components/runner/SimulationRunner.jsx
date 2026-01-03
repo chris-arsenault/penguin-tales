@@ -45,6 +45,7 @@ export default function SimulationRunner({
   actions,
   seedEntities,
   seedRelationships,
+  distributionTargets,
   validation,
   isRunning,
   setIsRunning,
@@ -59,9 +60,8 @@ export default function SimulationRunner({
     scaleFactor: 1.0,
     defaultMinDistance: 5,
     pressureDeltaSmoothing: 10,
-    ticksPerEpoch: 15,
+    ticksPerEpoch: 25,
     maxEpochs: 10,
-    targetEntitiesPerKind: 20,
     maxTicks: 500,
     // Narrative event tracking
     narrativeEnabled: true,
@@ -174,13 +174,13 @@ export default function SimulationRunner({
       actions: (actions || []).filter(a => a.enabled !== false),
       ticksPerEpoch: params.ticksPerEpoch,
       maxEpochs: params.maxEpochs,
-      targetEntitiesPerKind: params.targetEntitiesPerKind,
       maxTicks: params.maxTicks,
       maxRelationshipsPerType: 10,
       scaleFactor: params.scaleFactor,
       defaultMinDistance: params.defaultMinDistance,
       pressureDeltaSmoothing: params.pressureDeltaSmoothing,
       seedRelationships: seedRelationships || [],
+      distributionTargets: distributionTargets || undefined,
       debugConfig,
       // Narrative event tracking config
       narrativeConfig: {
@@ -188,7 +188,7 @@ export default function SimulationRunner({
         minSignificance: params.narrativeMinSignificance,
       },
     };
-  }, [schema, eras, pressures, generators, systems, actions, params, seedRelationships, debugConfig]);
+  }, [schema, eras, pressures, generators, systems, actions, params, seedRelationships, distributionTargets, debugConfig]);
 
   // Run simulation
   const runSimulation = useCallback(() => {

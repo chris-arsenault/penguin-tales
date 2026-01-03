@@ -243,8 +243,7 @@ export class PopulationTracker {
   }
 
   private getEntityTarget(kind: string, subtype: string): number {
-    const targetsWithEntities = this.distributionTargets as any;
-    return targetsWithEntities.entities?.[kind]?.[subtype]?.target || 0;
+    return this.distributionTargets.entities[kind]?.[subtype]?.target || 0;
   }
 
   private getRelationshipTarget(kind: string): number {

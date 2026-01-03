@@ -119,14 +119,14 @@ Block
     }
 
 RelStatement
-  = key:RelKeyword _ kind:Identifier _ src:Identifier _ "->" _ dst:Identifier _ pairs:InlinePairs? {
+  = key:RelKeyword _ kind:Identifier _ src:Identifier _ "->" _ dst:Identifier values:LineValueList? {
       return {
         type: "rel",
         key,
         kind,
         src,
         dst,
-        value: pairs || { type: "object", entries: [], span: span(location()) },
+        value: values || null,
         span: span(location())
       };
     }
@@ -173,11 +173,12 @@ Comparator
   = ">=" / "<=" / "==" / "!=" / ">" / "<"
 
 InStatement
-  = key:Identifier _ InKeyword _ list:(Array / InlineValueList) {
+  = key:Identifier _ InKeyword _ list:(InlineValueList / Value) {
+      const items = list.items ? list.items : [list];
       return {
         type: "in",
         key,
-        items: list.items || [],
+        items,
         span: span(location())
       };
     }
@@ -201,12 +202,12 @@ FromStatement
     }
 
 LabeledAttribute
-  = key:LabeledKey _ labels:Label+ _ pairs:InlinePairs? {
+  = key:LabeledKey _ labels:Label+ values:LineValueList? {
       return {
         type: "attribute",
         key,
         labels,
-        value: pairs || { type: "object", entries: [], span: span(location()) },
+        value: values || null,
         span: span(location())
       };
     }
@@ -227,16 +228,13 @@ LabeledKey
   / StrategyKeyword
 
 Label
-  = _ value:(String / VariableIdentifier / QualifiedIdentifier / Identifier) !InlinePairStart { return value; }
-
-InlinePairStart
-  = _ (":" / "=")
+  = _ value:(String / VariableIdentifier / QualifiedIdentifier / Identifier) { return value; }
 
 KindSubtype
   = kind:Identifier ":" subtype:Identifier { return kind + ":" + subtype; }
 
 Attribute
-  = key:(Identifier / String) _ (":" / "=")? _ values:InlineValues {
+  = key:(Identifier / String) _ values:InlineValues {
       return {
         type: "attribute",
         key,
@@ -256,22 +254,11 @@ BareStatement
     }
 
 InlineValues
-  = pairs:InlinePairs { return pairs; }
-  / values:InlineValueList { return values; }
+  = values:InlineValueList { return values; }
   / value:Value { return value; }
 
-InlinePairs
-  = head:Pair tail:(_ Pair)* {
-      const rest = tail.map(t => t[1]);
-      return {
-        type: "object",
-        entries: [head, ...rest],
-        span: span(location())
-      };
-    }
-
 InlineValueList
-  = head:Value tail:(_ Value)+ {
+  = head:Value tail:(__1 Value)+ {
       const rest = tail.map(t => t[1]);
       return {
         type: "array",
@@ -281,7 +268,7 @@ InlineValueList
     }
 
 LineValueList
-  = __1 head:Value tail:(_ Value)* {
+  = __1 head:Value tail:(__1 Value)* {
       const rest = tail.map(t => t[1]);
       return {
         type: "array",
@@ -291,14 +278,16 @@ LineValueList
     }
 
 Value
-  = Call
-  / Array
-  / Object
+  = ComparatorToken
+  / Call
   / Null
   / Boolean
   / Number
   / String
   / IdentifierValue
+
+ComparatorToken
+  = op:Comparator { return op; }
 
 Call
   = name:Identifier _ "(" _ args:CallArgs? _ ")" {
@@ -311,8 +300,8 @@ Call
     }
 
 CallArgs
-  = head:Value tail:(_ "," _ Value)* {
-      const rest = tail.map(t => t[3]);
+  = head:Value tail:(__1 Value)* {
+      const rest = tail.map(t => t[1]);
       return [head, ...rest];
     }
 
@@ -325,44 +314,6 @@ IdentifierValue
       };
     }
 
-Array
-  = "[" __ items:ValueList? __ "]" {
-      return {
-        type: "array",
-        items: items || [],
-        span: span(location())
-      };
-    }
-
-ValueList
-  = head:Value tail:(ListSeparator Value)* {
-      const rest = tail.map(t => t[1]);
-      return [head, ...rest];
-    }
-
-Object
-  = "{" __ entries:PairList? __ "}" {
-      return {
-        type: "object",
-        entries: entries || [],
-        span: span(location())
-      };
-    }
-
-PairList
-  = head:Pair tail:(PairSeparator Pair)* {
-      const rest = tail.map(t => t[1]);
-      return [head, ...rest];
-    }
-
-Pair
-  = key:(Identifier / String) __ (":" / "=") __ value:Value {
-      return {
-        key,
-        value,
-        span: span(location())
-      };
-    }
 
 Boolean
   = "true" WordBoundary { return true; }
@@ -436,15 +387,8 @@ Newline = "\r"? "\n"
 
 _ = (Whitespace / Comment)*
 __ = (Whitespace / Comment / Newline)*
-__1 = (Whitespace / Comment / Newline)+
+__1 = Whitespace+
 Whitespace = [ \t]+ 
 Comment = "#" [^\n]* / "//" [^\n]*
 
-ListSeparator
-  = __ "," __
-  / __1
-
-PairSeparator
-  = __ "," __
-  / __1
 `;

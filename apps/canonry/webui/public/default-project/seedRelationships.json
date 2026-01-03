@@ -77,7 +77,6 @@
     "dst": "loc_nightfall_shelf",
     "strength": 1
   },
-
   {
     "kind": "resident_of",
     "src": "npc_keeper_hollows",
@@ -96,7 +95,6 @@
     "dst": "npc_keeper_hollows",
     "strength": 1
   },
-
   {
     "kind": "leader_of",
     "src": "npc_grandmother_deep",
@@ -121,7 +119,6 @@
     "dst": "faction_wake_singers",
     "strength": 1
   },
-
   {
     "kind": "contained_by",
     "src": "loc_veil_vents",

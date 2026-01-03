@@ -44,7 +44,6 @@ function aggregatePressureUpdates(pressureUpdates, currentEpochNumber) {
       negativeFeedbackSum: new Map(), // label -> cumulative contribution
       totalScaledFeedback: 0,
       totalHomeostaticDelta: 0,
-      totalDistributionFeedback: 0,
       totalRawDelta: 0,
       totalSmoothedDelta: 0,
       homeostasis: p.breakdown.homeostasis,
@@ -66,7 +65,6 @@ function aggregatePressureUpdates(pressureUpdates, currentEpochNumber) {
       agg.totalFeedback += p.breakdown.feedbackTotal;
       agg.totalScaledFeedback += p.breakdown.scaledFeedback;
       agg.totalHomeostaticDelta += p.breakdown.homeostaticDelta;
-      agg.totalDistributionFeedback += p.breakdown.distributionFeedback;
       agg.totalRawDelta += p.breakdown.rawDelta;
       agg.totalSmoothedDelta += p.breakdown.smoothedDelta;
       agg.homeostasis = p.breakdown.homeostasis;
@@ -135,7 +133,6 @@ function aggregatePressureUpdates(pressureUpdates, currentEpochNumber) {
         homeostasis: agg.homeostasis,
         homeostaticDelta: agg.totalHomeostaticDelta,
         eraModifier: lastUpdate.pressures.find(p => p.id === id)?.breakdown.eraModifier ?? 1,
-        distributionFeedback: agg.totalDistributionFeedback,
         rawDelta: agg.totalRawDelta,
         smoothedDelta: agg.totalSmoothedDelta
       }

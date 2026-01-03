@@ -106,8 +106,6 @@ export type {
   EntityEffect,
   ParticipantEffect,
   CoordinateState,
-  DistributionMetrics,
-  GraphMetrics,
   ReachabilityMetrics,
   Validation,
   ValidationResult,

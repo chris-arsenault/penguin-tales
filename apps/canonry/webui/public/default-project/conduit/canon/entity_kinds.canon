@@ -1,0 +1,251 @@
+entity_kind ability do
+  description <<DESCRIPTION
+Abilities & Techniques
+  DESCRIPTION
+  category power
+  subtype technology Technology
+  subtype combat "Combat Technique"
+  subtype magic Magic
+  status active Active neutral
+  status lost Lost negative "was lost to time" terminal
+  status historical Historical neutral "faded into legend" terminal
+  status secret Secret neutral "was hidden away"
+  status discovered Discovered neutral "was discovered"
+  status emergent Emergent neutral
+  defaultStatus emergent
+  style "#C76BFC"
+  semantic_plane do
+    axes element.id pragmatism.id power.id
+    region ability_nightshelf_moonweave "Moonweave Mysteries" do
+      color "#9370DB"
+      culture nightshelf
+      tags none
+      bounds circle 84 84 15
+    end
+    region ability_aurora_prismcraft "Prismcraft Arts" do
+      color "#FFD700"
+      culture aurora-stack
+      tags none
+      bounds circle 79 49 20
+    end
+    region ability_orca_battleways "Orca Battleways" do
+      color "#2F4F4F"
+      culture orca
+      tags none
+      bounds circle 16 17 15
+    end
+  end
+end
+
+entity_kind artifact do
+  description <<DESCRIPTION
+Artifacts & Relics
+  DESCRIPTION
+  category object
+  subtype weapon Weapon
+  subtype relic Relic
+  subtype tome Tome
+  subtype instrument Instrument
+  status intact Intact positive
+  status damaged Damaged negative "was damaged"
+  status lost Lost negative "was lost"
+  status destroyed Destroyed negative "was destroyed" terminal
+  defaultStatus intact
+  style "#B8860B"
+  semantic_plane do
+    axes element.id purpose.id pragmatism.id
+    region aurora_artifacts "Aurora Relics" do
+      color "#FFD700"
+      culture aurora-stack
+      tags trade organized ice
+      bounds circle 75 60 15
+    end
+    region nightshelf_artifacts "Shadow Relics" do
+      color "#9370DB"
+      culture nightshelf
+      tags mystical secretive
+      bounds circle 40 75 15
+    end
+    region orca_artifacts "Orca Trophies" do
+      color "#2F4F4F"
+      culture orca
+      tags hostile combat
+      bounds circle 20 25 12
+    end
+  end
+end
+
+entity_kind faction do
+  description <<DESCRIPTION
+Factions
+  DESCRIPTION
+  category collective
+  subtype political Political
+  subtype criminal Criminal
+  subtype cult Cult
+  subtype company Company
+  status active Active neutral
+  status disbanded Disbanded negative "disbanded" terminal
+  status waning Waning negative "began to wane"
+  status state_sanctioned "State Sanctioned" positive "received state sanction"
+  status illegal Illegal negative "was outlawed"
+  defaultStatus active
+  style "#FC6B6B"
+  semantic_plane do
+    axes structure.id alignment.id visibility.id
+    region faction_aurora_guilds "Merchant Guilds" do
+      color "#FFD700"
+      culture aurora-stack
+      tags organized friendly trade influential
+      bounds circle 75 70 15
+    end
+    region faction_nightshelf_covens "Shadow Covens" do
+      color "#9370DB"
+      culture nightshelf
+      tags secretive mystical
+      bounds circle 35 49 15
+    end
+    region faction_orca_warclans "War Clans" do
+      color "#410f1e"
+      culture orca
+      tags authoritarian fire hostile
+      bounds circle 11 10 9
+    end
+  end
+end
+
+entity_kind location do
+  description <<DESCRIPTION
+Locations
+  DESCRIPTION
+  category place
+  subtype colony Colony
+  subtype anomaly Anomaly
+  subtype resource_node "Resource Node"
+  subtype point_of_interest "Point of Interest"
+  status thriving Thriving positive "began thriving"
+  status waning Waning negative "began to wane"
+  status abandoned Abandoned negative "was abandoned" terminal
+  status unspoiled Unspoiled neutral
+  defaultStatus thriving
+  style "#6BFC9C"
+  semantic_plane do
+    axes longitude.id latitude.id visibility.id
+    region location_aurora_markets "Aurora Markets" do
+      color "#FFD700"
+      culture aurora-stack
+      tags central trade thriving
+      bounds circle 65 25 12
+    end
+    region location_nightshelf_sanctums "Hidden Sanctums" do
+      color "#9370DB"
+      culture nightshelf
+      tags hidden mystical secretive
+      bounds circle 35 35 12
+    end
+    region location_glow_fissure "The Glow-Fissure" do
+      color "#FF6347"
+      culture nightshelf
+      tags anomaly dangerous mystical
+      bounds circle 30 65 8
+    end
+  end
+end
+
+entity_kind npc do
+  description <<DESCRIPTION
+NPCs
+  DESCRIPTION
+  category character
+  subtype merchant Merchant
+  subtype mayor Mayor authority
+  subtype hero Hero
+  subtype outlaw Outlaw
+  subtype orca Orca
+  status alive Alive neutral
+  status historical Historical negative "passed away" terminal
+  status fictional Fictional neutral "was revealed to be fictional"
+  status missing Missing negative "went missing"
+  defaultStatus alive
+  style "#6FB1FC"
+  semantic_plane do
+    axes authority.id pragmatism.id power.id
+    region npc_aurora_citizens "Golden Citizens" do
+      color "#FFD700"
+      culture aurora-stack
+      tags friendly trade organized
+      bounds circle 84 50 15
+    end
+    region npc_nightshelf_denizens "Twilight Denizens" do
+      color "#9370DB"
+      culture nightshelf
+      tags mystical secretive
+      bounds circle 50 70 15
+    end
+    region npc_orca_raiders "Orca Marauders" do
+      color "#2F4F4F"
+      culture orca
+      tags hostile raider external
+      bounds circle 14 14 12
+    end
+  end
+end
+
+entity_kind occurrence do
+  description <<DESCRIPTION
+Events & Occurrences
+  DESCRIPTION
+  category event
+  subtype war War
+  subtype succession_crisis "Succession Crisis"
+  subtype disaster Disaster
+  subtype celebration Celebration
+  status active Active neutral "erupted"
+  status historical Historical neutral "came to an end" terminal
+  status brewing Brewing neutral "began brewing"
+  status legendary Legendary neutral "became legendary"
+  defaultStatus brewing
+  style "#FCD76B"
+  semantic_plane do
+    axes element.id pragmatism.id visibility.id
+  end
+end
+
+entity_kind rule do
+  description <<DESCRIPTION
+Laws & Traditions
+  DESCRIPTION
+  category concept
+  subtype law Law
+  subtype social "Social Custom"
+  subtype memorial Memorial
+  subtype ideology Ideology
+  status active Active neutral
+  status repealed Repealed negative "was repealed" terminal
+  status contested Contested neutral "became contested"
+  status enacted Enacted neutral "was enacted"
+  status proposed Proposed neutral "was proposed"
+  defaultStatus proposed
+  style "#FCA86B"
+  semantic_plane do
+    axes autonomy.id pragmatism.id structure.id
+    region rule_aurora_trade_edicts "Trade Edicts" do
+      color "#FFD700"
+      culture aurora-stack
+      tags none
+      bounds circle 90 50 9
+    end
+    region rule_orca_war_doctrines "War Doctrines" do
+      color "#2F4F4F"
+      culture orca
+      tags none
+      bounds circle 16 84 15
+    end
+    region rule_nightshelf_shadow_codes "Shadow Codes" do
+      color "#9370DB"
+      culture nightshelf
+      tags none
+      bounds circle 58 17 9
+    end
+  end
+end

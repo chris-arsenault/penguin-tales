@@ -3,7 +3,7 @@
     "id": "resource_availibility",
     "name": "Resource Availibility",
     "initialValue": 15,
-    "homeostasis": 0.10,
+    "homeostasis": 0.1,
     "growth": {
       "positiveFeedback": [
         {
@@ -85,7 +85,9 @@
         },
         {
           "type": "relationship_count",
-          "relationshipKinds": ["allied_with"],
+          "relationshipKinds": [
+            "allied_with"
+          ],
           "coefficient": 0.08
         }
       ],

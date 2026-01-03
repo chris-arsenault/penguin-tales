@@ -1,5 +1,4 @@
 import type { WorldState } from '../types/world.ts';
-import { getProminenceColor, getProminenceLevels } from '../utils/dataTransform.ts';
 import './StatsPanel.css';
 
 interface StatsPanelProps {
@@ -9,9 +8,7 @@ interface StatsPanelProps {
 }
 
 export default function StatsPanel({ worldData, isOpen, onToggle }: StatsPanelProps) {
-  const { pressures, distributionMetrics, validation } = worldData;
-  const prominenceLevels = getProminenceLevels(worldData.schema);
-  const prominenceOrder = new Map(prominenceLevels.map((level, index) => [level, index]));
+  const { pressures, validation } = worldData;
 
   // Get pressure entries and sort by value
   const pressureEntries = Object.entries(pressures).sort((a, b) => b[1] - a[1]);
@@ -92,117 +89,6 @@ export default function StatsPanel({ worldData, isOpen, onToggle }: StatsPanelPr
               </div>
             </div>
 
-            {/* Distribution Metrics */}
-            {distributionMetrics && distributionMetrics.graphMetrics && (
-              <>
-                {/* Graph Metrics */}
-                <div className="stats-section">
-                  <h4 className="stats-section-title">Graph Metrics</h4>
-                  <div className="metrics-grid">
-                    <div className="metric-card">
-                      <div className="metric-label">Clusters</div>
-                      <div className="metric-value">{distributionMetrics.graphMetrics.clusters}</div>
-                    </div>
-                    <div className="metric-card">
-                      <div className="metric-label">Avg Cluster Size</div>
-                      <div className="metric-value">{distributionMetrics.graphMetrics.avgClusterSize.toFixed(2)}</div>
-                    </div>
-                    <div className="metric-card">
-                      <div className="metric-label">Isolated Nodes</div>
-                      <div className="metric-value">{distributionMetrics.graphMetrics.isolatedNodes}</div>
-                    </div>
-                    <div className="metric-card">
-                      <div className="metric-label">Isolated Ratio</div>
-                      <div className="metric-value">{(distributionMetrics.graphMetrics.isolatedNodeRatio * 100).toFixed(1)}%</div>
-                    </div>
-                    <div className="metric-card">
-                      <div className="metric-label">Intra-Cluster</div>
-                      <div className="metric-value">{(distributionMetrics.graphMetrics.intraClusterDensity * 100).toFixed(1)}%</div>
-                    </div>
-                    <div className="metric-card">
-                      <div className="metric-label">Inter-Cluster</div>
-                      <div className="metric-value">{(distributionMetrics.graphMetrics.interClusterDensity * 100).toFixed(1)}%</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Entity Kind Distribution */}
-                {distributionMetrics.entityKindRatios && (
-                  <div className="stats-section">
-                    <h4 className="stats-section-title">Entity Distribution</h4>
-                    <div className="distribution-bars">
-                      {Object.entries(distributionMetrics.entityKindRatios)
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([kind, ratio]) => (
-                          <div key={kind} className="distribution-item">
-                            <div className="distribution-label">{kind}</div>
-                            <div className="distribution-bar-container">
-                              <div
-                                className="distribution-bar-fill"
-                                style={{ width: `${ratio * 100}%` }}
-                              />
-                              <span className="distribution-percentage">{(ratio * 100).toFixed(1)}%</span>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Prominence Distribution */}
-                {distributionMetrics.prominenceRatios && (
-                  <div className="stats-section">
-                    <h4 className="stats-section-title">Prominence Distribution</h4>
-                    <div className="distribution-bars">
-                      {Object.entries(distributionMetrics.prominenceRatios)
-                        .sort((a, b) => (prominenceOrder.get(a[0] as typeof prominenceLevels[number]) ?? 0) - (prominenceOrder.get(b[0] as typeof prominenceLevels[number]) ?? 0))
-                        .map(([prominence, ratio]) => {
-                          const prominenceKey = prominence as typeof prominenceLevels[number];
-                          return (
-                          <div key={prominence} className="distribution-item">
-                            <div className="distribution-label">{prominence}</div>
-                            <div className="distribution-bar-container">
-                              <div
-                                className="distribution-bar-fill"
-                                style={{
-                                  width: `${ratio * 100}%`,
-                                  background: getProminenceColor(prominenceKey, worldData.schema),
-                                }}
-                              />
-                              <span className="distribution-percentage">{(ratio * 100).toFixed(1)}%</span>
-                            </div>
-                          </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Top Relationship Types */}
-                {distributionMetrics.relationshipTypeRatios && (
-                  <div className="stats-section">
-                    <h4 className="stats-section-title">Top Relationship Types</h4>
-                    <div className="distribution-bars">
-                      {Object.entries(distributionMetrics.relationshipTypeRatios)
-                        .sort((a, b) => b[1] - a[1])
-                        .slice(0, 10)
-                        .map(([type, ratio]) => (
-                          <div key={type} className="distribution-item">
-                            <div className="distribution-label">{type.replace(/_/g, ' ')}</div>
-                            <div className="distribution-bar-container">
-                              <div
-                                className="distribution-bar-fill"
-                                style={{ width: `${ratio * 100}%` }}
-                              />
-                              <span className="distribution-percentage">{(ratio * 100).toFixed(1)}%</span>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
           </div>
         </div>
       )}
