@@ -44,11 +44,11 @@ culture world do
 end
 
 domain ancient_tech_prefix do
-  culture_id [aurora-stack.id nightshelf.id orca.id]
+  culture_id aurora-stack.id nightshelf.id orca.id
   phonology do
     consonants [X V N K R Z T M B D G H J L Q W Y P]
     vowels ["0" "1" "2" "3" "4" "5" "6" "7" "8" "9"]
-    templates [CV VC]
+    templates CV VC
     length 1 1
     favored_clusters []
     forbidden_clusters []
@@ -71,11 +71,11 @@ domain ancient_tech_prefix do
 end
 
 domain ancient_tech_serial do
-  culture_id [aurora-stack.id nightshelf.id orca.id]
+  culture_id aurora-stack.id nightshelf.id orca.id
   phonology do
     consonants [X V N K R Z T M B D G H J L Q W Y P]
     vowels ["0" "1" "2" "3" "4" "5" "6" "7" "8" "9"]
-    templates [CV CVC VC]
+    templates CV CVC VC
     length 2 3
     favored_clusters []
     forbidden_clusters []
@@ -102,7 +102,7 @@ domain aurora_domain do
   phonology do
     consonants [zh sh ch x q j l m n h f w y]
     vowels [a o e i u ai ei ou ong ang ing]
-    templates [CV V]
+    templates CV V
     length 2 3
     favored_clusters []
     forbidden_clusters []
@@ -132,7 +132,7 @@ domain aurora_domain_short do
   phonology do
     consonants [zh sh ch x q j l m n h f]
     vowels [a o e i u ai ei ang ing]
-    templates [CV V]
+    templates CV V
     length 1 1
     favored_clusters []
     forbidden_clusters []
@@ -162,7 +162,7 @@ domain nightshelf_domain do
   phonology do
     consonants [v s c m n l r t]
     vowels [a e i o u ae ia]
-    templates [CV CVC VC]
+    templates CV CVC VC
     length 2 3
     favored_clusters [ct nt st sc nc rm lv rv]
     forbidden_clusters [cc tt ss mm nn ll rr vv aa ee ii oo uu]
@@ -192,7 +192,7 @@ domain orca_domain do
   phonology do
     consonants [k r g n m b d th z]
     vowels [i u ui ai]
-    templates [CV CVC CVCC]
+    templates CV CVC CVCC
     length 2 3
     favored_clusters [kr gr kn]
     forbidden_clusters [ii ee]
@@ -222,7 +222,7 @@ domain orca_domain_short do
   phonology do
     consonants [k r g n m b d th z]
     vowels [i u ui ai]
-    templates [CV CVC CVCC]
+    templates CV CVC CVCC
     length 1 1
     favored_clusters [kr gr kn]
     forbidden_clusters [ii ee]
@@ -252,7 +252,7 @@ domain world_domain do
   phonology do
     consonants [p l m n k]
     vowels [o oo]
-    templates [CV VCV]
+    templates CV VCV
     length 1 4
     favored_clusters [pl]
     forbidden_clusters [ooo]
@@ -275,7 +275,7 @@ domain world_domain do
 end
 
 grammar ancient_relic do
-  culture_id [aurora-stack.id nightshelf.id orca.id]
+  culture_id aurora-stack.id nightshelf.id orca.id
   start name
   capitalization ""
   rule name ["domain:ancient_tech_prefix^-^domain:ancient_tech_serial" "(^slot:ancient_relic_epithets" "slot:ancient_relic_types^)"]
@@ -902,15 +902,15 @@ end
 
 profile aurora_abilities do
   culture_id aurora-stack.id
-  entityKinds:[ability]
+  entityKinds ability
   strategy_group "Meta-Entity Schools" do
     priority:80
     conditions do
-      entityKinds:[ability]
+      entityKinds ability
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[meta-entity]
+      tags meta-entity
       tagMatchAll:false
     end
     strategy grammar aurora_meta_ability.id weight:1
@@ -918,11 +918,11 @@ profile aurora_abilities do
   strategy_group Magic do
     priority:50
     conditions do
-      entityKinds:[ability]
+      entityKinds ability
       prominence:[]
-      subtypes:[magic]
+      subtypes magic
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_magic.id weight:1
@@ -930,11 +930,11 @@ profile aurora_abilities do
   strategy_group Technology do
     priority:50
     conditions do
-      entityKinds:[ability]
+      entityKinds ability
       prominence:[]
-      subtypes:[technology]
+      subtypes technology
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_technology.id weight:1
@@ -942,11 +942,11 @@ profile aurora_abilities do
   strategy_group Combat do
     priority:50
     conditions do
-      entityKinds:[ability]
+      entityKinds ability
       prominence:[]
-      subtypes:[combat]
+      subtypes combat
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_technology.id weight:0.5
@@ -958,15 +958,15 @@ profile aurora_artifacts do
   culture_id aurora-stack.id
   name:"Aurora Artifacts"
   isDefault:false
-  entityKinds:[artifact]
+  entityKinds artifact
   strategy_group "Anomaly-Born Artifacts" do
     priority:65
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[anomaly_born]
+      tags anomaly_born
       tagMatchAll:false
     end
     strategy grammar aurora_artifact.id weight:1
@@ -974,11 +974,11 @@ profile aurora_artifacts do
   strategy_group "Ancient Relics" do
     priority:60
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[relic]
+      subtypes relic
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar ancient_relic.id weight:0.4
@@ -987,11 +987,11 @@ profile aurora_artifacts do
   strategy_group Instruments do
     priority:55
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[instrument]
+      subtypes instrument
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_instrument.id weight:1
@@ -999,11 +999,11 @@ profile aurora_artifacts do
   strategy_group "Artifact Names" do
     priority:50
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_artifact.id weight:1
@@ -1014,15 +1014,15 @@ profile aurora_default do
   culture_id aurora-stack.id
   name:"Aurora Default"
   isDefault:true
-  entityKinds:[]
+  entityKinds none
   strategy_group "Magic Names" do
     priority:50
     conditions do
-      entityKinds:[ability]
+      entityKinds ability
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_region.id weight:1
@@ -1038,15 +1038,15 @@ profile aurora_factions do
   culture_id aurora-stack.id
   name:"Aurora Default"
   isDefault:false
-  entityKinds:[faction]
+  entityKinds faction
   strategy_group "Faction Names" do
     priority:50
     conditions do
-      entityKinds:[faction]
+      entityKinds faction
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_faction.id weight:0.85
@@ -1055,11 +1055,11 @@ profile aurora_factions do
   strategy_group "Region Names" do
     priority:60
     conditions do
-      entityKinds:[faction]
+      entityKinds faction
       prominence:[]
-      subtypes:[region]
+      subtypes region
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_region.id weight:1
@@ -1070,15 +1070,15 @@ profile aurora_locations do
   culture_id aurora-stack.id
   name:"Aurora Default"
   isDefault:false
-  entityKinds:[location]
+  entityKinds location
   strategy_group "Location Names" do
     priority:40
     conditions do
-      entityKinds:[location]
+      entityKinds location
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_location.id weight:1
@@ -1086,11 +1086,11 @@ profile aurora_locations do
   strategy_group "Region Names" do
     priority:50
     conditions do
-      entityKinds:[location]
+      entityKinds location
       prominence:[]
-      subtypes:[region]
+      subtypes region
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_region.id weight:1
@@ -1101,15 +1101,15 @@ profile aurora_npcs do
   culture_id aurora-stack.id
   name:"Aurora NPCs"
   isDefault:false
-  entityKinds:[npc]
+  entityKinds npc
   strategy_group "Legendary Heroes" do
     priority:75
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[mythic]
-      subtypes:[hero]
+      subtypes hero
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_hero_legendary.id weight:0.7
@@ -1118,11 +1118,11 @@ profile aurora_npcs do
   strategy_group Heroes do
     priority:70
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[hero]
+      subtypes hero
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_hero_npc.id weight:0.6
@@ -1131,11 +1131,11 @@ profile aurora_npcs do
   strategy_group "Mayors and Leaders" do
     priority:68
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[mayor]
+      subtypes mayor
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_noble_npc.id weight:1
@@ -1143,11 +1143,11 @@ profile aurora_npcs do
   strategy_group Merchants do
     priority:65
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[merchant]
+      subtypes merchant
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_merchant_npc.id weight:0.7
@@ -1156,11 +1156,11 @@ profile aurora_npcs do
   strategy_group "Outlaws and Criminals" do
     priority:65
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[outlaw]
+      subtypes outlaw
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_outlaw_npc.id weight:0.8
@@ -1169,11 +1169,11 @@ profile aurora_npcs do
   strategy_group "Elite NPCs" do
     priority:60
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[mythic renowned]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_elite_npc.id weight:0.6
@@ -1182,11 +1182,11 @@ profile aurora_npcs do
   strategy_group "NPC Regions (Families)" do
     priority:50
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[region]
+      subtypes region
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_family_names.id weight:1
@@ -1194,11 +1194,11 @@ profile aurora_npcs do
   strategy_group "Default NPC Names" do
     priority:0
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_npc.id weight:0.25
@@ -1213,15 +1213,15 @@ profile aurora_occurrences do
   culture_id aurora-stack.id
   name:"Aurora Occurrences"
   isDefault:false
-  entityKinds:[occurrence]
+  entityKinds occurrence
   strategy_group "Wars and Conflicts" do
     priority:60
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[war conflict]
+      subtypes war conflict
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_war_name.id weight:1
@@ -1229,11 +1229,11 @@ profile aurora_occurrences do
   strategy_group Disasters do
     priority:60
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[disaster]
+      subtypes disaster
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_disaster_name.id weight:1
@@ -1241,11 +1241,11 @@ profile aurora_occurrences do
   strategy_group "Celebrations and Memorials" do
     priority:60
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[celebration memorial social]
+      subtypes celebration memorial social
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_holidays.id weight:1
@@ -1253,11 +1253,11 @@ profile aurora_occurrences do
   strategy_group "Succession Crises" do
     priority:55
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[succession_crisis]
+      subtypes succession_crisis
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_war_name.id weight:0.6
@@ -1267,15 +1267,15 @@ end
 
 profile aurora_rules do
   culture_id aurora-stack.id
-  entityKinds:[rule]
+  entityKinds rule
   strategy_group Holidays do
     priority:60
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[social]
+      subtypes social
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_holidays.id weight:1
@@ -1283,11 +1283,11 @@ profile aurora_rules do
   strategy_group Memorials do
     priority:55
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[memorial]
+      subtypes memorial
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_holidays.id weight:0.6
@@ -1296,11 +1296,11 @@ profile aurora_rules do
   strategy_group Ideology do
     priority:55
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[ideology]
+      subtypes ideology
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_law.id weight:1
@@ -1308,11 +1308,11 @@ profile aurora_rules do
   strategy_group Laws do
     priority:50
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[law]
+      subtypes law
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_law.id weight:0.85
@@ -1321,11 +1321,11 @@ profile aurora_rules do
   strategy_group "Region Names" do
     priority:60
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[region]
+      subtypes region
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar aurora_region.id weight:1
@@ -1334,15 +1334,15 @@ end
 
 profile nightshelf_abilities do
   culture_id nightshelf.id
-  entityKinds:[ability]
+  entityKinds ability
   strategy_group "Meta-Entity Schools" do
     priority:80
     conditions do
-      entityKinds:[ability]
+      entityKinds ability
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[meta-entity]
+      tags meta-entity
       tagMatchAll:false
     end
     strategy grammar nightshelf_meta_ability.id weight:1
@@ -1350,11 +1350,11 @@ profile nightshelf_abilities do
   strategy_group Magic do
     priority:50
     conditions do
-      entityKinds:[ability]
+      entityKinds ability
       prominence:[]
-      subtypes:[magic]
+      subtypes magic
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_magic.id weight:1
@@ -1362,11 +1362,11 @@ profile nightshelf_abilities do
   strategy_group Technology do
     priority:50
     conditions do
-      entityKinds:[ability]
+      entityKinds ability
       prominence:[]
-      subtypes:[technology]
+      subtypes technology
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_magic.id weight:1
@@ -1374,11 +1374,11 @@ profile nightshelf_abilities do
   strategy_group Combat do
     priority:50
     conditions do
-      entityKinds:[ability]
+      entityKinds ability
       prominence:[]
-      subtypes:[combat]
+      subtypes combat
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_magic.id weight:1
@@ -1389,15 +1389,15 @@ profile nightshelf_artifacts do
   culture_id nightshelf.id
   name:"Nightshelf Artifacts"
   isDefault:false
-  entityKinds:[artifact]
+  entityKinds artifact
   strategy_group "Anomaly-Born Artifacts" do
     priority:65
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[anomaly_born]
+      tags anomaly_born
       tagMatchAll:false
     end
     strategy grammar nightshelf_artifact.id weight:1
@@ -1405,11 +1405,11 @@ profile nightshelf_artifacts do
   strategy_group "Ancient Relics" do
     priority:60
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[relic]
+      subtypes relic
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar ancient_relic.id weight:0.4
@@ -1418,11 +1418,11 @@ profile nightshelf_artifacts do
   strategy_group Instruments do
     priority:55
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[instrument]
+      subtypes instrument
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_instrument.id weight:1
@@ -1430,11 +1430,11 @@ profile nightshelf_artifacts do
   strategy_group "Artifact Names" do
     priority:50
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_artifact.id weight:1
@@ -1454,15 +1454,15 @@ end
 
 profile nightshelf_factions do
   culture_id nightshelf.id
-  entityKinds:[faction]
+  entityKinds faction
   strategy_group Conditional do
     priority:50
     conditions do
-      entityKinds:[faction]
+      entityKinds faction
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_faction.id weight:0.85
@@ -1471,11 +1471,11 @@ profile nightshelf_factions do
   strategy_group "Region Names" do
     priority:60
     conditions do
-      entityKinds:[faction]
+      entityKinds faction
       prominence:[]
-      subtypes:[region]
+      subtypes region
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_region.id weight:1
@@ -1486,15 +1486,15 @@ profile nightshelf_locations do
   culture_id nightshelf.id
   name:"Nightshelf Locations"
   isDefault:false
-  entityKinds:[location]
+  entityKinds location
   strategy_group "Region Names" do
     priority:50
     conditions do
-      entityKinds:[location]
+      entityKinds location
       prominence:[]
-      subtypes:[region]
+      subtypes region
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy phonotactic nightshelf_domain.id weight:1
@@ -1502,11 +1502,11 @@ profile nightshelf_locations do
   strategy_group "Location Names" do
     priority:0
     conditions do
-      entityKinds:[location]
+      entityKinds location
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_location.id weight:1
@@ -1517,15 +1517,15 @@ profile nightshelf_npcs do
   culture_id nightshelf.id
   name:"Nightshelf NPCs"
   isDefault:false
-  entityKinds:[npc]
+  entityKinds npc
   strategy_group "Legendary Heroes" do
     priority:75
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[mythic]
-      subtypes:[hero]
+      subtypes hero
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_hero_legendary.id weight:0.7
@@ -1534,11 +1534,11 @@ profile nightshelf_npcs do
   strategy_group Heroes do
     priority:70
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[hero]
+      subtypes hero
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_hero_npc.id weight:0.6
@@ -1547,11 +1547,11 @@ profile nightshelf_npcs do
   strategy_group "Mayors and Leaders" do
     priority:68
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[mayor]
+      subtypes mayor
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_noble_npc.id weight:1
@@ -1559,11 +1559,11 @@ profile nightshelf_npcs do
   strategy_group Merchants do
     priority:65
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[merchant]
+      subtypes merchant
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_merchant_npc.id weight:0.7
@@ -1572,11 +1572,11 @@ profile nightshelf_npcs do
   strategy_group "Outlaws and Criminals" do
     priority:65
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[outlaw]
+      subtypes outlaw
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_outlaw_npc.id weight:0.8
@@ -1585,11 +1585,11 @@ profile nightshelf_npcs do
   strategy_group "Elite NPCs" do
     priority:60
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[mythic renowned]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_elite_npc.id weight:0.6
@@ -1598,11 +1598,11 @@ profile nightshelf_npcs do
   strategy_group "Region Names" do
     priority:55
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[region]
+      subtypes region
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_region.id weight:1
@@ -1610,11 +1610,11 @@ profile nightshelf_npcs do
   strategy_group "Default NPC Names" do
     priority:0
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_npc.id weight:0.35
@@ -1629,15 +1629,15 @@ profile nightshelf_occurrences do
   culture_id nightshelf.id
   name:"Nightshelf Occurrences"
   isDefault:false
-  entityKinds:[occurrence]
+  entityKinds occurrence
   strategy_group "Wars and Conflicts" do
     priority:60
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[war conflict]
+      subtypes war conflict
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_war_name.id weight:1
@@ -1645,11 +1645,11 @@ profile nightshelf_occurrences do
   strategy_group Disasters do
     priority:60
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[disaster]
+      subtypes disaster
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_disaster_name.id weight:1
@@ -1657,11 +1657,11 @@ profile nightshelf_occurrences do
   strategy_group "Celebrations and Memorials" do
     priority:60
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[celebration memorial social]
+      subtypes celebration memorial social
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_holidays.id weight:1
@@ -1669,11 +1669,11 @@ profile nightshelf_occurrences do
   strategy_group "Succession Crises" do
     priority:55
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[succession_crisis]
+      subtypes succession_crisis
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_war_name.id weight:0.6
@@ -1685,15 +1685,15 @@ profile nightshelf_rules do
   culture_id nightshelf.id
   name:"Nightshelf Rules"
   isDefault:false
-  entityKinds:[rule]
+  entityKinds rule
   strategy_group Holidays do
     priority:60
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[social]
+      subtypes social
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_holidays.id weight:1
@@ -1701,11 +1701,11 @@ profile nightshelf_rules do
   strategy_group Memorials do
     priority:55
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[memorial]
+      subtypes memorial
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_holidays.id weight:0.6
@@ -1714,11 +1714,11 @@ profile nightshelf_rules do
   strategy_group Ideology do
     priority:55
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[ideology]
+      subtypes ideology
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_magic.id weight:1
@@ -1726,11 +1726,11 @@ profile nightshelf_rules do
   strategy_group Laws do
     priority:50
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[law]
+      subtypes law
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_magic.id weight:0.85
@@ -1739,11 +1739,11 @@ profile nightshelf_rules do
   strategy_group "Region Names" do
     priority:60
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[region]
+      subtypes region
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar nightshelf_region.id weight:1
@@ -1754,15 +1754,15 @@ profile orca_artifacts do
   culture_id orca.id
   name:"Orca Artifacts"
   isDefault:false
-  entityKinds:[artifact]
+  entityKinds artifact
   strategy_group "Anomaly-Born Artifacts" do
     priority:65
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[anomaly_born]
+      tags anomaly_born
       tagMatchAll:false
     end
     strategy grammar orca_artifact.id weight:1
@@ -1770,11 +1770,11 @@ profile orca_artifacts do
   strategy_group "Ancient Relics" do
     priority:60
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[relic]
+      subtypes relic
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar ancient_relic.id weight:0.4
@@ -1783,11 +1783,11 @@ profile orca_artifacts do
   strategy_group Instruments do
     priority:55
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[instrument]
+      subtypes instrument
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_instrument.id weight:1
@@ -1795,11 +1795,11 @@ profile orca_artifacts do
   strategy_group "Artifact Names" do
     priority:50
     conditions do
-      entityKinds:[artifact]
+      entityKinds artifact
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_artifact.id weight:1
@@ -1810,15 +1810,15 @@ profile orca_combat_techs do
   culture_id orca.id
   name:"Orca Abilities"
   isDefault:false
-  entityKinds:[ability]
+  entityKinds ability
   strategy_group "Meta-Entity Schools" do
     priority:80
     conditions do
-      entityKinds:[ability]
+      entityKinds ability
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[meta-entity]
+      tags meta-entity
       tagMatchAll:false
     end
     strategy grammar orca_meta_ability.id weight:1
@@ -1826,11 +1826,11 @@ profile orca_combat_techs do
   strategy_group "Combat Tech" do
     priority:60
     conditions do
-      entityKinds:[ability]
+      entityKinds ability
       prominence:[]
-      subtypes:[combat]
+      subtypes combat
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_combat_tech.id weight:1
@@ -1858,15 +1858,15 @@ profile orca_factions do
   culture_id orca.id
   name:"Orca Factions"
   isDefault:false
-  entityKinds:[faction]
+  entityKinds faction
   strategy_group "Faction Names" do
     priority:50
     conditions do
-      entityKinds:[faction]
+      entityKinds faction
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_faction.id weight:0.55
@@ -1876,11 +1876,11 @@ profile orca_factions do
   strategy_group "Region Names" do
     priority:60
     conditions do
-      entityKinds:[faction]
+      entityKinds faction
       prominence:[]
-      subtypes:[region]
+      subtypes region
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_region.id weight:1
@@ -1891,15 +1891,15 @@ profile orca_locations do
   culture_id orca.id
   name:"Orca Locations"
   isDefault:false
-  entityKinds:[location]
+  entityKinds location
   strategy_group "Location Names" do
     priority:50
     conditions do
-      entityKinds:[location]
+      entityKinds location
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_location.id weight:0.6
@@ -1911,15 +1911,15 @@ profile orca_npc_names do
   culture_id orca.id
   name:"Orca NPCs"
   isDefault:false
-  entityKinds:[npc]
+  entityKinds npc
   strategy_group "Legendary Heroes" do
     priority:75
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[mythic]
-      subtypes:[hero]
+      subtypes hero
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_hero_legendary.id weight:0.7
@@ -1928,11 +1928,11 @@ profile orca_npc_names do
   strategy_group Heroes do
     priority:70
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[hero]
+      subtypes hero
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_hero_npc.id weight:0.6
@@ -1941,11 +1941,11 @@ profile orca_npc_names do
   strategy_group "Chieftains and Mayors" do
     priority:68
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[mayor]
+      subtypes mayor
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_chieftain_npc.id weight:0.7
@@ -1954,11 +1954,11 @@ profile orca_npc_names do
   strategy_group Merchants do
     priority:65
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[merchant]
+      subtypes merchant
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_npc.id weight:0.5
@@ -1967,11 +1967,11 @@ profile orca_npc_names do
   strategy_group "Outlaws and Criminals" do
     priority:65
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[outlaw]
+      subtypes outlaw
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_outlaw_npc.id weight:0.8
@@ -1980,11 +1980,11 @@ profile orca_npc_names do
   strategy_group "Elite NPCs" do
     priority:60
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[mythic renowned]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_hero_npc.id weight:0.5
@@ -1993,11 +1993,11 @@ profile orca_npc_names do
   strategy_group "Region Names" do
     priority:55
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[region]
+      subtypes region
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_region.id weight:1
@@ -2005,11 +2005,11 @@ profile orca_npc_names do
   strategy_group "Default NPC Names" do
     priority:0
     conditions do
-      entityKinds:[npc]
+      entityKinds npc
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_npc.id weight:0.5
@@ -2022,15 +2022,15 @@ profile orca_occurrences do
   culture_id orca.id
   name:"Orca Occurrences"
   isDefault:false
-  entityKinds:[occurrence]
+  entityKinds occurrence
   strategy_group "Wars and Conflicts" do
     priority:60
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[war conflict]
+      subtypes war conflict
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_war_name.id weight:1
@@ -2038,11 +2038,11 @@ profile orca_occurrences do
   strategy_group Disasters do
     priority:60
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[disaster]
+      subtypes disaster
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_disaster_name.id weight:1
@@ -2050,11 +2050,11 @@ profile orca_occurrences do
   strategy_group Celebrations do
     priority:60
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[celebration]
+      subtypes celebration
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_celebration.id weight:1
@@ -2062,11 +2062,11 @@ profile orca_occurrences do
   strategy_group "Succession Crises" do
     priority:55
     conditions do
-      entityKinds:[occurrence]
+      entityKinds occurrence
       prominence:[]
-      subtypes:[succession_crisis]
+      subtypes succession_crisis
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_war_name.id weight:0.7
@@ -2078,15 +2078,15 @@ profile orca_rules do
   culture_id orca.id
   name:"Orca Rules"
   isDefault:false
-  entityKinds:[rule]
+  entityKinds rule
   strategy_group "Laws and Traditions" do
     priority:50
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[]
+      subtypes none
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_law.id weight:0.55
@@ -2096,11 +2096,11 @@ profile orca_rules do
   strategy_group "Region Names" do
     priority:60
     conditions do
-      entityKinds:[rule]
+      entityKinds rule
       prominence:[]
-      subtypes:[region]
+      subtypes region
       subtypeMatchAll:false
-      tags:[]
+      tags none
       tagMatchAll:false
     end
     strategy grammar orca_region.id weight:1
@@ -2261,7 +2261,7 @@ lexeme_spec orca_superlatives do
 end
 
 lexeme_list ancient_relic_epithets do
-  culture_id [aurora-stack.id nightshelf.id orca.id]
+  culture_id aurora-stack.id nightshelf.id orca.id
   description "Grandiose epithets for ancient alien relics"
   source manual
   entry Apocalypse
@@ -2287,7 +2287,7 @@ lexeme_list ancient_relic_epithets do
 end
 
 lexeme_list ancient_relic_types do
-  culture_id [aurora-stack.id nightshelf.id orca.id]
+  culture_id aurora-stack.id nightshelf.id orca.id
   description "Weapon/device types for ancient alien relics"
   source manual
   entry Cannon

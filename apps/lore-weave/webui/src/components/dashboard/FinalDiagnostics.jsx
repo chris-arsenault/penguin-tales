@@ -115,6 +115,9 @@ function RelationshipBreakdownTab({ relationshipBreakdown }) {
 }
 
 function AgentsTab({ catalystStats }) {
+  const [showUnused, setShowUnused] = useState(false);
+  const unusedCount = catalystStats.unusedActions?.length || 0;
+
   return (
     <div>
       <div className="lw-metric-grid">
@@ -158,6 +161,32 @@ function AgentsTab({ catalystStats }) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {unusedCount > 0 && (
+        <div style={{ marginTop: '16px' }}>
+          <div
+            className="lw-unused-header"
+            onClick={() => setShowUnused(!showUnused)}
+          >
+            <span className="lw-unused-toggle">{showUnused ? '▼' : '▶'}</span>
+            <span className="lw-unused-title">Unused Actions ({unusedCount})</span>
+          </div>
+          {showUnused && (
+            <div className="lw-unused-list">
+              {catalystStats.unusedActions.map(action => (
+                <div key={action.actionId} className="lw-template-item" style={{ borderLeft: '3px solid var(--lw-text-muted)' }}>
+                  <span className="lw-template-name" style={{ width: 'auto', flex: 1 }}>
+                    {action.actionName}
+                    <span style={{ marginLeft: '8px', fontSize: '11px', color: 'var(--lw-text-muted)' }}>
+                      ({action.actionId})
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

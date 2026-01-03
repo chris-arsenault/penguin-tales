@@ -7,7 +7,7 @@ action artifact_attracts_restorer "The Relic Calls" do
   end
   target choose npc do
     pick weighted
-    subtype in [mayor merchant hero]
+    subtype in mayor merchant hero
     filter matches_culture actor
     status alive
   end
@@ -32,7 +32,7 @@ action artifact_enshrines_tradition "Relic Enshrines Tradition" do
   end
   target choose rule do
     pick random
-    subtype in [ideology law social memorial]
+    subtype in ideology law social memorial
     filter matches_culture actor
     filter lacks_relationship central_to with actor
   end
@@ -173,7 +173,7 @@ action corrupt_location "Corrupt Location" do
   end
   actor instigator do
     from actor via practitioner_of dst
-    kinds [npc faction]
+    kinds npc faction
     pick random
   end
   target choose location do
@@ -227,8 +227,8 @@ action echo_occurrence "Echo Occurrence" do
   description "An ability resonates with a major event and becomes legend"
   actor choose ability do
     pick random
-    subtype in [magic combat technology]
-    status in [active discovered emergent]
+    subtype in magic combat technology
+    status in active discovered emergent
   end
   actor when do
     relationship_count practitioner_of dst >= 1
@@ -236,7 +236,7 @@ action echo_occurrence "Echo Occurrence" do
   end
   target choose occurrence do
     pick random
-    subtype in [war disaster celebration succession_crisis]
+    subtype in war disaster celebration succession_crisis
     filter lacks_relationship derived_from with actor
     status active
   end
@@ -355,7 +355,7 @@ action ideology_conquers "Ideology Conquers" do
   description "A powerful ideology spreads to claim new believers among the factions"
   actor choose rule do
     pick random
-    subtype in [ideology law]
+    subtype in ideology law
     minProminence marginal
   end
   actor when do
@@ -386,7 +386,7 @@ action instrument_blesses_listener "Instrument Blesses" do
   end
   target choose npc do
     pick random
-    subtype in [merchant outlaw mayor]
+    subtype in merchant outlaw mayor
     filter lacks_tag blessed
     status alive
   end
@@ -463,7 +463,7 @@ action manifest_magic "Manifest Magic" do
   end
   actor instigator do
     from actor via practitioner_of dst
-    kinds [npc faction]
+    kinds npc faction
     pick random
   end
   target choose location do
@@ -484,12 +484,12 @@ action master_ability "Master Ability" do
   description "An NPC studies and masters a notable ability"
   actor choose npc do
     pick random
-    subtype in [hero mayor merchant outlaw]
+    subtype in hero mayor merchant outlaw
     status alive
   end
   target choose ability do
     pick random
-    status in [active discovered emergent]
+    status in active discovered emergent
     filter lacks_relationship practitioner_of with actor
     filter matches_culture actor
   end
@@ -508,7 +508,7 @@ action occurrence_marks_artifact "Event Marks Relic" do
   description "A significant event leaves its memory upon an artifact, making it historically significant"
   actor choose occurrence do
     pick random
-    subtype in [war disaster celebration succession_crisis]
+    subtype in war disaster celebration succession_crisis
     minProminence marginal
     status active
   end
@@ -679,7 +679,7 @@ action steal_artifact "Steal Artifact" do
   description "An outlaw steals an artifact from a faction or location"
   actor choose npc do
     pick random
-    subtype in [outlaw orca]
+    subtype in outlaw orca
     status alive
   end
   target choose artifact do
@@ -707,7 +707,7 @@ action steal_foreign_art "Steal Foreign Art" do
   description "An outsider steals knowledge from another culture, forfeiting their right to lead"
   actor choose npc do
     pick random
-    subtype in [outlaw merchant mayor]
+    subtype in outlaw merchant mayor
     status alive
   end
   actor when do
@@ -715,7 +715,7 @@ action steal_foreign_art "Steal Foreign Art" do
   end
   target choose ability do
     pick random
-    status in [active discovered emergent]
+    status in active discovered emergent
     filter lacks_relationship practitioner_of with actor
     filter not_matches_culture actor
   end
@@ -852,12 +852,12 @@ action tradition_commemorates_event "Tradition Commemorates Event" do
   description "A cultural tradition begins commemorating a significant event"
   actor choose rule do
     pick random
-    subtype in [ideology law social memorial]
+    subtype in ideology law social memorial
     minProminence marginal
   end
   target choose occurrence do
     pick random
-    subtype in [war disaster celebration succession_crisis]
+    subtype in war disaster celebration succession_crisis
     filter matches_culture actor
     filter lacks_relationship commemorates with actor
   end

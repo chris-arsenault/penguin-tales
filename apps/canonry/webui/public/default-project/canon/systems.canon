@@ -1,234 +1,1108 @@
 system thresholdTrigger ability_fade "Ability Fade" do
-  enabled:true
-  config:{ description:"Abilities without practitioners gradually lose prominence" conditions:[{ type:relationship_count relationshipKind:practitioner_of direction:dst max:0 } { type:time_elapsed minTicks:25 since:created } { type:random_chance chance:0.35 }] actions:[{ type:adjust_prominence delta:-0.15 entity:$self }] clusterMode:individual throttleChance:0.2 selection:{ strategy:by_kind kind:ability statuses:[active discovered emergent] } }
+  enabled true
+  description "Abilities without practitioners gradually lose prominence"
+  selection do
+    pick random
+    kind ability
+    status in active discovered emergent
+  end
+  condition relationship_count practitioner_of dst lte 0
+  condition time_elapsed 25 since created
+  condition random_chance 0.35
+  actions do
+    adjust_prominence self -0.15
+  end
+  cluster_mode individual
+  throttle 0.2
 end
 
 system thresholdTrigger alliance_defense_call "Alliance Defense Call" do
-  enabled:true
-  config:{ description:"When an allied faction is at war, allies consider joining the fight to honor their pact" conditions:[{ type:relationship_exists relationshipKind:allied_with direction:both } { type:relationship_count relationshipKind:at_war_with direction:both max:0 } { type:graph_path assert:{ check:exists path:[{ via:allied_with direction:any targetKind:faction targetSubtype:any } { via:at_war_with direction:any targetKind:faction targetSubtype:any }] } } { type:random_chance chance:0.25 }] variables:{ "$ally":{ select:{ from:{ relatedTo:$self relationshipKind:allied_with direction:both } kind:faction filters:[{ type:has_relationship kind:at_war_with direction:both }] pickStrategy:random } required:true } "$ally_enemy":{ select:{ from:{ relatedTo:$ally relationshipKind:at_war_with direction:both } kind:faction filters:[{ type:lacks_relationship kind:allied_with with:$self }] pickStrategy:random } required:true } } actions:[{ type:create_relationship kind:at_war_with src:$self dst:$ally_enemy strength:0.6 bidirectional:true } { type:set_tag tag:honor_bound value:true entity:$self } { type:set_tag tag:conflict value:true entity:$self } { type:adjust_prominence delta:0.25 entity:$self }] clusterMode:individual throttleChance:0.4 pressureChanges:{ harmony:-3 } selection:{ strategy:by_kind kind:faction status:active } }
+  enabled true
+  description "When an allied faction is at war, allies consider joining the fight to honor their pact"
+  selection do
+    pick random
+    kind faction
+    status active
+  end
+  condition relationship_exists allied_with both
+  condition relationship_count at_war_with both lte 0
+  path exists do
+    step allied_with any faction any
+    step at_war_with any faction any
+  end
+  condition random_chance 0.25
+  let ally do
+    from self via allied_with both
+    kind faction
+    pick random
+    filter has_relationship at_war_with direction both
+    required true
+  end
+  let ally_enemy do
+    from ally via at_war_with both
+    kind faction
+    pick random
+    filter lacks_relationship allied_with with self
+    required true
+  end
+  actions do
+    rel at_war_with self -> ally_enemy strength:0.6 bidirectional:true
+    set_tag self honor_bound true
+    set_tag self conflict true
+    adjust_prominence self 0.25
+  end
+  cluster_mode individual
+  throttle 0.4
+  pressure harmony -3
 end
 
 system thresholdTrigger alliance_dissolution "Alliance Dissolution" do
-  enabled:true
-  config:{ description:"Oath breakers eventually lose their alliances as trust erodes completely" conditions:[{ type:tag_exists tag:oath_breaker } { type:relationship_exists relationshipKind:allied_with direction:both } { type:time_elapsed minTicks:3 since:created } { type:random_chance chance:0.4 }] variables:{ "$former_ally":{ select:{ from:{ relatedTo:$self relationshipKind:allied_with direction:both } kind:faction pickStrategy:random } required:true } } actions:[{ type:archive_relationship entity:$self relationshipKind:allied_with with:$former_ally } { type:remove_tag entity:$self tag:honor_bound }] clusterMode:individual throttleChance:0.4 selection:{ strategy:by_kind kind:faction status:active } }
+  enabled true
+  description "Oath breakers eventually lose their alliances as trust erodes completely"
+  selection do
+    pick random
+    kind faction
+    status active
+  end
+  condition tag_exists oath_breaker
+  condition relationship_exists allied_with both
+  condition time_elapsed 3 since created
+  condition random_chance 0.4
+  let former_ally do
+    from self via allied_with both
+    kind faction
+    pick random
+    required true
+  end
+  actions do
+    archive_relationship self allied_with former_ally
+    remove_tag self honor_bound
+  end
+  cluster_mode individual
+  throttle 0.4
 end
 
 system connectionEvolution alliance_formation "Alliance Formation" do
-  enabled:true
-  config:{ description:"Factions practicing the same abilities may form alliances" metric:{ type:shared_relationship sharedRelationshipKind:practitioner_of sharedDirection:src } rules:[{ condition:{ operator:">=" threshold:1 } probability:0.3 action:{ type:create_relationship kind:allied_with src:$member dst:$member2 strength:0.5 bidirectional:true } betweenMatching:true }] pairExcludeRelationships:[at_war_with betrayed_by] pairComponentSizeLimit:{ relationshipKinds:[allied_with] max:6 } throttleChance:0.15 pressureChanges:{ harmony:5 } selection:{ strategy:by_kind kind:faction } }
+  enabled true
+  description "Factions practicing the same abilities may form alliances"
+  selection do
+    pick random
+    kind faction
+  end
+  metric shared_relationship do
+    relationship practitioner_of
+    direction src
+  end
+  rule do
+    threshold gte 1
+    probability 0.3
+    between_matching true
+    rel allied_with member -> member2 strength:0.5 bidirectional:true
+  end
+  pair_exclude at_war_with betrayed_by
+  pair_component_limit allied_with max 6
+  throttle 0.15
+  pressure harmony 5
 end
 
 system thresholdTrigger anomaly_activation "Anomaly Surges" do
-  enabled:true
-  config:{ description:"When multiple adjacent anomalies resonate without NPC interference, one surges to an active state capable of crystallizing power." conditions:[{ type:graph_path assert:{ check:count_min count:1 path:[{ via:[adjacent_to contained_by contains] direction:any targetKind:location targetSubtype:any filters:[{ type:has_tag tag:anomaly }] }] } } { type:graph_path assert:{ check:count_max count:0 path:[{ via:[adjacent_to contained_by contains] direction:any targetKind:location targetSubtype:any } { via:resident_of direction:in targetKind:npc targetSubtype:any }] } } { type:random_chance chance:0.2 }] actions:[{ type:set_tag entity:$self tag:active value:true } { type:adjust_prominence entity:$self delta:0.3 }] clusterMode:individual throttleChance:0.4 pressureChanges:{ magical_stability:-5 } selection:{ strategy:by_kind kind:location filters:[{ type:has_tag tag:anomaly } { type:has_tag tag:mystical } { type:lacks_tag tag:active } { type:lacks_tag tag:depleted }] } }
+  enabled true
+  description "When multiple adjacent anomalies resonate without NPC interference, one surges to an active state capable of crystallizing power."
+  selection do
+    pick random
+    kind location
+    filter has_tag anomaly
+    filter has_tag mystical
+    filter lacks_tag active
+    filter lacks_tag depleted
+  end
+  path count_min do
+    count 1
+    step [adjacent_to contained_by contains] any location any do
+      filter has_tag anomaly
+    end
+  end
+  path count_max do
+    count 0
+    step [adjacent_to contained_by contains] any location any
+    step resident_of in npc any
+  end
+  condition random_chance 0.2
+  actions do
+    set_tag self active true
+    adjust_prominence self 0.3
+  end
+  cluster_mode individual
+  throttle 0.4
+  pressure magical_stability -5
 end
 
 system connectionEvolution anomaly_mystical_gain "Anomaly Stirs" do
-  enabled:true
-  config:{ description:"Anomalous locations gain mystical qualities over time. NPCs residing nearby dampen this effect through their stabilizing presence." metric:{ type:neighbor_kind_count via:[adjacent_to contained_by contains] viaDirection:both then:resident_of thenDirection:dst kind:npc } rules:[{ condition:{ operator:"<=" threshold:0 } probability:0.25 action:{ type:set_tag tag:mystical value:true entity:$self } } { condition:{ operator:">=" threshold:1 } probability:0.06 action:{ type:set_tag tag:mystical value:true entity:$self } }] throttleChance:0.3 pressureChanges:{ magical_stability:-2 } selection:{ strategy:by_kind kind:location filters:[{ type:has_tag tag:anomaly } { type:lacks_tag tag:mystical }] } }
+  enabled true
+  description "Anomalous locations gain mystical qualities over time. NPCs residing nearby dampen this effect through their stabilizing presence."
+  selection do
+    pick random
+    kind location
+    filter has_tag anomaly
+    filter lacks_tag mystical
+  end
+  metric neighbor_kind_count do
+    kind npc
+    via adjacent_to contained_by contains
+    via_direction both
+    then resident_of
+    then_direction dst
+  end
+  rule do
+    threshold lte 0
+    probability 0.25
+    set_tag self mystical true
+  end
+  rule do
+    threshold gte 1
+    probability 0.06
+    set_tag self mystical true
+  end
+  throttle 0.3
+  pressure magical_stability -2
 end
 
 system thresholdTrigger armed_hero_detector "Armed Hero Detection" do
-  enabled:true
-  config:{ description:"Heroes who own weapons are tagged as armed, enabling them to hunt orcas" conditions:[{ type:graph_path assert:{ check:exists path:[{ via:owned_by direction:in targetKind:artifact targetSubtype:weapon }] } }] actions:[{ type:set_tag tag:armed value:true entity:$self } { type:adjust_prominence delta:0.3 entity:$self }] clusterMode:individual throttleChance:0.1 selection:{ strategy:by_kind kind:npc subtypes:[hero] status:alive filters:[{ type:lacks_tag tag:armed }] } }
+  enabled true
+  description "Heroes who own weapons are tagged as armed, enabling them to hunt orcas"
+  selection do
+    pick random
+    kind npc
+    subtype hero
+    status alive
+    filter lacks_tag armed
+  end
+  path exists do
+    step owned_by in artifact weapon
+  end
+  actions do
+    set_tag self armed true
+    adjust_prominence self 0.3
+  end
+  cluster_mode individual
+  throttle 0.1
 end
 
 system graphContagion artifact_corruption_spread "Artifact Corruption" do
-  enabled:true
-  config:{ description:"Cursed or corrupted artifacts affect their owners" contagion:{ type:tag tag:corrupted } vectors:[{ relationshipKind:owned_by direction:src minStrength:0.3 }] transmission:{ baseRate:0.15 contactMultiplier:0.1 maxProbability:0.5 } infectionAction:{ type:set_tag tag:corrupted value:true entity:$target } throttleChance:0.5 cooldown:10 selection:{ strategy:by_kind kind:artifact filters:[{ type:has_tag tag:corrupted }] } }
+  enabled true
+  description "Cursed or corrupted artifacts affect their owners"
+  selection do
+    pick random
+    kind artifact
+    filter has_tag corrupted
+  end
+  contagion tag corrupted
+  vector owned_by src 0.3
+  transmission 0.15 0.1 0.5
+  infection_action do
+    set_tag target corrupted true
+  end
+  throttle 0.5
+  cooldown 10
 end
 
 system thresholdTrigger artifact_covetousness "Artifact Covetousness" do
-  enabled:true
-  config:{ description:"Factions covet powerful artifacts held in territories they do not control, breeding resentment." selection:{ strategy:by_kind kind:faction status:active } conditions:[{ type:graph_path assert:{ check:exists path:[{ via:practitioner_of direction:out targetKind:ability targetSubtype:any } { via:manifests_at direction:out targetKind:location targetSubtype:any } { via:stored_at direction:in targetKind:artifact targetSubtype:any }] where:[{ type:not_self }] } }] actions:[{ type:modify_pressure pressureId:harmony delta:-1.5 }] clusterMode:individual throttleChance:0.5 }
+  enabled true
+  description "Factions covet powerful artifacts held in territories they do not control, breeding resentment."
+  selection do
+    pick random
+    kind faction
+    status active
+  end
+  path exists do
+    step practitioner_of out ability any
+    step manifests_at out location any
+    step stored_at in artifact any
+    where not_self
+  end
+  actions do
+    mutate pressure harmony -= 1
+  end
+  cluster_mode individual
+  throttle 0.5
 end
 
 system thresholdTrigger artifact_degradation "Artifact Degradation" do
-  enabled:true
-  config:{ description:"Over time, artifacts may become damaged" conditions:[{ type:time_elapsed minTicks:40 } { type:random_chance chance:0.1 }] actions:[{ type:change_status newStatus:damaged entity:$self }] clusterMode:individual throttleChance:0.6 selection:{ strategy:by_kind kind:artifact status:intact } }
+  enabled true
+  description "Over time, artifacts may become damaged"
+  selection do
+    pick random
+    kind artifact
+    status intact
+  end
+  condition time_elapsed 40
+  condition random_chance 0.1
+  actions do
+    change_status self damaged
+  end
+  cluster_mode individual
+  throttle 0.6
 end
 
 system thresholdTrigger artifact_destruction "Artifact Destruction" do
-  enabled:true
-  config:{ description:"Damaged artifacts may be destroyed over time" conditions:[{ type:time_elapsed minTicks:20 } { type:random_chance chance:0.15 }] actions:[{ type:change_status newStatus:destroyed entity:$self }] clusterMode:individual throttleChance:0.7 selection:{ strategy:by_kind kind:artifact status:damaged } }
+  enabled true
+  description "Damaged artifacts may be destroyed over time"
+  selection do
+    pick random
+    kind artifact
+    status damaged
+  end
+  condition time_elapsed 20
+  condition random_chance 0.15
+  actions do
+    change_status self destroyed
+  end
+  cluster_mode individual
+  throttle 0.7
 end
 
 system graphContagion belief_contagion "Ideological Spread" do
-  enabled:true
-  config:{ description:"Models ideological spread through social networks using SIR epidemic model" contagion:{ type:relationship relationshipKind:believer_of } vectors:[{ relationshipKind:believer_of direction:both minStrength:0.3 } { relationshipKind:allied_with direction:both minStrength:0.3 } { relationshipKind:trades_with direction:both minStrength:0.3 } { relationshipKind:at_war_with direction:both minStrength:0.3 } { relationshipKind:splinter_of direction:both minStrength:0.3 }] transmission:{ baseRate:0.25 contactMultiplier:0.1 maxProbability:0.95 } infectionAction:{ type:create_relationship kind:believer_of src:$self dst:$contagion_source strength:0.5 } recovery:{ baseRate:0.02 recoveryBonusTraits:[{ tag:organized bonus:0.12 } { tag:leader bonus:0.12 }] } susceptibilityModifiers:[{ tag:follower modifier:0.3 } { tag:mystical modifier:0.2 } { tag:organized modifier:-0.2 } { tag:leader modifier:-0.2 }] phaseTransitions:[{ toStatus:enacted adoptionThreshold:0.2 descriptionSuffix:"This belief has spread widely and is now established tradition." selection:{ strategy:by_kind kind:rule status:proposed } }] multiSource:{ immunityTagPrefix:immune lowAdoptionThreshold:0.05 lowAdoptionStatus:contested sourceSelection:{ strategy:by_kind kind:rule status:proposed } } selection:{ strategy:by_kind kind:faction } }
+  enabled true
+  description "Models ideological spread through social networks using SIR epidemic model"
+  selection do
+    pick random
+    kind faction
+  end
+  contagion relationship believer_of
+  vector believer_of both 0.3
+  vector allied_with both 0.3
+  vector trades_with both 0.3
+  vector at_war_with both 0.3
+  vector splinter_of both 0.3
+  transmission 0.25 0.1 0.95
+  infection_action do
+    rel believer_of self -> contagion_source strength:0.5
+  end
+  recovery do
+    base_rate 0.02
+    bonus organized 0.12
+    bonus leader 0.12
+  end
+  susceptibility follower 0.3
+  susceptibility mystical 0.2
+  susceptibility organized -0.2
+  susceptibility leader -0.2
+  phase_transition enacted do
+    adoption_threshold 0.2
+    description_suffix "This belief has spread widely and is now established tradition."
+    selection do
+      pick random
+      kind rule
+      status proposed
+    end
+  end
+  multi_source do
+    immunity_tag_prefix immune
+    low_adoption_threshold 0.05
+    low_adoption_status contested
+    source_selection do
+      pick random
+      kind rule
+      status proposed
+    end
+  end
 end
 
 system thresholdTrigger border_friction "Border Friction" do
-  enabled:true
-  config:{ description:"Factions controlling adjacent territories breed tension and reduce harmony." selection:{ strategy:by_kind kind:faction filters:[{ type:has_relationship kind:controls direction:src }] } conditions:[{ type:graph_path assert:{ check:exists path:[{ via:controls direction:out targetKind:location targetSubtype:any } { via:adjacent_to direction:any targetKind:location targetSubtype:any } { via:controls direction:in targetKind:faction targetSubtype:any }] where:[{ type:not_self }] } }] actions:[{ type:modify_pressure pressureId:harmony delta:-2 }] clusterMode:individual throttleChance:0.6 }
+  enabled true
+  description "Factions controlling adjacent territories breed tension and reduce harmony."
+  selection do
+    pick random
+    kind faction
+    filter has_relationship controls direction src
+  end
+  path exists do
+    step controls out location any
+    step adjacent_to any location any
+    step controls in faction any
+    where not_self
+  end
+  actions do
+    mutate pressure harmony -= 1
+  end
+  cluster_mode individual
+  throttle 0.6
 end
 
 system thresholdTrigger cleansed_isolation_decay "Sacred Ground Fades" do
-  enabled:true
-  config:{ description:"Cleansed locations without nearby sanctified neighbors lose their protection as the wards weaken" selection:{ strategy:by_kind kind:location filters:[{ type:has_tag tag:cleansed }] } conditions:[{ type:graph_path assert:{ check:count_max path:[{ via:adjacent_to direction:any targetKind:location targetSubtype:any filters:[{ type:has_tag tag:cleansed }] }] count:0 } }] actions:[{ type:remove_tag entity:$self tag:cleansed } { type:modify_pressure pressureId:magical_stability delta:-2 }] clusterMode:individual throttleChance:0.3 }
+  enabled true
+  description "Cleansed locations without nearby sanctified neighbors lose their protection as the wards weaken"
+  selection do
+    pick random
+    kind location
+    filter has_tag cleansed
+  end
+  path count_max do
+    count 0
+    step adjacent_to any location any do
+      filter has_tag cleansed
+    end
+  end
+  actions do
+    remove_tag self cleansed
+    mutate pressure magical_stability -= 2
+  end
+  cluster_mode individual
+  throttle 0.3
 end
 
 system clusterFormation combat_technique_formation "Combat Technique Formation" do
-  enabled:true
-  config:{ description:"Clusters combat abilities into unified fighting styles. Only top practitioners by prominence become 'masters' with direct links to the meta-ability." runAtEpochEnd:true clustering:{ minSize:5 maxSize:8 criteria:[{ type:shared_relationship weight:5 relationshipKind:practitioner_of direction:dst } { type:same_culture weight:4 } { type:shared_tags weight:2 threshold:0.3 } { type:temporal_proximity weight:1.5 threshold:50 }] minimumScore:5 } metaEntity:{ kind:ability subtypeFromMajority:true status:active prominenceFromSize:{ marginal:3 recognized:4 renowned:6 mythic:9 } additionalTags:[combat-style] descriptionTemplate:"A unified combat tradition encompassing {names}. Mastered by warriors who practice {count} techniques in harmony." } masterSelection:{ filters:[{ type:matches_culture with:$meta }] pickStrategy:weighted maxResults:2 } memberUpdates:[{ type:change_status entity:$member newStatus:subsumed }] postProcess:{ pressureChanges:{ security:2 } } selection:{ strategy:by_kind kind:ability subtypes:[combat] filters:[{ type:lacks_tag tag:meta-entity }] } }
+  enabled true
+  description "Clusters combat abilities into unified fighting styles. Only top practitioners by prominence become 'masters' with direct links to the meta-ability."
+  run_at_epoch_end true
+  selection do
+    pick random
+    kind ability
+    subtype combat
+    filter lacks_tag meta-entity
+  end
+  clustering do
+    min_size 5
+    max_size 8
+    minimum_score 5
+    criterion shared_relationship 5 practitioner_of dst
+    criterion same_culture 4
+    criterion shared_tags 2 0.3
+    criterion temporal_proximity 1.5 50
+  end
+  meta_entity do
+    kind ability
+    subtype_from_majority true
+    status active
+    prominence_from_size marginal 3 recognized 4 renowned 6 mythic 9
+    additional_tags combat-style
+    description_template "A unified combat tradition encompassing {names}. Mastered by warriors who practice {count} techniques in harmony."
+  end
+  master_selection do
+    pick weighted
+    max 2
+    filter matches_culture meta
+  end
+  member_updates do
+    change_status member subsumed
+  end
+  post_process do
+    pressure security 2
+  end
 end
 
 system graphContagion conflict_contagion "Conflict Spread" do
-  enabled:true
-  config:{ description:"Spreads conflicts through alliance networks - allies of enemies become enemies (but not between allies)" contagion:{ type:relationship relationshipKind:at_war_with } vectors:[{ relationshipKind:allied_with direction:both minStrength:0.3 } { relationshipKind:splinter_of direction:both minStrength:0.3 }] transmission:{ baseRate:0.25 contactMultiplier:0.1 maxProbability:0.7 } infectionAction:{ type:create_relationship kind:at_war_with src:$self dst:$source strength:0.4 bidirectional:true } excludeRelationships:[allied_with] throttleChance:0.1 cooldown:4 pressureChanges:{ harmony:-3 } selection:{ strategy:by_kind kind:faction } }
+  enabled true
+  description "Spreads conflicts through alliance networks - allies of enemies become enemies (but not between allies)"
+  selection do
+    pick random
+    kind faction
+  end
+  contagion relationship at_war_with
+  vector allied_with both 0.3
+  vector splinter_of both 0.3
+  transmission 0.25 0.1 0.7
+  infection_action do
+    rel at_war_with self -> source strength:0.4 bidirectional:true
+  end
+  exclude_relationships allied_with
+  throttle 0.1
+  cooldown 4
+  pressure harmony -3
 end
 
 system thresholdTrigger control_collapse "Control Collapse" do
-  enabled:true
-  config:{ description:"When a faction's control over a location weakens below threshold, they lose control entirely" conditions:[{ type:relationship_count relationshipKind:controls direction:src min:1 } { type:random_chance chance:0.25 }] variables:{ "$weak_territory":{ select:{ from:{ relatedTo:$self relationshipKind:controls direction:src } kind:location pickStrategy:random } required:true } } actions:[{ type:archive_relationship entity:$self relationshipKind:controls with:$weak_territory } { type:set_tag tag:contested value:true entity:$weak_territory } { type:set_tag tag:crisis value:true entity:$weak_territory } { type:adjust_prominence delta:-0.25 entity:$self }] clusterMode:individual throttleChance:0.5 pressureChanges:{ security:-3 } selection:{ strategy:by_kind kind:faction status:active } }
+  enabled true
+  description "When a faction's control over a location weakens below threshold, they lose control entirely"
+  selection do
+    pick random
+    kind faction
+    status active
+  end
+  condition relationship_count controls src gte 1
+  condition random_chance 0.25
+  let weak_territory do
+    from self via controls src
+    kind location
+    pick random
+    required true
+  end
+  actions do
+    archive_relationship self controls weak_territory
+    set_tag weak_territory contested true
+    set_tag weak_territory crisis true
+    adjust_prominence self -0.25
+  end
+  cluster_mode individual
+  throttle 0.5
+  pressure security -3
 end
 
 system thresholdTrigger corruption_crisis "Corruption Crisis" do
-  enabled:true
-  config:{ description:"Severely corrupted locations trigger a crisis that kills inhabitants and spreads fear" conditions:[{ type:tag_exists tag:corrupted } { type:graph_path assert:{ check:count_min path:[{ via:occupies direction:in targetKind:npc targetSubtype:any targetStatus:alive }] count:2 } }] actions:[{ type:set_tag entity:$self tag:crisis value:true } { type:modify_pressure pressureId:security delta:-10 } { type:modify_pressure pressureId:magical_stability delta:-5 }] clusterMode:individual throttleChance:0.15 selection:{ strategy:by_kind kind:location filters:[{ type:has_tag tag:corrupted } { type:lacks_tag tag:crisis }] } }
+  enabled true
+  description "Severely corrupted locations trigger a crisis that kills inhabitants and spreads fear"
+  selection do
+    pick random
+    kind location
+    filter has_tag corrupted
+    filter lacks_tag crisis
+  end
+  condition tag_exists corrupted
+  path count_min do
+    count 2
+    step occupies in npc any status alive
+  end
+  actions do
+    set_tag self crisis true
+    mutate pressure security -= 10
+    mutate pressure magical_stability -= 5
+  end
+  cluster_mode individual
+  throttle 0.15
 end
 
 system thresholdTrigger corruption_harm "Corruption Harm" do
-  enabled:true
-  config:{ description:"NPCs residing in corrupted locations are harmed by the corruption - first corrupted, then killed" conditions:[{ type:graph_path assert:{ check:exists path:[{ via:resident_of direction:out targetKind:location targetSubtype:any }] } } { type:random_chance chance:0.08 }] variables:{ "$home":{ select:{ from:{ relatedTo:$self relationshipKind:resident_of direction:src } kind:location filters:[{ type:has_tag tag:corrupted }] } required:true } } actions:[{ type:conditional condition:{ type:tag_exists tag:cursed } thenActions:[{ type:change_status entity:$self newStatus:historical }] elseActions:[{ type:conditional condition:{ type:tag_exists tag:corrupted } thenActions:[{ type:set_tag tag:cursed value:true entity:$self } { type:archive_all_relationships entity:$self relationshipKind:owned_by direction:dst }] elseActions:[{ type:set_tag tag:corrupted value:true entity:$self }] }] }] clusterMode:individual throttleChance:0.5 pressureChanges:{ magical_stability:-2 } selection:{ strategy:by_kind kind:npc status:alive } }
+  enabled true
+  description "NPCs residing in corrupted locations are harmed by the corruption - first corrupted, then killed"
+  selection do
+    pick random
+    kind npc
+    status alive
+  end
+  path exists do
+    step resident_of out location any
+  end
+  condition random_chance 0.08
+  let home do
+    from self via resident_of src
+    kind location
+    pick random
+    filter has_tag corrupted
+    required true
+  end
+  actions do
+    conditional do
+      condition tag_exists cursed
+      then do
+        change_status self historical
+      end
+      else do
+        conditional do
+          condition tag_exists corrupted
+          then do
+            set_tag self cursed true
+            archive_all_relationships self owned_by direction dst
+          end
+          else do
+            set_tag self corrupted true
+          end
+        end
+      end
+    end
+  end
+  cluster_mode individual
+  throttle 0.5
+  pressure magical_stability -2
 end
 
 system tagDiffusion cultural_drift "Cultural Evolution" do
-  enabled:true
-  config:{ description:"Connected colonies become more similar (trade, friendly), isolated colonies diverge (secretive, hidden)" connectionKind:adjacent_to connectionDirection:both convergence:{ tags:[trade friendly central organized resource thriving] minConnections:1 probability:0.3 maxSharedTags:2 } divergence:{ tags:[hidden secretive mystical] maxConnections:0 probability:0.3 } maxTags:10 divergencePressure:{ pressureName:harmony minDivergent:2 delta:-10 } selection:{ strategy:by_kind kind:location subtypes:[colony] } }
+  enabled true
+  description "Connected colonies become more similar (trade, friendly), isolated colonies diverge (secretive, hidden)"
+  selection do
+    pick random
+    kind location
+    subtype colony
+  end
+  connection adjacent_to both
+  convergence tags trade friendly central organized resource thriving min_connections 1 probability 0.3 max_shared_tags 2
+  divergence tags hidden secretive mystical max_connections 0 probability 0.3
+  max_tags 10
+  divergence_pressure harmony 2 -10
 end
 
 system thresholdTrigger depleted_recovery "Anomaly Recovers" do
-  enabled:true
-  config:{ description:"Depleted anomalies slowly recover their potential over time." conditions:[{ type:time_elapsed minTicks:8 since:updated } { type:random_chance chance:0.25 }] actions:[{ type:remove_tag entity:$self tag:depleted }] clusterMode:individual throttleChance:0.5 selection:{ strategy:by_kind kind:location filters:[{ type:has_tag tag:depleted }] } }
+  enabled true
+  description "Depleted anomalies slowly recover their potential over time."
+  selection do
+    pick random
+    kind location
+    filter has_tag depleted
+  end
+  condition time_elapsed 8 since updated
+  condition random_chance 0.25
+  actions do
+    remove_tag self depleted
+  end
+  cluster_mode individual
+  throttle 0.5
 end
 
 system thresholdTrigger devout_believer_detector "Devout Believer Detection" do
-  enabled:true
-  config:{ description:"Factions with strong belief relationships are marked as devout" conditions:[{ type:relationship_count relationshipKind:believer_of direction:src min:1 } { type:lacks_tag tag:devout }] actions:[{ type:set_tag tag:devout value:true entity:$self } { type:adjust_prominence delta:0.25 entity:$self }] clusterMode:individual throttleChance:0.2 selection:{ strategy:by_kind kind:faction status:active } }
+  enabled true
+  description "Factions with strong belief relationships are marked as devout"
+  selection do
+    pick random
+    kind faction
+    status active
+  end
+  condition relationship_count believer_of src gte 1
+  condition lacks_tag devout
+  actions do
+    set_tag self devout true
+    adjust_prominence self 0.25
+  end
+  cluster_mode individual
+  throttle 0.2
 end
 
 system eraSpawner era_spawner "Era Initialization" do
-  enabled:true
-  config:{ description:"Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras." ticksPerEra:25 }
+  enabled true
+  description "Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras."
+  ticks_per_era 25
 end
 
 system eraTransition era_transition "Era Progression" do
-  enabled:true
-  config:{ description:"Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future → current → historical." prominenceSnapshot:{ enabled:false minProminence:renowned } }
+  enabled true
+  description "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future → current → historical."
+  prominence_snapshot enabled false min_prominence renowned
 end
 
 system thresholdTrigger heresy_war_trigger "Heresy War" do
-  enabled:true
-  config:{ description:"Devout factions are more likely to declare war on factions with apostate or different beliefs" conditions:[{ type:tag_exists tag:devout } { type:relationship_count relationshipKind:at_war_with direction:both max:0 } { type:random_chance chance:0.12 }] variables:{ "$heretic":{ select:{ from:graph kind:faction filters:[{ type:has_tag tag:apostate } { type:lacks_relationship kind:at_war_with with:$self } { type:lacks_relationship kind:allied_with with:$self }] pickStrategy:random } required:true } } actions:[{ type:create_relationship kind:at_war_with src:$self dst:$heretic strength:0.7 bidirectional:true } { type:set_tag tag:conflict value:true entity:$self } { type:set_tag tag:religious_war value:true entity:$self }] clusterMode:individual throttleChance:0.5 pressureChanges:{ harmony:-5 } selection:{ strategy:by_kind kind:faction status:active } }
+  enabled true
+  description "Devout factions are more likely to declare war on factions with apostate or different beliefs"
+  selection do
+    pick random
+    kind faction
+    status active
+  end
+  condition tag_exists devout
+  condition relationship_count at_war_with both lte 0
+  condition random_chance 0.12
+  let heretic do
+    from graph
+    kind faction
+    pick random
+    filter has_tag apostate
+    filter lacks_relationship at_war_with with self
+    filter lacks_relationship allied_with with self
+    required true
+  end
+  actions do
+    rel at_war_with self -> heretic strength:0.7 bidirectional:true
+    set_tag self conflict true
+    set_tag self religious_war true
+  end
+  cluster_mode individual
+  throttle 0.5
+  pressure harmony -1
 end
 
 system thresholdTrigger heroic_sacrifice "Heroic Sacrifice" do
-  enabled:true
-  config:{ description:"Heroes caught in wars occasionally fall, their weapons becoming legendary" conditions:[{ type:or conditions:[{ type:graph_path assert:{ check:exists path:[{ via:member_of direction:out targetKind:faction targetSubtype:any } { via:at_war_with direction:any targetKind:faction targetSubtype:any }] } } { type:graph_path assert:{ check:exists path:[{ via:leader_of direction:out targetKind:faction targetSubtype:any } { via:at_war_with direction:any targetKind:faction targetSubtype:any }] } }] } { type:random_chance chance:0.04 }] actions:[{ type:change_status entity:$self newStatus:historical } { type:for_each_related relationship:owned_by direction:in targetKind:artifact actions:[{ type:set_tag entity:$related tag:legendary value:true } { type:set_tag entity:$related tag:hero_relic value:true } { type:adjust_prominence delta:0.4 entity:$related }] }] clusterMode:individual throttleChance:0.3 selection:{ strategy:by_kind kind:npc status:alive subtypes:[hero] } }
+  enabled true
+  description "Heroes caught in wars occasionally fall, their weapons becoming legendary"
+  selection do
+    pick random
+    kind npc
+    subtype hero
+    status alive
+  end
+  when any do
+    path exists do
+      step member_of out faction any
+      step at_war_with any faction any
+    end
+    path exists do
+      step leader_of out faction any
+      step at_war_with any faction any
+    end
+  end
+  condition random_chance 0.04
+  actions do
+    change_status self historical
+    for_each_related owned_by in artifact do
+      set_tag related legendary true
+      set_tag related hero_relic true
+      adjust_prominence related 0.4
+    end
+  end
+  cluster_mode individual
+  throttle 0.3
 end
 
 system thresholdTrigger ice_memory_witness "The Ice Remembers" do
-  enabled:true
-  config:{ description:"The ice witnesses deeds at significant locations, annotating those present with echoes" selection:{ strategy:by_kind kind:npc subtypes:[hero merchant outlaw mayor orca] status:alive } conditions:[{ type:graph_path assert:{ check:exists path:[{ via:resident_of direction:out targetKind:location targetSubtype:any }] } } { type:prominence max:marginal }] actions:[{ type:set_tag entity:$self tag:ice_witnessed value:true } { type:adjust_prominence entity:$self delta:0.2 }] throttleChance:0.3 }
+  enabled true
+  description "The ice witnesses deeds at significant locations, annotating those present with echoes"
+  selection do
+    pick random
+    kind npc
+    subtype in hero merchant outlaw mayor orca
+    status alive
+  end
+  path exists do
+    step resident_of out location any
+  end
+  condition prominence max marginal
+  actions do
+    set_tag self ice_witnessed true
+    adjust_prominence self 0.2
+  end
+  throttle 0.3
 end
 
 system clusterFormation legal_code_formation "Legal Code Formation" do
-  enabled:true
-  config:{ description:"Clusters rules into unified legal codes with governance factions" runAtEpochEnd:true clustering:{ minSize:5 criteria:[{ type:same_culture weight:5 } { type:temporal_proximity weight:2 threshold:40 }] minimumScore:5 } metaEntity:{ kind:rule subtypeFromMajority:true status:enacted prominenceFromSize:{ marginal:4 recognized:5 renowned:7 mythic:10 } additionalTags:[] descriptionTemplate:"A unified legal system encompassing {names}. Codified from {count} related rules." } postProcess:{ createGovernanceFaction:true governanceFactionSubtype:political governanceRelationship:related_to pressureChanges:{ security:5 } } selection:{ strategy:by_kind kind:rule subtypes:[law] } }
+  enabled true
+  description "Clusters rules into unified legal codes with governance factions"
+  run_at_epoch_end true
+  selection do
+    pick random
+    kind rule
+    subtype law
+  end
+  clustering do
+    min_size 5
+    minimum_score 5
+    criterion same_culture 5
+    criterion temporal_proximity 2 40
+  end
+  meta_entity do
+    kind rule
+    subtype_from_majority true
+    status enacted
+    prominence_from_size marginal 4 recognized 5 renowned 7 mythic 10
+    description_template "A unified legal system encompassing {names}. Codified from {count} related rules."
+  end
+  post_process do
+    create_governance_faction true
+    governance_faction_subtype political
+    governance_relationship related_to
+    pressure security 5
+  end
 end
 
 system clusterFormation magic_school_formation "Magic School Formation" do
-  enabled:true
-  config:{ description:"Clusters magic abilities into unified schools. Only top practitioners by prominence become 'masters' with direct links to the meta-ability." runAtEpochEnd:true clustering:{ minSize:5 maxSize:8 criteria:[{ type:shared_relationship weight:5 relationshipKind:practitioner_of direction:dst } { type:same_culture weight:4 } { type:shared_tags weight:2 threshold:0.3 } { type:temporal_proximity weight:1.5 threshold:50 }] minimumScore:5 } metaEntity:{ kind:ability subtypeFromMajority:true status:active prominenceFromSize:{ marginal:3 recognized:4 renowned:6 mythic:9 } additionalTags:[] descriptionTemplate:"A unified tradition encompassing {names}. Formed from {count} related abilities practiced by multiple penguins." } masterSelection:{ filters:[{ type:matches_culture with:$meta }] pickStrategy:weighted maxResults:2 } memberUpdates:[{ type:change_status entity:$member newStatus:subsumed }] postProcess:{ pressureChanges:{ security:2 } } selection:{ strategy:by_kind kind:ability subtypes:[magic] filters:[{ type:lacks_tag tag:meta-entity }] } }
+  enabled true
+  description "Clusters magic abilities into unified schools. Only top practitioners by prominence become 'masters' with direct links to the meta-ability."
+  run_at_epoch_end true
+  selection do
+    pick random
+    kind ability
+    subtype magic
+    filter lacks_tag meta-entity
+  end
+  clustering do
+    min_size 5
+    max_size 8
+    minimum_score 5
+    criterion shared_relationship 5 practitioner_of dst
+    criterion same_culture 4
+    criterion shared_tags 2 0.3
+    criterion temporal_proximity 1.5 50
+  end
+  meta_entity do
+    kind ability
+    subtype_from_majority true
+    status active
+    prominence_from_size marginal 3 recognized 4 renowned 6 mythic 9
+    description_template "A unified tradition encompassing {names}. Formed from {count} related abilities practiced by multiple penguins."
+  end
+  master_selection do
+    pick weighted
+    max 2
+    filter matches_culture meta
+  end
+  member_updates do
+    change_status member subsumed
+  end
+  post_process do
+    pressure security 2
+  end
 end
 
 system connectionEvolution merchant_prosperity "Trade Network Growth" do
-  enabled:true
-  config:{ description:"Trade-connected factions controlling thriving colonies gain influence" metric:{ type:connection_count relationshipKinds:[controls] direction:src } rules:[{ condition:{ operator:">=" threshold:1 } probability:0.7 action:{ type:adjust_prominence delta:0.2 entity:$self } } { condition:{ operator:"<=" threshold:0 } probability:0.8 action:{ type:adjust_prominence delta:-0.15 entity:$self } }] throttleChance:0.15 selection:{ strategy:by_kind kind:faction subtypes:[company] } }
+  enabled true
+  description "Trade-connected factions controlling thriving colonies gain influence"
+  selection do
+    pick random
+    kind faction
+    subtype company
+  end
+  metric connection_count do
+    relationships [controls]
+    direction src
+  end
+  rule do
+    threshold gte 1
+    probability 0.7
+    adjust_prominence self 0.2
+  end
+  rule do
+    threshold lte 0
+    probability 0.8
+    adjust_prominence self -0.15
+  end
+  throttle 0.15
 end
 
 system connectionEvolution mystical_decay "Mystical Fades" do
-  enabled:true
-  config:{ description:"Mystical qualities fade from locations over time. NPCs residing nearby dampen this effect, stabilizing the mystical energy." metric:{ type:neighbor_kind_count via:[adjacent_to contained_by contains] viaDirection:both then:resident_of thenDirection:dst kind:npc } rules:[{ condition:{ operator:"<=" threshold:0 } probability:0.2 action:{ type:remove_tag tag:mystical entity:$self } } { condition:{ operator:">=" threshold:1 } probability:0.04 action:{ type:remove_tag tag:mystical entity:$self } }] throttleChance:0.3 selection:{ strategy:by_kind kind:location filters:[{ type:has_tag tag:mystical }] } }
+  enabled true
+  description "Mystical qualities fade from locations over time. NPCs residing nearby dampen this effect, stabilizing the mystical energy."
+  selection do
+    pick random
+    kind location
+    filter has_tag mystical
+  end
+  metric neighbor_kind_count do
+    kind npc
+    via adjacent_to contained_by contains
+    via_direction both
+    then resident_of
+    then_direction dst
+  end
+  rule do
+    threshold lte 0
+    probability 0.2
+    remove_tag self mystical
+  end
+  rule do
+    threshold gte 1
+    probability 0.04
+    remove_tag self mystical
+  end
+  throttle 0.3
 end
 
 system thresholdTrigger oath_breaker_consequences "Oath Breaker Consequences" do
-  enabled:true
-  config:{ description:"Oath breakers suffer ongoing reputation damage and weakened alliances" conditions:[{ type:tag_exists tag:oath_breaker } { type:time_elapsed minTicks:5 } { type:random_chance chance:0.2 }] actions:[{ type:adjust_prominence delta:-0.15 entity:$self } { type:for_each_related relationship:allied_with direction:both targetKind:faction actions:[{ type:adjust_relationship_strength kind:allied_with src:$self dst:$related delta:-0.15 }] }] clusterMode:individual throttleChance:0.4 selection:{ strategy:by_kind kind:faction status:active } }
+  enabled true
+  description "Oath breakers suffer ongoing reputation damage and weakened alliances"
+  selection do
+    pick random
+    kind faction
+    status active
+  end
+  condition tag_exists oath_breaker
+  condition time_elapsed 5
+  condition random_chance 0.2
+  actions do
+    adjust_prominence self -0.15
+    for_each_related allied_with both faction do
+      rel allied_with self -> related delta:-0.15
+    end
+  end
+  cluster_mode individual
+  throttle 0.4
 end
 
 system thresholdTrigger oath_breaker_detector "Oath Breaker Detection" do
-  enabled:true
-  config:{ description:"Allied factions that don't join wars are marked as oath breakers and lose reputation" conditions:[{ type:relationship_exists relationshipKind:allied_with direction:both } { type:lacks_tag tag:honor_bound } { type:lacks_tag tag:oath_breaker } { type:graph_path assert:{ check:exists path:[{ via:allied_with direction:any targetKind:faction targetSubtype:any } { via:at_war_with direction:any targetKind:faction targetSubtype:any }] } } { type:time_elapsed minTicks:10 } { type:random_chance chance:0.15 }] actions:[{ type:set_tag tag:oath_breaker value:true entity:$self } { type:adjust_prominence delta:-0.25 entity:$self }] clusterMode:individual throttleChance:0.5 pressureChanges:{ harmony:-2 } selection:{ strategy:by_kind kind:faction status:active } }
+  enabled true
+  description "Allied factions that don't join wars are marked as oath breakers and lose reputation"
+  selection do
+    pick random
+    kind faction
+    status active
+  end
+  condition relationship_exists allied_with both
+  condition lacks_tag honor_bound
+  condition lacks_tag oath_breaker
+  path exists do
+    step allied_with any faction any
+    step at_war_with any faction any
+  end
+  condition time_elapsed 10
+  condition random_chance 0.15
+  actions do
+    set_tag self oath_breaker true
+    adjust_prominence self -0.25
+  end
+  cluster_mode individual
+  throttle 0.5
+  pressure harmony -2
 end
 
 system thresholdTrigger occurrence_resolution "Occurrence Resolution" do
-  enabled:true
-  config:{ description:"Active events settle into history over time" conditions:[{ type:time_elapsed minTicks:6 since:created }] actions:[{ type:change_status entity:$self newStatus:historical }] clusterMode:individual throttleChance:0.6 pressureChanges:{ harmony:2 } selection:{ strategy:by_kind kind:occurrence status:active excludeSubtypes:[war] } }
+  enabled true
+  description "Active events settle into history over time"
+  selection do
+    pick random
+    kind occurrence
+    status active
+    excludeSubtypes war
+  end
+  condition time_elapsed 6 since created
+  actions do
+    change_status self historical
+  end
+  cluster_mode individual
+  throttle 0.6
+  pressure harmony 2
 end
 
 system thresholdTrigger old_age_mortality "Old Age Mortality" do
-  enabled:true
-  config:{ description:"Aging NPCs occasionally pass away, their artifacts inherited or lost" conditions:[{ type:time_elapsed minTicks:80 since:created } { type:random_chance chance:0.02 }] actions:[{ type:change_status entity:$self newStatus:historical } { type:for_each_related relationship:owned_by direction:in targetKind:artifact actions:[{ type:conditional condition:{ type:random_chance chance:0.6 } thenActions:[{ type:change_status entity:$related newStatus:lost } { type:archive_relationship entity:$related relationshipKind:owned_by with:$self }] elseActions:[{ type:transfer_relationship entity:$related relationshipKind:owned_by from:$self to:$faction condition:{ type:entity_exists entity:$faction } }] }] }] variables:{ "$faction":{ select:{ from:{ relatedTo:$self relationshipKind:member_of direction:src } kind:faction pickStrategy:random } } } clusterMode:individual throttleChance:0.25 selection:{ strategy:by_kind kind:npc status:alive } }
+  enabled true
+  description "Aging NPCs occasionally pass away, their artifacts inherited or lost"
+  selection do
+    pick random
+    kind npc
+    status alive
+  end
+  condition time_elapsed 80 since created
+  condition random_chance 0.02
+  let faction do
+    from self via member_of src
+    kind faction
+    pick random
+  end
+  actions do
+    change_status self historical
+    for_each_related owned_by in artifact do
+      conditional do
+        condition random_chance 0.6
+        then do
+          change_status related lost
+          archive_relationship related owned_by self
+        end
+        else do
+          transfer_relationship related owned_by from self to faction if entity_exists faction
+        end
+      end
+    end
+  end
+  cluster_mode individual
+  throttle 0.25
 end
 
 system thresholdTrigger post_war_recovery "Post-War Recovery" do
-  enabled:true
-  config:{ description:"Factions without active wars shed conflict tags" conditions:[{ type:relationship_count relationshipKind:at_war_with direction:both max:0 }] actions:[{ type:remove_tag tag:conflict entity:$self } { type:remove_tag tag:hostile entity:$self }] clusterMode:individual throttleChance:0.5 pressureChanges:{ harmony:3 security:2 } selection:{ strategy:by_kind kind:faction filters:[{ type:has_any_tag tags:[conflict hostile] }] } }
+  enabled true
+  description "Factions without active wars shed conflict tags"
+  selection do
+    pick random
+    kind faction
+    filter has_any_tag conflict hostile
+  end
+  condition relationship_count at_war_with both lte 0
+  actions do
+    remove_tag self conflict
+    remove_tag self hostile
+  end
+  cluster_mode individual
+  throttle 0.5
+  pressure harmony 3
+  pressure security 2
 end
 
 system thresholdTrigger power_vacuum_detector "Leadership Crisis" do
-  enabled:true
-  config:{ description:"Detects factions with historical (deceased) leaders and marks them in crisis" conditions:[{ type:or conditions:[{ type:relationship_exists relationshipKind:leader_of direction:dst targetKind:npc targetStatus:historical } { type:relationship_count relationshipKind:leader_of direction:dst max:0 }] }] actions:[{ type:set_tag tag:power_vacuum value:true entity:$self } { type:set_tag tag:crisis value:true entity:$self } { type:set_tag tag:political value:true entity:$self }] clusterMode:individual throttleChance:0.35 pressureChanges:{ security:-8 harmony:-5 } selection:{ strategy:by_kind kind:faction filters:[{ type:lacks_tag tag:power_vacuum }] } }
+  enabled true
+  description "Detects factions with historical (deceased) leaders and marks them in crisis"
+  selection do
+    pick random
+    kind faction
+    filter lacks_tag power_vacuum
+  end
+  when any do
+    condition relationship_exists leader_of dst target_kind npc target_status historical
+    condition relationship_count leader_of dst lte 0
+  end
+  actions do
+    set_tag self power_vacuum true
+    set_tag self crisis true
+    set_tag self political true
+  end
+  cluster_mode individual
+  throttle 0.35
+  pressure harmony -1
+  pressure security -8
 end
 
 system connectionEvolution prominence_evolution "Prominence Evolution" do
-  enabled:true
-  config:{ description:"All entities fade over time; connections slow the decay (inactivity leads to being forgotten)" metric:{ type:connection_count direction:both minStrength:0.2 } rules:[{ condition:{ operator:"<=" threshold:2 } probability:0.9 action:{ type:adjust_prominence delta:-0.25 entity:$self } } { condition:{ operator:">=" threshold:3 } probability:0.75 action:{ type:adjust_prominence delta:-0.15 entity:$self } }] throttleChance:0.08 selection:{ strategy:by_kind kind:any } }
+  enabled true
+  description "All entities fade over time; connections slow the decay (inactivity leads to being forgotten)"
+  selection do
+    pick random
+    kind any
+  end
+  metric connection_count do
+    direction both
+    min_strength 0.2
+  end
+  rule do
+    threshold lte 2
+    probability 0.9
+    adjust_prominence self -0.25
+  end
+  rule do
+    threshold gte 3
+    probability 0.75
+    adjust_prominence self -0.15
+  end
+  throttle 0.08
 end
 
 system connectionEvolution reflected_glory "Reflected Glory" do
-  enabled:true
-  config:{ description:"Weak homeostatic pressure. Connected to legends? Slight rise. Connected to the forgotten? Slight fade." metric:{ type:neighbor_prominence direction:both minStrength:0.2 } rules:[{ condition:{ operator:">=" threshold:3 } probability:0.4 action:{ type:adjust_prominence delta:0.08 entity:$self } } { condition:{ operator:"<=" threshold:2 } probability:0.4 action:{ type:adjust_prominence delta:-0.06 entity:$self } }] throttleChance:0.25 selection:{ strategy:by_kind kind:any } }
+  enabled true
+  description "Weak homeostatic pressure. Connected to legends? Slight rise. Connected to the forgotten? Slight fade."
+  selection do
+    pick random
+    kind any
+  end
+  metric neighbor_prominence do
+    direction both
+    min_strength 0.2
+  end
+  rule do
+    threshold gte 3
+    probability 0.4
+    adjust_prominence self 0.08
+  end
+  rule do
+    threshold lte 2
+    probability 0.4
+    adjust_prominence self -0.06
+  end
+  throttle 0.25
 end
 
 system relationshipMaintenance relationship_maintenance "Relationship Maintenance" do
-  enabled:true
-  config:{ description:"Handles decay, reinforcement, and culling of relationships. Maintains relationship health over time." maintenanceFrequency:5 cullThreshold:0.15 gracePeriod:20 reinforcementBonus:0.02 maxStrength:1 }
+  enabled true
+  description "Handles decay, reinforcement, and culling of relationships. Maintains relationship health over time."
+  maintenance_frequency 5
+  cull_threshold 0.15
+  grace_period 20
+  reinforcement_bonus 0.02
+  max_strength 1
 end
 
 system planeDiffusion resource_diffusion "Resource & Trade Flow" do
-  enabled:true
-  config:{ description:"Prosperity spreads from resource-rich and trade locations" sources:{ tagFilter:resource defaultStrength:80 } diffusion:{ rate:0.3 decayRate:0 sourceRadius:3 falloffType:none iterationsPerTick:30 } outputTags:[{ tag:thriving minValue:15 maxValue:100 } { tag:stressed maxValue:40 minValue:-100 }] valueTag:sys_resource_value sinks:{ tagFilter:conflict defaultStrength:25 } selection:{ strategy:by_kind kind:location } }
+  enabled true
+  description "Prosperity spreads from resource-rich and trade locations"
+  selection do
+    pick random
+    kind location
+  end
+  sources resource 80
+  sinks conflict 25
+  diffusion 0.3 0 3 none 30
+  output_tag thriving min 15 max 100
+  output_tag stressed min -100 max 40
+  value_tag sys_resource_value
 end
 
 system planeDiffusion thermal_diffusion "Thermal Diffusion" do
-  enabled:true
-  config:{ description:"Heat spreads from anomaly sources, making locations dangerous or safe" sources:{ tagFilter:anomaly defaultStrength:60 } sinks:{ tagFilter:central defaultStrength:12 } diffusion:{ rate:0.2 falloffType:none iterationsPerTick:30 sourceRadius:3 decayRate:0 } outputTags:[{ tag:safe maxValue:0.15 } { tag:dangerous minValue:0.25 }] valueTag:temperature selection:{ strategy:by_kind kind:location } }
+  enabled true
+  description "Heat spreads from anomaly sources, making locations dangerous or safe"
+  selection do
+    pick random
+    kind location
+  end
+  sources anomaly 60
+  sinks central 12
+  diffusion 0.2 0 3 none 30
+  output_tag safe max 0.15
+  output_tag dangerous min 0.25
+  value_tag temperature
 end
 
 system thresholdTrigger unarmed_hero_detector "Unarmed Hero Detection" do
-  enabled:true
-  config:{ description:"Heroes who lose their weapons are no longer armed" conditions:[{ type:graph_path assert:{ check:not_exists path:[{ via:owned_by direction:in targetKind:artifact targetSubtype:weapon }] } }] actions:[{ type:remove_tag tag:armed entity:$self }] clusterMode:individual throttleChance:0.1 selection:{ strategy:by_kind kind:npc subtypes:[hero] status:alive filters:[{ type:has_tag tag:armed }] } }
+  enabled true
+  description "Heroes who lose their weapons are no longer armed"
+  selection do
+    pick random
+    kind npc
+    subtype hero
+    status alive
+    filter has_tag armed
+  end
+  path not_exists do
+    step owned_by in artifact weapon
+  end
+  actions do
+    remove_tag self armed
+  end
+  cluster_mode individual
+  throttle 0.1
 end
 
 system universalCatalyst universal_catalyst "Agent Actions" do
-  enabled:true
-  config:{ description:"Enables agents (NPCs, factions) to perform domain-defined actions. Manages action selection and success/failure." actionAttemptRate:0.18 pressureMultiplier:1.1 prominenceUpChanceOnSuccess:1 prominenceDownChanceOnFailure:1 }
+  enabled true
+  description "Enables agents (NPCs, factions) to perform domain-defined actions. Manages action selection and success/failure."
+  action_attempt_rate 0.18
+  pressure_multiplier 1.1
+  prominence_up_chance 1
+  prominence_down_chance 1
 end
 
 system thresholdTrigger war_casualties "War Casualties" do
-  enabled:true
-  config:{ description:"NPCs serving factions at war can fall in battle, their artifacts looted or lost" conditions:[{ type:graph_path assert:{ check:exists path:[{ via:member_of direction:out targetKind:faction targetSubtype:any } { via:at_war_with direction:any targetKind:faction targetSubtype:any }] } } { type:random_chance chance:0.08 }] actions:[{ type:change_status entity:$self newStatus:historical } { type:for_each_related relationship:owned_by direction:in targetKind:artifact actions:[{ type:conditional condition:{ type:random_chance chance:0.5 } thenActions:[{ type:transfer_relationship entity:$related relationshipKind:owned_by from:$self to:$enemy_faction condition:{ type:entity_exists entity:$enemy_faction } } { type:set_tag entity:$related tag:war_trophy value:true }] elseActions:[{ type:change_status entity:$related newStatus:lost } { type:archive_relationship entity:$related relationshipKind:owned_by with:$self }] }] }] variables:{ "$enemy_faction":{ select:{ from:{ path:[{ from:$self via:member_of direction:src } { via:at_war_with direction:both }] } kind:faction pickStrategy:random } } } clusterMode:individual throttleChance:0.5 selection:{ strategy:by_kind kind:npc status:alive excludeSubtypes:[hero mayor] } }
+  enabled true
+  description "NPCs serving factions at war can fall in battle, their artifacts looted or lost"
+  selection do
+    pick random
+    kind npc
+    status alive
+    excludeSubtypes hero mayor
+  end
+  path exists do
+    step member_of out faction any
+    step at_war_with any faction any
+  end
+  condition random_chance 0.08
+  let enemy_faction do
+    kind faction
+    pick random
+    from { path:[{ from:$self via:member_of direction:src } { via:at_war_with direction:both }] }
+  end
+  actions do
+    change_status self historical
+    for_each_related owned_by in artifact do
+      conditional do
+        condition random_chance 0.5
+        then do
+          transfer_relationship related owned_by from self to enemy_faction if entity_exists enemy_faction
+          set_tag related war_trophy true
+        end
+        else do
+          change_status related lost
+          archive_relationship related owned_by self
+        end
+      end
+    end
+  end
+  cluster_mode individual
+  throttle 0.5
 end
 
 system thresholdTrigger war_fatigue_detector "War Fatigue" do
-  enabled:true
-  config:{ description:"Long-running wars become weary and ready to resolve" conditions:[{ type:time_elapsed minTicks:5 since:created }] actions:[{ type:set_tag tag:war_weary value:true entity:$self }] clusterMode:individual throttleChance:0.5 selection:{ strategy:by_kind kind:occurrence subtypes:[war] status:active filters:[{ type:lacks_tag tag:war_weary }] } }
+  enabled true
+  description "Long-running wars become weary and ready to resolve"
+  selection do
+    pick random
+    kind occurrence
+    subtype war
+    status active
+    filter lacks_tag war_weary
+  end
+  condition time_elapsed 5 since created
+  actions do
+    set_tag self war_weary true
+  end
+  cluster_mode individual
+  throttle 0.5
 end
 
 system thresholdTrigger war_tie_cleanup "War Tie Cleanup" do
-  enabled:true
-  config:{ description:"Archives stale war ties when no active war occurrence remains and cleans up war-related state" conditions:[{ type:relationship_count relationshipKind:at_war_with direction:both min:1 } { type:graph_path assert:{ check:not_exists path:[{ via:participant_in direction:out targetKind:occurrence targetSubtype:war targetStatus:active }] } }] actions:[{ type:archive_all_relationships entity:$self relationshipKind:at_war_with direction:both } { type:remove_tag entity:$self tag:conflict } { type:remove_tag entity:$self tag:honor_bound }] clusterMode:individual throttleChance:0.4 pressureChanges:{ harmony:4 } selection:{ strategy:by_kind kind:faction } }
+  enabled true
+  description "Archives stale war ties when no active war occurrence remains and cleans up war-related state"
+  selection do
+    pick random
+    kind faction
+  end
+  condition relationship_count at_war_with both gte 1
+  path not_exists do
+    step participant_in out occurrence war status active
+  end
+  actions do
+    archive_all_relationships self at_war_with direction both
+    remove_tag self conflict
+    remove_tag self honor_bound
+  end
+  cluster_mode individual
+  throttle 0.4
+  pressure harmony 4
 end

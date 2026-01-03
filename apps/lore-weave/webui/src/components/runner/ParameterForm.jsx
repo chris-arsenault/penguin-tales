@@ -90,6 +90,18 @@ export default function ParameterForm({ params, onParamChange }) {
           integer
         />
       </div>
+      <div className="lw-form-group">
+        <label className="lw-label">Validity Attempts</label>
+        <NumberInput
+          min={1}
+          max={20}
+          value={params.maxValidityAttempts}
+          onChange={(v) => onParamChange('maxValidityAttempts', v ?? 4)}
+          className="lw-input"
+          integer
+          title="Max runs for 'Until Valid' search"
+        />
+      </div>
 
       {/* Narrative Events Section */}
       <div className="lw-form-group" style={{ gridColumn: '1 / -1', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>

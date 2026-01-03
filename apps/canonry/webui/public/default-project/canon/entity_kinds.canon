@@ -17,19 +17,19 @@ entity_kind ability do
     region ability_nightshelf_moonweave "Moonweave Mysteries" do
       color:"#9370DB"
       culture:nightshelf
-      tags:[]
+      tags none
       bounds circle 84 84 15
     end
     region ability_aurora_prismcraft "Prismcraft Arts" do
       color:"#FFD700"
       culture:aurora-stack
-      tags:[]
+      tags none
       bounds circle 79 49 20
     end
     region ability_orca_battleways "Orca Battleways" do
       color:"#2F4F4F"
       culture:orca
-      tags:[]
+      tags none
       bounds circle 16 17 15
     end
   end
@@ -53,19 +53,19 @@ entity_kind artifact do
     region aurora_artifacts "Aurora Relics" do
       color:"#FFD700"
       culture:aurora-stack
-      tags:[trade organized ice]
+      tags trade organized ice
       bounds circle 75 60 15
     end
     region nightshelf_artifacts "Shadow Relics" do
       color:"#9370DB"
       culture:nightshelf
-      tags:[mystical secretive]
+      tags mystical secretive
       bounds circle 40 75 15
     end
     region orca_artifacts "Orca Trophies" do
       color:"#2F4F4F"
       culture:orca
-      tags:[hostile combat]
+      tags hostile combat
       bounds circle 20 25 12
     end
   end
@@ -90,19 +90,19 @@ entity_kind faction do
     region faction_aurora_guilds "Merchant Guilds" do
       color:"#FFD700"
       culture:aurora-stack
-      tags:[organized friendly trade influential]
+      tags organized friendly trade influential
       bounds circle 75 70 15
     end
     region faction_nightshelf_covens "Shadow Covens" do
       color:"#9370DB"
       culture:nightshelf
-      tags:[secretive mystical]
+      tags secretive mystical
       bounds circle 35 49 15
     end
     region faction_orca_warclans "War Clans" do
       color:"#410f1e"
       culture:orca
-      tags:[authoritarian fire hostile]
+      tags authoritarian fire hostile
       bounds circle 11 10 9
     end
   end
@@ -126,19 +126,19 @@ entity_kind location do
     region location_aurora_markets "Aurora Markets" do
       color:"#FFD700"
       culture:aurora-stack
-      tags:[central trade thriving]
+      tags central trade thriving
       bounds circle 65 25 12
     end
     region location_nightshelf_sanctums "Hidden Sanctums" do
       color:"#9370DB"
       culture:nightshelf
-      tags:[hidden mystical secretive]
+      tags hidden mystical secretive
       bounds circle 35 35 12
     end
     region location_glow_fissure "The Glow-Fissure" do
       color:"#FF6347"
       culture:nightshelf
-      tags:[anomaly dangerous mystical]
+      tags anomaly dangerous mystical
       bounds circle 30 65 8
     end
   end
@@ -163,19 +163,19 @@ entity_kind npc do
     region npc_aurora_citizens "Golden Citizens" do
       color:"#FFD700"
       culture:aurora-stack
-      tags:[friendly trade organized]
+      tags friendly trade organized
       bounds circle 84 50 15
     end
     region npc_nightshelf_denizens "Twilight Denizens" do
       color:"#9370DB"
       culture:nightshelf
-      tags:[mystical secretive]
+      tags mystical secretive
       bounds circle 50 70 15
     end
     region npc_orca_raiders "Orca Marauders" do
       color:"#2F4F4F"
       culture:orca
-      tags:[hostile raider external]
+      tags hostile raider external
       bounds circle 14 14 12
     end
   end
@@ -218,19 +218,19 @@ entity_kind rule do
     region rule_aurora_trade_edicts "Trade Edicts" do
       color:"#FFD700"
       culture:aurora-stack
-      tags:[]
+      tags none
       bounds circle 90 50 9
     end
     region rule_orca_war_doctrines "War Doctrines" do
       color:"#2F4F4F"
       culture:orca
-      tags:[]
+      tags none
       bounds circle 16 84 15
     end
     region rule_nightshelf_shadow_codes "Shadow Codes" do
       color:"#9370DB"
       culture:nightshelf
-      tags:[]
+      tags none
       bounds circle 58 17 9
     end
   end

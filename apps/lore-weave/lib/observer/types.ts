@@ -305,6 +305,11 @@ export interface CatalystStatsPayload {
     kind: string;
     actionCount: number;
   }>;
+  /** Actions that have never succeeded during the simulation */
+  unusedActions: Array<{
+    actionId: string;
+    actionName: string;
+  }>;
 }
 
 export interface RelationshipBreakdownPayload {

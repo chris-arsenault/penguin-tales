@@ -14,7 +14,16 @@ generator alliance_betrayal "Alliance Betrayal" do
     pick random
     required true
   end
-  create war kind:occurrence subtype:war status:active prominence:renowned culture:{ inherit:target } description:{ template:"A betrayal war when {betrayer} turned against their ally {victim}" replacements:{ betrayer:target.name victim:ally.name } } tags:{ betrayal_war:true } placement:{ anchor:{ type:refs_centroid refs:[$target $ally] jitter:0.1 } steps:[anchor_region sparse random] }
+  create war do
+    kind:occurrence
+    subtype:war
+    status:active
+    prominence:renowned
+    culture:{ inherit:target }
+    description:{ template:"A betrayal war when {betrayer} turned against their ally {victim}" replacements:{ betrayer:target.name victim:ally.name } }
+    tags betrayal_war
+    placement:{ anchor:{ type:refs_centroid refs:[$target $ally] jitter:0.1 } steps:[anchor_region sparse random] }
+  end
   rel participant_in target -> war strength:0.9
   rel participant_in ally -> war strength:0.9
   rel at_war_with target -> ally strength:0.95 bidirectional:true
@@ -30,7 +39,7 @@ generator artifact_crafting "Artifact Crafting" do
   end
   choose target from npc do
     pick random
-    subtype in [hero mayor]
+    subtype in hero mayor
     inbound created_by <= 2
     status:alive
   end
@@ -44,7 +53,16 @@ generator artifact_crafting "Artifact Crafting" do
     kind location
     pick random
   end
-  create artifact kind:artifact subtype:{ random:[weapon relic instrument] } status:intact prominence:recognized culture:{ inherit:target } description:{ template:"A powerful artifact crafted by {creatorName}" replacements:{ creatorName:target.name } } tags:{ crafted:true } placement:{ anchor:{ type:culture id:$target.culture } steps:[anchor_region seed_region sparse random] }
+  create artifact do
+    kind:artifact
+    subtype:{ random:[weapon relic instrument] }
+    status:intact
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A powerful artifact crafted by {creatorName}" replacements:{ creatorName:target.name } }
+    tags crafted
+    placement:{ anchor:{ type:culture id:$target.culture } steps:[anchor_region seed_region sparse random] }
+  end
   rel created_by artifact -> target strength:1
   rel owned_by artifact -> target strength:0.9
   rel empowered_by artifact -> ability strength:0.7 condition:{ type:entity_exists entity:ability }
@@ -59,7 +77,7 @@ generator artifact_discovery "Artifact Discovery" do
   end
   choose target from location do
     pick random
-    subtype in [anomaly point_of_interest resource_node]
+    subtype in anomaly point_of_interest resource_node
     inbound stored_at <= 2
   end
   let discoverer do
@@ -68,7 +86,16 @@ generator artifact_discovery "Artifact Discovery" do
     pick random
     status alive
   end
-  create artifact kind:artifact subtype:{ random:[relic tome instrument] } status:intact prominence:marginal culture:{ inherit:target } description:{ template:"An ancient artifact uncovered at {locationName}" replacements:{ locationName:target.name } } tags:{ discovered:true ancient:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  create artifact do
+    kind:artifact
+    subtype:{ random:[relic tome instrument] }
+    status:intact
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"An ancient artifact uncovered at {locationName}" replacements:{ locationName:target.name } }
+    tags discovered ancient
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
   rel stored_at artifact -> target strength:0.8
   rel discovered_by artifact -> discoverer strength:0.7 condition:{ type:entity_exists entity:discoverer }
   mutate pressure magical_stability -= 3
@@ -87,11 +114,56 @@ generator colony_founding "Colony Foundation" do
     saturationLimits:[{ relationshipKind:splinter_of maxCount:1 fromKind:location }]
   end
   variables:{}
-  create colony kind:location subtype:colony status:thriving prominence:marginal culture:{ inherit:target } description:{ template:"New colony established on {icebergName} in the reaches" replacements:{ icebergName:target.name } } tags:{ emergent:true colony:true thriving:true } placement:{ anchor:{ type:sparse preferPeriphery:true } spacing:{ minDistance:12 avoidRefs:[$target] } regionPolicy:{ allowEmergent:true createRegion:true } steps:[sparse random] }
-  create outpost kind:location subtype:point_of_interest status:unspoiled prominence:marginal culture:{ inherit:target } description:{ template:"A satellite outpost founded by settlers from {parentColony}" replacements:{ parentColony:target.name } } tags:{ emergent:true trade:true } placement:{ anchor:{ type:entity ref:colony stickToRegion:true } spacing:{ minDistance:2 } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
-  create council kind:faction prominence:recognized status:active subtype:political culture:{ inherit:target } placement:{ anchor:{ type:entity ref:colony stickToRegion:true } spacing:{ minDistance:1 } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] } tags:{ political:true organized:true influential:true } description:{ template:"A governing council formed by pioneers from {parentColony}" replacements:{ parentColony:target.name } }
-  create founder kind:npc subtype:mayor status:alive prominence:marginal culture:{ inherit:target } description:"The founder who led settlers to establish the new colony" tags:{ founder:true leader:true } placement:{ anchor:{ type:entity ref:colony stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
-  create settler kind:npc subtype:merchant status:alive prominence:marginal culture:{ inherit:target } description:"A pioneer trader who helped establish the new colony" tags:{ settler:true trade:true } placement:{ anchor:{ type:entity ref:colony stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  create colony do
+    kind:location
+    subtype:colony
+    status:thriving
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"New colony established on {icebergName} in the reaches" replacements:{ icebergName:target.name } }
+    tags emergent colony thriving
+    placement:{ anchor:{ type:sparse preferPeriphery:true } spacing:{ minDistance:12 avoidRefs:[$target] } regionPolicy:{ allowEmergent:true createRegion:true } steps:[sparse random] }
+  end
+  create outpost do
+    kind:location
+    subtype:point_of_interest
+    status:unspoiled
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A satellite outpost founded by settlers from {parentColony}" replacements:{ parentColony:target.name } }
+    tags emergent trade
+    placement:{ anchor:{ type:entity ref:colony stickToRegion:true } spacing:{ minDistance:2 } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create council do
+    kind:faction
+    prominence:recognized
+    status:active
+    subtype:political
+    culture:{ inherit:target }
+    placement:{ anchor:{ type:entity ref:colony stickToRegion:true } spacing:{ minDistance:1 } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+    tags political organized influential
+    description:{ template:"A governing council formed by pioneers from {parentColony}" replacements:{ parentColony:target.name } }
+  end
+  create founder do
+    kind:npc
+    subtype:mayor
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:"The founder who led settlers to establish the new colony"
+    tags founder leader
+    placement:{ anchor:{ type:entity ref:colony stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create settler do
+    kind:npc
+    subtype:merchant
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:"A pioneer trader who helped establish the new colony"
+    tags settler trade
+    placement:{ anchor:{ type:entity ref:colony stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
   rel trades_with colony -> target strength:1 bidirectional:true
   rel adjacent_to colony -> target strength:0.7 bidirectional:true
   rel adjacent_to outpost -> colony strength:0.7 bidirectional:true
@@ -121,14 +193,23 @@ generator crisis_legislation "Crisis Law" do
   let mainThreat do
     from graph
     kind npc
-    subtype in [orca outlaw]
+    subtype in orca outlaw
     pick random
     filter path not_exists do
       step related_to any rule law
     end
     required true
   end
-  create rule kind:rule subtype:law status:enacted prominence:recognized culture:{ inherit:target } description:{ template:"Emergency measure enacted in {colonyName}" replacements:{ colonyName:target.name } } tags:{ crisis:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  create rule do
+    kind:rule
+    subtype:law
+    status:enacted
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"Emergency measure enacted in {colonyName}" replacements:{ colonyName:target.name } }
+    tags crisis
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  end
   rel originated_in rule -> target strength:1
   rel derived_from rule -> existingRule strength:0.7 condition:{ type:random_chance chance:0.4 }
   rel related_to mainThreat -> rule strength:0.8
@@ -142,8 +223,26 @@ generator crystallized_power "Power Crystallizes" do
     pick random
     filter has_tag active
   end
-  create event kind:occurrence subtype:disaster status:active prominence:recognized culture:{ inherit:target } description:{ template:"A surge of ancient power at {locationName} - the ice cracked, light poured from the fissures, and something crystallized from the raw energy" replacements:{ locationName:target.name } } tags:{ power_surge:true crystallization:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } steps:[anchor_region sparse random] }
-  create artifact kind:artifact subtype:relic status:intact prominence:marginal culture:{ inherit:target } description:{ template:"A crystallized fragment of raw power that emerged from {locationName} during the surge" replacements:{ locationName:target.name } } tags:{ crystallized:true power_fragment:true anomaly_born:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } steps:[anchor_region sparse random] }
+  create event do
+    kind:occurrence
+    subtype:disaster
+    status:active
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A surge of ancient power at {locationName} - the ice cracked, light poured from the fissures, and something crystallized from the raw energy" replacements:{ locationName:target.name } }
+    tags power_surge crystallization
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } steps:[anchor_region sparse random] }
+  end
+  create artifact do
+    kind:artifact
+    subtype:relic
+    status:intact
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A crystallized fragment of raw power that emerged from {locationName} during the surge" replacements:{ locationName:target.name } }
+    tags crystallized power_fragment anomaly_born
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } steps:[anchor_region sparse random] }
+  end
   rel occurred_at event -> target strength:1
   rel stored_at artifact -> target strength:0.9
   rel catalyst_of event -> artifact strength:0.8
@@ -158,7 +257,7 @@ generator cult_formation "Cult Awakening" do
   end
   choose target from location do
     pick random
-    subtype in [anomaly point_of_interest]
+    subtype in anomaly point_of_interest
     inbound originated_in <= 4
     inbound resident_of <= 5
     filter has_any_tag mystical secretive dangerous
@@ -177,7 +276,7 @@ generator cult_formation "Cult Awakening" do
   let cultist do
     from graph
     kind npc
-    subtype in [merchant outlaw hero]
+    subtype in merchant outlaw hero
     pick random
     required false
   end
@@ -193,11 +292,57 @@ generator cult_formation "Cult Awakening" do
     status intact
     required false
   end
-  create cult kind:faction subtype:cult status:illegal prominence:marginal culture:{ inherit:target } description:{ template:"A mystical cult drawn to the power near {locationName}" replacements:{ locationName:target.name } } tags:{ mystical:true secretive:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
-  create doctrine kind:rule subtype:ideology status:proposed prominence:marginal culture:{ inherit:target } description:{ template:"A secretive doctrine centered on the power near {locationName}" replacements:{ locationName:target.name } } tags:{ mystical:true cultural:true secretive:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
-  create acolyte1 kind:npc subtype:outlaw status:alive prominence:marginal culture:{ inherit:target } description:{ template:"An outcast drawn to the mysteries near {locationName}" replacements:{ locationName:target.name } } tags:{ mystical:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
-  create acolyte2 kind:npc subtype:outlaw status:alive prominence:marginal culture:{ inherit:target } description:{ template:"A devotee serving the cult near {locationName}" replacements:{ locationName:target.name } } tags:{ mystical:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
-  create sacredRelic kind:artifact subtype:relic status:intact prominence:marginal culture:{ inherit:target } description:{ template:"A sacred object venerated by the cult near {locationName}" replacements:{ locationName:target.name } } tags:{ sacred:true mystical:true cult_relic:true } placement:{ anchor:{ type:sparse } steps:[sparse random] } createChance:0.35
+  create cult do
+    kind:faction
+    subtype:cult
+    status:illegal
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A mystical cult drawn to the power near {locationName}" replacements:{ locationName:target.name } }
+    tags mystical secretive
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  end
+  create doctrine do
+    kind:rule
+    subtype:ideology
+    status:proposed
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A secretive doctrine centered on the power near {locationName}" replacements:{ locationName:target.name } }
+    tags mystical cultural secretive
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create acolyte1 do
+    kind:npc
+    subtype:outlaw
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"An outcast drawn to the mysteries near {locationName}" replacements:{ locationName:target.name } }
+    tags mystical
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create acolyte2 do
+    kind:npc
+    subtype:outlaw
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A devotee serving the cult near {locationName}" replacements:{ locationName:target.name } }
+    tags mystical
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create sacredRelic do
+    kind:artifact
+    subtype:relic
+    status:intact
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A sacred object venerated by the cult near {locationName}" replacements:{ locationName:target.name } }
+    tags sacred mystical cult_relic
+    placement:{ anchor:{ type:sparse } steps:[sparse random] }
+    createChance:0.35
+  end
   rel originated_in cult -> target strength:1
   rel owned_by sacredRelic -> cult strength:0.9
   rel member_of acolyte1 -> cult strength:0.5
@@ -240,7 +385,16 @@ generator dark_ritual "Dark Ritual" do
     filter has_tag cleansed
     required false
   end
-  create ritual kind:occurrence subtype:disaster status:historical prominence:marginal culture:{ inherit:target } description:{ template:"A dark ritual performed by {cultName} at {locationName}, breaking the sanctity of cleansed ground" replacements:{ cultName:target.name locationName:location.name } } tags:{ ritual:true dark_magic:true desecration:true } placement:{ anchor:{ type:entity ref:location stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  create ritual do
+    kind:occurrence
+    subtype:disaster
+    status:historical
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A dark ritual performed by {cultName} at {locationName}, breaking the sanctity of cleansed ground" replacements:{ cultName:target.name locationName:location.name } }
+    tags ritual dark_magic desecration
+    placement:{ anchor:{ type:entity ref:location stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
   rel desecrated target -> location strength:0.9
   rel occurred_at ritual -> location strength:1
   rel participant_in target -> ritual strength:0.8
@@ -258,7 +412,16 @@ generator economic_colony_decline "Colony Economic Decline" do
     filter has_tag stressed
     status:thriving
   end
-  create economic_crisis kind:occurrence subtype:disaster status:active prominence:recognized culture:{ inherit:target } description:{ template:"An economic collapse strikes {colonyName}, grinding trade to a halt" replacements:{ colonyName:target.name } } tags:{ crisis:true stressed:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  create economic_crisis do
+    kind:occurrence
+    subtype:disaster
+    status:active
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"An economic collapse strikes {colonyName}, grinding trade to a halt" replacements:{ colonyName:target.name } }
+    tags crisis stressed
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
   rel epicenter_of economic_crisis -> target strength:0.8
   rel triggered_by economic_crisis -> target strength:0.5
   stateUpdates:[{ type:change_status entity:target newStatus:waning } { type:set_tag entity:target tag:stressed value:true } { type:remove_tag entity:target tag:thriving } { type:modify_pressure pressureId:resource_availibility delta:-8 }]
@@ -273,7 +436,16 @@ generator economic_colony_recovery "Colony Economic Recovery" do
     filter has_any_tag trade resource
     status:waning
   end
-  create revival kind:occurrence subtype:celebration status:active prominence:marginal culture:{ inherit:target } description:{ template:"A trade revival festival marks {colonyName}'s economic recovery" replacements:{ colonyName:target.name } } tags:{ cultural:true trade:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  create revival do
+    kind:occurrence
+    subtype:celebration
+    status:active
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A trade revival festival marks {colonyName}'s economic recovery" replacements:{ colonyName:target.name } }
+    tags cultural trade
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
   rel epicenter_of revival -> target strength:0.7
   stateUpdates:[{ type:change_status entity:target newStatus:thriving } { type:set_tag entity:target tag:thriving value:true } { type:remove_tag entity:target tag:stressed } { type:modify_pressure pressureId:resource_availibility delta:5 }]
   enabled:true
@@ -312,10 +484,47 @@ generator faction_splinter "Faction Splinter" do
     pick random
     required true
   end
-  create splinter kind:faction subtype:{ inherit:target } status:waning prominence:marginal culture:{ inherit:target } description:{ template:"A splinter group that broke away from {parentName}" replacements:{ parentName:target.name } } tags:{ splinter:true } placement:{ anchor:{ type:entity ref:target } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
-  create recruit1 kind:npc subtype:outlaw status:alive prominence:marginal culture:{ inherit:target } description:"A dissident who joined the splinter faction" tags:{ criminal:true } placement:{ anchor:{ type:entity ref:target } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
-  create recruit2 kind:npc subtype:outlaw status:alive prominence:marginal culture:{ inherit:target } description:"A recruit drawn to the splinter faction" tags:{ criminal:true } placement:{ anchor:{ type:entity ref:target } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
-  create contestedRelic kind:artifact subtype:relic status:intact prominence:marginal culture:{ inherit:target } description:{ template:"A contested relic that sparked the schism from {parentName}" replacements:{ parentName:target.name } } tags:{ contested:true schism_cause:true legitimacy_symbol:true } placement:{ anchor:{ type:sparse } steps:[sparse random] } createChance:0.2
+  create splinter do
+    kind:faction
+    subtype:{ inherit:target }
+    status:waning
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A splinter group that broke away from {parentName}" replacements:{ parentName:target.name } }
+    tags splinter
+    placement:{ anchor:{ type:entity ref:target } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  end
+  create recruit1 do
+    kind:npc
+    subtype:outlaw
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:"A dissident who joined the splinter faction"
+    tags criminal
+    placement:{ anchor:{ type:entity ref:target } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  end
+  create recruit2 do
+    kind:npc
+    subtype:outlaw
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:"A recruit drawn to the splinter faction"
+    tags criminal
+    placement:{ anchor:{ type:entity ref:target } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  end
+  create contestedRelic do
+    kind:artifact
+    subtype:relic
+    status:intact
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A contested relic that sparked the schism from {parentName}" replacements:{ parentName:target.name } }
+    tags contested schism_cause legitimacy_symbol
+    placement:{ anchor:{ type:sparse } steps:[sparse random] }
+    createChance:0.2
+  end
   rel splinter_of splinter -> target strength:1
   rel owned_by contestedRelic -> splinter strength:0.8
   rel catalyst_of contestedRelic -> splinter strength:0.9
@@ -369,8 +578,26 @@ generator great_festival "Great Festival" do
     status intact
     required false
   end
-  create festival kind:rule subtype:social status:enacted prominence:recognized culture:{ inherit:target } description:{ template:"A great festival celebrating prosperity and unity, held in {colonyName}" replacements:{ colonyName:target.name } } tags:{ cultural:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
-  create herald kind:npc subtype:merchant status:alive prominence:marginal culture:{ inherit:target } description:{ template:"A festival herald who organizes the gathering at {colonyName}" replacements:{ colonyName:target.name } } tags:{ cultural:true trade:true emergent:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  create festival do
+    kind:rule
+    subtype:social
+    status:enacted
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A great festival celebrating prosperity and unity, held in {colonyName}" replacements:{ colonyName:target.name } }
+    tags cultural
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  end
+  create herald do
+    kind:npc
+    subtype:merchant
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A festival herald who organizes the gathering at {colonyName}" replacements:{ colonyName:target.name } }
+    tags cultural trade emergent
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  end
   rel originated_in festival -> target strength:1
   rel celebrated_by festival -> faction1 strength:0.7 condition:{ type:entity_exists entity:faction1 }
   rel celebrated_by festival -> faction2 strength:0.7 condition:{ type:entity_exists entity:faction2 }
@@ -403,12 +630,67 @@ generator guild_establishment "Guild Formation" do
     status intact
     required false
   end
-  create guild kind:faction subtype:company status:state_sanctioned prominence:recognized culture:{ inherit:target } description:{ template:"A merchant guild controlling trade in {colonyName}" replacements:{ colonyName:target.name } } tags:{ trade:true organized:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[seed_region sparse random] }
-  create tradeHub kind:location subtype:point_of_interest status:thriving prominence:recognized culture:{ inherit:target } description:{ template:"A bustling trade hub in {colonyName}, serving as the commercial heart of the region" replacements:{ colonyName:target.name } } tags:{ trade:true organized:true resource:true emergent:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
-  create charter kind:rule subtype:law status:enacted prominence:marginal culture:{ inherit:target } description:{ template:"A charter granting exclusive trading rights in {colonyName}" replacements:{ colonyName:target.name } } tags:{ trade:true political:true organized:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
-  create trader1 kind:npc subtype:merchant status:alive prominence:marginal culture:{ inherit:target } description:{ template:"A trader working for the guild in {colonyName}" replacements:{ colonyName:target.name } } tags:{ trade:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
-  create trader2 kind:npc subtype:merchant status:alive prominence:marginal culture:{ inherit:target } description:{ template:"A merchant employed by the guild in {colonyName}" replacements:{ colonyName:target.name } } tags:{ trade:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
-  create guildSeal kind:artifact subtype:relic status:intact prominence:marginal culture:{ inherit:target } description:{ template:"A ceremonial seal symbolizing the authority of the guild in {colonyName}" replacements:{ colonyName:target.name } } tags:{ ceremonial:true trade_symbol:true authority:true } placement:{ anchor:{ type:sparse } steps:[sparse random] } createChance:0.3
+  create guild do
+    kind:faction
+    subtype:company
+    status:state_sanctioned
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A merchant guild controlling trade in {colonyName}" replacements:{ colonyName:target.name } }
+    tags trade organized
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[seed_region sparse random] }
+  end
+  create tradeHub do
+    kind:location
+    subtype:point_of_interest
+    status:thriving
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A bustling trade hub in {colonyName}, serving as the commercial heart of the region" replacements:{ colonyName:target.name } }
+    tags trade organized resource emergent
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create charter do
+    kind:rule
+    subtype:law
+    status:enacted
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A charter granting exclusive trading rights in {colonyName}" replacements:{ colonyName:target.name } }
+    tags trade political organized
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create trader1 do
+    kind:npc
+    subtype:merchant
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A trader working for the guild in {colonyName}" replacements:{ colonyName:target.name } }
+    tags trade
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create trader2 do
+    kind:npc
+    subtype:merchant
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A merchant employed by the guild in {colonyName}" replacements:{ colonyName:target.name } }
+    tags trade
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create guildSeal do
+    kind:artifact
+    subtype:relic
+    status:intact
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A ceremonial seal symbolizing the authority of the guild in {colonyName}" replacements:{ colonyName:target.name } }
+    tags ceremonial trade_symbol authority
+    placement:{ anchor:{ type:sparse } steps:[sparse random] }
+    createChance:0.3
+  end
   rel originated_in guild -> target strength:1
   rel controls guild -> tradeHub strength:0.8
   rel owned_by guildSeal -> guild strength:0.9
@@ -452,9 +734,37 @@ generator hero_emergence "Hero Emergence" do
     kind faction
     pick random
   end
-  create hero kind:npc subtype:hero status:alive prominence:recognized culture:{ inherit:target } description:{ template:"A brave penguin who emerged during troubled times in {colonyName}" replacements:{ colonyName:target.name } } tags:{ emergent:true } placement:{ anchor:{ type:culture id:$target.culture } steps:[anchor_region seed_region sparse random] }
-  create companion kind:npc subtype:hero status:alive prominence:marginal culture:{ inherit:target } description:{ template:"A lesser hero who emerged alongside a champion in {colonyName}" replacements:{ colonyName:target.name } } tags:{ companion:true } placement:{ anchor:{ type:culture id:$target.culture } steps:[anchor_region seed_region sparse random] }
-  create heroWeapon kind:artifact subtype:weapon status:intact prominence:marginal culture:{ inherit:target } description:{ template:"A weapon forged for a hero of {colonyName}, symbol of their emergence as a champion" replacements:{ colonyName:target.name } } tags:{ hero_weapon:true forged:true } placement:{ anchor:{ type:sparse } steps:[sparse random] } createChance:0.25
+  create hero do
+    kind:npc
+    subtype:hero
+    status:alive
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A brave penguin who emerged during troubled times in {colonyName}" replacements:{ colonyName:target.name } }
+    tags emergent
+    placement:{ anchor:{ type:culture id:$target.culture } steps:[anchor_region seed_region sparse random] }
+  end
+  create companion do
+    kind:npc
+    subtype:hero
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A lesser hero who emerged alongside a champion in {colonyName}" replacements:{ colonyName:target.name } }
+    tags companion
+    placement:{ anchor:{ type:culture id:$target.culture } steps:[anchor_region seed_region sparse random] }
+  end
+  create heroWeapon do
+    kind:artifact
+    subtype:weapon
+    status:intact
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A weapon forged for a hero of {colonyName}, symbol of their emergence as a champion" replacements:{ colonyName:target.name } }
+    tags hero_weapon forged
+    placement:{ anchor:{ type:sparse } steps:[sparse random] }
+    createChance:0.25
+  end
   rel resident_of hero -> target strength:0.8
   rel allied_with companion -> hero strength:0.5
   rel owned_by heroWeapon -> hero strength:0.9
@@ -479,8 +789,27 @@ generator ice_memory_thaw "Ice Memory Thaw" do
     filter lacks_relationship manifests_at with target
     status active
   end
-  create memory kind:location subtype:point_of_interest status:unspoiled prominence:marginal culture:{ inherit:target } description:{ template:"A thawed memory cache surfaced near {locationName}" replacements:{ locationName:target.name } } tags:{ mystical:true discovered:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
-  create ancientTome kind:artifact subtype:tome status:intact prominence:marginal culture:{ inherit:target } description:{ template:"An ancient tome preserved in ice near {locationName}, containing lost knowledge" replacements:{ locationName:target.name } } tags:{ ancient:true preserved:true frozen_knowledge:true } placement:{ anchor:{ type:sparse } steps:[sparse random] } createChance:0.3
+  create memory do
+    kind:location
+    subtype:point_of_interest
+    status:unspoiled
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A thawed memory cache surfaced near {locationName}" replacements:{ locationName:target.name } }
+    tags mystical discovered
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create ancientTome do
+    kind:artifact
+    subtype:tome
+    status:intact
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"An ancient tome preserved in ice near {locationName}, containing lost knowledge" replacements:{ locationName:target.name } }
+    tags ancient preserved frozen_knowledge
+    placement:{ anchor:{ type:sparse } steps:[sparse random] }
+    createChance:0.3
+  end
   rel contained_by memory -> target strength:0.8 condition:{ type:entity_exists entity:memory }
   rel stored_at ancientTome -> memory strength:0.9
   rel manifests_at frozen_ability -> memory strength:0.6 condition:{ type:random_chance chance:0.3 }
@@ -537,7 +866,16 @@ generator ideology_emergence "Ideological Movement" do
     status intact
     required false
   end
-  create ideology kind:rule subtype:ideology status:proposed prominence:marginal culture:{ inherit:target } description:{ template:"An ideology championed by {championName}. This belief is spreading through whispered conversations and passionate debates." replacements:{ championName:target.name } } tags:{ political:true cultural:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
+  create ideology do
+    kind:rule
+    subtype:ideology
+    status:proposed
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"An ideology championed by {championName}. This belief is spreading through whispered conversations and passionate debates." replacements:{ championName:target.name } }
+    tags political cultural
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
+  end
   rel believer_of target -> ideology strength:1
   rel originated_in ideology -> championLocation strength:0.8 condition:{ type:entity_exists entity:championLocation }
   rel believer_of factionMember1 -> ideology strength:0.6 condition:{ type:entity_exists entity:factionMember1 }
@@ -559,8 +897,26 @@ generator krill_bloom_migration "Krill Bloom Discovery" do
     end
   end
   variables:{}
-  create bloom kind:location subtype:resource_node status:thriving prominence:recognized culture:{ inherit:target } description:"Massive bioluminescent krill swarms dance in these waters, drawing merchants and hunters from across the berg." tags:{ resource:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } steps:[anchor_region seed_region sparse random] }
-  create harvestTechnique kind:ability subtype:technology status:discovered prominence:recognized culture:{ inherit:target } description:"A harvesting technique refined to track and gather the krill blooms." tags:{ trade:true resource:true organized:true emergent:true } placement:{ anchor:{ type:entity ref:bloom stickToRegion:true } steps:[anchor_region seed_region sparse random] }
+  create bloom do
+    kind:location
+    subtype:resource_node
+    status:thriving
+    prominence:recognized
+    culture:{ inherit:target }
+    description:"Massive bioluminescent krill swarms dance in these waters, drawing merchants and hunters from across the berg."
+    tags resource
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create harvestTechnique do
+    kind:ability
+    subtype:technology
+    status:discovered
+    prominence:recognized
+    culture:{ inherit:target }
+    description:"A harvesting technique refined to track and gather the krill blooms."
+    tags trade resource organized emergent
+    placement:{ anchor:{ type:entity ref:bloom stickToRegion:true } steps:[anchor_region seed_region sparse random] }
+  end
   create company kind:faction prominence:marginal status:active subtype:company culture:{ inherit:target } description:{ template:"A harvesting company formed near {colonyName} to exploit the krill blooms" replacements:{ colonyName:target.name } } placement:{ anchor:{ type:entity ref:bloom stickToRegion:true } spacing:{ minDistance:5 } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
   rel originated_in company -> target strength:0.8
   rel controls company -> bloom strength:0.8
@@ -587,8 +943,27 @@ generator legend_crystallization "Legend Crystallization" do
     kind location
     pick first
   end
-  create memorial kind:rule subtype:memorial status:enacted prominence:recognized culture:{ inherit:target } description:{ template:"A sacred tradition honoring the memory of {heroName}, whose deeds have passed into legend" replacements:{ heroName:target.name } } tags:{ cultural:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
-  create legendaryWeapon kind:artifact subtype:weapon status:intact prominence:renowned culture:{ inherit:target } description:{ template:"The legendary weapon of {heroName}, now a sacred relic" replacements:{ heroName:target.name } } tags:{ legendary:true hero_weapon:true sacred:true } placement:{ anchor:{ type:sparse } steps:[sparse random] } createChance:0.4
+  create memorial do
+    kind:rule
+    subtype:memorial
+    status:enacted
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A sacred tradition honoring the memory of {heroName}, whose deeds have passed into legend" replacements:{ heroName:target.name } }
+    tags cultural
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  end
+  create legendaryWeapon do
+    kind:artifact
+    subtype:weapon
+    status:intact
+    prominence:renowned
+    culture:{ inherit:target }
+    description:{ template:"The legendary weapon of {heroName}, now a sacred relic" replacements:{ heroName:target.name } }
+    tags legendary hero_weapon sacred
+    placement:{ anchor:{ type:sparse } steps:[sparse random] }
+    createChance:0.4
+  end
   rel commemorates memorial -> target strength:1
   rel created_by legendaryWeapon -> target strength:1
   rel central_to legendaryWeapon -> memorial strength:0.9
@@ -615,8 +990,27 @@ generator location_discovery " Location Discovery" do
     prefer has_tag colony
     required true
   end
-  create location kind:location subtype:resource_node status:unspoiled prominence:recognized culture:{ inherit:target } description:{ template:"A resource-rich site discovered by {discovererName} during an expedition" replacements:{ discovererName:target.name } } tags:{ discovered:true emergent:true resource:true } placement:{ anchor:{ type:entity ref:nearbyLocation stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[seed_region sparse random] }
-  create ancientRelic kind:artifact subtype:relic status:intact prominence:marginal culture:{ inherit:target } description:{ template:"An ancient relic unearthed by {discovererName} at the newly discovered site" replacements:{ discovererName:target.name } } tags:{ ancient:true discovered:true unearthed:true } placement:{ anchor:{ type:sparse } steps:[sparse random] } createChance:0.25
+  create location do
+    kind:location
+    subtype:resource_node
+    status:unspoiled
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A resource-rich site discovered by {discovererName} during an expedition" replacements:{ discovererName:target.name } }
+    tags discovered emergent resource
+    placement:{ anchor:{ type:entity ref:nearbyLocation stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[seed_region sparse random] }
+  end
+  create ancientRelic do
+    kind:artifact
+    subtype:relic
+    status:intact
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"An ancient relic unearthed by {discovererName} at the newly discovered site" replacements:{ discovererName:target.name } }
+    tags ancient discovered unearthed
+    placement:{ anchor:{ type:sparse } steps:[sparse random] }
+    createChance:0.25
+  end
   rel discovered_by location -> target strength:1
   rel discovered_by ancientRelic -> target strength:0.9
   rel stored_at ancientRelic -> location strength:0.8
@@ -668,7 +1062,16 @@ generator magic_discovery "Magical Discovery" do
     status intact
     required false
   end
-  create magic kind:ability subtype:magic status:emergent prominence:recognized culture:{ inherit:target } description:{ template:"Mystical ability discovered by {heroName}" replacements:{ heroName:target.name } } tags:{ mystical:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ preferSparse:true allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  create magic do
+    kind:ability
+    subtype:magic
+    status:emergent
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"Mystical ability discovered by {heroName}" replacements:{ heroName:target.name } }
+    tags mystical
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ preferSparse:true allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
   rel derived_from magic -> parentMagic strength:1 condition:{ type:entity_exists entity:parentMagic }
   rel discovered_by magic -> target strength:1
   rel manifests_at magic -> anomaly strength:0.8 condition:{ type:entity_exists entity:anomaly }
@@ -703,7 +1106,16 @@ generator orca_combat_technique "Orca Combat Technique" do
     subtype combat
     pick random
   end
-  create technique kind:ability subtype:combat status:active prominence:marginal culture:{ fixed:orca } description:{ template:"A devastating combat technique used by orca raiders, witnessed when {orcaName} attacked" replacements:{ orcaName:target.name } } tags:{ conflict:true orca:true hostile:true external:true } placement:{ anchor:{ type:culture id:$target.culture } steps:[anchor_region seed_region sparse random] }
+  create technique do
+    kind:ability
+    subtype:combat
+    status:active
+    prominence:marginal
+    culture:{ fixed:orca }
+    description:{ template:"A devastating combat technique used by orca raiders, witnessed when {orcaName} attacked" replacements:{ orcaName:target.name } }
+    tags conflict orca hostile external
+    placement:{ anchor:{ type:culture id:$target.culture } steps:[anchor_region seed_region sparse random] }
+  end
   rel derived_from technique -> parentTechnique strength:1 condition:{ type:entity_exists entity:parentTechnique }
   rel practitioner_of target -> technique strength:0.9
   rel practitioner_of otherOrca -> technique strength:0.8 condition:{ type:random_chance chance:0.6 }
@@ -732,7 +1144,16 @@ generator orca_organized_offensive "Orca Organized Offensive" do
     filter has_tag war_leader
     status alive
   end
-  create offensive kind:occurrence subtype:war status:active prominence:renowned culture:{ fixed:orca } description:{ template:"A coordinated orca assault on {colonyName}, bringing together multiple war-bands in devastating formation" replacements:{ colonyName:target.name } } tags:{ orca_offensive:true coordinated_attack:true siege:true } placement:{ anchor:{ type:entity ref:target } steps:[anchor_region sparse random] }
+  create offensive do
+    kind:occurrence
+    subtype:war
+    status:active
+    prominence:renowned
+    culture:{ fixed:orca }
+    description:{ template:"A coordinated orca assault on {colonyName}, bringing together multiple war-bands in devastating formation" replacements:{ colonyName:target.name } }
+    tags orca_offensive coordinated_attack siege
+    placement:{ anchor:{ type:entity ref:target } steps:[anchor_region sparse random] }
+  end
   rel occurred_at offensive -> target strength:1
   rel instigated_by offensive -> warLeader strength:0.9 condition:{ type:entity_exists entity:warLeader }
   mutate pressure security -= 30
@@ -756,7 +1177,7 @@ generator orca_raider_arrival "Orca Raiders Arrive" do
   let defender do
     from target via resident_of dst
     kind npc
-    subtype in [hero mayor]
+    subtype in hero mayor
     pick random
     status alive
   end
@@ -778,9 +1199,37 @@ generator orca_raider_arrival "Orca Raiders Arrive" do
     pick random
     status alive
   end
-  create orca1 kind:npc subtype:orca status:alive prominence:marginal culture:{ fixed:orca } description:{ template:"A fearsome orca raider threatening {colonyName} from the depths" replacements:{ colonyName:target.name } } tags:{ orca:true raider:true external:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
-  create orca2 kind:npc subtype:orca status:alive prominence:marginal culture:{ fixed:orca } description:{ template:"A raider hunting alongside their packmate near {colonyName}" replacements:{ colonyName:target.name } } tags:{ orca:true raider:true } placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
-  create warLeaderWeapon kind:artifact subtype:weapon status:intact prominence:marginal culture:{ fixed:orca } description:{ template:"A brutal weapon wielded by a fearsome orca war-leader threatening {colonyName}" replacements:{ colonyName:target.name } } tags:{ orca_weapon:true war_trophy:true brutal:true } placement:{ anchor:{ type:sparse } steps:[sparse random] } createChance:0.2
+  create orca1 do
+    kind:npc
+    subtype:orca
+    status:alive
+    prominence:marginal
+    culture:{ fixed:orca }
+    description:{ template:"A fearsome orca raider threatening {colonyName} from the depths" replacements:{ colonyName:target.name } }
+    tags orca raider external
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create orca2 do
+    kind:npc
+    subtype:orca
+    status:alive
+    prominence:marginal
+    culture:{ fixed:orca }
+    description:{ template:"A raider hunting alongside their packmate near {colonyName}" replacements:{ colonyName:target.name } }
+    tags orca raider
+    placement:{ anchor:{ type:entity ref:target stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
+  create warLeaderWeapon do
+    kind:artifact
+    subtype:weapon
+    status:intact
+    prominence:marginal
+    culture:{ fixed:orca }
+    description:{ template:"A brutal weapon wielded by a fearsome orca war-leader threatening {colonyName}" replacements:{ colonyName:target.name } }
+    tags orca_weapon war_trophy brutal
+    placement:{ anchor:{ type:sparse } steps:[sparse random] }
+    createChance:0.2
+  end
   rel taught_by orca1 -> parentOrca strength:1 condition:{ type:entity_exists entity:parentOrca }
   rel allied_with orca2 -> orca1 strength:0.5
   rel owned_by warLeaderWeapon -> orca1 strength:0.9
@@ -805,8 +1254,26 @@ generator orca_war_ritual "Orca War Ritual" do
     status:alive
   end
   variables:{}
-  create ritual kind:occurrence subtype:celebration status:active prominence:recognized culture:{ fixed:orca } description:"A dark ritual conducted by the orca war-bands, calling upon ancient powers to strengthen their assault" tags:{ orca_ritual:true dark_magic:true war_ceremony:true } placement:{ anchor:{ type:sparse } steps:[sparse random] }
-  create battlePower kind:ability subtype:combat status:active prominence:marginal culture:{ fixed:orca } description:"Savage combat technique empowered by the war ritual" tags:{ orca_power:true ritual_granted:true } placement:{ anchor:{ type:sparse } steps:[sparse random] }
+  create ritual do
+    kind:occurrence
+    subtype:celebration
+    status:active
+    prominence:recognized
+    culture:{ fixed:orca }
+    description:"A dark ritual conducted by the orca war-bands, calling upon ancient powers to strengthen their assault"
+    tags orca_ritual dark_magic war_ceremony
+    placement:{ anchor:{ type:sparse } steps:[sparse random] }
+  end
+  create battlePower do
+    kind:ability
+    subtype:combat
+    status:active
+    prominence:marginal
+    culture:{ fixed:orca }
+    description:"Savage combat technique empowered by the war ritual"
+    tags orca_power ritual_granted
+    placement:{ anchor:{ type:sparse } steps:[sparse random] }
+  end
   rel practitioner_of target -> battlePower strength:0.9
   rel catalyst_of ritual -> battlePower strength:0.8
   mutate pressure security -= 25
@@ -838,8 +1305,26 @@ generator succession "Leadership Succession" do
     kind faction
     pick first
   end
-  create successor kind:npc subtype:mayor status:alive prominence:marginal culture:{ inherit:target } description:{ template:"Successor to {predecessorName} in {colonyName}" replacements:{ predecessorName:target.name colonyName:colony.name } } tags:{ political:true leader:true } placement:{ anchor:{ type:sparse preferPeriphery:false } }
-  create aide kind:npc subtype:mayor status:alive prominence:marginal culture:{ inherit:target } description:{ template:"A minor official serving the leadership in {colonyName}" replacements:{ colonyName:colony.name } } tags:{ bureaucrat:true } placement:{ anchor:{ type:sparse preferPeriphery:false } }
+  create successor do
+    kind:npc
+    subtype:mayor
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"Successor to {predecessorName} in {colonyName}" replacements:{ predecessorName:target.name colonyName:colony.name } }
+    tags political leader
+    placement:{ anchor:{ type:sparse preferPeriphery:false } }
+  end
+  create aide do
+    kind:npc
+    subtype:mayor
+    status:alive
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A minor official serving the leadership in {colonyName}" replacements:{ colonyName:colony.name } }
+    tags bureaucrat
+    placement:{ anchor:{ type:sparse preferPeriphery:false } }
+  end
   rel taught_by successor -> target strength:1
   rel allied_with aide -> successor strength:0.4
   rel leader_of successor -> colony strength:0.9
@@ -864,7 +1349,16 @@ generator succession_crisis "Succession Crisis" do
     kind location
     pick random
   end
-  create crisis kind:occurrence subtype:succession_crisis status:active prominence:recognized culture:{ inherit:target } description:{ template:"A bitter succession crisis has erupted in {factionName} following the death of their leader" replacements:{ factionName:target.name } } tags:{ political:true conflict:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  create crisis do
+    kind:occurrence
+    subtype:succession_crisis
+    status:active
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A bitter succession crisis has erupted in {factionName} following the death of their leader" replacements:{ factionName:target.name } }
+    tags political conflict
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  end
   rel participant_in target -> crisis strength:1
   rel epicenter_of crisis -> crisisSite strength:0.7 condition:{ type:entity_exists entity:crisisSite }
   rel triggered_by crisis -> target strength:0.7
@@ -896,7 +1390,16 @@ generator tech_breakthrough "Technological Breakthrough" do
     subtype technology
     pick random
   end
-  create tech kind:ability subtype:technology status:active prominence:recognized culture:{ inherit:target } description:{ template:"A technological breakthrough developed by {factionName} at {locationName}" replacements:{ factionName:target.name locationName:location.name } } tags:{ technology:true innovation:true } placement:{ anchor:{ type:entity ref:location stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
+  create tech do
+    kind:ability
+    subtype:technology
+    status:active
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A technological breakthrough developed by {factionName} at {locationName}" replacements:{ factionName:target.name locationName:location.name } }
+    tags technology innovation
+    placement:{ anchor:{ type:entity ref:location stickToRegion:true } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[anchor_region seed_region sparse random] }
+  end
   rel derived_from tech -> parentTech strength:1 condition:{ type:entity_exists entity:parentTech }
   rel practitioner_of target -> tech strength:0.9 catalyzedBy:leader
   rel originated_in tech -> location strength:0.7
@@ -909,12 +1412,21 @@ generator thermal_colony_decline "Thermal Decline" do
   applicability:[]
   choose target from location do
     pick random
-    subtype in [colony point_of_interest resource_node anomaly]
+    subtype in colony point_of_interest resource_node anomaly
     inbound epicenter_of <= 2
     filter has_any_tag dangerous stressed crisis
     status:thriving
   end
-  create thermal_disaster kind:occurrence subtype:disaster status:active prominence:recognized culture:{ inherit:target } description:{ template:"A thermal calamity grips {locationName}, forcing evacuations and rationing" replacements:{ locationName:target.name } } tags:{ crisis:true dangerous:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  create thermal_disaster do
+    kind:occurrence
+    subtype:disaster
+    status:active
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A thermal calamity grips {locationName}, forcing evacuations and rationing" replacements:{ locationName:target.name } }
+    tags crisis dangerous
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
   rel epicenter_of thermal_disaster -> target strength:0.8
   rel triggered_by thermal_disaster -> target strength:0.5
   stateUpdates:[{ type:change_status entity:target newStatus:waning } { type:set_tag entity:target tag:stressed value:true } { type:remove_tag entity:target tag:thriving }]
@@ -925,12 +1437,21 @@ generator thermal_colony_recovery "Thermal Recovery" do
   applicability:[]
   choose target from location do
     pick random
-    subtype in [colony point_of_interest resource_node anomaly]
+    subtype in colony point_of_interest resource_node anomaly
     inbound epicenter_of <= 2
     filter has_tag safe
     status:waning
   end
-  create recovery kind:occurrence subtype:celebration status:active prominence:marginal culture:{ inherit:target } description:{ template:"A thaw celebration marks {locationName}'s recovery from harsh conditions" replacements:{ locationName:target.name } } tags:{ cultural:true thriving:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  create recovery do
+    kind:occurrence
+    subtype:celebration
+    status:active
+    prominence:marginal
+    culture:{ inherit:target }
+    description:{ template:"A thaw celebration marks {locationName}'s recovery from harsh conditions" replacements:{ locationName:target.name } }
+    tags cultural thriving
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
   rel epicenter_of recovery -> target strength:0.7
   stateUpdates:[{ type:change_status entity:target newStatus:thriving } { type:set_tag entity:target tag:thriving value:true } { type:remove_tag entity:target tag:stressed }]
   enabled:true
@@ -965,7 +1486,16 @@ generator thermal_migration "Thermal Migration" do
     status thriving
     required true
   end
-  create camp kind:location subtype:point_of_interest status:thriving prominence:marginal culture:{ inherit:refuge } description:{ template:"A temporary refuge camp shelters migrants fleeing {sourceName}" replacements:{ sourceName:target.name } } tags:{ emergent:true stressed:true } placement:{ anchor:{ type:entity ref:refuge stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  create camp do
+    kind:location
+    subtype:point_of_interest
+    status:thriving
+    prominence:marginal
+    culture:{ inherit:refuge }
+    description:{ template:"A temporary refuge camp shelters migrants fleeing {sourceName}" replacements:{ sourceName:target.name } }
+    tags emergent stressed
+    placement:{ anchor:{ type:entity ref:refuge stickToRegion:true } regionPolicy:{ allowEmergent:true } steps:[anchor_region seed_region sparse random] }
+  end
   rel resident_of migrant -> refuge strength:0.7 condition:{ type:random_chance chance:0.5 }
   rel contained_by camp -> refuge strength:0.8 condition:{ type:entity_exists entity:camp }
   rel related_to camp -> target strength:0.5 condition:{ type:entity_exists entity:camp }
@@ -1002,7 +1532,16 @@ generator war_apocalypse_resolution "Apocalyptic War Resolution" do
     kind location
     pick random
   end
-  create cataclysm kind:ability subtype:magic status:active prominence:mythic culture:{ inherit:target } description:{ template:"A cataclysmic spell born from the war known as {warName}" replacements:{ warName:target.name } } tags:{ mystical:true conflict:true cultural:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[seed_region sparse random] }
+  create cataclysm do
+    kind:ability
+    subtype:magic
+    status:active
+    prominence:mythic
+    culture:{ inherit:target }
+    description:{ template:"A cataclysmic spell born from the war known as {warName}" replacements:{ warName:target.name } }
+    tags mystical conflict cultural
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true preferSparse:true } steps:[seed_region sparse random] }
+  end
   rel derived_from cataclysm -> target strength:1
   rel manifests_at cataclysm -> warzone strength:0.8 condition:{ type:entity_exists entity:warzone }
   rel practitioner_of faction1 -> cataclysm strength:0.8
@@ -1029,7 +1568,16 @@ generator war_declaration "War Declaration" do
     filter lacks_relationship at_war_with with target
     required true
   end
-  create war kind:occurrence subtype:war status:active prominence:recognized culture:{ inherit:target } description:{ template:"A war declared by {aggressor} against {defender}" replacements:{ aggressor:target.name defender:enemy.name } } tags:{ declared_war:true } placement:{ anchor:{ type:refs_centroid refs:[$target $enemy] jitter:0.1 } steps:[anchor_region sparse random] }
+  create war do
+    kind:occurrence
+    subtype:war
+    status:active
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A war declared by {aggressor} against {defender}" replacements:{ aggressor:target.name defender:enemy.name } }
+    tags declared_war
+    placement:{ anchor:{ type:refs_centroid refs:[$target $enemy] jitter:0.1 } steps:[anchor_region sparse random] }
+  end
   rel participant_in target -> war strength:0.9
   rel participant_in enemy -> war strength:0.9
   rel at_war_with target -> enemy strength:0.9 bidirectional:true
@@ -1042,19 +1590,22 @@ generator war_outbreak "War Outbreak" do
   choose target from faction do
     pick random
     outbound participant_in <= 1
-    filter has_relationship at_war_with direction both
+    filter has_relationship allied_with direction both
   end
   let enemy do
-    from target via at_war_with both
+    from graph
     kind faction
     pick random
+    filter exclude target
+    filter lacks_relationship allied_with with target
     required true
   end
   let enemy2 do
-    from target via at_war_with both
+    from graph
     kind faction
     pick random
-    filter exclude enemy
+    filter exclude target enemy
+    filter lacks_relationship allied_with with target
   end
   let ally1 do
     from target via allied_with both
@@ -1076,11 +1627,30 @@ generator war_outbreak "War Outbreak" do
   let battle_style do
     from graph
     kind ability
-    subtype in [combat magic]
+    subtype in combat magic
     pick random
   end
-  create war kind:occurrence subtype:war status:active prominence:renowned culture:{ inherit:target } description:{ template:"A devastating war has erupted involving {factionName} and their rivals" replacements:{ factionName:target.name } } tags:{ conflict:true } placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
-  create warWeapon kind:artifact subtype:weapon status:intact prominence:recognized culture:{ inherit:target } description:{ template:"A weapon central to the conflict between {factionName} and their enemies" replacements:{ factionName:target.name } } tags:{ war_prize:true contested:true legendary_conflict:true } placement:{ anchor:{ type:sparse } steps:[sparse random] } createChance:0.25
+  create war do
+    kind:occurrence
+    subtype:war
+    status:active
+    prominence:renowned
+    culture:{ inherit:target }
+    description:{ template:"A devastating war has erupted involving {factionName} and their rivals" replacements:{ factionName:target.name } }
+    tags conflict artifact_war
+    placement:{ anchor:{ type:culture id:$target.culture } regionPolicy:{ allowEmergent:true } steps:[seed_region sparse random] }
+  end
+  create warWeapon do
+    kind:artifact
+    subtype:weapon
+    status:intact
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"A weapon central to the conflict between {factionName} and their enemies" replacements:{ factionName:target.name } }
+    tags war_prize contested legendary_conflict
+    placement:{ anchor:{ type:sparse } steps:[sparse random] }
+    createChance:0.25
+  end
   rel participant_in target -> war strength:1
   rel catalyst_of warWeapon -> war strength:0.9
   rel owned_by warWeapon -> target strength:0.7
@@ -1120,11 +1690,20 @@ generator wild_magic_discover "Wild Magical Discovery" do
   let discoverer do
     from graph
     kind npc
-    subtype in [hero merchant]
+    subtype in hero merchant
     pick random
     required true
   end
-  create magic kind:ability subtype:magic status:secret prominence:recognized culture:{ inherit:target } description:{ template:"Wild magic manifesting at {locationName}, discovered by {discovererName}" replacements:{ locationName:target.name discovererName:discoverer.name } } tags:{ mystical:true wild:true } placement:{ anchor:{ type:sparse preferPeriphery:true } spacing:{} regionPolicy:{ allowEmergent:true createRegion:true } steps:[sparse random] }
+  create magic do
+    kind:ability
+    subtype:magic
+    status:secret
+    prominence:recognized
+    culture:{ inherit:target }
+    description:{ template:"Wild magic manifesting at {locationName}, discovered by {discovererName}" replacements:{ locationName:target.name discovererName:discoverer.name } }
+    tags mystical wild
+    placement:{ anchor:{ type:sparse preferPeriphery:true } spacing:{} regionPolicy:{ allowEmergent:true createRegion:true } steps:[sparse random] }
+  end
   rel manifests_at magic -> target strength:0.8
   rel practitioner_of discoverer -> magic strength:0.8 bidirectional:false
   mutate pressure magical_stability += 15

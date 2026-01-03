@@ -103,6 +103,12 @@ export interface FromNode {
   span: SourceSpan;
 }
 
+export interface BareNode {
+  type: 'bare';
+  value: Value;
+  span: SourceSpan;
+}
+
 export type StatementNode =
   | AttributeNode
   | BlockNode
@@ -110,7 +116,8 @@ export type StatementNode =
   | MutateNode
   | PredicateNode
   | InNode
-  | FromNode;
+  | FromNode
+  | BareNode;
 
 export interface AstFile {
   path: string;

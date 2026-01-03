@@ -35,7 +35,8 @@ Statement
     / FromStatement
     / Block
     / LabeledAttribute
-    / Attribute) LineEnd? { return stmt; }
+    / Attribute
+    / BareStatement) LineEnd? { return stmt; }
   / LineEnd { return null; }
 
 AxisLine
@@ -241,6 +242,15 @@ Attribute
         key,
         value: values,
         labels: [],
+        span: span(location())
+      };
+    }
+
+BareStatement
+  = value:(String / IdentifierValue) {
+      return {
+        type: "bare",
+        value,
         span: span(location())
       };
     }

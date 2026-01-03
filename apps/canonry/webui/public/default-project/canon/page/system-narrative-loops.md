@@ -234,7 +234,7 @@ The reward creates new needs, or enables others' needs. The merchant who gains w
 
 **Need:** Factions compete for territory, resources, or ideology.
 
-**Progression:** `war_outbreak` creates conflicts. `war_escalation` intensifies them. `sue_for_peace` and `claim_victory` resolve them.
+**Progression:** `war_declaration` creates new conflicts between unaligned factions. `war_outbreak` escalates existing hostilities into larger multi-faction wars by drawing in allies (2-5 participants). `alliance_betrayal` creates smaller wars when allies turn on each other. `sue_for_peace` and `claim_victory` resolve them.
 
 **Reward:** Winners gain territory/influence. Losers lose prominence. Relationships shift (former enemies become rivals, allies become suspicious).
 

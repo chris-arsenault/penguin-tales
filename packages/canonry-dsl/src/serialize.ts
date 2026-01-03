@@ -17,6 +17,31 @@ const REF_KEYS = new Set([
   'ref'
 ]);
 const REF_LIST_KEYS = new Set(['entities']);
+const SET_FIELD_KEYS = new Set([
+  'tags',
+  'links',
+  'kinds',
+  'entityKinds',
+  'subtypes',
+  'statuses',
+  'excludeSubtypes',
+  'excludeStatuses',
+  'related',
+  'relatedTags',
+  'conflicts',
+  'conflictingTags',
+  'exclusive',
+  'mutuallyExclusiveWith',
+  'templates',
+  'relationshipKinds',
+  'excludeRelationships',
+  'pairExcludeRelationships',
+  'via',
+  'srcKinds',
+  'dstKinds',
+  'culture_id',
+  'cultureId'
+]);
 
 export interface CanonFile {
   path: string;
@@ -319,6 +344,15 @@ export function serializeCanonProject(
       continue;
     }
 
+    if (def.block === 'seed_relationship') {
+      const blocks = formatSeedRelationshipGroups(items.filter(isRecord) as Record<string, unknown>[]);
+      files.push({
+        path: def.file,
+        content: blocks.join('\n\n')
+      });
+      continue;
+    }
+
     items.sort((a, b) => {
       if (!isRecord(a) || !isRecord(b)) return 0;
       if (def.sortKey) return def.sortKey(a).localeCompare(def.sortKey(b));
@@ -378,6 +412,11 @@ export function serializeCanonProject(
       }
       if (def.block === 'action') {
         const block = formatActionBlock(item);
+        if (block) blocks.push(block);
+        continue;
+      }
+      if (def.block === 'pressure') {
+        const block = formatPressureBlock(item);
         if (block) blocks.push(block);
         continue;
       }
@@ -498,17 +537,1487 @@ function formatSystemBlock(item: Record<string, unknown>): string | null {
   if (idLabel) labels.push(idLabel);
   if (nameLabel) labels.push(nameLabel);
 
-  const body: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(item)) {
-    if (key === 'systemType' || key === 'config') continue;
-    body[key] = value;
+  const lines = [`system ${labels.map(formatLabel).join(' ')} do`];
+  if (item.enabled !== undefined) {
+    pushInlinePairLine(lines, 'enabled', item.enabled, 1);
   }
 
-  if (Object.keys(config).length > 0) {
-    body.config = config;
+  const systemLines = formatSystemConfigLines(systemType, config, 1);
+  if (!systemLines) return null;
+  if (systemLines.length > 0) {
+    lines.push(...systemLines);
   }
 
-  return formatBlock('system', labels, body);
+  lines.push('end');
+  return lines.join('\n');
+}
+
+function formatSystemConfigLines(
+  systemType: string,
+  config: Record<string, unknown>,
+  indentLevel: number
+): string[] | null {
+  switch (systemType) {
+    case 'thresholdTrigger':
+      return formatThresholdTriggerSystem(config, indentLevel);
+    case 'connectionEvolution':
+      return formatConnectionEvolutionSystem(config, indentLevel);
+    case 'clusterFormation':
+      return formatClusterFormationSystem(config, indentLevel);
+    case 'graphContagion':
+      return formatGraphContagionSystem(config, indentLevel);
+    case 'planeDiffusion':
+      return formatPlaneDiffusionSystem(config, indentLevel);
+    case 'tagDiffusion':
+      return formatTagDiffusionSystem(config, indentLevel);
+    case 'eraSpawner':
+      return formatEraSpawnerSystem(config, indentLevel);
+    case 'eraTransition':
+      return formatEraTransitionSystem(config, indentLevel);
+    case 'universalCatalyst':
+      return formatUniversalCatalystSystem(config, indentLevel);
+    case 'relationshipMaintenance':
+      return formatRelationshipMaintenanceSystem(config, indentLevel);
+    default:
+      return null;
+  }
+}
+
+function formatOperatorKeyword(operator: string): string | null {
+  if (operator === '>=') return 'gte';
+  if (operator === '>') return 'gt';
+  if (operator === '<=') return 'lte';
+  if (operator === '<') return 'lt';
+  if (operator === '==') return 'eq';
+  return null;
+}
+
+function formatPressureChangeLines(value: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(value)) return null;
+  const entries = Object.entries(value)
+    .filter(([, entry]) => typeof entry === 'number')
+    .sort(([a], [b]) => String(a).localeCompare(String(b)));
+  if (entries.length === 0) return [];
+  return entries.map(([key, entry]) =>
+    `${indent(indentLevel)}pressure ${formatLabel(String(key))} ${entry}`
+  );
+}
+
+function formatSystemSelectionBlock(value: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(value)) return null;
+  const selection = cloneAndStripRefs(value) as Record<string, unknown>;
+  const lines = [`${indent(indentLevel)}selection do`];
+  const innerIndent = indentLevel + 1;
+
+  if (selection.strategy !== undefined) {
+    if (selection.strategy !== 'by_kind') {
+      pushInlinePairLine(lines, 'strategy', selection.strategy, innerIndent);
+    }
+    delete selection.strategy;
+  }
+
+  const pickStrategy = selection.pickStrategy ?? 'random';
+  pushInlinePairLine(lines, 'pick', pickStrategy, innerIndent);
+  delete selection.pickStrategy;
+
+  if (selection.kind !== undefined) {
+    pushInlinePairLine(lines, 'kind', selection.kind, innerIndent);
+    delete selection.kind;
+  }
+  if (selection.kinds !== undefined) {
+    pushInlinePairLine(lines, 'kinds', selection.kinds, innerIndent);
+    delete selection.kinds;
+  }
+
+  if (Array.isArray(selection.subtypes) && selection.subtypes.length > 0) {
+    if (selection.subtypes.length > 1) {
+      const inline = formatSetInlineValue(selection.subtypes);
+      if (inline) {
+        lines.push(`${indent(innerIndent)}subtype in ${inline}`);
+      } else {
+        pushInlinePairLine(lines, 'subtypes', selection.subtypes, innerIndent);
+      }
+    } else {
+      pushInlinePairLine(lines, 'subtype', selection.subtypes[0], innerIndent);
+    }
+    delete selection.subtypes;
+  }
+
+  if (Array.isArray(selection.statuses) && selection.statuses.length > 0) {
+    if (selection.statuses.length > 1) {
+      const inline = formatSetInlineValue(selection.statuses);
+      if (inline) {
+        lines.push(`${indent(innerIndent)}status in ${inline}`);
+      } else {
+        pushInlinePairLine(lines, 'statuses', selection.statuses, innerIndent);
+      }
+    } else {
+      pushInlinePairLine(lines, 'status', selection.statuses[0], innerIndent);
+    }
+    delete selection.statuses;
+  }
+
+  if (selection.statusFilter !== undefined) {
+    pushInlinePairLine(lines, 'status', selection.statusFilter, innerIndent);
+    delete selection.statusFilter;
+  }
+
+  if (selection.status !== undefined) {
+    pushInlinePairLine(lines, 'status', selection.status, innerIndent);
+    delete selection.status;
+  }
+
+  if (selection.maxResults !== undefined) {
+    pushInlinePairLine(lines, 'max', selection.maxResults, innerIndent);
+    delete selection.maxResults;
+  }
+
+  if (Array.isArray(selection.saturationLimits) && selection.saturationLimits.length > 0) {
+    const saturationLines = formatSaturationLines(selection.saturationLimits, innerIndent);
+    if (saturationLines) {
+      lines.push(...saturationLines);
+      delete selection.saturationLimits;
+    }
+  }
+
+  if (selection.referenceEntity !== undefined) {
+    pushInlinePairLine(lines, 'referenceEntity', selection.referenceEntity, innerIndent);
+    delete selection.referenceEntity;
+  }
+
+  if (selection.relationshipKind !== undefined) {
+    pushInlinePairLine(lines, 'relationshipKind', selection.relationshipKind, innerIndent);
+    delete selection.relationshipKind;
+  }
+
+  if (selection.direction !== undefined) {
+    pushInlinePairLine(lines, 'direction', selection.direction, innerIndent);
+    delete selection.direction;
+  }
+
+  if (selection.mustHave !== undefined) {
+    pushInlinePairLine(lines, 'mustHave', selection.mustHave, innerIndent);
+    delete selection.mustHave;
+  }
+
+  if (selection.excludeSubtypes !== undefined) {
+    pushInlinePairLine(lines, 'excludeSubtypes', selection.excludeSubtypes, innerIndent);
+    delete selection.excludeSubtypes;
+  }
+
+  if (selection.notStatus !== undefined) {
+    pushInlinePairLine(lines, 'notStatus', selection.notStatus, innerIndent);
+    delete selection.notStatus;
+  }
+
+  if (selection.subtypePreferences !== undefined) {
+    pushInlinePairLine(lines, 'subtypePreferences', selection.subtypePreferences, innerIndent);
+    delete selection.subtypePreferences;
+  }
+
+  if (selection.maxDistance !== undefined) {
+    pushInlinePairLine(lines, 'maxDistance', selection.maxDistance, innerIndent);
+    delete selection.maxDistance;
+  }
+
+  if (selection.minProminence !== undefined) {
+    pushInlinePairLine(lines, 'minProminence', selection.minProminence, innerIndent);
+    delete selection.minProminence;
+  }
+
+  if (selection.filters !== undefined) {
+    const filterLines = formatFilterLines(selection.filters, innerIndent, 'filter');
+    if (filterLines) {
+      lines.push(...filterLines);
+    } else {
+      pushInlinePairLine(lines, 'filters', selection.filters, innerIndent);
+    }
+    delete selection.filters;
+  }
+
+  if (selection.preferFilters !== undefined) {
+    const preferLines = formatFilterLines(selection.preferFilters, innerIndent, 'prefer');
+    if (preferLines) {
+      lines.push(...preferLines);
+    } else {
+      pushInlinePairLine(lines, 'preferFilters', selection.preferFilters, innerIndent);
+    }
+    delete selection.preferFilters;
+  }
+
+  for (const [key, entry] of Object.entries(selection)) {
+    if (entry === undefined) continue;
+    pushInlinePairLine(lines, key, entry, innerIndent);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatSystemConditionLines(value: unknown, indentLevel: number): string[] | null {
+  if (Array.isArray(value)) {
+    const lines: string[] = [];
+    for (const condition of value) {
+      const conditionLines = formatSystemConditionLine(condition, indentLevel);
+      if (!conditionLines) return null;
+      lines.push(...conditionLines);
+    }
+    return lines;
+  }
+  if (isRecord(value)) {
+    return formatSystemConditionLine(value, indentLevel);
+  }
+  return null;
+}
+
+function formatSystemConditionLine(condition: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(condition)) {
+    const inline = formatInlineValue(condition);
+    if (!inline) return null;
+    return [`${indent(indentLevel)}condition ${inline}`];
+  }
+  const cleaned = cloneAndStripRefs(condition) as Record<string, unknown>;
+  const type = cleaned.type;
+  if (typeof type !== 'string') return null;
+
+  if ((type === 'and' || type === 'or') && Array.isArray(cleaned.conditions)) {
+    const mode = type === 'or' ? 'any' : 'all';
+    const lines = [`${indent(indentLevel)}when ${mode} do`];
+    for (const entry of cleaned.conditions) {
+      const entryLines = formatSystemConditionLine(entry, indentLevel + 1);
+      if (!entryLines) return null;
+      lines.push(...entryLines);
+    }
+    lines.push(`${indent(indentLevel)}end`);
+    return lines;
+  }
+
+  if (type === 'graph_path' && isRecord(cleaned.assert)) {
+    return formatGraphPathLines(cleaned.assert, indentLevel, 'path');
+  }
+
+  if (type === 'tag_exists' && typeof cleaned.tag === 'string') {
+    return [`${indent(indentLevel)}condition tag_exists ${formatLabel(cleaned.tag)}`];
+  }
+
+  if (type === 'lacks_tag' && typeof cleaned.tag === 'string') {
+    if (typeof cleaned.entity === 'string') {
+      return [
+        `${indent(indentLevel)}condition lacks_tag ${formatLabel(stripBinding(cleaned.entity))} ${formatLabel(cleaned.tag)}`
+      ];
+    }
+    return [`${indent(indentLevel)}condition lacks_tag ${formatLabel(cleaned.tag)}`];
+  }
+
+  if (type === 'relationship_exists' && typeof cleaned.relationshipKind === 'string') {
+    const parts = [
+      `${indent(indentLevel)}condition`,
+      'relationship_exists',
+      formatLabel(cleaned.relationshipKind)
+    ];
+    if (typeof cleaned.direction === 'string') {
+      parts.push(cleaned.direction);
+    }
+    if (typeof cleaned.targetKind === 'string') {
+      parts.push('target_kind', formatLabel(cleaned.targetKind));
+    }
+    if (typeof cleaned.targetStatus === 'string') {
+      parts.push('target_status', formatLabel(cleaned.targetStatus));
+    }
+    return [parts.join(' ')];
+  }
+
+  if (type === 'relationship_count' && typeof cleaned.relationshipKind === 'string') {
+    const parts = [
+      `${indent(indentLevel)}condition`,
+      'relationship_count',
+      formatLabel(cleaned.relationshipKind)
+    ];
+    if (typeof cleaned.direction === 'string') {
+      parts.push(cleaned.direction);
+    }
+    const min = cleaned.min;
+    const max = cleaned.max;
+    if (typeof min === 'number' && typeof max === 'number' && min !== max) {
+      parts.push('between', String(min), String(max));
+    } else if (typeof min === 'number' && typeof max === 'number' && min === max) {
+      parts.push('eq', String(min));
+    } else if (typeof min === 'number') {
+      parts.push('gte', String(min));
+    } else if (typeof max === 'number') {
+      parts.push('lte', String(max));
+    } else {
+      return null;
+    }
+    return [parts.join(' ')];
+  }
+
+  if (type === 'random_chance' && typeof cleaned.chance === 'number') {
+    return [`${indent(indentLevel)}condition random_chance ${cleaned.chance}`];
+  }
+
+  if (type === 'time_elapsed' && typeof cleaned.minTicks === 'number') {
+    const parts = [`${indent(indentLevel)}condition time_elapsed`, String(cleaned.minTicks)];
+    if (typeof cleaned.since === 'string') {
+      parts.push('since', cleaned.since);
+    }
+    return [parts.join(' ')];
+  }
+
+  if (type === 'prominence') {
+    if (typeof cleaned.min === 'string') {
+      return [`${indent(indentLevel)}condition prominence min ${formatLabel(cleaned.min)}`];
+    }
+    if (typeof cleaned.max === 'string') {
+      return [`${indent(indentLevel)}condition prominence max ${formatLabel(cleaned.max)}`];
+    }
+  }
+
+  if (type === 'entity_exists' && typeof cleaned.entity === 'string') {
+    return [`${indent(indentLevel)}condition entity_exists ${formatLabel(stripBinding(cleaned.entity))}`];
+  }
+
+  if (type === 'not_self') {
+    return [`${indent(indentLevel)}condition not_self`];
+  }
+
+  return formatEntryLineOrBlock('condition', [], cleaned, indentLevel);
+}
+
+function formatSystemConditionInlineTokens(condition: unknown): string[] | null {
+  if (!isRecord(condition)) return null;
+  const cleaned = cloneAndStripRefs(condition) as Record<string, unknown>;
+  const type = cleaned.type;
+  if (type === 'entity_exists' && typeof cleaned.entity === 'string') {
+    return ['entity_exists', formatLabel(stripBinding(cleaned.entity))];
+  }
+  if (type === 'tag_exists' && typeof cleaned.tag === 'string') {
+    return ['tag_exists', formatLabel(cleaned.tag)];
+  }
+  if (type === 'lacks_tag' && typeof cleaned.tag === 'string') {
+    if (typeof cleaned.entity === 'string') {
+      return ['lacks_tag', formatLabel(stripBinding(cleaned.entity)), formatLabel(cleaned.tag)];
+    }
+    return ['lacks_tag', formatLabel(cleaned.tag)];
+  }
+  return null;
+}
+
+function formatActionListBlock(
+  name: string,
+  actions: unknown[],
+  indentLevel: number
+): string[] | null {
+  if (!Array.isArray(actions)) return null;
+  const lines: string[] = [`${indent(indentLevel)}${name} do`];
+  for (const action of actions) {
+    const actionLines = formatActionMutationLine(action, indentLevel + 1);
+    if (!actionLines) return null;
+    lines.push(...actionLines);
+  }
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatMetricBlock(value: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(value)) return null;
+  const metric = cloneAndStripRefs(value) as Record<string, unknown>;
+  const type = metric.type;
+  if (typeof type !== 'string') return null;
+  const lines: string[] = [`${indent(indentLevel)}metric ${formatLabel(type)} do`];
+  const innerIndent = indentLevel + 1;
+  const remaining = { ...metric };
+  delete remaining.type;
+
+  if (type === 'shared_relationship') {
+    if (remaining.sharedRelationshipKind !== undefined) {
+      pushInlinePairLine(lines, 'relationship', remaining.sharedRelationshipKind, innerIndent);
+      delete remaining.sharedRelationshipKind;
+    }
+    if (remaining.sharedDirection !== undefined) {
+      pushInlinePairLine(lines, 'direction', remaining.sharedDirection, innerIndent);
+      delete remaining.sharedDirection;
+    }
+  } else if (type === 'connection_count') {
+    if (remaining.relationshipKinds !== undefined) {
+      pushInlinePairLine(lines, 'relationships', remaining.relationshipKinds, innerIndent);
+      delete remaining.relationshipKinds;
+    }
+    if (remaining.direction !== undefined) {
+      pushInlinePairLine(lines, 'direction', remaining.direction, innerIndent);
+      delete remaining.direction;
+    }
+    if (remaining.minStrength !== undefined) {
+      pushInlinePairLine(lines, 'min_strength', remaining.minStrength, innerIndent);
+      delete remaining.minStrength;
+    }
+  } else if (type === 'neighbor_prominence') {
+    if (remaining.direction !== undefined) {
+      pushInlinePairLine(lines, 'direction', remaining.direction, innerIndent);
+      delete remaining.direction;
+    }
+    if (remaining.minStrength !== undefined) {
+      pushInlinePairLine(lines, 'min_strength', remaining.minStrength, innerIndent);
+      delete remaining.minStrength;
+    }
+  } else if (type === 'neighbor_kind_count') {
+    if (remaining.kind !== undefined) {
+      pushInlinePairLine(lines, 'kind', remaining.kind, innerIndent);
+      delete remaining.kind;
+    }
+    if (remaining.via !== undefined) {
+      const inline = formatInlineList(remaining.via as unknown[]);
+      if (inline) {
+        lines.push(`${indent(innerIndent)}via ${inline}`);
+      } else {
+        pushInlinePairLine(lines, 'via', remaining.via, innerIndent);
+      }
+      delete remaining.via;
+    }
+    if (remaining.viaDirection !== undefined) {
+      pushInlinePairLine(lines, 'via_direction', remaining.viaDirection, innerIndent);
+      delete remaining.viaDirection;
+    }
+    if (remaining.then !== undefined) {
+      pushInlinePairLine(lines, 'then', remaining.then, innerIndent);
+      delete remaining.then;
+    }
+    if (remaining.thenDirection !== undefined) {
+      pushInlinePairLine(lines, 'then_direction', remaining.thenDirection, innerIndent);
+      delete remaining.thenDirection;
+    }
+  }
+
+  const extraLines = formatAttributeLines(remaining, innerIndent);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatRuleBlock(value: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(value)) return null;
+  const rule = cloneAndStripRefs(value) as Record<string, unknown>;
+  const lines: string[] = [`${indent(indentLevel)}rule do`];
+  const innerIndent = indentLevel + 1;
+
+  const condition = rule.condition;
+  const probability = rule.probability;
+  const betweenMatching = rule.betweenMatching;
+  const action = rule.action;
+  delete rule.condition;
+  delete rule.probability;
+  delete rule.betweenMatching;
+  delete rule.action;
+
+  if (isRecord(condition) && typeof condition.operator === 'string' && typeof condition.threshold === 'number') {
+    const keyword = formatOperatorKeyword(condition.operator);
+    if (!keyword) return null;
+    lines.push(`${indent(innerIndent)}threshold ${keyword} ${condition.threshold}`);
+  } else if (condition !== undefined) {
+    pushInlinePairLine(lines, 'condition', condition, innerIndent);
+  }
+
+  if (probability !== undefined) {
+    pushInlinePairLine(lines, 'probability', probability, innerIndent);
+  }
+  if (betweenMatching !== undefined) {
+    pushInlinePairLine(lines, 'between_matching', betweenMatching, innerIndent);
+  }
+
+  if (action !== undefined) {
+    const actionLines = formatActionMutationLine(action, innerIndent);
+    if (!actionLines) return null;
+    lines.push(...actionLines);
+  }
+
+  const extraLines = formatAttributeLines(rule, innerIndent);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatCriterionLine(value: unknown, indentLevel: number): string | null {
+  if (!isRecord(value)) return null;
+  const cleaned = cloneAndStripRefs(value) as Record<string, unknown>;
+  const type = cleaned.type;
+  const weight = cleaned.weight;
+  if (typeof type !== 'string' || typeof weight !== 'number') return null;
+
+  if (type === 'shared_relationship') {
+    const relationshipKind = cleaned.relationshipKind;
+    const direction = cleaned.direction;
+    if (typeof relationshipKind !== 'string' || typeof direction !== 'string') return null;
+    return `${indent(indentLevel)}criterion ${formatLabel(type)} ${weight} ${formatLabel(relationshipKind)} ${direction}`;
+  }
+
+  if (type === 'shared_tags' || type === 'temporal_proximity') {
+    const threshold = cleaned.threshold;
+    if (typeof threshold !== 'number') return null;
+    return `${indent(indentLevel)}criterion ${formatLabel(type)} ${weight} ${threshold}`;
+  }
+
+  if (type === 'same_culture') {
+    return `${indent(indentLevel)}criterion ${formatLabel(type)} ${weight}`;
+  }
+
+  return null;
+}
+
+function formatClusteringBlock(value: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(value)) return null;
+  const clustering = cloneAndStripRefs(value) as Record<string, unknown>;
+  const criteria = clustering.criteria;
+  delete clustering.criteria;
+
+  const lines: string[] = [`${indent(indentLevel)}clustering do`];
+  const innerIndent = indentLevel + 1;
+
+  if (clustering.minSize !== undefined) {
+    pushInlinePairLine(lines, 'min_size', clustering.minSize, innerIndent);
+    delete clustering.minSize;
+  }
+  if (clustering.maxSize !== undefined) {
+    pushInlinePairLine(lines, 'max_size', clustering.maxSize, innerIndent);
+    delete clustering.maxSize;
+  }
+  if (clustering.minimumScore !== undefined) {
+    pushInlinePairLine(lines, 'minimum_score', clustering.minimumScore, innerIndent);
+    delete clustering.minimumScore;
+  }
+
+  if (Array.isArray(criteria)) {
+    for (const criterion of criteria) {
+      const line = formatCriterionLine(criterion, innerIndent);
+      if (!line) return null;
+      lines.push(line);
+    }
+  } else if (criteria !== undefined) {
+    return null;
+  }
+
+  const extraLines = formatAttributeLines(clustering, innerIndent);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatMetaEntityBlock(value: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(value)) return null;
+  const meta = cloneAndStripRefs(value) as Record<string, unknown>;
+  const lines: string[] = [`${indent(indentLevel)}meta_entity do`];
+  const innerIndent = indentLevel + 1;
+
+  if (meta.kind !== undefined) {
+    pushInlinePairLine(lines, 'kind', meta.kind, innerIndent);
+    delete meta.kind;
+  }
+  if (meta.subtypeFromMajority !== undefined) {
+    pushInlinePairLine(lines, 'subtype_from_majority', meta.subtypeFromMajority, innerIndent);
+    delete meta.subtypeFromMajority;
+  }
+  if (meta.status !== undefined) {
+    pushInlinePairLine(lines, 'status', meta.status, innerIndent);
+    delete meta.status;
+  }
+  if (meta.prominenceFromSize !== undefined && isRecord(meta.prominenceFromSize)) {
+    const entries = Object.entries(meta.prominenceFromSize)
+      .map(([key, entry]) => `${formatLabel(key)} ${entry}`);
+    if (entries.length > 0) {
+      lines.push(`${indent(innerIndent)}prominence_from_size ${entries.join(' ')}`);
+    }
+    delete meta.prominenceFromSize;
+  }
+  if (Array.isArray(meta.additionalTags) && meta.additionalTags.length > 0) {
+    const inline = formatInlineList(meta.additionalTags);
+    if (inline) {
+      lines.push(`${indent(innerIndent)}additional_tags ${inline}`);
+    } else {
+      pushInlinePairLine(lines, 'additional_tags', meta.additionalTags, innerIndent);
+    }
+    delete meta.additionalTags;
+  } else if (meta.additionalTags !== undefined) {
+    delete meta.additionalTags;
+  }
+  if (meta.descriptionTemplate !== undefined) {
+    pushInlinePairLine(lines, 'description_template', meta.descriptionTemplate, innerIndent);
+    delete meta.descriptionTemplate;
+  }
+
+  const extraLines = formatAttributeLines(meta, innerIndent);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatPickerBlock(
+  name: string,
+  value: unknown,
+  indentLevel: number
+): string[] | null {
+  if (!isRecord(value)) return null;
+  const picker = cloneAndStripRefs(value) as Record<string, unknown>;
+  const filters = picker.filters;
+  const preferFilters = picker.preferFilters;
+  const pickStrategy = picker.pickStrategy ?? 'random';
+  const maxResults = picker.maxResults;
+  delete picker.filters;
+  delete picker.preferFilters;
+  delete picker.pickStrategy;
+  delete picker.maxResults;
+
+  const lines = [`${indent(indentLevel)}${name} do`];
+  const innerIndent = indentLevel + 1;
+
+  pushInlinePairLine(lines, 'pick', pickStrategy, innerIndent);
+  if (maxResults !== undefined) {
+    pushInlinePairLine(lines, 'max', maxResults, innerIndent);
+  }
+
+  if (filters !== undefined) {
+    const filterLines = formatFilterLines(filters, innerIndent, 'filter');
+    if (filterLines) {
+      lines.push(...filterLines);
+    } else {
+      pushInlinePairLine(lines, 'filters', filters, innerIndent);
+    }
+  }
+
+  if (preferFilters !== undefined) {
+    const preferLines = formatFilterLines(preferFilters, innerIndent, 'prefer');
+    if (preferLines) {
+      lines.push(...preferLines);
+    } else {
+      pushInlinePairLine(lines, 'preferFilters', preferFilters, innerIndent);
+    }
+  }
+
+  const extraLines = formatAttributeLines(picker, innerIndent);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatPostProcessBlock(value: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(value)) return null;
+  const post = cloneAndStripRefs(value) as Record<string, unknown>;
+  const pressureChanges = post.pressureChanges;
+  delete post.pressureChanges;
+
+  const lines = [`${indent(indentLevel)}post_process do`];
+  const innerIndent = indentLevel + 1;
+
+  if (post.createGovernanceFaction !== undefined) {
+    pushInlinePairLine(lines, 'create_governance_faction', post.createGovernanceFaction, innerIndent);
+    delete post.createGovernanceFaction;
+  }
+  if (post.governanceFactionSubtype !== undefined) {
+    pushInlinePairLine(lines, 'governance_faction_subtype', post.governanceFactionSubtype, innerIndent);
+    delete post.governanceFactionSubtype;
+  }
+  if (post.governanceRelationship !== undefined) {
+    pushInlinePairLine(lines, 'governance_relationship', post.governanceRelationship, innerIndent);
+    delete post.governanceRelationship;
+  }
+
+  if (pressureChanges !== undefined) {
+    const pressureLines = formatPressureChangeLines(pressureChanges, innerIndent);
+    if (pressureLines) {
+      lines.push(...pressureLines);
+    } else {
+      pushInlinePairLine(lines, 'pressureChanges', pressureChanges, innerIndent);
+    }
+  }
+
+  const extraLines = formatAttributeLines(post, innerIndent);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatPhaseTransitionBlock(value: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(value)) return null;
+  const transition = cloneAndStripRefs(value) as Record<string, unknown>;
+  const toStatus = transition.toStatus;
+  if (typeof toStatus !== 'string') return null;
+  delete transition.toStatus;
+
+  const lines: string[] = [`${indent(indentLevel)}phase_transition ${formatLabel(toStatus)} do`];
+  const innerIndent = indentLevel + 1;
+
+  if (transition.adoptionThreshold !== undefined) {
+    pushInlinePairLine(lines, 'adoption_threshold', transition.adoptionThreshold, innerIndent);
+    delete transition.adoptionThreshold;
+  }
+  if (transition.descriptionSuffix !== undefined) {
+    pushInlinePairLine(lines, 'description_suffix', transition.descriptionSuffix, innerIndent);
+    delete transition.descriptionSuffix;
+  }
+
+  const selectionLines = formatSystemSelectionBlock(transition.selection, innerIndent);
+  if (selectionLines) {
+    lines.push(...selectionLines);
+    delete transition.selection;
+  } else if (transition.selection !== undefined) {
+    pushInlinePairLine(lines, 'selection', transition.selection, innerIndent);
+    delete transition.selection;
+  }
+
+  const extraLines = formatAttributeLines(transition, innerIndent);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatMultiSourceBlock(value: unknown, indentLevel: number): string[] | null {
+  if (!isRecord(value)) return null;
+  const multi = cloneAndStripRefs(value) as Record<string, unknown>;
+  const lines: string[] = [`${indent(indentLevel)}multi_source do`];
+  const innerIndent = indentLevel + 1;
+
+  if (multi.immunityTagPrefix !== undefined) {
+    pushInlinePairLine(lines, 'immunity_tag_prefix', multi.immunityTagPrefix, innerIndent);
+    delete multi.immunityTagPrefix;
+  }
+  if (multi.lowAdoptionThreshold !== undefined) {
+    pushInlinePairLine(lines, 'low_adoption_threshold', multi.lowAdoptionThreshold, innerIndent);
+    delete multi.lowAdoptionThreshold;
+  }
+  if (multi.lowAdoptionStatus !== undefined) {
+    pushInlinePairLine(lines, 'low_adoption_status', multi.lowAdoptionStatus, innerIndent);
+    delete multi.lowAdoptionStatus;
+  }
+
+  const selectionLines = formatSystemSelectionBlock(multi.sourceSelection, innerIndent);
+  if (selectionLines) {
+    lines.push(...selectionLines.map((line, index) => (index === 0 ? `${indent(innerIndent)}source_selection do` : line)));
+    if (selectionLines.length > 0) {
+      lines[lines.length - 1] = `${indent(innerIndent)}end`;
+    }
+    delete multi.sourceSelection;
+  } else if (multi.sourceSelection !== undefined) {
+    pushInlinePairLine(lines, 'sourceSelection', multi.sourceSelection, innerIndent);
+    delete multi.sourceSelection;
+  }
+
+  const extraLines = formatAttributeLines(multi, innerIndent);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatTagDiffusionGroupLine(
+  name: string,
+  value: unknown,
+  indentLevel: number
+): string | null {
+  if (!isRecord(value) || !Array.isArray(value.tags)) return null;
+  const cleaned = cloneAndStripRefs(value) as Record<string, unknown>;
+  const tags = cleaned.tags;
+  if (!Array.isArray(tags)) return null;
+  const tagsInline = formatInlineList(tags);
+  if (!tagsInline) return null;
+  const parts = [`${indent(indentLevel)}${name}`, 'tags', tagsInline];
+  if (typeof cleaned.minConnections === 'number') {
+    parts.push('min_connections', String(cleaned.minConnections));
+  }
+  if (typeof cleaned.maxConnections === 'number') {
+    parts.push('max_connections', String(cleaned.maxConnections));
+  }
+  if (typeof cleaned.probability === 'number') {
+    parts.push('probability', String(cleaned.probability));
+  }
+  if (typeof cleaned.maxSharedTags === 'number') {
+    parts.push('max_shared_tags', String(cleaned.maxSharedTags));
+  }
+  return parts.join(' ');
+}
+
+function formatProminenceSnapshotLine(value: unknown, indentLevel: number): string | null {
+  if (!isRecord(value)) return null;
+  const snapshot = cloneAndStripRefs(value) as Record<string, unknown>;
+  const parts = [`${indent(indentLevel)}prominence_snapshot`];
+  if (snapshot.enabled !== undefined) {
+    parts.push('enabled', String(snapshot.enabled));
+  }
+  if (snapshot.minProminence !== undefined) {
+    parts.push('min_prominence', formatLabel(String(snapshot.minProminence)));
+  }
+  return parts.join(' ');
+}
+
+function formatThresholdTriggerSystem(config: Record<string, unknown>, indentLevel: number): string[] | null {
+  const remaining = cloneAndStripRefs(config) as Record<string, unknown>;
+  const lines: string[] = [];
+
+  if (remaining.description !== undefined) {
+    pushInlinePairLine(lines, 'description', remaining.description, indentLevel);
+    delete remaining.description;
+  }
+
+  const selectionLines = formatSystemSelectionBlock(remaining.selection, indentLevel);
+  if (selectionLines) {
+    lines.push(...selectionLines);
+    delete remaining.selection;
+  } else if (remaining.selection !== undefined) {
+    pushInlinePairLine(lines, 'selection', remaining.selection, indentLevel);
+    delete remaining.selection;
+  }
+
+  const conditionLines = formatSystemConditionLines(remaining.conditions, indentLevel);
+  if (conditionLines) {
+    lines.push(...conditionLines);
+    delete remaining.conditions;
+  } else if (remaining.conditions !== undefined) {
+    pushInlinePairLine(lines, 'conditions', remaining.conditions, indentLevel);
+    delete remaining.conditions;
+  }
+
+  const variableLines = formatVariableEntries(remaining.variables as Record<string, unknown> | undefined, indentLevel);
+  if (variableLines) {
+    lines.push(...variableLines);
+    delete remaining.variables;
+  } else if (remaining.variables !== undefined) {
+    pushInlinePairLine(lines, 'variables', remaining.variables, indentLevel);
+    delete remaining.variables;
+  }
+
+  if (Array.isArray(remaining.actions)) {
+    const actionLines = formatActionListBlock('actions', remaining.actions, indentLevel);
+    if (!actionLines) return null;
+    lines.push(...actionLines);
+    delete remaining.actions;
+  } else if (remaining.actions !== undefined) {
+    pushInlinePairLine(lines, 'actions', remaining.actions, indentLevel);
+    delete remaining.actions;
+  }
+
+  if (remaining.clusterMode !== undefined) {
+    pushInlinePairLine(lines, 'cluster_mode', remaining.clusterMode, indentLevel);
+    delete remaining.clusterMode;
+  }
+
+  if (remaining.throttleChance !== undefined) {
+    pushInlinePairLine(lines, 'throttle', remaining.throttleChance, indentLevel);
+    delete remaining.throttleChance;
+  }
+
+  if (remaining.pressureChanges !== undefined) {
+    const pressureLines = formatPressureChangeLines(remaining.pressureChanges, indentLevel);
+    if (pressureLines) {
+      lines.push(...pressureLines);
+    } else {
+      pushInlinePairLine(lines, 'pressureChanges', remaining.pressureChanges, indentLevel);
+    }
+    delete remaining.pressureChanges;
+  }
+
+  const extraLines = formatAttributeLines(remaining, indentLevel);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  return lines;
+}
+
+function formatConnectionEvolutionSystem(config: Record<string, unknown>, indentLevel: number): string[] | null {
+  const remaining = cloneAndStripRefs(config) as Record<string, unknown>;
+  const lines: string[] = [];
+
+  if (remaining.description !== undefined) {
+    pushInlinePairLine(lines, 'description', remaining.description, indentLevel);
+    delete remaining.description;
+  }
+
+  const selectionLines = formatSystemSelectionBlock(remaining.selection, indentLevel);
+  if (selectionLines) {
+    lines.push(...selectionLines);
+    delete remaining.selection;
+  } else if (remaining.selection !== undefined) {
+    pushInlinePairLine(lines, 'selection', remaining.selection, indentLevel);
+    delete remaining.selection;
+  }
+
+  const metricLines = formatMetricBlock(remaining.metric, indentLevel);
+  if (metricLines) {
+    lines.push(...metricLines);
+    delete remaining.metric;
+  } else if (remaining.metric !== undefined) {
+    pushInlinePairLine(lines, 'metric', remaining.metric, indentLevel);
+    delete remaining.metric;
+  }
+
+  if (Array.isArray(remaining.rules)) {
+    for (const rule of remaining.rules) {
+      const ruleLines = formatRuleBlock(rule, indentLevel);
+      if (!ruleLines) return null;
+      lines.push(...ruleLines);
+    }
+    delete remaining.rules;
+  } else if (remaining.rules !== undefined) {
+    pushInlinePairLine(lines, 'rules', remaining.rules, indentLevel);
+    delete remaining.rules;
+  }
+
+  if (Array.isArray(remaining.pairExcludeRelationships)) {
+    const inline = formatInlineList(remaining.pairExcludeRelationships);
+    if (inline) {
+      lines.push(`${indent(indentLevel)}pair_exclude ${inline}`);
+    } else {
+      pushInlinePairLine(lines, 'pair_exclude', remaining.pairExcludeRelationships, indentLevel);
+    }
+    delete remaining.pairExcludeRelationships;
+  }
+
+  if (isRecord(remaining.pairComponentSizeLimit)) {
+    const limit = remaining.pairComponentSizeLimit as Record<string, unknown>;
+    const kinds = Array.isArray(limit.relationshipKinds) ? limit.relationshipKinds : null;
+    const max = limit.max;
+    if (kinds && typeof max === 'number') {
+      const inline = formatInlineList(kinds);
+      if (inline) {
+        lines.push(`${indent(indentLevel)}pair_component_limit ${inline} max ${max}`);
+      } else {
+        pushInlinePairLine(lines, 'pair_component_limit', remaining.pairComponentSizeLimit, indentLevel);
+      }
+    } else {
+      pushInlinePairLine(lines, 'pair_component_limit', remaining.pairComponentSizeLimit, indentLevel);
+    }
+    delete remaining.pairComponentSizeLimit;
+  }
+
+  if (remaining.throttleChance !== undefined) {
+    pushInlinePairLine(lines, 'throttle', remaining.throttleChance, indentLevel);
+    delete remaining.throttleChance;
+  }
+
+  if (remaining.pressureChanges !== undefined) {
+    const pressureLines = formatPressureChangeLines(remaining.pressureChanges, indentLevel);
+    if (pressureLines) {
+      lines.push(...pressureLines);
+    } else {
+      pushInlinePairLine(lines, 'pressureChanges', remaining.pressureChanges, indentLevel);
+    }
+    delete remaining.pressureChanges;
+  }
+
+  const extraLines = formatAttributeLines(remaining, indentLevel);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  return lines;
+}
+
+function formatClusterFormationSystem(config: Record<string, unknown>, indentLevel: number): string[] | null {
+  const remaining = cloneAndStripRefs(config) as Record<string, unknown>;
+  const lines: string[] = [];
+
+  if (remaining.description !== undefined) {
+    pushInlinePairLine(lines, 'description', remaining.description, indentLevel);
+    delete remaining.description;
+  }
+
+  if (remaining.runAtEpochEnd !== undefined) {
+    pushInlinePairLine(lines, 'run_at_epoch_end', remaining.runAtEpochEnd, indentLevel);
+    delete remaining.runAtEpochEnd;
+  }
+
+  const selectionLines = formatSystemSelectionBlock(remaining.selection, indentLevel);
+  if (selectionLines) {
+    lines.push(...selectionLines);
+    delete remaining.selection;
+  } else if (remaining.selection !== undefined) {
+    pushInlinePairLine(lines, 'selection', remaining.selection, indentLevel);
+    delete remaining.selection;
+  }
+
+  const clusteringLines = formatClusteringBlock(remaining.clustering, indentLevel);
+  if (clusteringLines) {
+    lines.push(...clusteringLines);
+    delete remaining.clustering;
+  } else if (remaining.clustering !== undefined) {
+    pushInlinePairLine(lines, 'clustering', remaining.clustering, indentLevel);
+    delete remaining.clustering;
+  }
+
+  const metaLines = formatMetaEntityBlock(remaining.metaEntity, indentLevel);
+  if (metaLines) {
+    lines.push(...metaLines);
+    delete remaining.metaEntity;
+  } else if (remaining.metaEntity !== undefined) {
+    pushInlinePairLine(lines, 'metaEntity', remaining.metaEntity, indentLevel);
+    delete remaining.metaEntity;
+  }
+
+  const masterLines = formatPickerBlock('master_selection', remaining.masterSelection, indentLevel);
+  if (masterLines) {
+    lines.push(...masterLines);
+    delete remaining.masterSelection;
+  } else if (remaining.masterSelection !== undefined) {
+    pushInlinePairLine(lines, 'masterSelection', remaining.masterSelection, indentLevel);
+    delete remaining.masterSelection;
+  }
+
+  if (Array.isArray(remaining.memberUpdates)) {
+    const updateLines = formatActionListBlock('member_updates', remaining.memberUpdates, indentLevel);
+    if (!updateLines) return null;
+    lines.push(...updateLines);
+    delete remaining.memberUpdates;
+  } else if (remaining.memberUpdates !== undefined) {
+    pushInlinePairLine(lines, 'memberUpdates', remaining.memberUpdates, indentLevel);
+    delete remaining.memberUpdates;
+  }
+
+  const postLines = formatPostProcessBlock(remaining.postProcess, indentLevel);
+  if (postLines) {
+    lines.push(...postLines);
+    delete remaining.postProcess;
+  } else if (remaining.postProcess !== undefined) {
+    pushInlinePairLine(lines, 'postProcess', remaining.postProcess, indentLevel);
+    delete remaining.postProcess;
+  }
+
+  const extraLines = formatAttributeLines(remaining, indentLevel);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  return lines;
+}
+
+function formatGraphContagionSystem(config: Record<string, unknown>, indentLevel: number): string[] | null {
+  const remaining = cloneAndStripRefs(config) as Record<string, unknown>;
+  const lines: string[] = [];
+
+  if (remaining.description !== undefined) {
+    pushInlinePairLine(lines, 'description', remaining.description, indentLevel);
+    delete remaining.description;
+  }
+
+  const selectionLines = formatSystemSelectionBlock(remaining.selection, indentLevel);
+  if (selectionLines) {
+    lines.push(...selectionLines);
+    delete remaining.selection;
+  } else if (remaining.selection !== undefined) {
+    pushInlinePairLine(lines, 'selection', remaining.selection, indentLevel);
+    delete remaining.selection;
+  }
+
+  if (isRecord(remaining.contagion)) {
+    const contagion = remaining.contagion as Record<string, unknown>;
+    if (contagion.type === 'tag' && typeof contagion.tag === 'string') {
+      lines.push(`${indent(indentLevel)}contagion tag ${formatLabel(contagion.tag)}`);
+      delete remaining.contagion;
+    } else if (contagion.type === 'relationship' && typeof contagion.relationshipKind === 'string') {
+      lines.push(`${indent(indentLevel)}contagion relationship ${formatLabel(contagion.relationshipKind)}`);
+      delete remaining.contagion;
+    }
+  }
+
+  if (Array.isArray(remaining.vectors)) {
+    for (const vector of remaining.vectors) {
+      if (!isRecord(vector)) return null;
+      const relationshipKind = vector.relationshipKind;
+      const direction = vector.direction;
+      const minStrength = vector.minStrength;
+      if (typeof relationshipKind !== 'string' || typeof direction !== 'string' || typeof minStrength !== 'number') return null;
+      lines.push(`${indent(indentLevel)}vector ${formatLabel(relationshipKind)} ${direction} ${minStrength}`);
+    }
+    delete remaining.vectors;
+  } else if (remaining.vectors !== undefined) {
+    pushInlinePairLine(lines, 'vectors', remaining.vectors, indentLevel);
+    delete remaining.vectors;
+  }
+
+  if (isRecord(remaining.transmission)) {
+    const transmission = remaining.transmission as Record<string, unknown>;
+    if (typeof transmission.baseRate === 'number'
+      && typeof transmission.contactMultiplier === 'number'
+      && typeof transmission.maxProbability === 'number'
+    ) {
+      lines.push(
+        `${indent(indentLevel)}transmission ${transmission.baseRate} ${transmission.contactMultiplier} ${transmission.maxProbability}`
+      );
+      delete remaining.transmission;
+    }
+  }
+
+  if (isRecord(remaining.infectionAction)) {
+    const infectionLines = formatActionListBlock('infection_action', [remaining.infectionAction], indentLevel);
+    if (!infectionLines) return null;
+    lines.push(...infectionLines);
+    delete remaining.infectionAction;
+  }
+
+  if (isRecord(remaining.recovery)) {
+    const recovery = remaining.recovery as Record<string, unknown>;
+    const recoveryLines: string[] = [`${indent(indentLevel)}recovery do`];
+    const innerIndent = indentLevel + 1;
+    if (recovery.baseRate !== undefined) {
+      pushInlinePairLine(recoveryLines, 'base_rate', recovery.baseRate, innerIndent);
+    }
+    if (Array.isArray(recovery.recoveryBonusTraits)) {
+      for (const entry of recovery.recoveryBonusTraits) {
+        if (!isRecord(entry)) return null;
+        const tag = entry.tag;
+        const bonus = entry.bonus;
+        if (typeof tag !== 'string' || typeof bonus !== 'number') return null;
+        recoveryLines.push(`${indent(innerIndent)}bonus ${formatLabel(tag)} ${bonus}`);
+      }
+    }
+    recoveryLines.push(`${indent(indentLevel)}end`);
+    lines.push(...recoveryLines);
+    delete remaining.recovery;
+  }
+
+  if (Array.isArray(remaining.susceptibilityModifiers)) {
+    for (const entry of remaining.susceptibilityModifiers) {
+      if (!isRecord(entry)) return null;
+      const tag = entry.tag;
+      const modifier = entry.modifier;
+      if (typeof tag !== 'string' || typeof modifier !== 'number') return null;
+      lines.push(`${indent(indentLevel)}susceptibility ${formatLabel(tag)} ${modifier}`);
+    }
+    delete remaining.susceptibilityModifiers;
+  } else if (remaining.susceptibilityModifiers !== undefined) {
+    pushInlinePairLine(lines, 'susceptibilityModifiers', remaining.susceptibilityModifiers, indentLevel);
+    delete remaining.susceptibilityModifiers;
+  }
+
+  if (Array.isArray(remaining.phaseTransitions)) {
+    for (const entry of remaining.phaseTransitions) {
+      const transitionLines = formatPhaseTransitionBlock(entry, indentLevel);
+      if (!transitionLines) return null;
+      lines.push(...transitionLines);
+    }
+    delete remaining.phaseTransitions;
+  } else if (remaining.phaseTransitions !== undefined) {
+    pushInlinePairLine(lines, 'phaseTransitions', remaining.phaseTransitions, indentLevel);
+    delete remaining.phaseTransitions;
+  }
+
+  const multiLines = formatMultiSourceBlock(remaining.multiSource, indentLevel);
+  if (multiLines) {
+    lines.push(...multiLines);
+    delete remaining.multiSource;
+  } else if (remaining.multiSource !== undefined) {
+    pushInlinePairLine(lines, 'multiSource', remaining.multiSource, indentLevel);
+    delete remaining.multiSource;
+  }
+
+  if (Array.isArray(remaining.excludeRelationships)) {
+    const inline = formatInlineList(remaining.excludeRelationships);
+    if (inline) {
+      lines.push(`${indent(indentLevel)}exclude_relationships ${inline}`);
+    } else {
+      pushInlinePairLine(lines, 'exclude_relationships', remaining.excludeRelationships, indentLevel);
+    }
+    delete remaining.excludeRelationships;
+  }
+
+  if (remaining.throttleChance !== undefined) {
+    pushInlinePairLine(lines, 'throttle', remaining.throttleChance, indentLevel);
+    delete remaining.throttleChance;
+  }
+  if (remaining.cooldown !== undefined) {
+    pushInlinePairLine(lines, 'cooldown', remaining.cooldown, indentLevel);
+    delete remaining.cooldown;
+  }
+
+  if (remaining.pressureChanges !== undefined) {
+    const pressureLines = formatPressureChangeLines(remaining.pressureChanges, indentLevel);
+    if (pressureLines) {
+      lines.push(...pressureLines);
+    } else {
+      pushInlinePairLine(lines, 'pressureChanges', remaining.pressureChanges, indentLevel);
+    }
+    delete remaining.pressureChanges;
+  }
+
+  const extraLines = formatAttributeLines(remaining, indentLevel);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  return lines;
+}
+
+function formatPlaneDiffusionSystem(config: Record<string, unknown>, indentLevel: number): string[] | null {
+  const remaining = cloneAndStripRefs(config) as Record<string, unknown>;
+  const lines: string[] = [];
+
+  if (remaining.description !== undefined) {
+    pushInlinePairLine(lines, 'description', remaining.description, indentLevel);
+    delete remaining.description;
+  }
+
+  const selectionLines = formatSystemSelectionBlock(remaining.selection, indentLevel);
+  if (selectionLines) {
+    lines.push(...selectionLines);
+    delete remaining.selection;
+  } else if (remaining.selection !== undefined) {
+    pushInlinePairLine(lines, 'selection', remaining.selection, indentLevel);
+    delete remaining.selection;
+  }
+
+  if (isRecord(remaining.sources)) {
+    const sources = remaining.sources as Record<string, unknown>;
+    if (typeof sources.tagFilter === 'string' && typeof sources.defaultStrength === 'number') {
+      lines.push(`${indent(indentLevel)}sources ${formatLabel(sources.tagFilter)} ${sources.defaultStrength}`);
+      delete remaining.sources;
+    }
+  }
+  if (isRecord(remaining.sinks)) {
+    const sinks = remaining.sinks as Record<string, unknown>;
+    if (typeof sinks.tagFilter === 'string' && typeof sinks.defaultStrength === 'number') {
+      lines.push(`${indent(indentLevel)}sinks ${formatLabel(sinks.tagFilter)} ${sinks.defaultStrength}`);
+      delete remaining.sinks;
+    }
+  }
+
+  if (isRecord(remaining.diffusion)) {
+    const diffusion = remaining.diffusion as Record<string, unknown>;
+    if (typeof diffusion.rate === 'number'
+      && typeof diffusion.decayRate === 'number'
+      && typeof diffusion.sourceRadius === 'number'
+      && typeof diffusion.falloffType === 'string'
+      && typeof diffusion.iterationsPerTick === 'number'
+    ) {
+      lines.push(
+        `${indent(indentLevel)}diffusion ${diffusion.rate} ${diffusion.decayRate} ${diffusion.sourceRadius} ${diffusion.falloffType} ${diffusion.iterationsPerTick}`
+      );
+      delete remaining.diffusion;
+    }
+  }
+
+  if (Array.isArray(remaining.outputTags)) {
+    for (const entry of remaining.outputTags) {
+      if (!isRecord(entry) || typeof entry.tag !== 'string') return null;
+      const parts = [`${indent(indentLevel)}output_tag`, formatLabel(entry.tag)];
+      if (typeof entry.minValue === 'number') {
+        parts.push('min', String(entry.minValue));
+      }
+      if (typeof entry.maxValue === 'number') {
+        parts.push('max', String(entry.maxValue));
+      }
+      lines.push(parts.join(' '));
+    }
+    delete remaining.outputTags;
+  } else if (remaining.outputTags !== undefined) {
+    pushInlinePairLine(lines, 'outputTags', remaining.outputTags, indentLevel);
+    delete remaining.outputTags;
+  }
+
+  if (remaining.valueTag !== undefined) {
+    pushInlinePairLine(lines, 'value_tag', remaining.valueTag, indentLevel);
+    delete remaining.valueTag;
+  }
+
+  const extraLines = formatAttributeLines(remaining, indentLevel);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  return lines;
+}
+
+function formatTagDiffusionSystem(config: Record<string, unknown>, indentLevel: number): string[] | null {
+  const remaining = cloneAndStripRefs(config) as Record<string, unknown>;
+  const lines: string[] = [];
+
+  if (remaining.description !== undefined) {
+    pushInlinePairLine(lines, 'description', remaining.description, indentLevel);
+    delete remaining.description;
+  }
+
+  const selectionLines = formatSystemSelectionBlock(remaining.selection, indentLevel);
+  if (selectionLines) {
+    lines.push(...selectionLines);
+    delete remaining.selection;
+  } else if (remaining.selection !== undefined) {
+    pushInlinePairLine(lines, 'selection', remaining.selection, indentLevel);
+    delete remaining.selection;
+  }
+
+  if (remaining.connectionKind !== undefined && remaining.connectionDirection !== undefined) {
+    lines.push(
+      `${indent(indentLevel)}connection ${formatLabel(String(remaining.connectionKind))} ${String(remaining.connectionDirection)}`
+    );
+    delete remaining.connectionKind;
+    delete remaining.connectionDirection;
+  }
+
+  const convergenceLine = formatTagDiffusionGroupLine('convergence', remaining.convergence, indentLevel);
+  if (convergenceLine) {
+    lines.push(convergenceLine);
+    delete remaining.convergence;
+  } else if (remaining.convergence !== undefined) {
+    pushInlinePairLine(lines, 'convergence', remaining.convergence, indentLevel);
+    delete remaining.convergence;
+  }
+
+  const divergenceLine = formatTagDiffusionGroupLine('divergence', remaining.divergence, indentLevel);
+  if (divergenceLine) {
+    lines.push(divergenceLine);
+    delete remaining.divergence;
+  } else if (remaining.divergence !== undefined) {
+    pushInlinePairLine(lines, 'divergence', remaining.divergence, indentLevel);
+    delete remaining.divergence;
+  }
+
+  if (remaining.maxTags !== undefined) {
+    pushInlinePairLine(lines, 'max_tags', remaining.maxTags, indentLevel);
+    delete remaining.maxTags;
+  }
+
+  if (isRecord(remaining.divergencePressure)) {
+    const pressure = remaining.divergencePressure as Record<string, unknown>;
+    if (typeof pressure.pressureName === 'string'
+      && typeof pressure.minDivergent === 'number'
+      && typeof pressure.delta === 'number'
+    ) {
+      lines.push(
+        `${indent(indentLevel)}divergence_pressure ${formatLabel(pressure.pressureName)} ${pressure.minDivergent} ${pressure.delta}`
+      );
+      delete remaining.divergencePressure;
+    }
+  } else if (remaining.divergencePressure !== undefined) {
+    pushInlinePairLine(lines, 'divergencePressure', remaining.divergencePressure, indentLevel);
+    delete remaining.divergencePressure;
+  }
+
+  const extraLines = formatAttributeLines(remaining, indentLevel);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  return lines;
+}
+
+function formatEraSpawnerSystem(config: Record<string, unknown>, indentLevel: number): string[] | null {
+  const remaining = cloneAndStripRefs(config) as Record<string, unknown>;
+  const lines: string[] = [];
+
+  if (remaining.description !== undefined) {
+    pushInlinePairLine(lines, 'description', remaining.description, indentLevel);
+    delete remaining.description;
+  }
+  if (remaining.ticksPerEra !== undefined) {
+    pushInlinePairLine(lines, 'ticks_per_era', remaining.ticksPerEra, indentLevel);
+    delete remaining.ticksPerEra;
+  }
+
+  const extraLines = formatAttributeLines(remaining, indentLevel);
+  if (extraLines.length > 0) lines.push(...extraLines);
+  return lines;
+}
+
+function formatEraTransitionSystem(config: Record<string, unknown>, indentLevel: number): string[] | null {
+  const remaining = cloneAndStripRefs(config) as Record<string, unknown>;
+  const lines: string[] = [];
+
+  if (remaining.description !== undefined) {
+    pushInlinePairLine(lines, 'description', remaining.description, indentLevel);
+    delete remaining.description;
+  }
+  if (remaining.prominenceSnapshot !== undefined) {
+    const snapshotLine = formatProminenceSnapshotLine(remaining.prominenceSnapshot, indentLevel);
+    if (!snapshotLine) return null;
+    lines.push(snapshotLine);
+    delete remaining.prominenceSnapshot;
+  }
+
+  const extraLines = formatAttributeLines(remaining, indentLevel);
+  if (extraLines.length > 0) lines.push(...extraLines);
+  return lines;
+}
+
+function formatUniversalCatalystSystem(config: Record<string, unknown>, indentLevel: number): string[] | null {
+  const remaining = cloneAndStripRefs(config) as Record<string, unknown>;
+  const lines: string[] = [];
+
+  if (remaining.description !== undefined) {
+    pushInlinePairLine(lines, 'description', remaining.description, indentLevel);
+    delete remaining.description;
+  }
+  if (remaining.actionAttemptRate !== undefined) {
+    pushInlinePairLine(lines, 'action_attempt_rate', remaining.actionAttemptRate, indentLevel);
+    delete remaining.actionAttemptRate;
+  }
+  if (remaining.pressureMultiplier !== undefined) {
+    pushInlinePairLine(lines, 'pressure_multiplier', remaining.pressureMultiplier, indentLevel);
+    delete remaining.pressureMultiplier;
+  }
+  if (remaining.prominenceUpChanceOnSuccess !== undefined) {
+    pushInlinePairLine(lines, 'prominence_up_chance', remaining.prominenceUpChanceOnSuccess, indentLevel);
+    delete remaining.prominenceUpChanceOnSuccess;
+  }
+  if (remaining.prominenceDownChanceOnFailure !== undefined) {
+    pushInlinePairLine(lines, 'prominence_down_chance', remaining.prominenceDownChanceOnFailure, indentLevel);
+    delete remaining.prominenceDownChanceOnFailure;
+  }
+
+  const extraLines = formatAttributeLines(remaining, indentLevel);
+  if (extraLines.length > 0) lines.push(...extraLines);
+  return lines;
+}
+
+function formatRelationshipMaintenanceSystem(config: Record<string, unknown>, indentLevel: number): string[] | null {
+  const remaining = cloneAndStripRefs(config) as Record<string, unknown>;
+  const lines: string[] = [];
+
+  if (remaining.description !== undefined) {
+    pushInlinePairLine(lines, 'description', remaining.description, indentLevel);
+    delete remaining.description;
+  }
+  if (remaining.maintenanceFrequency !== undefined) {
+    pushInlinePairLine(lines, 'maintenance_frequency', remaining.maintenanceFrequency, indentLevel);
+    delete remaining.maintenanceFrequency;
+  }
+  if (remaining.cullThreshold !== undefined) {
+    pushInlinePairLine(lines, 'cull_threshold', remaining.cullThreshold, indentLevel);
+    delete remaining.cullThreshold;
+  }
+  if (remaining.gracePeriod !== undefined) {
+    pushInlinePairLine(lines, 'grace_period', remaining.gracePeriod, indentLevel);
+    delete remaining.gracePeriod;
+  }
+  if (remaining.reinforcementBonus !== undefined) {
+    pushInlinePairLine(lines, 'reinforcement_bonus', remaining.reinforcementBonus, indentLevel);
+    delete remaining.reinforcementBonus;
+  }
+  if (remaining.maxStrength !== undefined) {
+    pushInlinePairLine(lines, 'max_strength', remaining.maxStrength, indentLevel);
+    delete remaining.maxStrength;
+  }
+
+  const extraLines = formatAttributeLines(remaining, indentLevel);
+  if (extraLines.length > 0) lines.push(...extraLines);
+  return lines;
 }
 
 function formatGeneratorBlock(labels: string[], body: Record<string, unknown>): string {
@@ -761,7 +2270,7 @@ function formatActionSelectionBlock(
 
   if (Array.isArray(selection.subtypes) && selection.subtypes.length > 0) {
     if (selection.subtypes.length > 1) {
-      const inline = formatInlineValue(selection.subtypes);
+      const inline = formatSetInlineValue(selection.subtypes);
       if (inline) {
         lines.push(`${indent(innerIndent)}subtype in ${inline}`);
       } else {
@@ -775,7 +2284,7 @@ function formatActionSelectionBlock(
 
   if (Array.isArray(selection.statuses) && selection.statuses.length > 0) {
     if (selection.statuses.length > 1) {
-      const inline = formatInlineValue(selection.statuses);
+      const inline = formatSetInlineValue(selection.statuses);
       if (inline) {
         lines.push(`${indent(innerIndent)}status in ${inline}`);
       } else {
@@ -944,7 +2453,7 @@ function formatActionInstigatorBlock(value: unknown, indentLevel: number): strin
 
   if (Array.isArray(instigator.subtypes) && instigator.subtypes.length > 0) {
     if (instigator.subtypes.length > 1) {
-      const inline = formatInlineValue(instigator.subtypes);
+      const inline = formatSetInlineValue(instigator.subtypes);
       if (inline) {
         lines.push(`${indent(innerIndent)}subtype in ${inline}`);
       } else {
@@ -958,7 +2467,7 @@ function formatActionInstigatorBlock(value: unknown, indentLevel: number): strin
 
   if (Array.isArray(instigator.statuses) && instigator.statuses.length > 0) {
     if (instigator.statuses.length > 1) {
-      const inline = formatInlineValue(instigator.statuses);
+      const inline = formatSetInlineValue(instigator.statuses);
       if (inline) {
         lines.push(`${indent(innerIndent)}status in ${inline}`);
       } else {
@@ -1222,6 +2731,79 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
     return [parts.join(' ')];
   }
 
+  if (type === 'transfer_relationship') {
+    const entity = cleaned.entity;
+    const relationshipKind = cleaned.relationshipKind;
+    const from = cleaned.from;
+    const to = cleaned.to;
+    if (typeof entity !== 'string' || typeof relationshipKind !== 'string'
+      || typeof from !== 'string' || typeof to !== 'string') {
+      return null;
+    }
+    const parts = [
+      `${indent(indentLevel)}transfer_relationship`,
+      formatLabel(stripBinding(entity)),
+      formatLabel(relationshipKind),
+      'from',
+      formatLabel(stripBinding(from)),
+      'to',
+      formatLabel(stripBinding(to))
+    ];
+    if (cleaned.condition !== undefined) {
+      const inline = formatSystemConditionInlineTokens(cleaned.condition);
+      if (inline) {
+        parts.push('if', ...inline);
+        return [parts.join(' ')];
+      }
+      const lines = [`${parts.join(' ')} do`];
+      const conditionLines = formatSystemConditionLine(cleaned.condition, indentLevel + 1);
+      if (!conditionLines) return null;
+      lines.push(...conditionLines);
+      lines.push(`${indent(indentLevel)}end`);
+      return lines;
+    }
+    return [parts.join(' ')];
+  }
+
+  if (type === 'for_each_related') {
+    const relationship = cleaned.relationship ?? cleaned.relationshipKind;
+    const direction = cleaned.direction;
+    const targetKind = cleaned.targetKind;
+    const actions = cleaned.actions;
+    if (typeof relationship !== 'string' || typeof direction !== 'string' || typeof targetKind !== 'string') return null;
+    if (!Array.isArray(actions)) return null;
+    const header = `${indent(indentLevel)}for_each_related ${formatLabel(relationship)} ${direction} ${formatLabel(targetKind)} do`;
+    const lines = [header];
+    for (const action of actions) {
+      const actionLines = formatActionMutationLine(action, indentLevel + 1);
+      if (!actionLines) return null;
+      lines.push(...actionLines);
+    }
+    lines.push(`${indent(indentLevel)}end`);
+    return lines;
+  }
+
+  if (type === 'conditional') {
+    const condition = cleaned.condition;
+    const thenActions = cleaned.thenActions;
+    const elseActions = cleaned.elseActions;
+    if (!Array.isArray(thenActions)) return null;
+    const lines = [`${indent(indentLevel)}conditional do`];
+    const conditionLines = formatSystemConditionLine(condition, indentLevel + 1);
+    if (!conditionLines) return null;
+    lines.push(...conditionLines);
+    const thenLines = formatActionListBlock('then', thenActions, indentLevel + 1);
+    if (!thenLines) return null;
+    lines.push(...thenLines);
+    if (Array.isArray(elseActions) && elseActions.length > 0) {
+      const elseLines = formatActionListBlock('else', elseActions, indentLevel + 1);
+      if (!elseLines) return null;
+      lines.push(...elseLines);
+    }
+    lines.push(`${indent(indentLevel)}end`);
+    return lines;
+  }
+
   if (type === 'update_rate_limit') {
     return [`${indent(indentLevel)}update_rate_limit true`];
   }
@@ -1373,19 +2955,19 @@ function formatTagLine(item: Record<string, unknown>): string | null {
   let line = `tag ${formatLabel(tag)} ${formatLabel(category)} ${formatLabel(rarity)}`;
   if (description !== null) line += ` ${quoteString(description)}`;
 
-  const kindsValue = formatInlineValue(entityKinds);
+  const kindsValue = formatSetInlineValue(entityKinds);
   if (kindsValue) line += ` kinds ${kindsValue}`;
 
-  const relatedValue = formatInlineValue(relatedTags);
+  const relatedValue = formatSetInlineValue(relatedTags);
   if (relatedValue) line += ` related ${relatedValue}`;
 
-  const conflictsValue = formatInlineValue(conflictingTags);
+  const conflictsValue = formatSetInlineValue(conflictingTags);
   if (conflictsValue) line += ` conflicts ${conflictsValue}`;
 
-  const exclusiveValue = formatInlineValue(mutuallyExclusiveWith);
+  const exclusiveValue = formatSetInlineValue(mutuallyExclusiveWith);
   if (exclusiveValue) line += ` exclusive ${exclusiveValue}`;
 
-  const templatesValue = formatInlineValue(templates);
+  const templatesValue = formatSetInlineValue(templates);
   if (templatesValue) line += ` templates ${templatesValue}`;
 
   if (typeof minUsage === 'number' && typeof maxUsage === 'number') {
@@ -1444,8 +3026,8 @@ function formatRelationshipKindLine(item: Record<string, unknown>): string | nul
     return formatBlock('relationship_kind', [kind], body);
   }
 
-  const srcValue = formatInlineValue(srcKinds);
-  const dstValue = formatInlineValue(dstKinds);
+  const srcValue = formatSetInlineValue(srcKinds);
+  const dstValue = formatSetInlineValue(dstKinds);
   if (!srcValue || !dstValue) {
     const body = { ...item };
     delete body.kind;
@@ -1489,6 +3071,291 @@ function formatRelationshipKindLine(item: Record<string, unknown>): string | nul
   return line;
 }
 
+function formatSimpleCountFactor(value: Record<string, unknown>): string | null {
+  const type = value.type;
+  if (typeof type !== 'string') return null;
+
+  if (type === 'entity_count') {
+    const kind = value.kind;
+    if (typeof kind !== 'string') return null;
+    const parts = ['entity_count', 'kind', formatLabel(kind)];
+    if (typeof value.subtype === 'string') parts.push('subtype', formatLabel(value.subtype));
+    if (typeof value.status === 'string') parts.push('status', formatLabel(value.status));
+    return parts.join(' ');
+  }
+  if (type === 'relationship_count') {
+    const kinds = value.relationshipKinds;
+    const list = formatSetInlineValue(kinds);
+    if (!list || list === 'none') return null;
+    return `relationship_count ${list}`;
+  }
+  if (type === 'tag_count') {
+    const tags = value.tags;
+    const list = formatSetInlineValue(tags);
+    if (!list || list === 'none') return null;
+    return `tag_count ${list}`;
+  }
+  if (type === 'total_entities') {
+    return 'total_entities';
+  }
+  if (type === 'constant') {
+    const val = value.value;
+    if (typeof val !== 'number') return null;
+    return `constant ${val}`;
+  }
+  return null;
+}
+
+function formatPressureFactorLine(value: Record<string, unknown>, indentLevel: number): string | null {
+  const type = value.type;
+  if (typeof type !== 'string') return null;
+
+  if (type === 'entity_count') {
+    const kind = value.kind;
+    if (typeof kind !== 'string') return null;
+    const parts = ['entity_count', 'kind', formatLabel(kind)];
+    if (typeof value.subtype === 'string') parts.push('subtype', formatLabel(value.subtype));
+    if (typeof value.status === 'string') parts.push('status', formatLabel(value.status));
+    if (typeof value.coefficient === 'number') parts.push('coefficient', String(value.coefficient));
+    if (typeof value.cap === 'number') parts.push('cap', String(value.cap));
+    return `${indent(indentLevel)}${parts.join(' ')}`;
+  }
+
+  if (type === 'relationship_count') {
+    const list = formatSetInlineValue(value.relationshipKinds);
+    if (!list || list === 'none') return null;
+    const parts = ['relationship_count', list];
+    if (typeof value.direction === 'string') parts.push('direction', formatLabel(value.direction));
+    if (typeof value.minStrength === 'number') parts.push('min_strength', String(value.minStrength));
+    if (typeof value.coefficient === 'number') parts.push('coefficient', String(value.coefficient));
+    if (typeof value.cap === 'number') parts.push('cap', String(value.cap));
+    return `${indent(indentLevel)}${parts.join(' ')}`;
+  }
+
+  if (type === 'tag_count') {
+    const list = formatSetInlineValue(value.tags);
+    if (!list || list === 'none') return null;
+    const parts = ['tag_count', list];
+    if (typeof value.coefficient === 'number') parts.push('coefficient', String(value.coefficient));
+    if (typeof value.cap === 'number') parts.push('cap', String(value.cap));
+    return `${indent(indentLevel)}${parts.join(' ')}`;
+  }
+
+  if (type === 'total_entities') {
+    const parts = ['total_entities'];
+    if (typeof value.coefficient === 'number') parts.push('coefficient', String(value.coefficient));
+    if (typeof value.cap === 'number') parts.push('cap', String(value.cap));
+    return `${indent(indentLevel)}${parts.join(' ')}`;
+  }
+
+  if (type === 'constant') {
+    const val = value.value;
+    if (typeof val !== 'number') return null;
+    const parts = ['constant', String(val)];
+    if (typeof value.coefficient === 'number') parts.push('coefficient', String(value.coefficient));
+    return `${indent(indentLevel)}${parts.join(' ')}`;
+  }
+
+  if (type === 'ratio') {
+    const numerator = isRecord(value.numerator) ? formatSimpleCountFactor(value.numerator) : null;
+    const denominator = isRecord(value.denominator) ? formatSimpleCountFactor(value.denominator) : null;
+    if (!numerator || !denominator) return null;
+    const parts = ['ratio', 'numerator', numerator, 'denominator', denominator];
+    if (typeof value.coefficient === 'number') parts.push('coefficient', String(value.coefficient));
+    if (typeof value.cap === 'number') parts.push('cap', String(value.cap));
+    if (typeof value.fallbackValue === 'number') parts.push('fallback', String(value.fallbackValue));
+    return `${indent(indentLevel)}${parts.join(' ')}`;
+  }
+
+  if (type === 'status_ratio') {
+    const kind = value.kind;
+    const aliveStatus = value.aliveStatus;
+    if (typeof kind !== 'string' || typeof aliveStatus !== 'string') return null;
+    const parts = ['status_ratio', 'kind', formatLabel(kind)];
+    if (typeof value.subtype === 'string') parts.push('subtype', formatLabel(value.subtype));
+    parts.push('alive_status', formatLabel(aliveStatus));
+    if (typeof value.coefficient === 'number') parts.push('coefficient', String(value.coefficient));
+    if (typeof value.cap === 'number') parts.push('cap', String(value.cap));
+    return `${indent(indentLevel)}${parts.join(' ')}`;
+  }
+
+  if (type === 'cross_culture_ratio') {
+    const list = formatSetInlineValue(value.relationshipKinds);
+    if (!list || list === 'none') return null;
+    const parts = ['cross_culture_ratio', list];
+    if (typeof value.coefficient === 'number') parts.push('coefficient', String(value.coefficient));
+    if (typeof value.cap === 'number') parts.push('cap', String(value.cap));
+    return `${indent(indentLevel)}${parts.join(' ')}`;
+  }
+
+  return null;
+}
+
+function formatPressureFeedbackBlock(
+  name: string,
+  entries: unknown[],
+  indentLevel: number
+): string[] | null {
+  if (!Array.isArray(entries)) return null;
+  const lines = [`${indent(indentLevel)}${name} do`];
+  for (const entry of entries) {
+    if (!isRecord(entry)) return null;
+    const line = formatPressureFactorLine(entry, indentLevel + 1);
+    if (!line) return null;
+    lines.push(line);
+  }
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatPressureGrowthBlock(
+  growth: unknown,
+  indentLevel: number
+): string[] | null {
+  if (!isRecord(growth)) return null;
+  const positive = growth.positiveFeedback;
+  const negative = growth.negativeFeedback;
+  if (!Array.isArray(positive) || !Array.isArray(negative)) return null;
+  const lines = [`${indent(indentLevel)}growth do`];
+  const positiveLines = formatPressureFeedbackBlock('positive_feedback', positive, indentLevel + 1);
+  const negativeLines = formatPressureFeedbackBlock('negative_feedback', negative, indentLevel + 1);
+  if (!positiveLines || !negativeLines) return null;
+  lines.push(...positiveLines);
+  lines.push(...negativeLines);
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatContractEntriesBlock(
+  blockName: string,
+  entryName: string,
+  entries: unknown[],
+  indentLevel: number
+): string[] | null {
+  if (!Array.isArray(entries)) return null;
+  const lines = [`${indent(indentLevel)}${blockName} do`];
+  for (const entry of entries) {
+    if (!isRecord(entry)) return null;
+    const parts = [entryName];
+    if (typeof entry.component === 'string') {
+      parts.push('component', formatLabel(entry.component));
+    } else {
+      return null;
+    }
+    if (entryName === 'affect') {
+      if (typeof entry.effect === 'string') {
+        parts.push('effect', formatLabel(entry.effect));
+      } else {
+        return null;
+      }
+      if (typeof entry.threshold === 'number') parts.push('threshold', String(entry.threshold));
+      if (typeof entry.factor === 'number') parts.push('factor', String(entry.factor));
+    } else {
+      if (typeof entry.delta === 'number') parts.push('delta', String(entry.delta));
+      if (typeof entry.formula === 'string') parts.push('formula', quoteString(entry.formula));
+    }
+    lines.push(`${indent(indentLevel + 1)}${parts.join(' ')}`);
+  }
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatPressureContractBlock(
+  contract: unknown,
+  indentLevel: number
+): string[] | null {
+  if (!isRecord(contract)) return null;
+  const lines = [`${indent(indentLevel)}contract do`];
+  if (typeof contract.purpose === 'string') {
+    lines.push(`${indent(indentLevel + 1)}purpose ${quoteString(contract.purpose)}`);
+  }
+
+  if (Array.isArray(contract.sources)) {
+    const block = formatContractEntriesBlock('sources', 'source', contract.sources, indentLevel + 1);
+    if (!block) return null;
+    lines.push(...block);
+  }
+  if (Array.isArray(contract.sinks)) {
+    const block = formatContractEntriesBlock('sinks', 'sink', contract.sinks, indentLevel + 1);
+    if (!block) return null;
+    lines.push(...block);
+  }
+  if (Array.isArray(contract.affects)) {
+    const block = formatContractEntriesBlock('affects', 'affect', contract.affects, indentLevel + 1);
+    if (!block) return null;
+    lines.push(...block);
+  }
+
+  if (isRecord(contract.equilibrium)) {
+    const equilibrium = contract.equilibrium as Record<string, unknown>;
+    lines.push(`${indent(indentLevel + 1)}equilibrium do`);
+    const expectedRange = equilibrium.expectedRange;
+    if (Array.isArray(expectedRange) && expectedRange.length === 2
+      && typeof expectedRange[0] === 'number'
+      && typeof expectedRange[1] === 'number') {
+      lines.push(`${indent(indentLevel + 2)}expected_range ${expectedRange[0]} ${expectedRange[1]}`);
+    }
+    if (typeof equilibrium.restingPoint === 'number') {
+      lines.push(`${indent(indentLevel + 2)}resting_point ${equilibrium.restingPoint}`);
+    }
+    if (typeof equilibrium.oscillationPeriod === 'number') {
+      lines.push(`${indent(indentLevel + 2)}oscillation_period ${equilibrium.oscillationPeriod}`);
+    }
+    lines.push(`${indent(indentLevel + 1)}end`);
+  }
+
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatPressureBlock(item: Record<string, unknown>): string | null {
+  const id = item.id;
+  if (typeof id !== 'string') return null;
+  const name = typeof item.name === 'string' ? item.name : null;
+  const lines = [`pressure ${formatLabel(id)}${name ? ' ' + quoteString(name) : ''} do`];
+
+  const remaining = { ...item };
+  delete remaining.id;
+  delete remaining.name;
+
+  if (remaining.initialValue !== undefined) {
+    pushInlinePairLine(lines, 'initial_value', remaining.initialValue, 1);
+    delete remaining.initialValue;
+  }
+  if (remaining.homeostasis !== undefined) {
+    pushInlinePairLine(lines, 'homeostasis', remaining.homeostasis, 1);
+    delete remaining.homeostasis;
+  }
+  if (remaining.description !== undefined) {
+    pushInlinePairLine(lines, 'description', remaining.description, 1);
+    delete remaining.description;
+  }
+
+  if (remaining.contract !== undefined) {
+    const contractLines = formatPressureContractBlock(remaining.contract, 1);
+    if (contractLines) {
+      lines.push(...contractLines);
+      delete remaining.contract;
+    }
+  }
+
+  if (remaining.growth !== undefined) {
+    const growthLines = formatPressureGrowthBlock(remaining.growth, 1);
+    if (growthLines) {
+      lines.push(...growthLines);
+      delete remaining.growth;
+    }
+  }
+
+  const extraLines = formatAttributeLines(remaining, 1);
+  if (extraLines.length > 0) {
+    lines.push(...extraLines);
+  }
+
+  lines.push('end');
+  return lines.join('\n');
+}
+
 function formatSeedRelationshipBlock(item: Record<string, unknown>): string | null {
   const kind = item.kind;
   const src = item.src;
@@ -1515,6 +3382,104 @@ function formatSeedRelationshipBlock(item: Record<string, unknown>): string | nu
   return `seed_relationship ${formatLabel(kind)} ${formatLabel(src)} ${formatLabel(dst)} ${strength}`;
 }
 
+function formatSeedRelationshipGroups(items: Record<string, unknown>[]): string[] {
+  const groups = new Map<string, Array<{ kind: string; dst: string; strength: number }>>();
+  const extras: Record<string, unknown>[] = [];
+
+  for (const item of items) {
+    const kind = item.kind;
+    const src = item.src;
+    const dst = item.dst;
+    const strength = item.strength;
+    const remaining = { ...item };
+    delete remaining.kind;
+    delete remaining.src;
+    delete remaining.dst;
+    delete remaining.strength;
+
+    const hasExtras = Object.keys(remaining).length > 0;
+    if (typeof kind !== 'string' || typeof src !== 'string' || typeof dst !== 'string' || typeof strength !== 'number' || hasExtras) {
+      extras.push(item);
+      continue;
+    }
+
+    if (!groups.has(src)) groups.set(src, []);
+    groups.get(src)?.push({ kind, dst, strength });
+  }
+
+  const blocks: string[] = [];
+  const sortedSources = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b));
+  for (const src of sortedSources) {
+    const relationships = groups.get(src) || [];
+    relationships.sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind.localeCompare(b.kind);
+      if (a.dst !== b.dst) return a.dst.localeCompare(b.dst);
+      return a.strength - b.strength;
+    });
+    const lines = [`relationships ${formatLabel(src)} do`];
+    for (const rel of relationships) {
+      lines.push(`${indent(1)}${formatLabel(rel.kind)} ${formatLabel(rel.dst)} ${rel.strength}`);
+    }
+    lines.push('end');
+    blocks.push(lines.join('\n'));
+  }
+
+  for (const extra of extras) {
+    const block = formatSeedRelationshipBlock(extra);
+    if (block) blocks.push(block);
+  }
+
+  return blocks;
+}
+
+function formatInlineList(items: unknown[]): string | null {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const parts = items.map((item) => formatInlineValue(item));
+  if (parts.some((part) => part === null)) return null;
+  return parts.join(' ');
+}
+
+function extractSetFieldItems(value: unknown): { items: string[]; none: boolean } | null {
+  if (typeof value === 'string') {
+    if (value === 'none') return { items: [], none: true };
+    return { items: [value], none: false };
+  }
+  if (Array.isArray(value)) {
+    const items = value.filter((entry) => typeof entry === 'string') as string[];
+    if (items.length !== value.length) return null;
+    return { items, none: items.length === 0 };
+  }
+  if (isRecord(value)) {
+    const entries = Object.entries(value);
+    if (entries.length === 0) return { items: [], none: true };
+    if (!entries.every(([, entry]) => entry === true)) return null;
+    return { items: entries.map(([key]) => key), none: false };
+  }
+  return null;
+}
+
+function formatSetInlineValue(value: unknown): string | null {
+  const parsed = extractSetFieldItems(value);
+  if (!parsed) return null;
+  if (parsed.items.length === 0) return 'none';
+  const parts = parsed.items.map((item) => formatInlineValue(item));
+  if (parts.some((part) => part === null)) return null;
+  return parts.join(' ');
+}
+
+function formatSetFieldLine(key: string, value: unknown, indentLevel: number): string[] | null {
+  if (!SET_FIELD_KEYS.has(key)) return null;
+  const parsed = extractSetFieldItems(value);
+  if (!parsed) return null;
+  const prefix = `${indent(indentLevel)}${formatAttributeKey(key)}`;
+  if (parsed.items.length === 0) {
+    return [`${prefix} none`];
+  }
+  const parts = parsed.items.map((item) => formatInlineValue(item));
+  if (parts.some((part) => part === null)) return null;
+  return [`${prefix} ${parts.join(' ')}`];
+}
+
 function formatSeedEntityBlock(item: Record<string, unknown>): string | null {
   const id = item.id;
   if (typeof id !== 'string') return null;
@@ -1536,67 +3501,83 @@ function formatSeedEntityBlock(item: Record<string, unknown>): string | null {
   ];
 
   for (const key of knownKeys) {
-    if (remaining[key] !== undefined) {
-      pushInlinePairLine(lines, key, remaining[key], 1);
-      delete remaining[key];
+    const value = remaining[key];
+    delete remaining[key];
+    if (value === undefined || value === null || (typeof value === 'string' && value.length === 0)) {
+      pushInlinePairLine(lines, key, 'none', 1);
+      continue;
     }
+    pushInlinePairLine(lines, key, value, 1);
   }
 
-  if (remaining.tags !== undefined) {
-    const tags = remaining.tags;
-    if (isRecord(tags)) {
-      const entries = Object.entries(tags);
-      const allTrue = entries.length > 0 && entries.every(([, value]) => value === true);
-      if (allTrue) {
-        const list = entries.map(([key]) => key);
-        const inline = formatInlineValue(list);
-        if (inline) {
-          lines.push(`${indent(1)}tags ${inline}`);
-        } else {
-          pushAttributeLine(lines, 'tags', tags, 1);
-        }
-      } else {
-        pushAttributeLine(lines, 'tags', tags, 1);
-      }
-    } else if (Array.isArray(tags)) {
-      const inline = formatInlineValue(tags);
+  const tags = remaining.tags;
+  delete remaining.tags;
+  if (tags === undefined || tags === null || (typeof tags === 'string' && tags.length === 0)) {
+    lines.push(`${indent(1)}tags none`);
+  } else if (isRecord(tags)) {
+    const entries = Object.entries(tags).filter(([, value]) => Boolean(value));
+    if (entries.length === 0) {
+      lines.push(`${indent(1)}tags none`);
+    } else {
+      const inline = formatInlineList(entries.map(([key]) => key));
       if (inline) {
         lines.push(`${indent(1)}tags ${inline}`);
       } else {
-        pushAttributeLine(lines, 'tags', tags, 1);
+        lines.push(`${indent(1)}tags none`);
       }
-    } else {
-      pushAttributeLine(lines, 'tags', tags, 1);
     }
-    delete remaining.tags;
+  } else if (Array.isArray(tags)) {
+    if (tags.length === 0) {
+      lines.push(`${indent(1)}tags none`);
+    } else {
+      const inline = formatInlineList(tags);
+      if (inline) {
+        lines.push(`${indent(1)}tags ${inline}`);
+      } else {
+        lines.push(`${indent(1)}tags none`);
+      }
+    }
+  } else {
+    lines.push(`${indent(1)}tags none`);
   }
 
   const coords = remaining.coords ?? remaining.coordinates;
-  if (coords !== undefined) {
-    if (isRecord(coords) && typeof coords.x === 'number' && typeof coords.y === 'number' && typeof coords.z === 'number') {
-      lines.push(`${indent(1)}coords ${coords.x} ${coords.y} ${coords.z}`);
-    } else if (Array.isArray(coords) && coords.length >= 3) {
-      const [x, y, z] = coords;
-      if ([x, y, z].every((value) => typeof value === 'number')) {
-        lines.push(`${indent(1)}coords ${x} ${y} ${z}`);
-      } else {
-        pushAttributeLine(lines, 'coordinates', coords, 1);
-      }
+  if (coords === undefined || coords === null) {
+    lines.push(`${indent(1)}coords none`);
+  } else if (isRecord(coords) && typeof coords.x === 'number' && typeof coords.y === 'number' && typeof coords.z === 'number') {
+    lines.push(`${indent(1)}coords ${coords.x} ${coords.y} ${coords.z}`);
+  } else if (Array.isArray(coords) && coords.length >= 3) {
+    const [x, y, z] = coords;
+    if ([x, y, z].every((value) => typeof value === 'number')) {
+      lines.push(`${indent(1)}coords ${x} ${y} ${z}`);
     } else {
-      pushAttributeLine(lines, 'coordinates', coords, 1);
+      lines.push(`${indent(1)}coords none`);
     }
-    delete remaining.coords;
-    delete remaining.coordinates;
+  } else if (coords === 'none') {
+    lines.push(`${indent(1)}coords none`);
+  } else {
+    lines.push(`${indent(1)}coords none`);
   }
+  delete remaining.coords;
+  delete remaining.coordinates;
 
-  if (remaining.links !== undefined) {
-    const inline = formatInlineValue(remaining.links);
-    if (inline) {
-      lines.push(`${indent(1)}links ${inline}`);
+  const links = remaining.links;
+  delete remaining.links;
+  if (links === undefined || links === null || (typeof links === 'string' && links.length === 0)) {
+    lines.push(`${indent(1)}links none`);
+  } else if (Array.isArray(links)) {
+    if (links.length === 0) {
+      lines.push(`${indent(1)}links none`);
     } else {
-      pushAttributeLine(lines, 'links', remaining.links, 1);
+      const inline = formatInlineList(links);
+      if (inline) {
+        lines.push(`${indent(1)}links ${inline}`);
+      } else {
+        lines.push(`${indent(1)}links none`);
+      }
     }
-    delete remaining.links;
+  } else {
+    lines.push(`${indent(1)}links none`);
   }
 
   const extraLines = formatAttributeLines(remaining, 1);
@@ -2871,6 +4852,11 @@ function formatAttributeLines(obj: Record<string, unknown>, indentLevel: number)
         continue;
       }
     }
+    const setLine = formatSetFieldLine(key, value, indentLevel);
+    if (setLine) {
+      lines.push(...setLine);
+      continue;
+    }
     const valueLines = formatValueLines(value, indentLevel + 1);
     const valueIndent = indent(indentLevel + 1);
     const first = valueLines[0].startsWith(valueIndent)
@@ -3031,7 +5017,7 @@ function formatSelectionBlock(value: unknown, indentLevel: number): string[] | n
 
   if (Array.isArray(selection.subtypes) && selection.subtypes.length > 0) {
     if (selection.subtypes.length > 1) {
-      const inline = formatInlineValue(selection.subtypes);
+      const inline = formatSetInlineValue(selection.subtypes);
       if (inline) {
         lines.push(`${indent(innerIndent)}subtype in ${inline}`);
       } else {
@@ -3045,7 +5031,7 @@ function formatSelectionBlock(value: unknown, indentLevel: number): string[] | n
 
   if (Array.isArray(selection.statuses) && selection.statuses.length > 0) {
     if (selection.statuses.length > 1) {
-      const inline = formatInlineValue(selection.statuses);
+      const inline = formatSetInlineValue(selection.statuses);
       if (inline) {
         lines.push(`${indent(innerIndent)}status in ${inline}`);
       } else {
@@ -3386,7 +5372,7 @@ function formatLetEntry(name: string, value: Record<string, unknown>, indentLeve
 
   if (Array.isArray(select.subtypes) && select.subtypes.length > 0) {
     if (select.subtypes.length > 1) {
-      const inline = formatInlineValue(select.subtypes);
+      const inline = formatSetInlineValue(select.subtypes);
       if (inline) {
         lines.push(`${indent(innerIndent)}subtype in ${inline}`);
       } else {
@@ -3400,7 +5386,7 @@ function formatLetEntry(name: string, value: Record<string, unknown>, indentLeve
 
   if (Array.isArray(select.statuses) && select.statuses.length > 0) {
     if (select.statuses.length > 1) {
-      const inline = formatInlineValue(select.statuses);
+      const inline = formatSetInlineValue(select.statuses);
       if (inline) {
         lines.push(`${indent(innerIndent)}status in ${inline}`);
       } else {
@@ -3481,6 +5467,13 @@ function formatMutationEntries(items: unknown[], indentLevel: number): string[] 
 }
 
 function pushAttributeLine(lines: string[], key: string, value: unknown, indentLevel: number): void {
+  if (SET_FIELD_KEYS.has(key)) {
+    const setLine = formatSetFieldLine(key, value, indentLevel);
+    if (setLine) {
+      lines.push(...setLine);
+      return;
+    }
+  }
   const valueLines = formatValueLines(value, indentLevel + 1);
   const valueIndent = indent(indentLevel + 1);
   const first = valueLines[0].startsWith(valueIndent)
@@ -3493,6 +5486,13 @@ function pushAttributeLine(lines: string[], key: string, value: unknown, indentL
 }
 
 function pushInlinePairLine(lines: string[], key: string, value: unknown, indentLevel: number): void {
+  if (SET_FIELD_KEYS.has(key)) {
+    const inlineSet = formatSetInlineValue(value);
+    if (inlineSet) {
+      lines.push(`${indent(indentLevel)}${formatAttributeKey(key)} ${inlineSet}`);
+      return;
+    }
+  }
   const inline = formatInlineValue(value);
   if (!inline) {
     pushAttributeLine(lines, key, value, indentLevel);
@@ -3806,6 +5806,7 @@ function formatInlinePairs(body: Record<string, unknown>): string | null {
   if (entries.length === 0) return '';
   const parts: string[] = [];
   for (const [key, value] of entries) {
+    if (SET_FIELD_KEYS.has(key)) return null;
     const inlineValue = formatInlineValue(value);
     if (!inlineValue) return null;
     parts.push(`${formatAttributeKey(key)}:${inlineValue}`);

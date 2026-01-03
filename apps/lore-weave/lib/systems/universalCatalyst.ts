@@ -162,6 +162,10 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
 
         if (outcome.success) {
           actionsSucceeded++;
+
+          // Track that this action type has succeeded at least once
+          graphView.config.actionSuccessTracker?.add(selectedAction.type);
+
           const historyModifiedIds = new Set<string>();
 
           if (outcome.entitiesModified && outcome.entitiesModified.length > 0) {

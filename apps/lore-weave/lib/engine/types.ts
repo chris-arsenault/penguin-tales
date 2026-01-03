@@ -562,6 +562,10 @@ export interface EngineConfig {
   // Used by universalCatalyst system to execute agent actions
   executableActions?: import('./actionInterpreter').ExecutableAction[];
 
+  // Action success tracking - populated by universalCatalyst when actions succeed
+  // Used for diagnostics to report which actions have never succeeded
+  actionSuccessTracker?: Set<string>;
+
   entityRegistries?: EntityOperatorRegistry[];
 
   // Configuration

@@ -776,7 +776,7 @@
       "throttleChance": 0.35,
       "pressureChanges": {
         "security": -8,
-        "harmony": -5
+        "harmony": -1
       },
       "selection": {
         "strategy": "by_kind",
@@ -1600,7 +1600,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.5,
       "pressureChanges": {
-        "harmony": -5
+        "harmony": -1
       },
       "selection": {
         "strategy": "by_kind",
@@ -2621,7 +2621,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "harmony",
-          "delta": -2.0
+          "delta": -1.0
         }
       ],
       "clusterMode": "individual",
@@ -2677,7 +2677,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "harmony",
-          "delta": -1.5
+          "delta": -1.0
         }
       ],
       "clusterMode": "individual",

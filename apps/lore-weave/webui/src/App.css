@@ -1033,6 +1033,30 @@
   color: var(--lw-text-secondary);
 }
 
+/* Validity badge */
+.lw-validity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lw-space-xs);
+  padding: var(--lw-space-xs) var(--lw-space-md);
+  border-radius: var(--lw-radius-md);
+  font-size: var(--lw-text-sm);
+  font-weight: 600;
+  cursor: default;
+}
+
+.lw-validity-valid {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.lw-validity-invalid {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
 /* ========================================
    Tabs
    ======================================== */

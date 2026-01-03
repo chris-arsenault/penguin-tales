@@ -49,7 +49,12 @@ const BLOCK_MAPPINGS: Record<string, BlockMapping> = {
     nameKey: 'name',
     buildItem: (block, diagnostics) => buildActionItem(block, diagnostics)
   },
-  pressure: { target: 'pressures', idKey: 'id', nameKey: 'name' },
+  pressure: {
+    target: 'pressures',
+    idKey: 'id',
+    nameKey: 'name',
+    buildItem: (block, diagnostics) => buildPressureItem(block, diagnostics)
+  },
   era: { target: 'eras', idKey: 'id', nameKey: 'name' },
   entity_kind: {
     target: 'entityKinds',
@@ -134,6 +139,13 @@ interface ResourceEntry {
   span: BlockNode['span'];
 }
 
+interface SetDefinition {
+  name: string;
+  items: string[];
+  includes: string[];
+  span: BlockNode['span'];
+}
+
 const RESOURCE_BLOCKS = new Set([
   'entity_kind',
   'relationship_kind',
@@ -151,6 +163,30 @@ const RESOURCE_BLOCKS = new Set([
   'lexeme_list'
 ]);
 
+const SET_FIELD_KEYS = new Set([
+  'tags',
+  'links',
+  'kinds',
+  'entityKinds',
+  'excludeSubtypes',
+  'excludeStatuses',
+  'related',
+  'relatedTags',
+  'conflicts',
+  'conflictingTags',
+  'exclusive',
+  'mutuallyExclusiveWith',
+  'templates',
+  'relationshipKinds',
+  'excludeRelationships',
+  'pairExcludeRelationships',
+  'via',
+  'srcKinds',
+  'dstKinds',
+  'culture_id',
+  'cultureId'
+]);
+
 const VARIABLE_BLOCK_NAMES = new Set(['vars', 'locals']);
 const VARIABLE_ATTRIBUTE_KEYS = new Set(['var', 'variable']);
 const VARIABLE_REFERENCE_PREFIXES = ['var.', 'vars.', 'local.'];
@@ -166,6 +202,7 @@ const NAMING_RESOURCE_BLOCKS = new Set([
 interface EvalContext {
   variables: Map<string, VariableEntry>;
   resources: Map<string, ResourceEntry[]>;
+  sets: Map<string, string[]>;
   resolved: Map<string, unknown>;
   resolving: Set<string>;
   diagnostics: Diagnostic[];
@@ -318,11 +355,13 @@ function expandStatements(
 function createEvalContext(
   variables: Map<string, VariableEntry>,
   resources: Map<string, ResourceEntry[]>,
+  sets: Map<string, string[]>,
   diagnostics: Diagnostic[]
 ): EvalContext {
   return {
     variables,
     resources,
+    sets,
     resolved: new Map<string, unknown>(),
     resolving: new Set<string>(),
     diagnostics
@@ -385,14 +424,19 @@ export function compileCanonProject(files: SourceFile[]): CompileResult<Record<s
     return { config: null, diagnostics };
   }
 
-  const resources = collectResourceRegistry(allBlocks);
+  const { blocks: blocksWithoutSets, sets } = collectSetDefinitions(allBlocks, diagnostics);
   if (diagnostics.some(d => d.severity === 'error')) {
     return { config: null, diagnostics };
   }
 
-  const evalContext = createEvalContext(variables, resources, diagnostics);
+  const resources = collectResourceRegistry(blocksWithoutSets);
+  if (diagnostics.some(d => d.severity === 'error')) {
+    return { config: null, diagnostics };
+  }
+
+  const evalContext = createEvalContext(variables, resources, sets, diagnostics);
   return withEvalContext(evalContext, () => {
-    const { blocks: filteredBlocks, resources: namingResources } = collectNamingResources(allBlocks, diagnostics);
+    const { blocks: filteredBlocks, resources: namingResources } = collectNamingResources(blocksWithoutSets, diagnostics);
     if (diagnostics.some(d => d.severity === 'error')) {
       return { config: null, diagnostics };
     }
@@ -401,6 +445,16 @@ export function compileCanonProject(files: SourceFile[]): CompileResult<Record<s
     const seenIds: Record<string, Map<string, { span: BlockNode['span'] }>> = {};
 
     for (const block of filteredBlocks) {
+      if (block.name === 'relationships') {
+        const groupItems = buildSeedRelationshipGroup(block, diagnostics);
+        if (groupItems.length > 0) {
+          if (!config.seedRelationships) config.seedRelationships = [];
+          const list = config.seedRelationships as Record<string, unknown>[];
+          list.push(...groupItems);
+        }
+        continue;
+      }
+
       const mapping = BLOCK_MAPPINGS[block.name];
       if (!mapping) {
         if (block.name === 'static_page') {
@@ -563,7 +617,7 @@ export function compileCanonStaticPages(
     return { pages: null, diagnostics };
   }
 
-  const evalContext = createEvalContext(variables, new Map(), diagnostics);
+  const evalContext = createEvalContext(variables, new Map(), new Map(), diagnostics);
   return withEvalContext(evalContext, () => {
     for (const file of expandedFiles) {
       for (const stmt of file.statements) {
@@ -650,6 +704,181 @@ function collectResourceRegistry(blocks: BlockNode[]): Map<string, ResourceEntry
   }
 
   return resources;
+}
+
+function parseSetIncludeValue(
+  value: Value,
+  diagnostics: Diagnostic[],
+  parent: BlockNode
+): string | null {
+  if (isArrayValue(value) || isObjectValue(value) || Array.isArray(value)) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'include requires a single set identifier',
+      span: parent.span
+    });
+    return null;
+  }
+  const raw = valueToJson(value, diagnostics, parent);
+  const list = Array.isArray(raw) ? raw : [raw];
+  if (list.length !== 1 || typeof list[0] !== 'string') {
+    diagnostics.push({
+      severity: 'error',
+      message: 'include requires a single set identifier',
+      span: parent.span
+    });
+    return null;
+  }
+  return list[0];
+}
+
+function parseSetBlockItems(
+  statements: StatementNode[],
+  diagnostics: Diagnostic[],
+  parent: BlockNode
+): { items: string[]; includes: string[]; none: boolean } | null {
+  const items: string[] = [];
+  const includes: string[] = [];
+  let sawNone = false;
+
+  for (const stmt of statements) {
+    if (stmt.type === 'bare') {
+      const value = coerceStringValue(stmt.value);
+      if (!value) {
+        diagnostics.push({
+          severity: 'error',
+          message: 'set entries must be identifiers or strings',
+          span: stmt.span
+        });
+        return null;
+      }
+      if (value === 'include') {
+        diagnostics.push({
+          severity: 'error',
+          message: 'include requires a set name',
+          span: stmt.span
+        });
+        return null;
+      }
+      if (value === 'none') {
+        sawNone = true;
+      } else {
+        items.push(value);
+      }
+      continue;
+    }
+    if (stmt.type === 'attribute' && stmt.key === 'include') {
+      const includeName = parseSetIncludeValue(stmt.value, diagnostics, parent);
+      if (includeName) includes.push(includeName);
+      continue;
+    }
+    diagnostics.push({
+      severity: 'error',
+      message: 'set blocks only support bare identifiers or include statements',
+      span: stmt.span
+    });
+    return null;
+  }
+
+  if (sawNone && (items.length > 0 || includes.length > 0)) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'none cannot be combined with other set entries',
+      span: parent.span
+    });
+    return null;
+  }
+
+  return { items, includes, none: sawNone };
+}
+
+function collectSetDefinitions(
+  blocks: BlockNode[],
+  diagnostics: Diagnostic[]
+): { blocks: BlockNode[]; sets: Map<string, string[]> } {
+  const definitions = new Map<string, SetDefinition>();
+  const remaining: BlockNode[] = [];
+
+  for (const block of blocks) {
+    if (block.name !== 'set') {
+      remaining.push(block);
+      continue;
+    }
+    const name = block.labels[0];
+    if (!name) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'set block requires a name label',
+        span: block.span
+      });
+      continue;
+    }
+    if (definitions.has(name)) {
+      diagnostics.push({
+        severity: 'error',
+        message: `Duplicate set "${name}" definition`,
+        span: block.span
+      });
+      continue;
+    }
+    const parsed = parseSetBlockItems(block.body, diagnostics, block);
+    if (!parsed) continue;
+    definitions.set(name, {
+      name,
+      items: parsed.none ? [] : parsed.items,
+      includes: parsed.includes,
+      span: block.span
+    });
+  }
+
+  const resolved = new Map<string, string[]>();
+  const resolving = new Set<string>();
+
+  const mergeUnique = (target: string[], additions: string[]): void => {
+    const seen = new Set(target);
+    for (const item of additions) {
+      if (seen.has(item)) continue;
+      seen.add(item);
+      target.push(item);
+    }
+  };
+
+  const resolveSet = (name: string): string[] => {
+    const existing = resolved.get(name);
+    if (existing) return existing;
+    if (resolving.has(name)) {
+      diagnostics.push({
+        severity: 'error',
+        message: `Circular set include detected for "${name}"`,
+        span: definitions.get(name)?.span
+      });
+      return [];
+    }
+    const def = definitions.get(name);
+    if (!def) {
+      diagnostics.push({
+        severity: 'error',
+        message: `Unknown set "${name}"`,
+        span: undefined
+      });
+      return [];
+    }
+    resolving.add(name);
+    const output: string[] = [];
+    for (const includeName of def.includes) {
+      mergeUnique(output, resolveSet(includeName));
+    }
+    mergeUnique(output, def.items);
+    resolving.delete(name);
+    resolved.set(name, output);
+    return output;
+  };
+
+  for (const name of definitions.keys()) {
+    resolveSet(name);
+  }
+
+  return { blocks: remaining, sets: resolved };
 }
 
 interface NamingResourceEntry {
@@ -1125,6 +1354,49 @@ function ensureArrayValue(
   return null;
 }
 
+function consumeInlineSetValues(
+  items: Value[],
+  startIndex: number,
+  keywordSet: Set<string>,
+  diagnostics: Diagnostic[],
+  stmt: AttributeNode,
+  label: string
+): { value: Value; nextIndex: number } | null {
+  if (startIndex >= items.length) {
+    diagnostics.push({
+      severity: 'error',
+      message: `${label} requires at least one value`,
+      span: stmt.span
+    });
+    return null;
+  }
+
+  const values: Value[] = [];
+  let index = startIndex;
+  while (index < items.length) {
+    const token = items[index];
+    const tokenLabel = coerceStringValue(token);
+    if (tokenLabel && keywordSet.has(tokenLabel)) break;
+    values.push(token);
+    index += 1;
+  }
+
+  if (values.length === 0) {
+    diagnostics.push({
+      severity: 'error',
+      message: `${label} requires at least one value`,
+      span: stmt.span
+    });
+    return null;
+  }
+
+  if (values.length === 1) {
+    return { value: values[0], nextIndex: index };
+  }
+
+  return { value: makeArrayValue(values, stmt.span), nextIndex: index };
+}
+
 function parseTagInline(
   items: Value[],
   diagnostics: Diagnostic[],
@@ -1185,8 +1457,8 @@ function parseTagInline(
     }
 
     if (keyword === 'kinds' || keyword === 'related' || keyword === 'conflicts' || keyword === 'exclusive' || keyword === 'templates') {
-      const list = ensureArrayValue(items[index + 1], diagnostics, stmt, keyword);
-      if (!list) return null;
+      const parsed = consumeInlineSetValues(items, index + 1, keywordSet, diagnostics, stmt, keyword);
+      if (!parsed) return null;
       const key =
         keyword === 'kinds'
           ? 'entityKinds'
@@ -1197,8 +1469,8 @@ function parseTagInline(
               : keyword === 'exclusive'
                 ? 'mutuallyExclusiveWith'
                 : 'templates';
-      statements.push(makeAttributeStatement(key, list, stmt.span));
-      index += 2;
+      statements.push(makeAttributeStatement(key, parsed.value, stmt.span));
+      index = parsed.nextIndex;
       continue;
     }
 
@@ -1273,18 +1545,19 @@ function parseRelationshipKindInline(
   diagnostics: Diagnostic[],
   stmt: AttributeNode
 ): StatementNode[] | null {
-  if (items.length < 5) {
-    diagnostics.push({
-      severity: 'error',
-      message: 'relationship_kind requires polarity, decay, cullable flag, src, and dst',
-      span: stmt.span
-    });
-    return null;
-  }
-
   const statements: StatementNode[] = [];
   let index = 0;
   const polaritySet = new Set(['positive', 'neutral', 'negative']);
+  const keywordSet = new Set([
+    'src',
+    'dst',
+    'verbs',
+    'category',
+    'name',
+    'desc',
+    'symmetric',
+    'framework'
+  ]);
 
   const firstLabel = coerceStringValue(items[index]);
   if (typeof items[index] === 'string' || (firstLabel && !polaritySet.has(firstLabel))) {
@@ -1317,10 +1590,10 @@ function parseRelationshipKindInline(
     });
     return null;
   }
-  const srcList = ensureArrayValue(items[index + 1], diagnostics, stmt, 'src');
-  if (!srcList) return null;
-  statements.push(makeAttributeStatement('srcKinds', srcList, stmt.span));
-  index += 2;
+  const srcParsed = consumeInlineSetValues(items, index + 1, keywordSet, diagnostics, stmt, 'src');
+  if (!srcParsed) return null;
+  statements.push(makeAttributeStatement('srcKinds', srcParsed.value, stmt.span));
+  index = srcParsed.nextIndex;
 
   const dstKeyword = coerceStringValue(items[index]);
   if (dstKeyword !== 'dst') {
@@ -1331,10 +1604,10 @@ function parseRelationshipKindInline(
     });
     return null;
   }
-  const dstList = ensureArrayValue(items[index + 1], diagnostics, stmt, 'dst');
-  if (!dstList) return null;
-  statements.push(makeAttributeStatement('dstKinds', dstList, stmt.span));
-  index += 2;
+  const dstParsed = consumeInlineSetValues(items, index + 1, keywordSet, diagnostics, stmt, 'dst');
+  if (!dstParsed) return null;
+  statements.push(makeAttributeStatement('dstKinds', dstParsed.value, stmt.span));
+  index = dstParsed.nextIndex;
 
   while (index < items.length) {
     const keyword = coerceStringValue(items[index]);
@@ -1489,6 +1762,47 @@ function buildSystemItem(block: BlockNode, diagnostics: Diagnostic[]): Record<st
   }
 
   const [systemType, idLabel, nameLabel] = block.labels;
+  const hasConfig = block.body.some((stmt) =>
+    (stmt.type === 'attribute' && stmt.key === 'config')
+    || (stmt.type === 'block' && stmt.name === 'config')
+  );
+
+  if (!hasConfig) {
+    const ctx = createSystemContext(diagnostics, block);
+    const parsed = buildSystemConfigFromStatements(systemType, block.body, ctx);
+    if (!parsed) return null;
+
+    const { config, enabled } = parsed;
+    if (config.id !== undefined) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'system config.id must be provided via the system block label',
+        span: block.span
+      });
+      return null;
+    }
+    if (config.name !== undefined) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'system config.name must be provided via the system block label',
+        span: block.span
+      });
+      return null;
+    }
+
+    const finalConfig = {
+      ...config,
+      id: idLabel,
+      ...(nameLabel ? { name: nameLabel } : {})
+    };
+
+    return {
+      systemType,
+      config: finalConfig,
+      ...(enabled !== undefined ? { enabled } : {})
+    };
+  }
+
   const rawBody = buildObjectFromStatements(block.body, diagnostics, block);
   const configFromBody = (rawBody.config && typeof rawBody.config === 'object' && !Array.isArray(rawBody.config))
     ? (rawBody.config as Record<string, unknown>)
@@ -1553,6 +1867,2446 @@ function buildSystemItem(block: BlockNode, diagnostics: Diagnostic[]): Record<st
   };
 }
 
+interface SystemParseResult {
+  config: Record<string, unknown>;
+  enabled?: unknown;
+}
+
+const SYSTEM_BINDINGS = [
+  'self',
+  'member',
+  'member2',
+  'source',
+  'target',
+  'contagion_source',
+  'related',
+  'meta'
+];
+
+function createSystemContext(diagnostics: Diagnostic[], parent: BlockNode): GeneratorContext {
+  const bindings = new Map<string, string>();
+  for (const name of SYSTEM_BINDINGS) {
+    bindings.set(name, `$${name}`);
+  }
+  return {
+    bindings,
+    diagnostics,
+    parent,
+    selectionDefined: false
+  };
+}
+
+function buildSystemConfigFromStatements(
+  systemType: string,
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): SystemParseResult | null {
+  switch (systemType) {
+    case 'thresholdTrigger':
+      return buildThresholdTriggerSystem(statements, ctx);
+    case 'connectionEvolution':
+      return buildConnectionEvolutionSystem(statements, ctx);
+    case 'clusterFormation':
+      return buildClusterFormationSystem(statements, ctx);
+    case 'graphContagion':
+      return buildGraphContagionSystem(statements, ctx);
+    case 'planeDiffusion':
+      return buildPlaneDiffusionSystem(statements, ctx);
+    case 'tagDiffusion':
+      return buildTagDiffusionSystem(statements, ctx);
+    case 'eraSpawner':
+      return buildEraSpawnerSystem(statements, ctx);
+    case 'eraTransition':
+      return buildEraTransitionSystem(statements, ctx);
+    case 'universalCatalyst':
+      return buildUniversalCatalystSystem(statements, ctx);
+    case 'relationshipMaintenance':
+      return buildRelationshipMaintenanceSystem(statements, ctx);
+    default:
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported system type "${systemType}"`,
+        span: ctx.parent.span
+      });
+      return null;
+  }
+}
+
+const SYSTEM_CONDITION_KEYS = new Set([
+  'condition',
+  'tag_exists',
+  'lacks_tag',
+  'relationship_exists',
+  'relationship_count',
+  'random_chance',
+  'time_elapsed',
+  'prominence',
+  'entity_exists',
+  'not_self'
+]);
+
+const SYSTEM_OPERATOR_KEYWORDS = new Set(['gt', 'gte', 'lt', 'lte', 'eq', 'between']);
+
+function applySystemCommonAttribute(
+  stmt: Extract<StatementNode, { type: 'attribute' }>,
+  result: SystemParseResult,
+  ctx: GeneratorContext
+): boolean {
+  if (stmt.key === 'enabled') {
+    result.enabled = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+    return true;
+  }
+  if (stmt.key === 'description') {
+    result.config.description = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+    return true;
+  }
+  return false;
+}
+
+function parseSystemSelectionBlock(stmt: BlockNode, ctx: GeneratorContext): Record<string, unknown> | null {
+  const { selection } = buildSelectionFromStatements(stmt, ctx);
+  if (!selection) return null;
+  normalizeRefsInObject(selection, ctx);
+  return selection;
+}
+
+function parseStringListValue(
+  value: Value,
+  ctx: GeneratorContext,
+  span: BlockNode['span'],
+  label: string
+): string[] | null {
+  const tokens = valueToTokenList(value, ctx, span);
+  if (!tokens) return null;
+  const list = flattenTokenList(tokens, ctx, span);
+  if (!list) return null;
+  if (list.length === 0) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `${label} requires at least one value`,
+      span
+    });
+    return null;
+  }
+  return list;
+}
+
+function parseOperatorKeyword(
+  token: unknown,
+  ctx: GeneratorContext,
+  span: BlockNode['span']
+): string | null {
+  if (typeof token !== 'string' || !SYSTEM_OPERATOR_KEYWORDS.has(token)) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'Expected an operator keyword (gt/gte/lt/lte/eq/between)',
+      span
+    });
+    return null;
+  }
+  return token;
+}
+
+function parseSystemConditionTokens(
+  tokens: unknown[],
+  ctx: GeneratorContext,
+  span: BlockNode['span']
+): Record<string, unknown> | null {
+  if (tokens.length === 0 || typeof tokens[0] !== 'string') {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'condition requires a type',
+      span
+    });
+    return null;
+  }
+
+  const type = tokens[0];
+  const rest = tokens.slice(1);
+
+  if (type === 'tag_exists') {
+    const tag = rest[0];
+    if (typeof tag !== 'string') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'tag_exists requires a tag identifier',
+        span
+      });
+      return null;
+    }
+    return { type: 'tag_exists', tag };
+  }
+
+  if (type === 'lacks_tag') {
+    if (rest.length === 1 && typeof rest[0] === 'string') {
+      return { type: 'lacks_tag', tag: rest[0] };
+    }
+    if (rest.length === 2 && typeof rest[0] === 'string' && typeof rest[1] === 'string') {
+      return {
+        type: 'lacks_tag',
+        entity: normalizeRefName(rest[0], ctx),
+        tag: rest[1]
+      };
+    }
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'lacks_tag requires: lacks_tag <tag> or lacks_tag <entity> <tag>',
+      span
+    });
+    return null;
+  }
+
+  if (type === 'relationship_exists') {
+    const relationshipKind = rest[0];
+    const direction = rest[1];
+    if (typeof relationshipKind !== 'string' || typeof direction !== 'string') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'relationship_exists requires: relationship_exists <relationship> <direction>',
+        span
+      });
+      return null;
+    }
+    const condition: Record<string, unknown> = {
+      type: 'relationship_exists',
+      relationshipKind,
+      direction
+    };
+    let idx = 2;
+    while (idx < rest.length) {
+      const key = rest[idx];
+      const value = rest[idx + 1];
+      if (key === 'target_kind' && typeof value === 'string') {
+        condition.targetKind = value;
+        idx += 2;
+        continue;
+      }
+      if (key === 'target_status' && typeof value === 'string') {
+        condition.targetStatus = value;
+        idx += 2;
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'relationship_exists supports target_kind and target_status modifiers',
+        span
+      });
+      return null;
+    }
+    normalizeRefsInObject(condition, ctx);
+    return condition;
+  }
+
+  if (type === 'relationship_count') {
+    const relationshipKind = rest[0];
+    if (typeof relationshipKind !== 'string') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'relationship_count requires a relationship kind',
+        span
+      });
+      return null;
+    }
+    let idx = 1;
+    let direction: string | undefined;
+    const next = rest[idx];
+    if (typeof next === 'string' && !SYSTEM_OPERATOR_KEYWORDS.has(next)) {
+      direction = next;
+      idx += 1;
+    }
+    const opToken = rest[idx];
+    const op = parseOperatorKeyword(opToken, ctx, span);
+    if (!op) return null;
+    idx += 1;
+
+    const condition: Record<string, unknown> = {
+      type: 'relationship_count',
+      relationshipKind
+    };
+    if (direction) condition.direction = direction;
+
+    if (op === 'between') {
+      const minValue = rest[idx];
+      const maxValue = rest[idx + 1];
+      if (typeof minValue !== 'number' || typeof maxValue !== 'number') {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'relationship_count between requires two numeric values',
+          span
+        });
+        return null;
+      }
+      condition.min = minValue;
+      condition.max = maxValue;
+      return condition;
+    }
+
+    const value = rest[idx];
+    if (typeof value !== 'number') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'relationship_count requires a numeric threshold',
+        span
+      });
+      return null;
+    }
+    if (op === 'eq') {
+      condition.min = value;
+      condition.max = value;
+      return condition;
+    }
+    if (op === 'gt' || op === 'gte') {
+      condition.min = value;
+      return condition;
+    }
+    if (op === 'lt' || op === 'lte') {
+      condition.max = value;
+      return condition;
+    }
+  }
+
+  if (type === 'random_chance') {
+    const chance = rest[0];
+    if (typeof chance !== 'number') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'random_chance requires a numeric value',
+        span
+      });
+      return null;
+    }
+    return { type: 'random_chance', chance };
+  }
+
+  if (type === 'time_elapsed') {
+    const minTicks = rest[0];
+    if (typeof minTicks !== 'number') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'time_elapsed requires a numeric tick value',
+        span
+      });
+      return null;
+    }
+    const condition: Record<string, unknown> = { type: 'time_elapsed', minTicks };
+    if (rest.length > 1) {
+      if (rest[1] === 'since' && typeof rest[2] === 'string') {
+        condition.since = rest[2];
+      } else {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'time_elapsed only supports: since <created|updated>',
+          span
+        });
+        return null;
+      }
+    }
+    return condition;
+  }
+
+  if (type === 'prominence') {
+    const bound = rest[0];
+    const value = rest[1];
+    if ((bound !== 'min' && bound !== 'max') || typeof value !== 'string') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'prominence requires: prominence min|max <label>',
+        span
+      });
+      return null;
+    }
+    return bound === 'min'
+      ? { type: 'prominence', min: value }
+      : { type: 'prominence', max: value };
+  }
+
+  if (type === 'entity_exists') {
+    const entity = rest[0];
+    if (typeof entity !== 'string') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'entity_exists requires an entity reference',
+        span
+      });
+      return null;
+    }
+    return {
+      type: 'entity_exists',
+      entity: normalizeRefName(entity, ctx)
+    };
+  }
+
+  if (type === 'not_self') {
+    return { type: 'not_self' };
+  }
+
+  ctx.diagnostics.push({
+    severity: 'error',
+    message: `Unsupported condition type "${type}"`,
+    span
+  });
+  return null;
+}
+
+function parseSystemConditionStatement(
+  stmt: StatementNode,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  if (stmt.type === 'attribute') {
+    if (stmt.key === 'condition') {
+      const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+      if (!tokens) return null;
+      const condition = parseSystemConditionTokens(tokens, ctx, stmt.span);
+      if (condition) {
+        normalizeRefsInObject(condition, ctx);
+      }
+      return condition;
+    }
+    if (SYSTEM_CONDITION_KEYS.has(stmt.key)) {
+      const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+      if (!tokens) return null;
+      const condition = parseSystemConditionTokens([stmt.key, ...tokens], ctx, stmt.span);
+      if (condition) {
+        normalizeRefsInObject(condition, ctx);
+      }
+      return condition;
+    }
+  }
+
+  if (stmt.type === 'predicate') {
+    const condition = conditionFromPredicate(stmt, ctx);
+    if (condition) {
+      normalizeRefsInObject(condition, ctx);
+    }
+    return condition;
+  }
+
+  if (stmt.type === 'block' && (stmt.name === 'path' || stmt.name === 'graph_path' || stmt.name === 'filter')) {
+    const condition = parseGraphPathBlock(stmt, ctx);
+    if (condition) {
+      normalizeRefsInObject(condition, ctx);
+    }
+    return condition;
+  }
+
+  return null;
+}
+
+function buildSystemConditionStatements(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): Record<string, unknown>[] {
+  const conditions: Record<string, unknown>[] = [];
+  for (const stmt of statements) {
+    if (stmt.type === 'block' && (stmt.name === 'when' || stmt.name === 'conditions')) {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'Nested when blocks are not supported in system conditions',
+        span: stmt.span
+      });
+      continue;
+    }
+    const condition = parseSystemConditionStatement(stmt, ctx);
+    if (condition) {
+      conditions.push(condition);
+    } else {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported condition statement "${stmt.type}"`,
+        span: stmt.span
+      });
+    }
+  }
+  return conditions;
+}
+
+function buildSystemConditionGroup(
+  stmt: BlockNode,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  const mode = stmt.labels.find((label) =>
+    label === 'any' || label === 'or' || label === 'all' || label === 'and'
+  );
+  const type = (mode === 'any' || mode === 'or') ? 'or' : 'and';
+  const conditions = buildSystemConditionStatements(stmt.body, ctx);
+  if (conditions.length === 0) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'when block requires at least one condition',
+      span: stmt.span
+    });
+    return null;
+  }
+  return { type, conditions };
+}
+
+function buildSystemConditions(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): Record<string, unknown>[] {
+  const conditions: Record<string, unknown>[] = [];
+  for (const stmt of statements) {
+    if (stmt.type === 'block' && (stmt.name === 'when' || stmt.name === 'conditions')) {
+      const group = buildSystemConditionGroup(stmt, ctx);
+      if (group) conditions.push(group);
+      continue;
+    }
+    const condition = parseSystemConditionStatement(stmt, ctx);
+    if (condition) {
+      conditions.push(condition);
+      continue;
+    }
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported condition statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+  return conditions;
+}
+
+function buildSystemActionListFromStatements(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): Record<string, unknown>[] {
+  const actions: Record<string, unknown>[] = [];
+  for (const stmt of statements) {
+    const action = parseSystemActionStatement(stmt, ctx);
+    if (action) {
+      actions.push(action);
+      continue;
+    }
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported action statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+  return actions;
+}
+
+function parseSystemActionStatement(
+  stmt: StatementNode,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  if (stmt.type === 'rel') {
+    return buildActionRelationshipMutation(stmt, ctx as ActionContext);
+  }
+  if (stmt.type === 'mutate') {
+    return buildActionPressureMutation(stmt, ctx as ActionContext);
+  }
+  if (stmt.type === 'attribute') {
+    if (stmt.key === 'transfer_relationship') {
+      return parseTransferRelationshipAction(stmt, ctx);
+    }
+    const mutation = buildActionMutationFromAttribute(stmt, ctx as ActionContext);
+    return mutation ?? null;
+  }
+  if (stmt.type === 'block') {
+    if (stmt.name === 'conditional' || stmt.name === 'if') {
+      return parseConditionalActionBlock(stmt, ctx);
+    }
+    if (stmt.name === 'for_each_related') {
+      return parseForEachRelatedActionBlock(stmt, ctx);
+    }
+    if (stmt.name === 'action') {
+      const actions = buildSystemActionListFromStatements(stmt.body, ctx);
+      if (actions.length !== 1) {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'action block requires exactly one action',
+          span: stmt.span
+        });
+        return null;
+      }
+      return actions[0];
+    }
+  }
+  return null;
+}
+
+function parseConditionalActionBlock(
+  stmt: BlockNode,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  const conditions: Record<string, unknown>[] = [];
+  let thenActions: Record<string, unknown>[] | null = null;
+  let elseActions: Record<string, unknown>[] | null = null;
+
+  for (const child of stmt.body) {
+    if (child.type === 'block' && child.name === 'then') {
+      thenActions = buildSystemActionListFromStatements(child.body, ctx);
+      continue;
+    }
+    if (child.type === 'block' && child.name === 'else') {
+      elseActions = buildSystemActionListFromStatements(child.body, ctx);
+      continue;
+    }
+    if (child.type === 'block' && (child.name === 'when' || child.name === 'conditions')) {
+      const group = buildSystemConditionGroup(child, ctx);
+      if (group) conditions.push(group);
+      continue;
+    }
+    const condition = parseSystemConditionStatement(child, ctx);
+    if (condition) {
+      conditions.push(condition);
+      continue;
+    }
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported conditional statement "${child.type}"`,
+      span: child.span
+    });
+  }
+
+  if (!thenActions || thenActions.length === 0) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'conditional requires a then block with actions',
+      span: stmt.span
+    });
+    return null;
+  }
+  if (conditions.length === 0) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'conditional requires a condition',
+      span: stmt.span
+    });
+    return null;
+  }
+
+  const condition = conditions.length === 1 ? conditions[0] : { type: 'and', conditions };
+  const action: Record<string, unknown> = {
+    type: 'conditional',
+    condition,
+    thenActions
+  };
+  if (elseActions && elseActions.length > 0) {
+    action.elseActions = elseActions;
+  }
+  normalizeRefsInObject(action, ctx);
+  return action;
+}
+
+function parseForEachRelatedActionBlock(
+  stmt: BlockNode,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  const [relationship, direction, targetKind] = stmt.labels;
+  if (!relationship || !direction || !targetKind) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'for_each_related requires: for_each_related <relationship> <direction> <kind>',
+      span: stmt.span
+    });
+    return null;
+  }
+  const actions = buildSystemActionListFromStatements(stmt.body, ctx);
+  if (actions.length === 0) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'for_each_related requires at least one action',
+      span: stmt.span
+    });
+    return null;
+  }
+  const action: Record<string, unknown> = {
+    type: 'for_each_related',
+    relationship,
+    direction,
+    targetKind,
+    actions
+  };
+  normalizeRefsInObject(action, ctx);
+  return action;
+}
+
+function parseTransferRelationshipAction(
+  stmt: Extract<StatementNode, { type: 'attribute' }>,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+  if (!tokens || tokens.length < 6) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'transfer_relationship requires: transfer_relationship <entity> <relationship> from <from> to <to>',
+      span: stmt.span
+    });
+    return null;
+  }
+
+  const entity = tokens[0];
+  const relationshipKind = tokens[1];
+  if (typeof entity !== 'string' || typeof relationshipKind !== 'string') {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'transfer_relationship requires entity and relationship identifiers',
+      span: stmt.span
+    });
+    return null;
+  }
+
+  if (tokens[2] !== 'from') {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'transfer_relationship requires "from" keyword',
+      span: stmt.span
+    });
+    return null;
+  }
+  const from = tokens[3];
+  if (typeof from !== 'string') {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'transfer_relationship requires a from reference',
+      span: stmt.span
+    });
+    return null;
+  }
+  if (tokens[4] !== 'to') {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'transfer_relationship requires "to" keyword',
+      span: stmt.span
+    });
+    return null;
+  }
+  const to = tokens[5];
+  if (typeof to !== 'string') {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'transfer_relationship requires a to reference',
+      span: stmt.span
+    });
+    return null;
+  }
+
+  const action: Record<string, unknown> = {
+    type: 'transfer_relationship',
+    entity: normalizeRefName(entity, ctx),
+    relationshipKind,
+    from: normalizeRefName(from, ctx),
+    to: normalizeRefName(to, ctx)
+  };
+
+  if (tokens.length > 6) {
+    const keyword = tokens[6];
+    const rest = tokens.slice(7);
+    if (keyword !== 'if' && keyword !== 'when') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'transfer_relationship only supports an optional if/when condition',
+        span: stmt.span
+      });
+      return null;
+    }
+    const condition = parseSystemConditionTokens(rest, ctx, stmt.span);
+    if (!condition) return null;
+    action.condition = condition;
+  }
+
+  normalizeRefsInObject(action, ctx);
+  return action;
+}
+
+function applyPressureChangeValue(
+  value: Value,
+  ctx: GeneratorContext,
+  span: BlockNode['span'],
+  pressureChanges: Record<string, unknown>
+): boolean {
+  const tokens = valueToTokenList(value, ctx, span);
+  if (!tokens || tokens.length < 2) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'pressure requires: pressure <id> <delta>',
+      span
+    });
+    return false;
+  }
+  const id = tokens[0];
+  const delta = tokens[1];
+  if (typeof id !== 'string' || typeof delta !== 'number') {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'pressure requires a pressure id and numeric delta',
+      span
+    });
+    return false;
+  }
+  if (tokens.length > 2) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'pressure only supports a single delta value',
+      span
+    });
+    return false;
+  }
+  pressureChanges[id] = delta;
+  return true;
+}
+
+function buildPickerFromStatements(
+  stmt: BlockNode,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  const picker: Record<string, unknown> = {};
+  for (const child of stmt.body) {
+    if (child.type === 'block') {
+      if (child.name === 'filter' || child.name === 'path' || child.name === 'graph_path') {
+        const filter = parseGraphPathBlock(child, ctx);
+        if (filter) {
+          pushArrayValue(picker, 'filters', filter);
+        }
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported picker block "${child.name}"`,
+        span: child.span
+      });
+      continue;
+    }
+
+    if (child.type === 'attribute') {
+      const value = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+      if (child.key === 'filter') {
+        const filter = parseFilterValue(child.value, ctx, child.span);
+        if (filter) pushArrayValue(picker, 'filters', filter);
+        continue;
+      }
+      if (child.key === 'prefer') {
+        const filter = parseFilterValue(child.value, ctx, child.span);
+        if (filter) pushArrayValue(picker, 'preferFilters', filter);
+        continue;
+      }
+      if (child.key === 'pick') {
+        picker.pickStrategy = value;
+        continue;
+      }
+      if (child.key === 'max') {
+        picker.maxResults = value;
+        continue;
+      }
+      picker[child.key] = value;
+      continue;
+    }
+
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported picker statement "${child.type}"`,
+      span: child.span
+    });
+  }
+
+  if (picker.pickStrategy === undefined) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'picker requires explicit pick strategy',
+      span: stmt.span
+    });
+  }
+
+  normalizeRefsInObject(picker, ctx);
+  return picker;
+}
+
+function parseMetricBlock(
+  stmt: BlockNode,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  const metricType = stmt.labels[0];
+  if (!metricType) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'metric requires a type label',
+      span: stmt.span
+    });
+    return null;
+  }
+
+  const metric: Record<string, unknown> = { type: metricType };
+
+  for (const child of stmt.body) {
+    if (child.type !== 'attribute') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'metric only supports attribute statements',
+        span: child.span
+      });
+      continue;
+    }
+    const value = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+    if (metricType === 'shared_relationship') {
+      if (child.key === 'relationship' || child.key === 'relationship_kind' || child.key === 'relationshipKind') {
+        metric.sharedRelationshipKind = value;
+        continue;
+      }
+      if (child.key === 'direction' || child.key === 'sharedDirection') {
+        metric.sharedDirection = value;
+        continue;
+      }
+    }
+    if (metricType === 'connection_count') {
+      if (child.key === 'relationships' || child.key === 'relationshipKinds' || child.key === 'relationship') {
+        const list = normalizeStringList(value, ctx.diagnostics, ctx.parent, 'relationships');
+        if (list) metric.relationshipKinds = list;
+        continue;
+      }
+      if (child.key === 'direction') {
+        metric.direction = value;
+        continue;
+      }
+      if (child.key === 'min_strength' || child.key === 'minStrength') {
+        metric.minStrength = value;
+        continue;
+      }
+    }
+    if (metricType === 'neighbor_prominence') {
+      if (child.key === 'direction') {
+        metric.direction = value;
+        continue;
+      }
+      if (child.key === 'min_strength' || child.key === 'minStrength') {
+        metric.minStrength = value;
+        continue;
+      }
+    }
+    if (metricType === 'neighbor_kind_count') {
+      if (child.key === 'kind') {
+        metric.kind = value;
+        continue;
+      }
+      if (child.key === 'via') {
+        const list = normalizeStringList(value, ctx.diagnostics, ctx.parent, 'via');
+        if (list) metric.via = list;
+        continue;
+      }
+      if (child.key === 'via_direction' || child.key === 'viaDirection') {
+        metric.viaDirection = value;
+        continue;
+      }
+      if (child.key === 'then') {
+        metric.then = value;
+        continue;
+      }
+      if (child.key === 'then_direction' || child.key === 'thenDirection') {
+        metric.thenDirection = value;
+        continue;
+      }
+    }
+
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported metric attribute "${child.key}" for ${metricType}`,
+      span: child.span
+    });
+  }
+
+  return metric;
+}
+
+function parseRuleBlock(
+  stmt: BlockNode,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  const rule: Record<string, unknown> = {};
+  let action: Record<string, unknown> | null = null;
+
+  for (const child of stmt.body) {
+    if (child.type === 'attribute') {
+      if (child.key === 'threshold') {
+        const tokens = valueToTokenList(child.value, ctx, child.span);
+        if (!tokens || tokens.length < 2) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'threshold requires: threshold <op> <value>',
+            span: child.span
+          });
+          continue;
+        }
+        const op = parseOperatorKeyword(tokens[0], ctx, child.span);
+        if (op === 'between') {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'threshold does not support between',
+            span: child.span
+          });
+          continue;
+        }
+        const threshold = tokens[1];
+        if (!op || typeof threshold !== 'number') {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'threshold requires an operator keyword and numeric value',
+            span: child.span
+          });
+          continue;
+        }
+        const operator = op === 'gt'
+          ? '>'
+          : op === 'gte'
+            ? '>='
+            : op === 'lt'
+              ? '<'
+              : op === 'lte'
+                ? '<='
+                : '==';
+        rule.condition = { operator, threshold };
+        continue;
+      }
+      if (child.key === 'probability') {
+        rule.probability = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      if (child.key === 'between_matching' || child.key === 'betweenMatching') {
+        rule.betweenMatching = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported rule attribute "${child.key}"`,
+        span: child.span
+      });
+      continue;
+    }
+
+    if (child.type === 'block' && child.name === 'action') {
+      const actions = buildSystemActionListFromStatements(child.body, ctx);
+      if (actions.length !== 1) {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'rule action block requires exactly one action',
+          span: child.span
+        });
+        continue;
+      }
+      if (action) {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'rule already has an action',
+          span: child.span
+        });
+        continue;
+      }
+      action = actions[0];
+      continue;
+    }
+
+    const maybeAction = parseSystemActionStatement(child, ctx);
+    if (maybeAction) {
+      if (action) {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'rule supports a single action',
+          span: child.span
+        });
+        continue;
+      }
+      action = maybeAction;
+      continue;
+    }
+
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported rule statement "${child.type}"`,
+      span: child.span
+    });
+  }
+
+  if (action) {
+    rule.action = action;
+  }
+
+  return rule;
+}
+
+function parseClusteringBlock(
+  stmt: BlockNode,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  const clustering: Record<string, unknown> = {};
+  const criteria: Record<string, unknown>[] = [];
+
+  for (const child of stmt.body) {
+    if (child.type !== 'attribute') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'clustering only supports attribute statements',
+        span: child.span
+      });
+      continue;
+    }
+    if (child.key === 'criterion' || child.key === 'criteria') {
+      const tokens = valueToTokenList(child.value, ctx, child.span);
+      if (!tokens || tokens.length < 2 || typeof tokens[0] !== 'string') {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'criterion requires: criterion <type> <weight> ...',
+          span: child.span
+        });
+        continue;
+      }
+      const type = tokens[0];
+      const weight = tokens[1];
+      if (typeof weight !== 'number') {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'criterion weight must be numeric',
+          span: child.span
+        });
+        continue;
+      }
+      const criterion: Record<string, unknown> = { type, weight };
+      if (type === 'shared_relationship') {
+        const relationshipKind = tokens[2];
+        const direction = tokens[3];
+        if (typeof relationshipKind !== 'string' || typeof direction !== 'string') {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'shared_relationship criterion requires relationship kind and direction',
+            span: child.span
+          });
+          continue;
+        }
+        criterion.relationshipKind = relationshipKind;
+        criterion.direction = direction;
+      } else if (type === 'shared_tags' || type === 'temporal_proximity') {
+        const threshold = tokens[2];
+        if (typeof threshold !== 'number') {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: `${type} criterion requires a numeric threshold`,
+            span: child.span
+          });
+          continue;
+        }
+        criterion.threshold = threshold;
+      } else if (type !== 'same_culture') {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: `Unsupported clustering criterion "${type}"`,
+          span: child.span
+        });
+        continue;
+      }
+      criteria.push(criterion);
+      continue;
+    }
+
+    const value = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+    if (child.key === 'min_size' || child.key === 'minSize') {
+      clustering.minSize = value;
+      continue;
+    }
+    if (child.key === 'max_size' || child.key === 'maxSize') {
+      clustering.maxSize = value;
+      continue;
+    }
+    if (child.key === 'minimum_score' || child.key === 'minimumScore') {
+      clustering.minimumScore = value;
+      continue;
+    }
+
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported clustering attribute "${child.key}"`,
+      span: child.span
+    });
+  }
+
+  if (criteria.length > 0) {
+    clustering.criteria = criteria;
+  }
+
+  return clustering;
+}
+
+function parseProminenceFromSizeTokens(
+  value: Value,
+  ctx: GeneratorContext,
+  span: BlockNode['span']
+): Record<string, number> | null {
+  const tokens = valueToTokenList(value, ctx, span);
+  if (!tokens || tokens.length === 0 || tokens.length % 2 !== 0) {
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: 'prominence_from_size requires pairs of <label> <value>',
+      span
+    });
+    return null;
+  }
+  const result: Record<string, number> = {};
+  for (let i = 0; i < tokens.length; i += 2) {
+    const label = tokens[i];
+    const valueToken = tokens[i + 1];
+    if (typeof label !== 'string' || typeof valueToken !== 'number') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'prominence_from_size requires label and numeric value pairs',
+        span
+      });
+      return null;
+    }
+    result[label] = valueToken;
+  }
+  return result;
+}
+
+function parseMetaEntityBlock(
+  stmt: BlockNode,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  const meta: Record<string, unknown> = {};
+
+  for (const child of stmt.body) {
+    if (child.type !== 'attribute') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'meta_entity only supports attribute statements',
+        span: child.span
+      });
+      continue;
+    }
+    if (child.key === 'prominence_from_size') {
+      const mapping = parseProminenceFromSizeTokens(child.value, ctx, child.span);
+      if (mapping) meta.prominenceFromSize = mapping;
+      continue;
+    }
+    if (child.key === 'additional_tags') {
+      const tags = parseStringListValue(child.value, ctx, child.span, 'additional_tags');
+      if (tags) meta.additionalTags = tags;
+      continue;
+    }
+    const value = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+    if (child.key === 'kind') {
+      meta.kind = value;
+      continue;
+    }
+    if (child.key === 'subtype_from_majority' || child.key === 'subtypeFromMajority') {
+      meta.subtypeFromMajority = value;
+      continue;
+    }
+    if (child.key === 'status') {
+      meta.status = value;
+      continue;
+    }
+    if (child.key === 'description_template' || child.key === 'descriptionTemplate') {
+      meta.descriptionTemplate = value;
+      continue;
+    }
+
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported meta_entity attribute "${child.key}"`,
+      span: child.span
+    });
+  }
+
+  return meta;
+}
+
+function parsePostProcessBlock(
+  stmt: BlockNode,
+  ctx: GeneratorContext
+): Record<string, unknown> | null {
+  const post: Record<string, unknown> = {};
+  const pressureChanges: Record<string, unknown> = {};
+
+  for (const child of stmt.body) {
+    if (child.type !== 'attribute') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'post_process only supports attribute statements',
+        span: child.span
+      });
+      continue;
+    }
+    if (child.key === 'pressure') {
+      applyPressureChangeValue(child.value, ctx, child.span, pressureChanges);
+      continue;
+    }
+    const value = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+    if (child.key === 'create_governance_faction' || child.key === 'createGovernanceFaction') {
+      post.createGovernanceFaction = value;
+      continue;
+    }
+    if (child.key === 'governance_faction_subtype' || child.key === 'governanceFactionSubtype') {
+      post.governanceFactionSubtype = value;
+      continue;
+    }
+    if (child.key === 'governance_relationship' || child.key === 'governanceRelationship') {
+      post.governanceRelationship = value;
+      continue;
+    }
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported post_process attribute "${child.key}"`,
+      span: child.span
+    });
+  }
+
+  if (Object.keys(pressureChanges).length > 0) {
+    post.pressureChanges = pressureChanges;
+  }
+
+  return post;
+}
+
+function buildThresholdTriggerSystem(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): SystemParseResult | null {
+  const config: Record<string, unknown> = {};
+  const result: SystemParseResult = { config };
+  const conditions: Record<string, unknown>[] = [];
+  const actions: Record<string, unknown>[] = [];
+  let selection: Record<string, unknown> | null = null;
+  const pressureChanges: Record<string, unknown> = {};
+
+  for (const stmt of statements) {
+    if (stmt.type === 'attribute') {
+      if (applySystemCommonAttribute(stmt, result, ctx)) continue;
+      if (stmt.key === 'cluster_mode' || stmt.key === 'clusterMode') {
+        config.clusterMode = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      if (stmt.key === 'throttle' || stmt.key === 'throttleChance') {
+        config.throttleChance = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      if (stmt.key === 'pressure') {
+        applyPressureChangeValue(stmt.value, ctx, stmt.span, pressureChanges);
+        continue;
+      }
+      if (SYSTEM_CONDITION_KEYS.has(stmt.key)) {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens) continue;
+        const condition = parseSystemConditionTokens([stmt.key, ...tokens], ctx, stmt.span);
+        if (condition) conditions.push(condition);
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported thresholdTrigger attribute "${stmt.key}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    if (stmt.type === 'block') {
+      if (stmt.name === 'selection' || stmt.name === 'choose') {
+        if (selection) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'selection already defined',
+            span: stmt.span
+          });
+          continue;
+        }
+        selection = parseSystemSelectionBlock(stmt, ctx);
+        continue;
+      }
+      if (stmt.name === 'actions') {
+        actions.push(...buildSystemActionListFromStatements(stmt.body, ctx));
+        continue;
+      }
+      if (stmt.name === 'when' || stmt.name === 'conditions') {
+        const group = buildSystemConditionGroup(stmt, ctx);
+        if (group) conditions.push(group);
+        continue;
+      }
+      if (stmt.name === 'path' || stmt.name === 'graph_path' || stmt.name === 'filter') {
+        const condition = parseGraphPathBlock(stmt, ctx);
+        if (condition) conditions.push(condition);
+        continue;
+      }
+      if (stmt.name === 'let' || stmt.name === 'var' || stmt.name === 'variable') {
+        addVariableEntryDsl(stmt.labels, buildVariableFromStatements(stmt, ctx), config, ctx);
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported thresholdTrigger block "${stmt.name}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported thresholdTrigger statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+
+  if (selection) config.selection = selection;
+  if (conditions.length > 0) config.conditions = conditions;
+  if (actions.length > 0) config.actions = actions;
+  if (Object.keys(pressureChanges).length > 0) config.pressureChanges = pressureChanges;
+
+  return result;
+}
+
+function buildConnectionEvolutionSystem(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): SystemParseResult | null {
+  const config: Record<string, unknown> = {};
+  const result: SystemParseResult = { config };
+  const rules: Record<string, unknown>[] = [];
+  let selection: Record<string, unknown> | null = null;
+  const pressureChanges: Record<string, unknown> = {};
+
+  for (const stmt of statements) {
+    if (stmt.type === 'attribute') {
+      if (applySystemCommonAttribute(stmt, result, ctx)) continue;
+      if (stmt.key === 'pair_exclude' || stmt.key === 'pairExclude') {
+        const list = parseStringListValue(stmt.value, ctx, stmt.span, 'pair_exclude');
+        if (list) config.pairExcludeRelationships = list;
+        continue;
+      }
+      if (stmt.key === 'pair_component_limit' || stmt.key === 'pairComponentLimit') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens) continue;
+        const maxIndex = tokens.findIndex((token) => token === 'max');
+        if (maxIndex === -1) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'pair_component_limit requires "max" keyword',
+            span: stmt.span
+          });
+          continue;
+        }
+        const kinds = flattenTokenList(tokens.slice(0, maxIndex), ctx, stmt.span);
+        const maxValue = tokens[maxIndex + 1];
+        if (!kinds || typeof maxValue !== 'number') {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'pair_component_limit requires relationship kinds and numeric max',
+            span: stmt.span
+          });
+          continue;
+        }
+        config.pairComponentSizeLimit = {
+          relationshipKinds: kinds,
+          max: maxValue
+        };
+        continue;
+      }
+      if (stmt.key === 'throttle' || stmt.key === 'throttleChance') {
+        config.throttleChance = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      if (stmt.key === 'pressure') {
+        applyPressureChangeValue(stmt.value, ctx, stmt.span, pressureChanges);
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported connectionEvolution attribute "${stmt.key}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    if (stmt.type === 'block') {
+      if (stmt.name === 'selection' || stmt.name === 'choose') {
+        if (selection) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'selection already defined',
+            span: stmt.span
+          });
+          continue;
+        }
+        selection = parseSystemSelectionBlock(stmt, ctx);
+        continue;
+      }
+      if (stmt.name === 'metric') {
+        const metric = parseMetricBlock(stmt, ctx);
+        if (metric) config.metric = metric;
+        continue;
+      }
+      if (stmt.name === 'rule') {
+        const rule = parseRuleBlock(stmt, ctx);
+        if (rule) rules.push(rule);
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported connectionEvolution block "${stmt.name}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported connectionEvolution statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+
+  if (selection) config.selection = selection;
+  if (rules.length > 0) config.rules = rules;
+  if (Object.keys(pressureChanges).length > 0) config.pressureChanges = pressureChanges;
+
+  return result;
+}
+
+function buildClusterFormationSystem(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): SystemParseResult | null {
+  const config: Record<string, unknown> = {};
+  const result: SystemParseResult = { config };
+  let selection: Record<string, unknown> | null = null;
+
+  for (const stmt of statements) {
+    if (stmt.type === 'attribute') {
+      if (applySystemCommonAttribute(stmt, result, ctx)) continue;
+      if (stmt.key === 'run_at_epoch_end' || stmt.key === 'runAtEpochEnd') {
+        config.runAtEpochEnd = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported clusterFormation attribute "${stmt.key}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    if (stmt.type === 'block') {
+      if (stmt.name === 'selection' || stmt.name === 'choose') {
+        if (selection) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'selection already defined',
+            span: stmt.span
+          });
+          continue;
+        }
+        selection = parseSystemSelectionBlock(stmt, ctx);
+        continue;
+      }
+      if (stmt.name === 'clustering') {
+        const clustering = parseClusteringBlock(stmt, ctx);
+        if (clustering) config.clustering = clustering;
+        continue;
+      }
+      if (stmt.name === 'meta_entity') {
+        const meta = parseMetaEntityBlock(stmt, ctx);
+        if (meta) config.metaEntity = meta;
+        continue;
+      }
+      if (stmt.name === 'master_selection') {
+        const master = buildPickerFromStatements(stmt, ctx);
+        if (master) config.masterSelection = master;
+        continue;
+      }
+      if (stmt.name === 'member_updates') {
+        const updates = buildSystemActionListFromStatements(stmt.body, ctx);
+        if (updates.length > 0) config.memberUpdates = updates;
+        continue;
+      }
+      if (stmt.name === 'post_process') {
+        const post = parsePostProcessBlock(stmt, ctx);
+        if (post) config.postProcess = post;
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported clusterFormation block "${stmt.name}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported clusterFormation statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+
+  if (selection) config.selection = selection;
+  return result;
+}
+
+function buildGraphContagionSystem(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): SystemParseResult | null {
+  const config: Record<string, unknown> = {};
+  const result: SystemParseResult = { config };
+  const vectors: Record<string, unknown>[] = [];
+  const susceptibilityModifiers: Record<string, unknown>[] = [];
+  const phaseTransitions: Record<string, unknown>[] = [];
+  const pressureChanges: Record<string, unknown> = {};
+  let selection: Record<string, unknown> | null = null;
+
+  for (const stmt of statements) {
+    if (stmt.type === 'attribute') {
+      if (applySystemCommonAttribute(stmt, result, ctx)) continue;
+      if (stmt.key === 'contagion') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 2) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'contagion requires: contagion tag|relationship <value>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const kind = tokens[0];
+        const value = tokens[1];
+        if (kind === 'tag' && typeof value === 'string') {
+          config.contagion = { type: 'tag', tag: value };
+          continue;
+        }
+        if (kind === 'relationship' && typeof value === 'string') {
+          config.contagion = { type: 'relationship', relationshipKind: value };
+          continue;
+        }
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'contagion requires tag or relationship kind',
+          span: stmt.span
+        });
+        continue;
+      }
+      if (stmt.key === 'vector') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 3) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'vector requires: vector <relationship> <direction> <minStrength>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const relationshipKind = tokens[0];
+        const direction = tokens[1];
+        const minStrength = tokens[2];
+        if (typeof relationshipKind === 'string' && typeof direction === 'string' && typeof minStrength === 'number') {
+          vectors.push({ relationshipKind, direction, minStrength });
+          continue;
+        }
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'vector requires relationship kind, direction, and numeric strength',
+          span: stmt.span
+        });
+        continue;
+      }
+      if (stmt.key === 'transmission') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 3) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'transmission requires: transmission <baseRate> <contactMultiplier> <maxProbability>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const [baseRate, contactMultiplier, maxProbability] = tokens;
+        if (typeof baseRate === 'number' && typeof contactMultiplier === 'number' && typeof maxProbability === 'number') {
+          config.transmission = { baseRate, contactMultiplier, maxProbability };
+          continue;
+        }
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'transmission requires numeric values',
+          span: stmt.span
+        });
+        continue;
+      }
+      if (stmt.key === 'exclude_relationships') {
+        const list = parseStringListValue(stmt.value, ctx, stmt.span, 'exclude_relationships');
+        if (list) config.excludeRelationships = list;
+        continue;
+      }
+      if (stmt.key === 'throttle' || stmt.key === 'throttleChance') {
+        config.throttleChance = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      if (stmt.key === 'cooldown') {
+        config.cooldown = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      if (stmt.key === 'pressure') {
+        applyPressureChangeValue(stmt.value, ctx, stmt.span, pressureChanges);
+        continue;
+      }
+      if (stmt.key === 'susceptibility') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 2) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'susceptibility requires: susceptibility <tag> <modifier>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const tag = tokens[0];
+        const modifier = tokens[1];
+        if (typeof tag === 'string' && typeof modifier === 'number') {
+          susceptibilityModifiers.push({ tag, modifier });
+          continue;
+        }
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'susceptibility requires a tag and numeric modifier',
+          span: stmt.span
+        });
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported graphContagion attribute "${stmt.key}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    if (stmt.type === 'block') {
+      if (stmt.name === 'selection' || stmt.name === 'choose') {
+        if (selection) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'selection already defined',
+            span: stmt.span
+          });
+          continue;
+        }
+        selection = parseSystemSelectionBlock(stmt, ctx);
+        continue;
+      }
+      if (stmt.name === 'infection_action') {
+        const actions = buildSystemActionListFromStatements(stmt.body, ctx);
+        if (actions.length !== 1) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'infection_action requires exactly one action',
+            span: stmt.span
+          });
+          continue;
+        }
+        config.infectionAction = actions[0];
+        continue;
+      }
+      if (stmt.name === 'recovery') {
+        const recovery: Record<string, unknown> = {};
+        const bonuses: Record<string, unknown>[] = [];
+        for (const child of stmt.body) {
+          if (child.type !== 'attribute') {
+            ctx.diagnostics.push({
+              severity: 'error',
+              message: 'recovery only supports attribute statements',
+              span: child.span
+            });
+            continue;
+          }
+          if (child.key === 'base_rate' || child.key === 'baseRate') {
+            recovery.baseRate = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+            continue;
+          }
+          if (child.key === 'bonus' || child.key === 'recovery_bonus') {
+            const tokens = valueToTokenList(child.value, ctx, child.span);
+            if (!tokens || tokens.length < 2) {
+              ctx.diagnostics.push({
+                severity: 'error',
+                message: 'recovery bonus requires: bonus <tag> <value>',
+                span: child.span
+              });
+              continue;
+            }
+            const tag = tokens[0];
+            const bonus = tokens[1];
+            if (typeof tag === 'string' && typeof bonus === 'number') {
+              bonuses.push({ tag, bonus });
+              continue;
+            }
+            ctx.diagnostics.push({
+              severity: 'error',
+              message: 'recovery bonus requires a tag and numeric value',
+              span: child.span
+            });
+            continue;
+          }
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: `Unsupported recovery attribute "${child.key}"`,
+            span: child.span
+          });
+        }
+        if (bonuses.length > 0) {
+          recovery.recoveryBonusTraits = bonuses;
+        }
+        config.recovery = recovery;
+        continue;
+      }
+      if (stmt.name === 'phase_transition') {
+        const toStatus = stmt.labels[0];
+        if (!toStatus) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'phase_transition requires a status label',
+            span: stmt.span
+          });
+          continue;
+        }
+        const transition: Record<string, unknown> = { toStatus };
+        for (const child of stmt.body) {
+          if (child.type === 'attribute') {
+            if (child.key === 'adoption_threshold' || child.key === 'adoptionThreshold') {
+              transition.adoptionThreshold = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+              continue;
+            }
+            if (child.key === 'description_suffix' || child.key === 'descriptionSuffix') {
+              transition.descriptionSuffix = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+              continue;
+            }
+            ctx.diagnostics.push({
+              severity: 'error',
+              message: `Unsupported phase_transition attribute "${child.key}"`,
+              span: child.span
+            });
+            continue;
+          }
+          if (child.type === 'block' && (child.name === 'selection' || child.name === 'choose')) {
+            const phaseSelection = parseSystemSelectionBlock(child, ctx);
+            if (phaseSelection) transition.selection = phaseSelection;
+            continue;
+          }
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: `Unsupported phase_transition statement "${child.type}"`,
+            span: child.span
+          });
+        }
+        phaseTransitions.push(transition);
+        continue;
+      }
+      if (stmt.name === 'multi_source') {
+        const multi: Record<string, unknown> = {};
+        for (const child of stmt.body) {
+          if (child.type === 'attribute') {
+            if (child.key === 'immunity_tag_prefix' || child.key === 'immunityTagPrefix') {
+              multi.immunityTagPrefix = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+              continue;
+            }
+            if (child.key === 'low_adoption_threshold' || child.key === 'lowAdoptionThreshold') {
+              multi.lowAdoptionThreshold = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+              continue;
+            }
+            if (child.key === 'low_adoption_status' || child.key === 'lowAdoptionStatus') {
+              multi.lowAdoptionStatus = valueToJson(child.value, ctx.diagnostics, ctx.parent);
+              continue;
+            }
+            ctx.diagnostics.push({
+              severity: 'error',
+              message: `Unsupported multi_source attribute "${child.key}"`,
+              span: child.span
+            });
+            continue;
+          }
+          if (child.type === 'block' && (child.name === 'source_selection' || child.name === 'selection' || child.name === 'choose')) {
+            const sourceSelection = parseSystemSelectionBlock(child, ctx);
+            if (sourceSelection) multi.sourceSelection = sourceSelection;
+            continue;
+          }
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: `Unsupported multi_source statement "${child.type}"`,
+            span: child.span
+          });
+        }
+        config.multiSource = multi;
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported graphContagion block "${stmt.name}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported graphContagion statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+
+  if (selection) config.selection = selection;
+  if (vectors.length > 0) config.vectors = vectors;
+  if (susceptibilityModifiers.length > 0) config.susceptibilityModifiers = susceptibilityModifiers;
+  if (phaseTransitions.length > 0) config.phaseTransitions = phaseTransitions;
+  if (Object.keys(pressureChanges).length > 0) config.pressureChanges = pressureChanges;
+
+  return result;
+}
+
+function buildPlaneDiffusionSystem(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): SystemParseResult | null {
+  const config: Record<string, unknown> = {};
+  const result: SystemParseResult = { config };
+  const outputTags: Record<string, unknown>[] = [];
+  let selection: Record<string, unknown> | null = null;
+
+  for (const stmt of statements) {
+    if (stmt.type === 'attribute') {
+      if (applySystemCommonAttribute(stmt, result, ctx)) continue;
+      if (stmt.key === 'sources') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 2) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'sources requires: sources <tag> <strength>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const tagFilter = tokens[0];
+        const defaultStrength = tokens[1];
+        if (typeof tagFilter === 'string' && typeof defaultStrength === 'number') {
+          config.sources = { tagFilter, defaultStrength };
+          continue;
+        }
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'sources requires a tag and numeric strength',
+          span: stmt.span
+        });
+        continue;
+      }
+      if (stmt.key === 'sinks') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 2) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'sinks requires: sinks <tag> <strength>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const tagFilter = tokens[0];
+        const defaultStrength = tokens[1];
+        if (typeof tagFilter === 'string' && typeof defaultStrength === 'number') {
+          config.sinks = { tagFilter, defaultStrength };
+          continue;
+        }
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'sinks requires a tag and numeric strength',
+          span: stmt.span
+        });
+        continue;
+      }
+      if (stmt.key === 'diffusion') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 5) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'diffusion requires: diffusion <rate> <decay> <radius> <falloff> <iterations>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const [rate, decayRate, sourceRadius, falloffType, iterationsPerTick] = tokens;
+        if (typeof rate === 'number'
+          && typeof decayRate === 'number'
+          && typeof sourceRadius === 'number'
+          && typeof falloffType === 'string'
+          && typeof iterationsPerTick === 'number'
+        ) {
+          config.diffusion = {
+            rate,
+            decayRate,
+            sourceRadius,
+            falloffType,
+            iterationsPerTick
+          };
+          continue;
+        }
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'diffusion requires numeric values and falloff type',
+          span: stmt.span
+        });
+        continue;
+      }
+      if (stmt.key === 'output_tag') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 1) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'output_tag requires: output_tag <tag> [min <value>] [max <value>]',
+            span: stmt.span
+          });
+          continue;
+        }
+        const tag = tokens[0];
+        if (typeof tag !== 'string') {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'output_tag requires a tag identifier',
+            span: stmt.span
+          });
+          continue;
+        }
+        const entry: Record<string, unknown> = { tag };
+        let idx = 1;
+        while (idx < tokens.length) {
+          const key = tokens[idx];
+          const value = tokens[idx + 1];
+          if (key === 'min' && typeof value === 'number') {
+            entry.minValue = value;
+            idx += 2;
+            continue;
+          }
+          if (key === 'max' && typeof value === 'number') {
+            entry.maxValue = value;
+            idx += 2;
+            continue;
+          }
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'output_tag supports min/max numeric values',
+            span: stmt.span
+          });
+          break;
+        }
+        outputTags.push(entry);
+        continue;
+      }
+      if (stmt.key === 'value_tag' || stmt.key === 'valueTag') {
+        config.valueTag = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported planeDiffusion attribute "${stmt.key}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    if (stmt.type === 'block') {
+      if (stmt.name === 'selection' || stmt.name === 'choose') {
+        if (selection) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'selection already defined',
+            span: stmt.span
+          });
+          continue;
+        }
+        selection = parseSystemSelectionBlock(stmt, ctx);
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported planeDiffusion block "${stmt.name}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported planeDiffusion statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+
+  if (selection) config.selection = selection;
+  if (outputTags.length > 0) config.outputTags = outputTags;
+
+  return result;
+}
+
+function buildTagDiffusionSystem(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): SystemParseResult | null {
+  const config: Record<string, unknown> = {};
+  const result: SystemParseResult = { config };
+  let selection: Record<string, unknown> | null = null;
+
+  for (const stmt of statements) {
+    if (stmt.type === 'attribute') {
+      if (applySystemCommonAttribute(stmt, result, ctx)) continue;
+      if (stmt.key === 'connection') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 2) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'connection requires: connection <relationship> <direction>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const connectionKind = tokens[0];
+        const connectionDirection = tokens[1];
+        if (typeof connectionKind === 'string' && typeof connectionDirection === 'string') {
+          config.connectionKind = connectionKind;
+          config.connectionDirection = connectionDirection;
+          continue;
+        }
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'connection requires relationship kind and direction',
+          span: stmt.span
+        });
+        continue;
+      }
+      if (stmt.key === 'convergence' || stmt.key === 'divergence') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length === 0 || tokens[0] !== 'tags') {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: `${stmt.key} requires: ${stmt.key} tags <list> ...`,
+            span: stmt.span
+          });
+          continue;
+        }
+        const tags: string[] = [];
+        const keywordSet = new Set(['min_connections', 'max_connections', 'probability', 'max_shared_tags']);
+        let idx = 1;
+        while (idx < tokens.length) {
+          const token = tokens[idx];
+          if (typeof token === 'string' && keywordSet.has(token)) break;
+          if (Array.isArray(token)) {
+            for (const entry of token) {
+              if (typeof entry !== 'string') {
+                ctx.diagnostics.push({
+                  severity: 'error',
+                  message: `${stmt.key} tags must be identifiers`,
+                  span: stmt.span
+                });
+                break;
+              }
+              tags.push(entry);
+            }
+            idx += 1;
+            continue;
+          }
+          if (typeof token === 'string') {
+            tags.push(token);
+            idx += 1;
+            continue;
+          }
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: `${stmt.key} tags must be identifiers`,
+            span: stmt.span
+          });
+          break;
+        }
+        if (tags.length === 0) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: `${stmt.key} requires at least one tag`,
+            span: stmt.span
+          });
+          continue;
+        }
+        const group: Record<string, unknown> = { tags };
+        while (idx < tokens.length) {
+          const key = tokens[idx];
+          const value = tokens[idx + 1];
+          if (key === 'min_connections' && typeof value === 'number') {
+            group.minConnections = value;
+            idx += 2;
+            continue;
+          }
+          if (key === 'max_connections' && typeof value === 'number') {
+            group.maxConnections = value;
+            idx += 2;
+            continue;
+          }
+          if (key === 'probability' && typeof value === 'number') {
+            group.probability = value;
+            idx += 2;
+            continue;
+          }
+          if (key === 'max_shared_tags' && typeof value === 'number') {
+            group.maxSharedTags = value;
+            idx += 2;
+            continue;
+          }
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: `${stmt.key} supports min_connections/max_connections/probability/max_shared_tags`,
+            span: stmt.span
+          });
+          break;
+        }
+        if (stmt.key === 'convergence') {
+          config.convergence = group;
+        } else {
+          config.divergence = group;
+        }
+        continue;
+      }
+      if (stmt.key === 'max_tags' || stmt.key === 'maxTags') {
+        config.maxTags = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      if (stmt.key === 'divergence_pressure' || stmt.key === 'divergencePressure') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length < 3) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'divergence_pressure requires: divergence_pressure <pressure> <minDivergent> <delta>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const pressureName = tokens[0];
+        const minDivergent = tokens[1];
+        const delta = tokens[2];
+        if (typeof pressureName === 'string' && typeof minDivergent === 'number' && typeof delta === 'number') {
+          config.divergencePressure = { pressureName, minDivergent, delta };
+          continue;
+        }
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'divergence_pressure requires pressure name and numeric values',
+          span: stmt.span
+        });
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported tagDiffusion attribute "${stmt.key}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    if (stmt.type === 'block') {
+      if (stmt.name === 'selection' || stmt.name === 'choose') {
+        if (selection) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'selection already defined',
+            span: stmt.span
+          });
+          continue;
+        }
+        selection = parseSystemSelectionBlock(stmt, ctx);
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported tagDiffusion block "${stmt.name}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported tagDiffusion statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+
+  if (selection) config.selection = selection;
+  return result;
+}
+
+function buildEraSpawnerSystem(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): SystemParseResult | null {
+  const config: Record<string, unknown> = {};
+  const result: SystemParseResult = { config };
+
+  for (const stmt of statements) {
+    if (stmt.type === 'attribute') {
+      if (applySystemCommonAttribute(stmt, result, ctx)) continue;
+      if (stmt.key === 'ticks_per_era' || stmt.key === 'ticksPerEra') {
+        config.ticksPerEra = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported eraSpawner attribute "${stmt.key}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported eraSpawner statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+
+  return result;
+}
+
+function buildEraTransitionSystem(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): SystemParseResult | null {
+  const config: Record<string, unknown> = {};
+  const result: SystemParseResult = { config };
+
+  for (const stmt of statements) {
+    if (stmt.type === 'attribute') {
+      if (applySystemCommonAttribute(stmt, result, ctx)) continue;
+      if (stmt.key === 'prominence_snapshot' || stmt.key === 'prominenceSnapshot') {
+        const tokens = valueToTokenList(stmt.value, ctx, stmt.span);
+        if (!tokens || tokens.length % 2 !== 0) {
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'prominence_snapshot requires pairs of <key> <value>',
+            span: stmt.span
+          });
+          continue;
+        }
+        const snapshot: Record<string, unknown> = {};
+        for (let i = 0; i < tokens.length; i += 2) {
+          const key = tokens[i];
+          const value = tokens[i + 1];
+          if (key === 'enabled') {
+            snapshot.enabled = value;
+            continue;
+          }
+          if (key === 'min_prominence' || key === 'minProminence') {
+            snapshot.minProminence = value;
+            continue;
+          }
+          ctx.diagnostics.push({
+            severity: 'error',
+            message: 'prominence_snapshot supports enabled and min_prominence',
+            span: stmt.span
+          });
+          break;
+        }
+        config.prominenceSnapshot = snapshot;
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported eraTransition attribute "${stmt.key}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported eraTransition statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+
+  return result;
+}
+
+function buildUniversalCatalystSystem(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): SystemParseResult | null {
+  const config: Record<string, unknown> = {};
+  const result: SystemParseResult = { config };
+
+  for (const stmt of statements) {
+    if (stmt.type === 'attribute') {
+      if (applySystemCommonAttribute(stmt, result, ctx)) continue;
+      const value = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+      if (stmt.key === 'action_attempt_rate' || stmt.key === 'actionAttemptRate') {
+        config.actionAttemptRate = value;
+        continue;
+      }
+      if (stmt.key === 'pressure_multiplier' || stmt.key === 'pressureMultiplier') {
+        config.pressureMultiplier = value;
+        continue;
+      }
+      if (stmt.key === 'prominence_up_chance' || stmt.key === 'prominenceUpChanceOnSuccess') {
+        config.prominenceUpChanceOnSuccess = value;
+        continue;
+      }
+      if (stmt.key === 'prominence_down_chance' || stmt.key === 'prominenceDownChanceOnFailure') {
+        config.prominenceDownChanceOnFailure = value;
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported universalCatalyst attribute "${stmt.key}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported universalCatalyst statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+
+  return result;
+}
+
+function buildRelationshipMaintenanceSystem(
+  statements: StatementNode[],
+  ctx: GeneratorContext
+): SystemParseResult | null {
+  const config: Record<string, unknown> = {};
+  const result: SystemParseResult = { config };
+
+  for (const stmt of statements) {
+    if (stmt.type === 'attribute') {
+      if (applySystemCommonAttribute(stmt, result, ctx)) continue;
+      const value = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
+      if (stmt.key === 'maintenance_frequency' || stmt.key === 'maintenanceFrequency') {
+        config.maintenanceFrequency = value;
+        continue;
+      }
+      if (stmt.key === 'cull_threshold' || stmt.key === 'cullThreshold') {
+        config.cullThreshold = value;
+        continue;
+      }
+      if (stmt.key === 'grace_period' || stmt.key === 'gracePeriod') {
+        config.gracePeriod = value;
+        continue;
+      }
+      if (stmt.key === 'reinforcement_bonus' || stmt.key === 'reinforcementBonus') {
+        config.reinforcementBonus = value;
+        continue;
+      }
+      if (stmt.key === 'max_strength' || stmt.key === 'maxStrength') {
+        config.maxStrength = value;
+        continue;
+      }
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: `Unsupported relationshipMaintenance attribute "${stmt.key}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+    ctx.diagnostics.push({
+      severity: 'error',
+      message: `Unsupported relationshipMaintenance statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+
+  return result;
+}
+
 function buildAxisItem(block: BlockNode, diagnostics: Diagnostic[]): Record<string, unknown> | null {
   const body = buildObjectFromStatements(block.body, diagnostics, block);
   const item = { ...body } as Record<string, unknown>;
@@ -1572,6 +4326,987 @@ function buildAxisItem(block: BlockNode, diagnostics: Diagnostic[]): Record<stri
     item.highTag = item.high;
     delete item.high;
   }
+
+  return item;
+}
+
+function readStringValue(
+  value: Value,
+  diagnostics: Diagnostic[],
+  parent: BlockNode,
+  span: BlockNode['span'],
+  label: string
+): string | null {
+  const raw = valueToJson(value, diagnostics, parent);
+  if (typeof raw === 'string') return raw;
+  diagnostics.push({
+    severity: 'error',
+    message: `${label} must be a string`,
+    span
+  });
+  return null;
+}
+
+function readNumberValue(
+  value: Value,
+  diagnostics: Diagnostic[],
+  parent: BlockNode,
+  span: BlockNode['span'],
+  label: string
+): number | null {
+  const raw = valueToJson(value, diagnostics, parent);
+  if (typeof raw === 'number') return raw;
+  diagnostics.push({
+    severity: 'error',
+    message: `${label} must be a number`,
+    span
+  });
+  return null;
+}
+
+function tokensFromValueStrict(
+  value: Value,
+  diagnostics: Diagnostic[],
+  parent: BlockNode,
+  span: BlockNode['span'],
+  label: string
+): Array<string | number> | null {
+  if (isObjectValue(value)) {
+    diagnostics.push({
+      severity: 'error',
+      message: `${label} does not support object literals`,
+      span
+    });
+    return null;
+  }
+  const raw = valueToJson(value, diagnostics, parent);
+  if (isRecord(raw)) {
+    diagnostics.push({
+      severity: 'error',
+      message: `${label} does not support object values`,
+      span
+    });
+    return null;
+  }
+  const tokens = Array.isArray(raw) ? raw : [raw];
+  const result: Array<string | number> = [];
+  for (const token of tokens) {
+    if (token === null || typeof token === 'boolean') {
+      diagnostics.push({
+        severity: 'error',
+        message: `${label} requires identifiers or numbers`,
+        span
+      });
+      return null;
+    }
+    if (Array.isArray(token) || isRecord(token)) {
+      diagnostics.push({
+        severity: 'error',
+        message: `${label} does not support nested arrays or objects`,
+        span
+      });
+      return null;
+    }
+    if (typeof token !== 'string' && typeof token !== 'number') {
+      diagnostics.push({
+        severity: 'error',
+        message: `${label} requires identifiers or numbers`,
+        span
+      });
+      return null;
+    }
+    result.push(token);
+  }
+  return result;
+}
+
+function tokensFromBlockAttributes(
+  stmt: BlockNode,
+  diagnostics: Diagnostic[],
+  parent: BlockNode
+): Array<string | number> | null {
+  const tokens: Array<string | number> = [];
+  for (const child of stmt.body) {
+    if (child.type !== 'attribute') {
+      diagnostics.push({
+        severity: 'error',
+        message: `${stmt.name} blocks only support attribute statements`,
+        span: child.span
+      });
+      return null;
+    }
+    if (child.labels && child.labels.length > 0) {
+      diagnostics.push({
+        severity: 'error',
+        message: `${stmt.name} attributes do not support labels`,
+        span: child.span
+      });
+      return null;
+    }
+    tokens.push(child.key);
+    const values = tokensFromValueStrict(child.value, diagnostics, parent, child.span, child.key);
+    if (!values) return null;
+    tokens.push(...values);
+  }
+  return tokens;
+}
+
+function parseKeyValuePairs(
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span'],
+  allowed: Set<string>
+): Record<string, unknown> | null {
+  if (tokens.length % 2 !== 0) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'Expected key/value pairs',
+      span
+    });
+    return null;
+  }
+  const result: Record<string, unknown> = {};
+  for (let i = 0; i < tokens.length; i += 2) {
+    const key = tokens[i];
+    const value = tokens[i + 1];
+    if (typeof key !== 'string') {
+      diagnostics.push({
+        severity: 'error',
+        message: 'Keys must be identifiers',
+        span
+      });
+      return null;
+    }
+    if (!allowed.has(key)) {
+      diagnostics.push({
+        severity: 'error',
+        message: `Unsupported key "${key}"`,
+        span
+      });
+      return null;
+    }
+    result[key] = value;
+  }
+  return result;
+}
+
+function parseListSegment(
+  tokens: Array<string | number>,
+  start: number,
+  stopWords: Set<string>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span'],
+  label: string
+): { list: string[]; nextIndex: number } | null {
+  const list: string[] = [];
+  let index = start;
+  while (index < tokens.length) {
+    const token = tokens[index];
+    if (typeof token === 'string' && stopWords.has(token)) break;
+    if (typeof token !== 'string') {
+      diagnostics.push({
+        severity: 'error',
+        message: `${label} requires identifiers`,
+        span
+      });
+      return null;
+    }
+    list.push(token);
+    index += 1;
+  }
+  if (list.length === 0) {
+    diagnostics.push({
+      severity: 'error',
+      message: `${label} requires at least one entry`,
+      span
+    });
+    return null;
+  }
+  return { list, nextIndex: index };
+}
+
+function parseEntityCountFactor(
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span'],
+  allowCoefficient: boolean,
+  allowCap: boolean
+): Record<string, unknown> | null {
+  const allowed = new Set<string>(['kind', 'subtype', 'status']);
+  if (allowCoefficient) allowed.add('coefficient');
+  if (allowCap) allowed.add('cap');
+  const kv = parseKeyValuePairs(tokens, diagnostics, span, allowed);
+  if (!kv) return null;
+
+  const kind = kv.kind;
+  if (typeof kind !== 'string') {
+    diagnostics.push({
+      severity: 'error',
+      message: 'entity_count requires kind',
+      span
+    });
+    return null;
+  }
+
+  const factor: Record<string, unknown> = { type: 'entity_count', kind };
+  if (typeof kv.subtype === 'string') factor.subtype = kv.subtype;
+  if (typeof kv.status === 'string') factor.status = kv.status;
+  if (allowCoefficient && typeof kv.coefficient === 'number') factor.coefficient = kv.coefficient;
+  if (allowCap && typeof kv.cap === 'number') factor.cap = kv.cap;
+  return factor;
+}
+
+function parseRelationshipCountFactor(
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span'],
+  allowDirection: boolean,
+  allowMinStrength: boolean,
+  allowCoefficient: boolean,
+  allowCap: boolean
+): Record<string, unknown> | null {
+  const stopWords = new Set<string>(['direction', 'min_strength', 'minStrength', 'coefficient', 'cap', 'relationship_kinds', 'relationshipKinds', 'relationships', 'kinds']);
+  let index = 0;
+  const first = tokens[0];
+  if (typeof first === 'string' && (first === 'relationship_kinds' || first === 'relationshipKinds' || first === 'relationships' || first === 'kinds')) {
+    index = 1;
+  }
+  const listResult = parseListSegment(tokens, index, stopWords, diagnostics, span, 'relationship_count');
+  if (!listResult) return null;
+  const relationshipKinds = listResult.list;
+  index = listResult.nextIndex;
+
+  const allowed = new Set<string>();
+  if (allowDirection) allowed.add('direction');
+  if (allowMinStrength) {
+    allowed.add('min_strength');
+    allowed.add('minStrength');
+  }
+  if (allowCoefficient) allowed.add('coefficient');
+  if (allowCap) allowed.add('cap');
+  const kv = parseKeyValuePairs(tokens.slice(index), diagnostics, span, allowed);
+  if (!kv) return null;
+
+  const factor: Record<string, unknown> = { type: 'relationship_count', relationshipKinds };
+  if (allowDirection && typeof kv.direction === 'string') factor.direction = kv.direction;
+  if (allowMinStrength) {
+    const strength = kv.minStrength ?? kv.min_strength;
+    if (typeof strength === 'number') factor.minStrength = strength;
+  }
+  if (allowCoefficient && typeof kv.coefficient === 'number') factor.coefficient = kv.coefficient;
+  if (allowCap && typeof kv.cap === 'number') factor.cap = kv.cap;
+  return factor;
+}
+
+function parseTagCountFactor(
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span'],
+  allowCoefficient: boolean,
+  allowCap: boolean
+): Record<string, unknown> | null {
+  const stopWords = new Set<string>(['coefficient', 'cap', 'tags']);
+  let index = 0;
+  if (tokens[0] === 'tags') index = 1;
+  const listResult = parseListSegment(tokens, index, stopWords, diagnostics, span, 'tag_count');
+  if (!listResult) return null;
+  const tags = listResult.list;
+  index = listResult.nextIndex;
+
+  const allowed = new Set<string>();
+  if (allowCoefficient) allowed.add('coefficient');
+  if (allowCap) allowed.add('cap');
+  const kv = parseKeyValuePairs(tokens.slice(index), diagnostics, span, allowed);
+  if (!kv) return null;
+
+  const factor: Record<string, unknown> = { type: 'tag_count', tags };
+  if (allowCoefficient && typeof kv.coefficient === 'number') factor.coefficient = kv.coefficient;
+  if (allowCap && typeof kv.cap === 'number') factor.cap = kv.cap;
+  return factor;
+}
+
+function parseTotalEntitiesFactor(
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span'],
+  allowCoefficient: boolean,
+  allowCap: boolean
+): Record<string, unknown> | null {
+  const allowed = new Set<string>();
+  if (allowCoefficient) allowed.add('coefficient');
+  if (allowCap) allowed.add('cap');
+  const kv = parseKeyValuePairs(tokens, diagnostics, span, allowed);
+  if (!kv) return null;
+  const factor: Record<string, unknown> = { type: 'total_entities' };
+  if (allowCoefficient && typeof kv.coefficient === 'number') factor.coefficient = kv.coefficient;
+  if (allowCap && typeof kv.cap === 'number') factor.cap = kv.cap;
+  return factor;
+}
+
+function parseConstantFactor(
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span'],
+  allowCoefficient: boolean
+): Record<string, unknown> | null {
+  let value: number | null = null;
+  let remaining = tokens;
+  if (tokens.length > 0 && typeof tokens[0] === 'number') {
+    value = tokens[0];
+    remaining = tokens.slice(1);
+  }
+  const allowed = new Set<string>(['value']);
+  if (allowCoefficient) allowed.add('coefficient');
+  const kv = remaining.length > 0 ? parseKeyValuePairs(remaining, diagnostics, span, allowed) : {};
+  if (remaining.length > 0 && !kv) return null;
+  const nextValue = kv?.value;
+  if (value === null) {
+    if (typeof nextValue === 'number') {
+      value = nextValue;
+    } else {
+      diagnostics.push({
+        severity: 'error',
+        message: 'constant requires a numeric value',
+        span
+      });
+      return null;
+    }
+  }
+  const factor: Record<string, unknown> = { type: 'constant', value };
+  if (allowCoefficient && typeof kv?.coefficient === 'number') factor.coefficient = kv.coefficient;
+  return factor;
+}
+
+function parseSimpleCountFactor(
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span']
+): Record<string, unknown> | null {
+  if (tokens.length === 0 || typeof tokens[0] !== 'string') {
+    diagnostics.push({
+      severity: 'error',
+      message: 'ratio requires a numerator and denominator factor',
+      span
+    });
+    return null;
+  }
+  const type = tokens[0];
+  const rest = tokens.slice(1);
+  if (type === 'entity_count') {
+    return parseEntityCountFactor(rest, diagnostics, span, false, false);
+  }
+  if (type === 'relationship_count') {
+    return parseRelationshipCountFactor(rest, diagnostics, span, false, false, false, false);
+  }
+  if (type === 'tag_count') {
+    return parseTagCountFactor(rest, diagnostics, span, false, false);
+  }
+  if (type === 'total_entities') {
+    return parseTotalEntitiesFactor(rest, diagnostics, span, false, false);
+  }
+  if (type === 'constant') {
+    return parseConstantFactor(rest, diagnostics, span, false);
+  }
+  diagnostics.push({
+    severity: 'error',
+    message: `Unsupported ratio factor "${type}"`,
+    span
+  });
+  return null;
+}
+
+function parseRatioFactor(
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span']
+): Record<string, unknown> | null {
+  const numeratorIndex = tokens.indexOf('numerator');
+  const denominatorIndex = tokens.indexOf('denominator');
+  if (numeratorIndex === -1 || denominatorIndex === -1 || numeratorIndex > denominatorIndex) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'ratio requires numerator and denominator sections',
+      span
+    });
+    return null;
+  }
+
+  const ratioOptions = new Set(['coefficient', 'cap', 'fallback', 'fallback_value', 'fallbackValue']);
+  const numeratorTokens = tokens.slice(numeratorIndex + 1, denominatorIndex);
+  const numerator = parseSimpleCountFactor(numeratorTokens, diagnostics, span);
+  if (!numerator) return null;
+
+  let denominatorEnd = tokens.length;
+  for (let i = denominatorIndex + 1; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (typeof token === 'string' && ratioOptions.has(token)) {
+      denominatorEnd = i;
+      break;
+    }
+  }
+
+  const denominatorTokens = tokens.slice(denominatorIndex + 1, denominatorEnd);
+  const denominator = parseSimpleCountFactor(denominatorTokens, diagnostics, span);
+  if (!denominator) return null;
+
+  const optionTokens = tokens.slice(denominatorEnd);
+  const allowed = new Set<string>(['coefficient', 'cap', 'fallback', 'fallback_value', 'fallbackValue']);
+  const kv = optionTokens.length > 0 ? parseKeyValuePairs(optionTokens, diagnostics, span, allowed) : {};
+  if (optionTokens.length > 0 && !kv) return null;
+
+  const factor: Record<string, unknown> = { type: 'ratio', numerator, denominator };
+  if (typeof kv?.coefficient === 'number') factor.coefficient = kv.coefficient;
+  if (typeof kv?.cap === 'number') factor.cap = kv.cap;
+  const fallback = kv?.fallback ?? kv?.fallback_value ?? kv?.fallbackValue;
+  if (typeof fallback === 'number') factor.fallbackValue = fallback;
+  return factor;
+}
+
+function parseStatusRatioFactor(
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span']
+): Record<string, unknown> | null {
+  const allowed = new Set<string>(['kind', 'subtype', 'alive_status', 'aliveStatus', 'coefficient', 'cap']);
+  const kv = parseKeyValuePairs(tokens, diagnostics, span, allowed);
+  if (!kv) return null;
+
+  const kind = kv.kind;
+  const aliveStatus = kv.aliveStatus ?? kv.alive_status;
+  if (typeof kind !== 'string' || typeof aliveStatus !== 'string') {
+    diagnostics.push({
+      severity: 'error',
+      message: 'status_ratio requires kind and alive_status',
+      span
+    });
+    return null;
+  }
+
+  const factor: Record<string, unknown> = { type: 'status_ratio', kind, aliveStatus };
+  if (typeof kv.subtype === 'string') factor.subtype = kv.subtype;
+  if (typeof kv.coefficient === 'number') factor.coefficient = kv.coefficient;
+  if (typeof kv.cap === 'number') factor.cap = kv.cap;
+  return factor;
+}
+
+function parseCrossCultureRatioFactor(
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span']
+): Record<string, unknown> | null {
+  const base = parseRelationshipCountFactor(tokens, diagnostics, span, false, false, true, true);
+  if (!base) return null;
+  const { relationshipKinds, coefficient, cap } = base;
+  const factor: Record<string, unknown> = { type: 'cross_culture_ratio', relationshipKinds };
+  if (typeof coefficient === 'number') factor.coefficient = coefficient;
+  if (typeof cap === 'number') factor.cap = cap;
+  return factor;
+}
+
+function parsePressureFactorTokens(
+  type: string,
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span']
+): Record<string, unknown> | null {
+  if (type === 'entity_count') {
+    return parseEntityCountFactor(tokens, diagnostics, span, true, true);
+  }
+  if (type === 'relationship_count') {
+    return parseRelationshipCountFactor(tokens, diagnostics, span, true, true, true, true);
+  }
+  if (type === 'tag_count') {
+    return parseTagCountFactor(tokens, diagnostics, span, true, true);
+  }
+  if (type === 'total_entities') {
+    return parseTotalEntitiesFactor(tokens, diagnostics, span, true, true);
+  }
+  if (type === 'constant') {
+    return parseConstantFactor(tokens, diagnostics, span, true);
+  }
+  if (type === 'ratio') {
+    return parseRatioFactor(tokens, diagnostics, span);
+  }
+  if (type === 'status_ratio') {
+    return parseStatusRatioFactor(tokens, diagnostics, span);
+  }
+  if (type === 'cross_culture_ratio') {
+    return parseCrossCultureRatioFactor(tokens, diagnostics, span);
+  }
+  diagnostics.push({
+    severity: 'error',
+    message: `Unsupported pressure factor "${type}"`,
+    span
+  });
+  return null;
+}
+
+function parsePressureFeedbackBlock(
+  stmt: BlockNode,
+  diagnostics: Diagnostic[],
+  parent: BlockNode
+): Record<string, unknown>[] | null {
+  const factors: Record<string, unknown>[] = [];
+  for (const child of stmt.body) {
+    if (child.type === 'attribute') {
+      const tokens = tokensFromValueStrict(child.value, diagnostics, parent, child.span, child.key);
+      if (!tokens) continue;
+      const factor = parsePressureFactorTokens(child.key, tokens, diagnostics, child.span);
+      if (factor) factors.push(factor);
+      continue;
+    }
+    if (child.type === 'block') {
+      const tokens = tokensFromBlockAttributes(child, diagnostics, parent);
+      if (!tokens) continue;
+      const factor = parsePressureFactorTokens(child.name, tokens, diagnostics, child.span);
+      if (factor) factors.push(factor);
+      continue;
+    }
+    if (child.type === 'bare') {
+      const type = coerceStringValue(child.value);
+      if (!type) {
+        diagnostics.push({
+          severity: 'error',
+          message: 'feedback entries must be identifiers',
+          span: child.span
+        });
+        continue;
+      }
+      if (type !== 'total_entities') {
+        diagnostics.push({
+          severity: 'error',
+          message: 'bare feedback entries are only supported for total_entities',
+          span: child.span
+        });
+        continue;
+      }
+      factors.push({ type: 'total_entities' });
+      continue;
+    }
+    diagnostics.push({
+      severity: 'error',
+      message: 'pressure feedback blocks only support attribute or block statements',
+      span: child.span
+    });
+  }
+  return factors;
+}
+
+function parsePressureGrowthBlock(
+  stmt: BlockNode,
+  diagnostics: Diagnostic[],
+  parent: BlockNode
+): Record<string, unknown> | null {
+  const positiveFeedback: Record<string, unknown>[] = [];
+  const negativeFeedback: Record<string, unknown>[] = [];
+  let sawPositive = false;
+  let sawNegative = false;
+
+  for (const child of stmt.body) {
+    if (child.type !== 'block') {
+      diagnostics.push({
+        severity: 'error',
+        message: 'growth only supports positive_feedback and negative_feedback blocks',
+        span: child.span
+      });
+      continue;
+    }
+    if (child.name === 'positive_feedback' || child.name === 'positiveFeedback') {
+      const factors = parsePressureFeedbackBlock(child, diagnostics, parent);
+      if (factors) positiveFeedback.push(...factors);
+      sawPositive = true;
+      continue;
+    }
+    if (child.name === 'negative_feedback' || child.name === 'negativeFeedback') {
+      const factors = parsePressureFeedbackBlock(child, diagnostics, parent);
+      if (factors) negativeFeedback.push(...factors);
+      sawNegative = true;
+      continue;
+    }
+    diagnostics.push({
+      severity: 'error',
+      message: `Unsupported growth block "${child.name}"`,
+      span: child.span
+    });
+  }
+
+  if (!sawPositive) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'growth requires a positive_feedback block',
+      span: stmt.span
+    });
+  }
+  if (!sawNegative) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'growth requires a negative_feedback block',
+      span: stmt.span
+    });
+  }
+
+  return { positiveFeedback, negativeFeedback };
+}
+
+function parseContractEntryTokens(
+  tokens: Array<string | number>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span'],
+  allowed: Set<string>,
+  required: string[],
+  label: string
+): Record<string, unknown> | null {
+  const kv = parseKeyValuePairs(tokens, diagnostics, span, allowed);
+  if (!kv) return null;
+  for (const key of required) {
+    if (typeof kv[key] !== 'string' && typeof kv[key] !== 'number') {
+      diagnostics.push({
+        severity: 'error',
+        message: `${label} requires ${key}`,
+        span
+      });
+      return null;
+    }
+  }
+  return kv;
+}
+
+function validateContractEntry(
+  entryName: string,
+  entry: Record<string, unknown>,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span']
+): boolean {
+  const component = entry.component;
+  if (typeof component !== 'string') {
+    diagnostics.push({
+      severity: 'error',
+      message: `${entryName} requires a component string`,
+      span
+    });
+    return false;
+  }
+
+  if (entryName === 'affect') {
+    const effect = entry.effect;
+    if (typeof effect !== 'string' || !['enabler', 'amplifier', 'suppressor'].includes(effect)) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'affect requires effect: enabler|amplifier|suppressor',
+        span
+      });
+      return false;
+    }
+    if (entry.threshold !== undefined && typeof entry.threshold !== 'number') {
+      diagnostics.push({
+        severity: 'error',
+        message: 'affect threshold must be a number',
+        span
+      });
+      return false;
+    }
+    if (entry.factor !== undefined && typeof entry.factor !== 'number') {
+      diagnostics.push({
+        severity: 'error',
+        message: 'affect factor must be a number',
+        span
+      });
+      return false;
+    }
+    return true;
+  }
+
+  if (entry.delta !== undefined && typeof entry.delta !== 'number') {
+    diagnostics.push({
+      severity: 'error',
+      message: `${entryName} delta must be a number`,
+      span
+    });
+    return false;
+  }
+  if (entry.formula !== undefined && typeof entry.formula !== 'string') {
+    diagnostics.push({
+      severity: 'error',
+      message: `${entryName} formula must be a string`,
+      span
+    });
+    return false;
+  }
+
+  return true;
+}
+
+function parseContractEntriesBlock(
+  stmt: BlockNode,
+  diagnostics: Diagnostic[],
+  parent: BlockNode,
+  entryName: string,
+  allowed: Set<string>,
+  required: string[],
+  label: string
+): Record<string, unknown>[] | null {
+  const entries: Record<string, unknown>[] = [];
+  for (const child of stmt.body) {
+    if (child.type === 'attribute' && child.key === entryName) {
+      const tokens = tokensFromValueStrict(child.value, diagnostics, parent, child.span, entryName);
+      if (!tokens) continue;
+      const entry = parseContractEntryTokens(tokens, diagnostics, child.span, allowed, required, label);
+      if (entry) {
+        if (!validateContractEntry(entryName, entry, diagnostics, child.span)) continue;
+        entries.push(entry);
+      }
+      continue;
+    }
+    if (child.type === 'block' && child.name === entryName) {
+      const tokens = tokensFromBlockAttributes(child, diagnostics, parent);
+      if (!tokens) continue;
+      const entry = parseContractEntryTokens(tokens, diagnostics, child.span, allowed, required, label);
+      if (entry) {
+        if (!validateContractEntry(entryName, entry, diagnostics, child.span)) continue;
+        entries.push(entry);
+      }
+      continue;
+    }
+    diagnostics.push({
+      severity: 'error',
+      message: `${stmt.name} only supports ${entryName} entries`,
+      span: child.span
+    });
+  }
+  return entries;
+}
+
+function parsePressureContractBlock(
+  stmt: BlockNode,
+  diagnostics: Diagnostic[],
+  parent: BlockNode
+): Record<string, unknown> | null {
+  const contract: Record<string, unknown> = {};
+
+  for (const child of stmt.body) {
+    if (child.type === 'attribute') {
+      if (child.key === 'purpose') {
+        const value = readStringValue(child.value, diagnostics, parent, child.span, 'purpose');
+        if (value !== null) contract.purpose = value;
+        continue;
+      }
+      diagnostics.push({
+        severity: 'error',
+        message: `Unsupported contract attribute "${child.key}"`,
+        span: child.span
+      });
+      continue;
+    }
+    if (child.type === 'block') {
+      if (child.name === 'sources') {
+        const entries = parseContractEntriesBlock(
+          child,
+          diagnostics,
+          parent,
+          'source',
+          new Set(['component', 'delta', 'formula']),
+          ['component'],
+          'source'
+        );
+        if (entries) contract.sources = entries;
+        continue;
+      }
+      if (child.name === 'sinks') {
+        const entries = parseContractEntriesBlock(
+          child,
+          diagnostics,
+          parent,
+          'sink',
+          new Set(['component', 'delta', 'formula']),
+          ['component'],
+          'sink'
+        );
+        if (entries) contract.sinks = entries;
+        continue;
+      }
+      if (child.name === 'affects') {
+        const entries = parseContractEntriesBlock(
+          child,
+          diagnostics,
+          parent,
+          'affect',
+          new Set(['component', 'effect', 'threshold', 'factor']),
+          ['component', 'effect'],
+          'affect'
+        );
+        if (entries) contract.affects = entries;
+        continue;
+      }
+      if (child.name === 'equilibrium') {
+        const equilibrium: Record<string, unknown> = {};
+        for (const entry of child.body) {
+          if (entry.type !== 'attribute') {
+            diagnostics.push({
+              severity: 'error',
+              message: 'equilibrium only supports attribute statements',
+              span: entry.span
+            });
+            continue;
+          }
+          if (entry.key === 'expected_range' || entry.key === 'expectedRange') {
+            const tokens = tokensFromValueStrict(entry.value, diagnostics, parent, entry.span, 'expected_range');
+            if (!tokens) continue;
+            if (tokens.length !== 2 || typeof tokens[0] !== 'number' || typeof tokens[1] !== 'number') {
+              diagnostics.push({
+                severity: 'error',
+                message: 'expected_range requires two numbers',
+                span: entry.span
+              });
+              continue;
+            }
+            equilibrium.expectedRange = [tokens[0], tokens[1]];
+            continue;
+          }
+          if (entry.key === 'resting_point' || entry.key === 'restingPoint') {
+            const value = readNumberValue(entry.value, diagnostics, parent, entry.span, 'resting_point');
+            if (value !== null) equilibrium.restingPoint = value;
+            continue;
+          }
+          if (entry.key === 'oscillation_period' || entry.key === 'oscillationPeriod') {
+            const value = readNumberValue(entry.value, diagnostics, parent, entry.span, 'oscillation_period');
+            if (value !== null) equilibrium.oscillationPeriod = value;
+            continue;
+          }
+          diagnostics.push({
+            severity: 'error',
+            message: `Unsupported equilibrium attribute "${entry.key}"`,
+            span: entry.span
+          });
+        }
+        contract.equilibrium = equilibrium;
+        continue;
+      }
+      diagnostics.push({
+        severity: 'error',
+        message: `Unsupported contract block "${child.name}"`,
+        span: child.span
+      });
+      continue;
+    }
+    diagnostics.push({
+      severity: 'error',
+      message: `Unsupported contract statement "${child.type}"`,
+      span: child.span
+    });
+  }
+
+  return contract;
+}
+
+function buildPressureItem(block: BlockNode, diagnostics: Diagnostic[]): Record<string, unknown> | null {
+  const item: Record<string, unknown> = {};
+  let growth: Record<string, unknown> | null = null;
+  let contract: Record<string, unknown> | null = null;
+
+  for (const stmt of block.body) {
+    if (stmt.type === 'attribute') {
+      if (stmt.labels && stmt.labels.length > 0) {
+        diagnostics.push({
+          severity: 'error',
+          message: 'pressure attributes do not support labels',
+          span: stmt.span
+        });
+        continue;
+      }
+      if (stmt.key === 'initial_value' || stmt.key === 'initialValue') {
+        const value = readNumberValue(stmt.value, diagnostics, block, stmt.span, 'initial_value');
+        if (value !== null) item.initialValue = value;
+        continue;
+      }
+      if (stmt.key === 'homeostasis') {
+        const value = readNumberValue(stmt.value, diagnostics, block, stmt.span, 'homeostasis');
+        if (value !== null) item.homeostasis = value;
+        continue;
+      }
+      if (stmt.key === 'description' || stmt.key === 'desc') {
+        const value = readStringValue(stmt.value, diagnostics, block, stmt.span, 'description');
+        if (value !== null) item.description = value;
+        continue;
+      }
+      if (stmt.key === 'name') {
+        const value = readStringValue(stmt.value, diagnostics, block, stmt.span, 'name');
+        if (value !== null) item.name = value;
+        continue;
+      }
+      if (stmt.key === 'growth' || stmt.key === 'contract') {
+        diagnostics.push({
+          severity: 'error',
+          message: `${stmt.key} must be a block`,
+          span: stmt.span
+        });
+        continue;
+      }
+      diagnostics.push({
+        severity: 'error',
+        message: `Unsupported pressure attribute "${stmt.key}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    if (stmt.type === 'block') {
+      if (stmt.name === 'growth') {
+        if (growth) {
+          diagnostics.push({
+            severity: 'error',
+            message: 'growth already defined',
+            span: stmt.span
+          });
+          continue;
+        }
+        growth = parsePressureGrowthBlock(stmt, diagnostics, block);
+        continue;
+      }
+      if (stmt.name === 'contract') {
+        if (contract) {
+          diagnostics.push({
+            severity: 'error',
+            message: 'contract already defined',
+            span: stmt.span
+          });
+          continue;
+        }
+        contract = parsePressureContractBlock(stmt, diagnostics, block);
+        continue;
+      }
+      diagnostics.push({
+        severity: 'error',
+        message: `Unsupported pressure block "${stmt.name}"`,
+        span: stmt.span
+      });
+      continue;
+    }
+
+    diagnostics.push({
+      severity: 'error',
+      message: `Unsupported pressure statement "${stmt.type}"`,
+      span: stmt.span
+    });
+  }
+
+  if (block.labels[0]) {
+    if (!applyLabelField(item, 'id', block.labels[0], diagnostics, block)) return null;
+  }
+  if (block.labels[1]) {
+    if (!applyLabelField(item, 'name', block.labels[1], diagnostics, block)) return null;
+  }
+
+  if (!growth) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'pressure requires a growth block',
+      span: block.span
+    });
+  } else {
+    item.growth = growth;
+  }
+
+  if (contract) item.contract = contract;
 
   return item;
 }
@@ -1669,6 +5404,7 @@ function normalizeKindList(
   label: string
 ): string[] | null {
   if (typeof value === 'string') {
+    if (value === 'none') return [];
     return [value];
   }
   if (Array.isArray(value)) {
@@ -1698,6 +5434,7 @@ function normalizeStringList(
   label: string
 ): string[] | null {
   if (typeof value === 'string') {
+    if (value === 'none') return [];
     return [value];
   }
   if (Array.isArray(value)) {
@@ -1732,6 +5469,151 @@ function buildSeedEntityItem(block: BlockNode, diagnostics: Diagnostic[]): Recor
     delete item.coords;
   }
 
+  const isNone = (value: unknown) => typeof value === 'string' && value === 'none';
+  const requiredFields = [
+    'kind',
+    'subtype',
+    'name',
+    'summary',
+    'description',
+    'status',
+    'prominence',
+    'culture',
+    'createdAt',
+    'updatedAt',
+    'tags',
+    'coords',
+    'links'
+  ];
+
+  for (const field of requiredFields) {
+    if (field === 'coords') {
+      if (item.coordinates === undefined) {
+        diagnostics.push({
+          severity: 'error',
+          message: 'seed_entity requires coords (use coords none when empty)',
+          span: block.span
+        });
+      }
+      if (item.coordinates === null) {
+        diagnostics.push({
+          severity: 'error',
+          message: 'coords must use none sentinel (null is not allowed)',
+          span: block.span
+        });
+      }
+      continue;
+    }
+    if (item[field] === undefined) {
+      diagnostics.push({
+        severity: 'error',
+        message: `seed_entity requires ${field} (use ${field} none when empty)`,
+        span: block.span
+      });
+    }
+    if (item[field] === null) {
+      diagnostics.push({
+        severity: 'error',
+        message: `${field} must use none sentinel (null is not allowed)`,
+        span: block.span
+      });
+    }
+  }
+
+  if (isNone(item.kind)) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'seed_entity kind cannot be none',
+      span: block.span
+    });
+    return null;
+  }
+  if (isNone(item.name)) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'seed_entity name cannot be none',
+      span: block.span
+    });
+    return null;
+  }
+  if (isNone(item.prominence)) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'seed_entity prominence cannot be none',
+      span: block.span
+    });
+    return null;
+  }
+
+  const summaryNone = isNone(item.summary);
+  if (summaryNone) {
+    item.summary = '';
+  } else if (typeof item.summary === 'string' && item.summary.length === 0) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'summary must use none sentinel when empty',
+      span: block.span
+    });
+    return null;
+  }
+
+  const descriptionNone = isNone(item.description);
+  if (descriptionNone) {
+    item.description = '';
+  } else if (typeof item.description === 'string' && item.description.length === 0) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'description must use none sentinel when empty',
+      span: block.span
+    });
+    return null;
+  }
+
+  const subtypeNone = isNone(item.subtype);
+  if (subtypeNone) {
+    delete item.subtype;
+  } else if (typeof item.subtype === 'string' && item.subtype.length === 0) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'subtype must use none sentinel when empty',
+      span: block.span
+    });
+    return null;
+  }
+
+  const statusNone = isNone(item.status);
+  if (statusNone) {
+    delete item.status;
+  } else if (typeof item.status === 'string' && item.status.length === 0) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'status must use none sentinel when empty',
+      span: block.span
+    });
+    return null;
+  }
+
+  const cultureNone = isNone(item.culture);
+  if (cultureNone) {
+    delete item.culture;
+  } else if (typeof item.culture === 'string' && item.culture.length === 0) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'culture must use none sentinel when empty',
+      span: block.span
+    });
+    return null;
+  }
+
+  if (isNone(item.createdAt) || isNone(item.updatedAt)) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'createdAt/updatedAt must be numbers (not none)',
+      span: block.span
+    });
+    return null;
+  }
+
   if (Array.isArray(item.coordinates)) {
     const [x, y, z] = item.coordinates;
     if ([x, y, z].every((value) => typeof value === 'number')) {
@@ -1746,7 +5628,31 @@ function buildSeedEntityItem(block: BlockNode, diagnostics: Diagnostic[]): Recor
     }
   }
 
-  if (Array.isArray(item.tags)) {
+  if (isNone(item.coordinates)) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'coords cannot be none',
+      span: block.span
+    });
+    return null;
+  }
+
+  if (typeof item.tags === 'string' && !isNone(item.tags)) {
+    item.tags = [item.tags];
+  }
+
+  const tagsNone = isNone(item.tags);
+  if (tagsNone) {
+    item.tags = {};
+  } else if (Array.isArray(item.tags)) {
+    if (item.tags.length === 0) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'tags must use none sentinel when empty',
+        span: block.span
+      });
+      return null;
+    }
     const tags: Record<string, boolean> = {};
     for (const entry of item.tags) {
       if (typeof entry !== 'string') {
@@ -1760,6 +5666,53 @@ function buildSeedEntityItem(block: BlockNode, diagnostics: Diagnostic[]): Recor
       tags[entry] = true;
     }
     item.tags = tags;
+  } else if (isRecord(item.tags)) {
+    const entries = Object.entries(item.tags);
+    if (entries.length === 0) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'tags must use none sentinel when empty',
+        span: block.span
+      });
+      return null;
+    }
+    if (!entries.every(([, value]) => value === true)) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'tags must be a list of identifiers (values are not supported in seed_entity)',
+        span: block.span
+      });
+      return null;
+    }
+  }
+
+  const linksNone = isNone(item.links);
+  if (linksNone) {
+    item.links = [];
+  } else if (Array.isArray(item.links)) {
+    if (item.links.length === 0) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'links must use none sentinel when empty',
+        span: block.span
+      });
+      return null;
+    }
+    if (!item.links.every((entry) => typeof entry === 'string')) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'links must be a list of identifiers',
+        span: block.span
+      });
+      return null;
+    }
+  } else if (item.links !== undefined) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'links must be a list of identifiers or none',
+      span: block.span
+    });
+    return null;
   }
 
   return item;
@@ -1790,6 +5743,83 @@ function buildSeedRelationshipItem(block: BlockNode, diagnostics: Diagnostic[]):
   }
 
   return item;
+}
+
+function buildSeedRelationshipGroup(
+  block: BlockNode,
+  diagnostics: Diagnostic[]
+): Record<string, unknown>[] {
+  const src = block.labels[0];
+  if (!src) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'relationships block requires a source entity label',
+      span: block.span
+    });
+    return [];
+  }
+  if (block.labels.length > 1) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'relationships block only supports a single source label',
+      span: block.span
+    });
+    return [];
+  }
+
+  const relationships: Record<string, unknown>[] = [];
+  for (const stmt of block.body) {
+    if (stmt.type !== 'attribute') {
+      diagnostics.push({
+        severity: 'error',
+        message: 'relationships block only supports relationship entries',
+        span: stmt.span
+      });
+      continue;
+    }
+    if (stmt.labels && stmt.labels.length > 0) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'relationships entries must use "<kind> <dst> <strength>"',
+        span: stmt.span
+      });
+      continue;
+    }
+    const raw = valueToJson(stmt.value, diagnostics, block);
+    if (!Array.isArray(raw) || raw.length < 2) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'relationships entries require "<dst> <strength>"',
+        span: stmt.span
+      });
+      continue;
+    }
+    if (raw.length > 2) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'relationships entries only support "<dst> <strength>"',
+        span: stmt.span
+      });
+      continue;
+    }
+    const [dst, strength] = raw;
+    if (typeof dst !== 'string' || typeof strength !== 'number') {
+      diagnostics.push({
+        severity: 'error',
+        message: 'relationships entries require "<dst> <strength>"',
+        span: stmt.span
+      });
+      continue;
+    }
+    relationships.push({
+      kind: stmt.key,
+      src,
+      dst,
+      strength
+    });
+  }
+
+  return relationships;
 }
 
 function buildCultureItem(block: BlockNode, diagnostics: Diagnostic[]): Record<string, unknown> | null {
@@ -5791,7 +9821,11 @@ function buildSelectionFromStatements(
       }
       if (child.key === 'status' || child.key === 'statuses') {
         const statuses = child.items.map((item) => valueToJson(item, ctx.diagnostics, ctx.parent));
-        selection.status = statuses.length === 1 ? statuses[0] : statuses;
+        if (statuses.length === 1) {
+          selection.status = statuses[0];
+        } else {
+          selection.statuses = statuses;
+        }
         continue;
       }
       ctx.diagnostics.push({
@@ -5832,6 +9866,14 @@ function buildSelectionFromStatements(
       }
       if (child.key === 'status') {
         selection.status = value;
+        continue;
+      }
+      if (child.key === 'statuses') {
+        if (Array.isArray(value)) {
+          selection.statuses = value;
+        } else {
+          selection.status = value;
+        }
         continue;
       }
       if (child.key === 'subtype') {
@@ -5932,7 +9974,11 @@ function buildVariableFromStatements(
       }
       if (child.key === 'status' || child.key === 'statuses') {
         const statuses = child.items.map((item) => valueToJson(item, ctx.diagnostics, ctx.parent));
-        select.status = statuses.length === 1 ? statuses[0] : statuses;
+        if (statuses.length === 1) {
+          select.status = statuses[0];
+        } else {
+          select.statuses = statuses;
+        }
         continue;
       }
       ctx.diagnostics.push({
@@ -5973,6 +10019,14 @@ function buildVariableFromStatements(
       }
       if (child.key === 'status') {
         select.status = value;
+        continue;
+      }
+      if (child.key === 'statuses') {
+        if (Array.isArray(value)) {
+          select.statuses = value;
+        } else {
+          select.status = value;
+        }
         continue;
       }
       if (child.key === 'subtype') {
@@ -6312,6 +10366,9 @@ function buildObjectFromStatements(
           continue;
         }
       }
+      if (applySetFieldAttribute(stmt, obj, diagnostics, parent)) {
+        continue;
+      }
       const value = valueToJson(stmt.value, diagnostics, parent);
       setObjectValue(obj, stmt.key, value);
       continue;
@@ -6361,6 +10418,14 @@ function buildObjectFromStatements(
 
       setObjectValue(obj, stmt.name, child);
     }
+
+    if (stmt.type === 'bare') {
+      diagnostics.push({
+        severity: 'error',
+        message: 'bare statements are only valid inside set blocks',
+        span: stmt.span
+      });
+    }
   }
 
   return obj;
@@ -6398,6 +10463,9 @@ function applySpecialBlock(
   diagnostics: Diagnostic[]
 ): boolean {
   const key = stmt.name;
+  if (SET_FIELD_KEYS.has(key)) {
+    return applySetFieldBlock(stmt, obj, diagnostics);
+  }
   if (key === 'create') {
     return addCreationEntry(stmt.labels, buildObjectFromStatements(stmt.body, diagnostics, stmt), obj, diagnostics, stmt);
   }
@@ -6411,6 +10479,245 @@ function applySpecialBlock(
     return addApplicabilityEntry(stmt.labels, buildObjectFromStatements(stmt.body, diagnostics, stmt), obj, diagnostics, stmt);
   }
   return false;
+}
+
+function parseSetTokens(
+  tokens: unknown[],
+  diagnostics: Diagnostic[],
+  span: BlockNode['span']
+): { items: string[]; includes: string[]; none: boolean } | null {
+  if (tokens.length === 0) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'set field requires at least one value',
+      span
+    });
+    return null;
+  }
+
+  const includes: string[] = [];
+  const items: string[] = [];
+
+  if (tokens[0] === 'include') {
+    if (tokens.length !== 2 || typeof tokens[1] !== 'string') {
+      diagnostics.push({
+        severity: 'error',
+        message: 'include requires a single set identifier',
+        span
+      });
+      return null;
+    }
+    includes.push(tokens[1]);
+    return { items, includes, none: false };
+  }
+
+  for (const token of tokens) {
+    if (token === 'include') {
+      diagnostics.push({
+        severity: 'error',
+        message: 'include cannot be mixed with set items',
+        span
+      });
+      return null;
+    }
+    if (typeof token !== 'string') {
+      diagnostics.push({
+        severity: 'error',
+        message: 'set fields only support identifiers or strings',
+        span
+      });
+      return null;
+    }
+    items.push(token);
+  }
+
+  const none = items.length === 1 && items[0] === 'none';
+  if (!none && items.includes('none')) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'none cannot be combined with other set items',
+      span
+    });
+    return null;
+  }
+
+  return { items: none ? [] : items, includes, none };
+}
+
+function resolveSetIncludes(
+  includes: string[],
+  diagnostics: Diagnostic[],
+  span: BlockNode['span']
+): string[] | null {
+  if (includes.length === 0) return [];
+  const registry = activeEvalContext?.sets;
+  if (!registry) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'set includes are not available in this context',
+      span
+    });
+    return null;
+  }
+  const output: string[] = [];
+  const seen = new Set<string>();
+  for (const name of includes) {
+    const set = registry.get(name);
+    if (!set) {
+      diagnostics.push({
+        severity: 'error',
+        message: `Unknown set "${name}"`,
+        span
+      });
+      return null;
+    }
+    for (const item of set) {
+      if (seen.has(item)) continue;
+      seen.add(item);
+      output.push(item);
+    }
+  }
+  return output;
+}
+
+function normalizeExistingSetValue(
+  value: unknown,
+  diagnostics: Diagnostic[],
+  span: BlockNode['span']
+): string[] | null {
+  if (value === undefined) return [];
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) {
+    if (!value.every((entry) => typeof entry === 'string')) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'set fields only support identifiers or strings',
+        span
+      });
+      return null;
+    }
+    return value as string[];
+  }
+  if (isRecord(value)) {
+    const entries = Object.entries(value);
+    if (!entries.every(([, entry]) => entry === true)) {
+      diagnostics.push({
+        severity: 'error',
+        message: 'set fields only support boolean maps when using object syntax',
+        span
+      });
+      return null;
+    }
+    return entries.map(([key]) => key);
+  }
+  diagnostics.push({
+    severity: 'error',
+    message: 'set fields only support identifiers or strings',
+    span
+  });
+  return null;
+}
+
+function mergeSetFieldValue(
+  obj: Record<string, unknown>,
+  key: string,
+  parsed: { items: string[]; includes: string[]; none: boolean },
+  diagnostics: Diagnostic[],
+  span: BlockNode['span']
+): boolean {
+  const existing = obj[key];
+  if (parsed.none) {
+    if (existing === undefined) {
+      obj[key] = 'none';
+      return true;
+    }
+    if (existing === 'none') {
+      return true;
+    }
+    diagnostics.push({
+      severity: 'error',
+      message: 'none cannot be combined with other set items',
+      span
+    });
+    return true;
+  }
+
+  if (existing === 'none') {
+    diagnostics.push({
+      severity: 'error',
+      message: 'none cannot be combined with other set items',
+      span
+    });
+    return true;
+  }
+
+  const resolvedIncludes = resolveSetIncludes(parsed.includes, diagnostics, span);
+  if (!resolvedIncludes) return true;
+
+  const existingItems = normalizeExistingSetValue(existing, diagnostics, span);
+  if (!existingItems) return true;
+  const merged = [...existingItems];
+  const seen = new Set(merged);
+  for (const item of [...resolvedIncludes, ...parsed.items]) {
+    if (seen.has(item)) continue;
+    seen.add(item);
+    merged.push(item);
+  }
+  obj[key] = merged;
+  return true;
+}
+
+function applySetFieldAttribute(
+  stmt: Extract<StatementNode, { type: 'attribute' }>,
+  obj: Record<string, unknown>,
+  diagnostics: Diagnostic[],
+  parent: BlockNode
+): boolean {
+  const key = stmt.key;
+  if (!SET_FIELD_KEYS.has(key)) return false;
+  if (isArrayValue(stmt.value) || isObjectValue(stmt.value)) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'set fields do not support array or object literals',
+      span: stmt.span
+    });
+    return true;
+  }
+  if (Array.isArray(stmt.value)) {
+    for (const entry of stmt.value) {
+      if (isArrayValue(entry) || isObjectValue(entry)) {
+        diagnostics.push({
+          severity: 'error',
+          message: 'set fields do not support array or object literals',
+          span: stmt.span
+        });
+        return true;
+      }
+    }
+  }
+  const raw = valueToJson(stmt.value, diagnostics, parent);
+  const tokens = Array.isArray(raw) ? raw : [raw];
+  if (tokens.length === 1 && isRecord(tokens[0])) {
+    diagnostics.push({
+      severity: 'error',
+      message: 'set fields do not support object values',
+      span: stmt.span
+    });
+    return true;
+  }
+  const parsed = parseSetTokens(tokens, diagnostics, stmt.span);
+  if (!parsed) return true;
+  return mergeSetFieldValue(obj, key, parsed, diagnostics, stmt.span);
+}
+
+function applySetFieldBlock(
+  stmt: BlockNode,
+  obj: Record<string, unknown>,
+  diagnostics: Diagnostic[]
+): boolean {
+  const parsed = parseSetBlockItems(stmt.body, diagnostics, stmt);
+  if (!parsed) return true;
+  return mergeSetFieldValue(obj, stmt.name, parsed, diagnostics, stmt.span);
 }
 
 function addCreationEntry(
@@ -6564,7 +10871,7 @@ function addVariableEntry(
       moved = true;
     }
     if ('statuses' in value) {
-      select.status = value.statuses;
+      select.statuses = value.statuses;
       delete value.statuses;
       moved = true;
     }

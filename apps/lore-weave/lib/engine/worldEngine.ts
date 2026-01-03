@@ -240,6 +240,10 @@ export class WorldEngine {
       config.executableActions = loadActions(config.actions);
     }
 
+    // Initialize action success tracker for diagnostics
+    // universalCatalyst will add action types here when they succeed
+    config.actionSuccessTracker = new Set<string>();
+
     this.statisticsCollector = new StatisticsCollector();
     this.currentEpoch = 0;
 
@@ -1036,6 +1040,7 @@ export class WorldEngine {
 
     // Reset tracking maps
     this.templateRunCounts.clear();
+    this.config.actionSuccessTracker?.clear();
     this.systemMetrics.clear();
     this.metaEntitiesFormed = [];
     this.lastRelationshipCount = 0;
@@ -1556,12 +1561,23 @@ export class WorldEngine {
 
     const totalActions = Array.from(agentActions.values()).reduce((sum, a) => sum + a.count, 0);
 
+    // Compute unused actions (actions that have never succeeded)
+    const allActions = this.config.executableActions || [];
+    const successTracker = this.config.actionSuccessTracker || new Set<string>();
+    const unusedActions = allActions
+      .filter(action => !successTracker.has(action.type))
+      .map(action => ({
+        actionId: action.type,
+        actionName: action.name
+      }));
+
     this.emitter.catalystStats({
       totalAgents: agents.length,
       activeAgents: activeAgents.length,
       totalActions,
       uniqueActors: agentActions.size,
-      topAgents
+      topAgents,
+      unusedActions
     });
 
     // Relationship breakdown

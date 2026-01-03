@@ -181,18 +181,13 @@ export function initializeCatalyst(
 }
 
 /**
- * Smart catalyst initialization based on entity type and prominence.
- * Only recognized, renowned, and mythic entities of actor kinds can act.
+ * Initialize catalyst properties for entities of actor kinds.
+ * All entities of eligible kinds can act - prominence affects action
+ * success chance and attempt rate, not eligibility.
  *
  * @param entity - The entity to initialize
- * @param graph - Graph (used for context)
  */
 export function initializeCatalystSmart(entity: HardState): void {
-  // Only prominent entities can act (prominence >= 2.0 = recognized or higher)
-  if (entity.prominence < 2.0) {
-    return;
-  }
-
   // Entity kinds that can act
   const actorKinds = ['npc', 'faction', 'ability', 'occurrence', 'location', 'artifact', 'rule'];
   if (!actorKinds.includes(entity.kind)) {
