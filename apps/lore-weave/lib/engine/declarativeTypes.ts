@@ -223,13 +223,21 @@ export interface CreationRule {
 }
 
 /**
+ * Condition for conditional subtype selection.
+ */
+export type SubtypeCondition =
+  | { type: 'target_subtype'; equals: string }  // Check if target entity has specific subtype
+  | { type: 'pressure_check'; pressureId: string; min?: number; max?: number };  // Check pressure threshold
+
+/**
  * How to determine subtype.
  */
 export type SubtypeSpec =
   | string  // Fixed subtype
   | { inherit: string; chance?: number }  // Inherit from reference
   | { fromPressure: Record<string, string> }  // Choose based on dominant pressure
-  | { random: string[] };  // Random from list
+  | { random: string[] }  // Random from list
+  | { conditional: { when: Array<{ condition: SubtypeCondition; then: string }>; otherwise: string } };  // Conditional selection
 
 /**
  * How to determine culture.

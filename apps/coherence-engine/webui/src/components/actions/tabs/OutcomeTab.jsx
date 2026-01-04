@@ -5,6 +5,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { RELATIONSHIP_REFS, MUTATION_TYPE_OPTIONS } from '../constants';
 import MutationCard, { DEFAULT_MUTATION_TYPES } from '../../shared/MutationCard';
+import { NumberInput } from '../../shared';
 
 const ACTION_MUTATION_TYPES = DEFAULT_MUTATION_TYPES;
 
@@ -38,9 +39,11 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
       case 'change_status':
         return { type: 'change_status', entity: defaultTarget, newStatus: '' };
       case 'adjust_prominence':
-        return { type: 'adjust_prominence', entity: defaultEntity, direction: 'up' };
+        return { type: 'adjust_prominence', entity: defaultEntity, delta: 0.1 };
       case 'archive_relationship':
-        return { type: 'archive_relationship', entity: defaultEntity, relationshipKind: '', direction: 'both' };
+        return { type: 'archive_relationship', entity: defaultEntity, relationshipKind: '', with: defaultTarget, direction: 'both' };
+      case 'archive_all_relationships':
+        return { type: 'archive_all_relationships', entity: defaultEntity, relationshipKind: '', direction: 'both' };
       case 'adjust_relationship_strength':
         return { type: 'adjust_relationship_strength', kind: '', src: defaultEntity, dst: defaultTarget, delta: 0.1 };
       case 'update_rate_limit':
@@ -167,27 +170,75 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
       <div className="section">
         <div className="section-title">⭐ Prominence Changes</div>
         <div className="section-desc">
-          Apply system-level prominence changes on success/failure. Chances are configured at the system level.
+          Apply prominence changes to actor or target on action success/failure. Values are numeric deltas (e.g., 0.1 or -0.05).
         </div>
-        <div className="form-row">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={outcome.applyProminenceToActor || false}
-              onChange={(e) => updateOutcome('applyProminenceToActor', e.target.checked || undefined)}
-              className="checkbox"
-            />
-            Apply prominence changes to Actor
-          </label>
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={outcome.applyProminenceToInstigator || false}
-              onChange={(e) => updateOutcome('applyProminenceToInstigator', e.target.checked || undefined)}
-              className="checkbox"
-            />
-            Apply prominence changes to Instigator
-          </label>
+
+        <div style={{ marginBottom: '16px' }}>
+          <div className="label" style={{ marginBottom: '8px' }}>Actor Prominence Delta</div>
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="label-micro">On Success</label>
+              <NumberInput
+                value={outcome.actorProminenceDelta?.onSuccess}
+                onChange={(v) => {
+                  const current = outcome.actorProminenceDelta || {};
+                  const updated = { ...current, onSuccess: v };
+                  if (updated.onSuccess === undefined) delete updated.onSuccess;
+                  updateOutcome('actorProminenceDelta', Object.keys(updated).length > 0 ? updated : undefined);
+                }}
+                placeholder="e.g., 0.1"
+                allowEmpty
+              />
+            </div>
+            <div className="form-group">
+              <label className="label-micro">On Failure</label>
+              <NumberInput
+                value={outcome.actorProminenceDelta?.onFailure}
+                onChange={(v) => {
+                  const current = outcome.actorProminenceDelta || {};
+                  const updated = { ...current, onFailure: v };
+                  if (updated.onFailure === undefined) delete updated.onFailure;
+                  updateOutcome('actorProminenceDelta', Object.keys(updated).length > 0 ? updated : undefined);
+                }}
+                placeholder="e.g., -0.05"
+                allowEmpty
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div className="label" style={{ marginBottom: '8px' }}>Target Prominence Delta</div>
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="label-micro">On Success</label>
+              <NumberInput
+                value={outcome.targetProminenceDelta?.onSuccess}
+                onChange={(v) => {
+                  const current = outcome.targetProminenceDelta || {};
+                  const updated = { ...current, onSuccess: v };
+                  if (updated.onSuccess === undefined) delete updated.onSuccess;
+                  updateOutcome('targetProminenceDelta', Object.keys(updated).length > 0 ? updated : undefined);
+                }}
+                placeholder="e.g., 0.1"
+                allowEmpty
+              />
+            </div>
+            <div className="form-group">
+              <label className="label-micro">On Failure</label>
+              <NumberInput
+                value={outcome.targetProminenceDelta?.onFailure}
+                onChange={(v) => {
+                  const current = outcome.targetProminenceDelta || {};
+                  const updated = { ...current, onFailure: v };
+                  if (updated.onFailure === undefined) delete updated.onFailure;
+                  updateOutcome('targetProminenceDelta', Object.keys(updated).length > 0 ? updated : undefined);
+                }}
+                placeholder="e.g., -0.05"
+                allowEmpty
+              />
+            </div>
+          </div>
         </div>
       </div>
 

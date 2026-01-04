@@ -333,6 +333,7 @@ export function applySaturationLimits(
         if (limit.fromKind) {
           const otherEntity = ctx.graph.getEntity(otherId);
           if (!otherEntity || otherEntity.kind !== limit.fromKind) continue;
+          if (limit.fromSubtype && otherEntity.subtype !== limit.fromSubtype) continue;
         }
         connectedEntities.add(otherId);
       }

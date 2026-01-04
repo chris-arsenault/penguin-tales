@@ -1077,7 +1077,18 @@
         "entityRef": "$splinter",
         "kind": "faction",
         "subtype": {
-          "inherit": "$target"
+          "conditional": {
+            "when": [
+              {
+                "condition": {
+                  "type": "target_subtype",
+                  "equals": "criminal"
+                },
+                "then": "criminal"
+              }
+            ],
+            "otherwise": "political"
+          }
         },
         "status": "waning",
         "prominence": "marginal",
@@ -1360,7 +1371,13 @@
         {
           "relationshipKind": "originated_in",
           "direction": "in",
-          "maxCount": 6
+          "maxCount": 2
+        },
+        {
+          "relationshipKind": "trade_route_to",
+          "fromKind": "location",
+          "fromSubtype": "resource_node",
+          "maxCount": 1
         }
       ]
     },
@@ -1743,19 +1760,8 @@
             "type": "pressure",
             "pressureId": "security",
             "max": -5
-          },
-          {
-            "type": "pressure",
-            "pressureId": "harmony",
-            "max": 10
           }
         ]
-      },
-      {
-        "type": "entity_count",
-        "kind": "faction",
-        "subtype": "cult",
-        "max": 12
       }
     ],
     "selection": {
@@ -1763,7 +1769,8 @@
       "kind": "location",
       "subtypes": [
         "anomaly",
-        "point_of_interest"
+        "point_of_interest",
+        "colony"
       ],
       "pickStrategy": "random",
       "saturationLimits": [
@@ -1808,7 +1815,21 @@
       {
         "entityRef": "$cult",
         "kind": "faction",
-        "subtype": "cult",
+        "subtype": {
+          "conditional": {
+            "when": [
+              {
+                "condition": {
+                  "type": "pressure_check",
+                  "pressureId": "magical_stability",
+                  "min": 0
+                },
+                "then": "criminal"
+              }
+            ],
+            "otherwise": "cult"
+          }
+        },
         "status": "illegal",
         "prominence": "marginal",
         "culture": {
@@ -1875,7 +1896,8 @@
             "sparse",
             "random"
           ]
-        }
+        },
+        "createChance": 0.4
       },
       {
         "entityRef": "$acolyte1",
@@ -1985,6 +2007,12 @@
         "src": "$cult",
         "dst": "$target",
         "strength": 1
+      },
+      {
+        "kind": "believer_of",
+        "src": "$cult",
+        "dst": "$existingIdeology",
+        "strength": 0.8
       },
       {
         "kind": "owned_by",
@@ -2100,6 +2128,18 @@
       }
     ],
     "variables": {
+      "$existingIdeology": {
+        "select": {
+          "from": "graph",
+          "kind": "rule",
+          "subtypes": [
+            "ideology"
+          ],
+          "status": "proposed",
+          "pickStrategy": "random"
+        },
+        "required": true
+      },
       "$magic": {
         "select": {
           "from": "graph",
@@ -2362,7 +2402,7 @@
         "type": "entity_count",
         "kind": "location",
         "subtype": "colony",
-        "max": 4
+        "max": 6
       }
     ],
     "selection": {
@@ -2897,23 +2937,13 @@
         {
           "relationshipKind": "originated_in",
           "direction": "in",
-          "maxCount": 6
-        }
-      ],
-      "filters": [
+          "maxCount": 4
+        },
         {
-          "type": "graph_path",
-          "assert": {
-            "check": "not_exists",
-            "path": [
-              {
-                "via": "originated_in",
-                "direction": "any",
-                "targetKind": "faction",
-                "targetSubtype": "company"
-              }
-            ]
-          }
+          "relationshipKind": "adjacent_to",
+          "fromKind": "location",
+          "fromSubtype": "resource_node",
+          "maxCount": 2
         }
       ]
     },
@@ -2977,6 +3007,7 @@
       },
       {
         "entityRef": "$company",
+        "createChance": 0.5,
         "kind": "faction",
         "prominence": "marginal",
         "status": "active",
@@ -3037,17 +3068,23 @@
         "strength": 0.8
       },
       {
-        "kind": "discovered_by",
-        "src": "$harvestTechnique",
-        "dst": "$company",
-        "strength": 0.7
-      },
-      {
         "kind": "adjacent_to",
         "src": "$bloom",
         "dst": "$target",
         "strength": 0.8,
         "bidirectional": true
+      },
+      {
+        "kind": "practitioner_of",
+        "src": "$sponsor",
+        "dst": "$harvestTechnique",
+        "strength": 0.7
+      },
+      {
+        "kind": "discovered_by",
+        "src": "$harvestTechnique",
+        "dst": "$sponsor",
+        "strength": 0.7
       }
     ],
     "stateUpdates": [
@@ -3060,6 +3097,182 @@
         "type": "modify_pressure",
         "pressureId": "harmony",
         "delta": -10
+      }
+    ],
+    "variables": {
+      "$sponsor": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationshipKind": "originated_in",
+            "direction": "dst"
+          },
+          "kind": "faction",
+          "pickStrategy": "first",
+          "subtypes": [
+            "company"
+          ]
+        },
+        "required": true
+      }
+    },
+    "enabled": true
+  },
+  {
+    "id": "thermal_vent_discovery",
+    "name": "Thermal Vent Discovery",
+    "applicability": [
+      {
+        "type": "pressure",
+        "pressureId": "resource_availibility",
+        "max": 10
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "subtypes": [
+        "colony"
+      ],
+      "pickStrategy": "random",
+      "saturationLimits": [
+        {
+          "relationshipKind": "adjacent_to",
+          "fromKind": "location",
+          "fromSubtype": "anomaly",
+          "maxCount": 1
+        }
+      ]
+    },
+    "creation": [
+      {
+        "entityRef": "$anomaly",
+        "kind": "location",
+        "subtype": "anomaly",
+        "status": "active",
+        "prominence": "marginal",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": "A geothermal vent releasing heat and strange energies from deep below the ice.",
+        "tags": {
+          "mystical": true,
+          "dangerous": true,
+          "geothermal": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$target",
+            "stickToRegion": true
+          },
+          "steps": [
+            "anchor_region",
+            "sparse",
+            "random"
+          ]
+        }
+      },
+      {
+        "entityRef": "$vent",
+        "kind": "location",
+        "subtype": "resource_node",
+        "status": "thriving",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": "Mineral-rich waters warmed by geothermal activity, attracting life and resources.",
+        "tags": {
+          "resource": true,
+          "mystical": true,
+          "guarded": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$anomaly",
+            "stickToRegion": true
+          },
+          "steps": [
+            "anchor_region",
+            "sparse",
+            "random"
+          ]
+        }
+      },
+      {
+        "entityRef": "$hermit",
+        "kind": "npc",
+        "subtype": "hero",
+        "status": "active",
+        "prominence": "marginal",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A solitary hermit who has made their home near the thermal vents of {colonyName}, guarding its secrets.",
+          "replacements": {
+            "colonyName": "$target.name"
+          }
+        },
+        "tags": {
+          "hermit": true,
+          "mystical": true,
+          "secretive": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$vent",
+            "stickToRegion": true
+          },
+          "steps": [
+            "anchor_region",
+            "sparse",
+            "random"
+          ]
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "adjacent_to",
+        "src": "$vent",
+        "dst": "$anomaly",
+        "strength": 0.9,
+        "bidirectional": true
+      },
+      {
+        "kind": "adjacent_to",
+        "src": "$vent",
+        "dst": "$target",
+        "strength": 0.7,
+        "bidirectional": true
+      },
+      {
+        "kind": "resident_of",
+        "src": "$hermit",
+        "dst": "$vent",
+        "strength": 0.9
+      },
+      {
+        "kind": "guardian_of",
+        "src": "$hermit",
+        "dst": "$anomaly",
+        "strength": 0.8
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "modify_pressure",
+        "pressureId": "resource_availibility",
+        "delta": 8
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "magical_stability",
+        "delta": -5
       }
     ],
     "variables": {},

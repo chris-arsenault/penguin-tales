@@ -48,14 +48,20 @@
           "coefficient": 3,
           "kind": "ability",
           "subtype": "magic"
+        },
+        {
+          "type": "entity_count",
+          "coefficient": 0.4,
+          "kind": "faction",
+          "subtype": "cult"
         }
       ],
       "negativeFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 0.6,
+          "coefficient": 0.4,
           "kind": "faction",
-          "subtype": "cult"
+          "subtype": "criminal"
         },
         {
           "type": "tag_count",
@@ -68,7 +74,7 @@
         }
       ]
     },
-    "description": "How stable the 'bergs native magic is. Positive values mean less wild magic is appearing, negative values mean anomalies happen frequently.  Penguins can harness the wild magic to stabilize it. Cults exploit it to their own devices"
+    "description": "How stable the 'bergs native magic is. Positive values mean less wild magic is appearing, negative values mean anomalies happen frequently. Cults harness wild magic to stabilize it for their purposes. Criminal syndicates destabilize through artifact smuggling and black market magic trade."
   },
   {
     "id": "security",

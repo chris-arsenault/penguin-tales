@@ -99,8 +99,11 @@ export function MutationCard({
       case 'adjust_prominence':
         return `${mutation.entity || '?'} ${formatDelta(mutation.delta)}`;
       case 'archive_relationship': {
-        const withLabel = mutation.with ? ` with ${mutation.with}` : '';
-        return `${mutation.entity || '?'} ${mutation.relationshipKind || '?'}${withLabel}`;
+        return `${mutation.entity || '?'} ${mutation.relationshipKind || '?'} with ${mutation.with || '?'}`;
+      }
+      case 'archive_all_relationships': {
+        const dirLabel = mutation.direction && mutation.direction !== 'both' ? ` (${mutation.direction})` : '';
+        return `${mutation.entity || '?'} all ${mutation.relationshipKind || '?'}${dirLabel}`;
       }
       case 'adjust_relationship_strength':
         return `${mutation.kind || '?'} ${mutation.src || '?'} -> ${mutation.dst || '?'} ${formatDelta(mutation.delta)}`;
@@ -392,10 +395,36 @@ export function MutationCard({
                   placeholder="Select relationship..."
                 />
                 <ReferenceDropdown
-                  label="With Entity (optional)"
+                  label="With Entity"
                   value={mutation.with || ''}
-                  onChange={(v) => update('with', v || undefined)}
-                  options={[{ value: '', label: 'Any entity' }, ...entityRefs]}
+                  onChange={(v) => update('with', v)}
+                  options={entityRefs}
+                  placeholder="Select entity..."
+                />
+                <ReferenceDropdown
+                  label="Direction"
+                  value={mutation.direction || 'both'}
+                  onChange={(v) => update('direction', v)}
+                  options={DIRECTION_OPTIONS}
+                />
+              </>
+            )}
+
+            {mutation.type === 'archive_all_relationships' && (
+              <>
+                <ReferenceDropdown
+                  label="Entity"
+                  value={mutation.entity || ''}
+                  onChange={(v) => update('entity', v)}
+                  options={entityRefs}
+                  placeholder="Select entity..."
+                />
+                <ReferenceDropdown
+                  label="Relationship Kind"
+                  value={mutation.relationshipKind || ''}
+                  onChange={(v) => update('relationshipKind', v)}
+                  options={relationshipKindOptions}
+                  placeholder="Select relationship..."
                 />
                 <ReferenceDropdown
                   label="Direction"

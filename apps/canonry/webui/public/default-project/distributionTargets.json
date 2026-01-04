@@ -29,7 +29,7 @@
         "comment": "Major settlements (2 initial + limited growth)"
       },
       "resource_node": {
-        "target": 12,
+        "target": 7,
         "comment": "Resource locations (krill blooms, hunting grounds)"
       },
       "point_of_interest": {
@@ -43,8 +43,8 @@
     },
     "faction": {
       "political": {
-        "target": 10,
-        "comment": "Major political factions (including splinters)"
+        "target": 4,
+        "comment": "Major political factions (from splinters)"
       },
       "company": {
         "target": 7,
@@ -55,7 +55,7 @@
         "comment": "Criminal syndicates"
       },
       "cult": {
-        "target": 8,
+        "target": 4,
         "comment": "Mystical factions"
       }
     },

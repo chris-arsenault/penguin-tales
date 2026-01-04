@@ -36,6 +36,7 @@ import type {
   StateUpdateRule,
   VariableDefinition,
   SubtypeSpec,
+  SubtypeCondition,
   CultureSpec,
   DescriptionSpec,
   PlacementSpec,
@@ -708,7 +709,34 @@ export class TemplateInterpreter {
       return pickRandom(spec.random);
     }
 
+    if ('conditional' in spec) {
+      const { when, otherwise } = spec.conditional;
+      for (const { condition, then: thenSubtype } of when) {
+        if (this.evaluateSubtypeCondition(condition, context)) {
+          return thenSubtype;
+        }
+      }
+      return otherwise;
+    }
+
     throw new Error(`Invalid subtype spec for kind "${entityKind}": ${JSON.stringify(spec)}.`);
+  }
+
+  private evaluateSubtypeCondition(condition: SubtypeCondition, context: ExecutionContext): boolean {
+    switch (condition.type) {
+      case 'target_subtype': {
+        const target = context.resolveEntity('$target');
+        return target?.subtype === condition.equals;
+      }
+      case 'pressure_check': {
+        const pressure = context.graphView.getPressure(condition.pressureId) || 0;
+        const minOk = condition.min === undefined || pressure >= condition.min;
+        const maxOk = condition.max === undefined || pressure <= condition.max;
+        return minOk && maxOk;
+      }
+      default:
+        throw new Error(`Unknown subtype condition type: ${JSON.stringify(condition)}`);
+    }
   }
 
   private resolveCulture(spec: CultureSpec, context: ExecutionContext): string {

@@ -255,7 +255,7 @@ export class WorldEngine {
     this.maxRunsPerTemplate = Math.ceil(20 * Math.pow(scale, 1.5));
     this.growthBounds = {
       min: 0,
-      max: Math.ceil(25 * scale)
+      max: Infinity  // No hard cap - let distribution targets drive growth
     };
 
     // Emit validating progress
@@ -1918,17 +1918,25 @@ export class WorldEngine {
 
     if (totalRemaining === 0) return 0;
 
-    // Calculate epochs remaining (rough estimate)
-    const epochsRemaining = Math.max(1, this.getTotalEpochs() - this.currentEpoch);
+    // Calculate epoch progress
+    const totalEpochs = this.getTotalEpochs();
+    const epochsRemaining = Math.max(1, totalEpochs - this.currentEpoch);
+    const epochProgress = this.currentEpoch / Math.max(1, totalEpochs - 1); // 0 at start, 1 at end
 
-    // Dynamic target: spread remaining entities over remaining epochs
+    // Apply front-loaded slope: early epochs get more growth, later epochs get less
+    // slopeMultiplier ranges from 1.3 (epoch 0) to 0.7 (final epoch)
+    const slope = 0.3;
+    const slopeMultiplier = 1 + slope - (epochProgress * slope * 2);
+
+    // Dynamic target: spread remaining entities over remaining epochs with slope
     const baseTarget = Math.ceil(totalRemaining / epochsRemaining);
+    const slopedTarget = Math.ceil(baseTarget * slopeMultiplier);
 
-    // Add some variance for organic feel (±30%)
-    const variance = 0.3;
-    const target = Math.floor(baseTarget * (1 - variance + Math.random() * variance * 2));
+    // Add some variance for organic feel (±20%)
+    const variance = 0.2;
+    const target = Math.floor(slopedTarget * (1 - variance + Math.random() * variance * 2));
 
-    // Cap at reasonable bounds (scaled by config.scaleFactor)
+    // Cap at reasonable bounds
     return Math.max(this.growthBounds.min, Math.min(this.growthBounds.max, target));
   }
 

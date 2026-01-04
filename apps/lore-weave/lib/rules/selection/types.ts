@@ -19,6 +19,8 @@ export interface SaturationLimit {
   direction?: 'in' | 'out' | Direction;
   /** Optional: only count relationships from/to this entity kind */
   fromKind?: string;
+  /** Optional: only count relationships from/to this entity subtype (requires fromKind) */
+  fromSubtype?: string;
   /** Maximum number of relationships allowed (target is selected only if count < maxCount) */
   maxCount: number;
 }

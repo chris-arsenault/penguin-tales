@@ -42,11 +42,8 @@ export const MUTATION_TYPE_META = {
   create_relationship: { label: 'Create Relationship', icon: '🔗', color: '#8b5cf6' },
   adjust_relationship_strength: { label: 'Adjust Relationship Strength', icon: '📈', color: '#7c3aed' },
   archive_relationship: { label: 'Archive Relationship', icon: '📦', color: '#64748b' },
-  transfer_relationship: { label: 'Transfer Relationship', icon: '↔️', color: '#0ea5e9' },
+  archive_all_relationships: { label: 'Archive All Relationships', icon: '📦', color: '#475569' },
   update_rate_limit: { label: 'Update Rate Limit', icon: '⏱️', color: '#06b6d4' },
-  // Compound actions
-  for_each_related: { label: 'For Each Related', icon: '🔁', color: '#a855f7' },
-  conditional: { label: 'Conditional', icon: '❓', color: '#f97316' },
 };
 
 export const MUTATION_TYPE_ORDER = [
@@ -55,13 +52,11 @@ export const MUTATION_TYPE_ORDER = [
   'create_relationship',
   'adjust_relationship_strength',
   'archive_relationship',
-  'transfer_relationship',
+  'archive_all_relationships',
   'change_status',
   'adjust_prominence',
   'modify_pressure',
   'update_rate_limit',
-  'for_each_related',
-  'conditional',
 ];
 
 export const MUTATION_TYPE_OPTIONS = MUTATION_TYPE_ORDER.map((key) => ({

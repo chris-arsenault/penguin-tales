@@ -410,6 +410,10 @@
           "$ref": "#/$defs/NonEmptyString",
           "description": "Optional: only count relationships from/to this entity kind"
         },
+        "fromSubtype": {
+          "$ref": "#/$defs/NonEmptyString",
+          "description": "Optional: only count relationships from/to this entity subtype (requires fromKind)"
+        },
         "maxCount": {
           "type": "integer",
           "minimum": 0,
@@ -656,6 +660,59 @@
           "additionalProperties": false,
           "properties": {
             "random": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["conditional"],
+          "additionalProperties": false,
+          "properties": {
+            "conditional": {
+              "type": "object",
+              "required": ["when", "otherwise"],
+              "additionalProperties": false,
+              "properties": {
+                "when": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["condition", "then"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "condition": { "$ref": "#/$defs/SubtypeCondition" },
+                      "then": { "$ref": "#/$defs/NonEmptyString" }
+                    }
+                  },
+                  "minItems": 1
+                },
+                "otherwise": { "$ref": "#/$defs/NonEmptyString" }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "SubtypeCondition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "equals"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "target_subtype" },
+            "equals": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "pressureId"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "pressure_check" },
+            "pressureId": { "$ref": "#/$defs/NonEmptyString" },
+            "min": { "type": "number" },
+            "max": { "type": "number" }
           }
         }
       ]

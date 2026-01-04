@@ -12,6 +12,15 @@ import JSZip from 'jszip';
 
 const DEBUG_MODAL_PREFIX = 'loreweave:debugModal:';
 
+// Infrastructure systems excluded from validity checking
+// These are framework systems that don't represent domain-specific behavior
+const INFRASTRUCTURE_SYSTEMS = new Set([
+  'era_spawner',           // Only fires at tick 0
+  'era_transition',        // Always fires on era changes
+  'universal_catalyst',    // Always fires (action selection infrastructure)
+  'relationship_maintenance', // Cleanup system
+]);
+
 function loadStoredBoolean(key) {
   if (!key || typeof localStorage === 'undefined') return false;
   try {
@@ -33,6 +42,43 @@ function saveStoredBoolean(key, value) {
   } catch {
     // Best-effort only.
   }
+}
+
+/**
+ * Extract unused systems from simulation result by scanning narrativeHistory.
+ * System events have IDs like "sys-{systemId}-{tick}" or "sys-{systemId}:{entityId}-{tick}".
+ */
+function getUnusedSystems(narrativeHistory, systems) {
+  // Get all system IDs that fired (from narrative events)
+  const systemsUsed = new Set(
+    (narrativeHistory || [])
+      .filter(e => e.id?.startsWith('sys-'))
+      .map(e => {
+        // Extract system ID from "sys-{systemId}-{tick}" or "sys-{systemId}:{entityId}-{tick}"
+        // Remove "sys-" prefix
+        const withoutPrefix = e.id.slice(4);
+        // Remove "-{tick}" suffix (last hyphen and everything after)
+        const lastHyphen = withoutPrefix.lastIndexOf('-');
+        if (lastHyphen === -1) return null;
+        const withoutTick = withoutPrefix.slice(0, lastHyphen);
+        // If there's a colon, take only the system ID (before colon)
+        const colonIndex = withoutTick.indexOf(':');
+        if (colonIndex !== -1) {
+          return withoutTick.slice(0, colonIndex);
+        }
+        return withoutTick;
+      })
+      .filter(Boolean)
+  );
+
+  // Get all enabled system IDs (excluding infrastructure)
+  const allSystemIds = (systems || [])
+    .filter(s => s.enabled !== false)
+    .map(s => s.config?.id || s.systemType)
+    .filter(id => id && !INFRASTRUCTURE_SYSTEMS.has(id));
+
+  // Return systems that never fired
+  return allSystemIds.filter(id => !systemsUsed.has(id));
 }
 
 export default function SimulationRunner({
@@ -131,14 +177,18 @@ export default function SimulationRunner({
     }
   }, [simState.status, simState.result, onComplete]);
 
-  // Validity tracking: all templates run, all actions succeeded, reached final era
+  // Validity tracking: all templates run, all actions succeeded, all systems fired, reached final era
   const runValidity = useMemo(() => {
     if (simState.status !== 'complete') {
-      return { isValid: false, allTemplatesRun: false, allActionsSucceeded: false, reachedFinalEra: false };
+      return { isValid: false, allTemplatesRun: false, allActionsSucceeded: false, allSystemsFired: false, reachedFinalEra: false, unusedSystems: [] };
     }
 
     const allTemplatesRun = simState.templateUsage?.unusedTemplates?.length === 0;
     const allActionsSucceeded = simState.catalystStats?.unusedActions?.length === 0;
+
+    // Check systems fired (derived from narrativeHistory)
+    const unusedSystems = getUnusedSystems(simState.result?.narrativeHistory, systems);
+    const allSystemsFired = unusedSystems.length === 0;
 
     // Check if we reached the final era
     // The final era is the last one in the eras array
@@ -147,12 +197,14 @@ export default function SimulationRunner({
     const reachedFinalEra = finalEraId && currentEraId === finalEraId;
 
     return {
-      isValid: allTemplatesRun && allActionsSucceeded && reachedFinalEra,
+      isValid: allTemplatesRun && allActionsSucceeded && allSystemsFired && reachedFinalEra,
       allTemplatesRun,
       allActionsSucceeded,
+      allSystemsFired,
+      unusedSystems,
       reachedFinalEra
     };
-  }, [simState.status, simState.templateUsage, simState.catalystStats, simState.currentEpoch, eras]);
+  }, [simState.status, simState.templateUsage, simState.catalystStats, simState.result, simState.currentEpoch, eras, systems]);
 
   // Run Until Valid state
   const [validityAttempts, setValidityAttempts] = useState(0);
@@ -243,6 +295,7 @@ export default function SimulationRunner({
       reachedFinalEra: runValidity.reachedFinalEra,
       unusedTemplates: simState.templateUsage?.unusedTemplates?.map(t => t.templateId) || [],
       unusedActions: simState.catalystStats?.unusedActions?.map(a => a.actionId) || [],
+      unusedSystems: runValidity.unusedSystems || [],
       entityCount: simState.result?.hardState?.length || 0,
       relationshipCount: simState.result?.relationships?.length || 0,
       // Store in canonry-slot format for script compatibility
@@ -303,6 +356,8 @@ export default function SimulationRunner({
         unusedTemplates: run.unusedTemplates,
         unusedActionCount: run.unusedActions.length,
         unusedActions: run.unusedActions,
+        unusedSystemCount: run.unusedSystems.length,
+        unusedSystems: run.unusedSystems,
         entityCount: run.entityCount,
         relationshipCount: run.relationshipCount,
       })),
@@ -310,7 +365,8 @@ export default function SimulationRunner({
         eraFailures: validityRunData.filter(r => !r.reachedFinalEra).length,
         templateFailures: validityRunData.filter(r => r.unusedTemplates.length > 0).length,
         actionFailures: validityRunData.filter(r => r.unusedActions.length > 0).length,
-        // Aggregate which templates/actions failed most often
+        systemFailures: validityRunData.filter(r => r.unusedSystems.length > 0).length,
+        // Aggregate which templates/actions/systems failed most often
         templateFailureCounts: validityRunData.reduce((acc, run) => {
           run.unusedTemplates.forEach(t => {
             acc[t] = (acc[t] || 0) + 1;
@@ -320,6 +376,12 @@ export default function SimulationRunner({
         actionFailureCounts: validityRunData.reduce((acc, run) => {
           run.unusedActions.forEach(a => {
             acc[a] = (acc[a] || 0) + 1;
+          });
+          return acc;
+        }, {}),
+        systemFailureCounts: validityRunData.reduce((acc, run) => {
+          run.unusedSystems.forEach(s => {
+            acc[s] = (acc[s] || 0) + 1;
           });
           return acc;
         }, {}),

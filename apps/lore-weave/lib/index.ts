@@ -326,6 +326,7 @@ export type {
   PathConstraint,
   GraphPathSelectionFilter,
   SubtypeSpec,
+  SubtypeCondition,
   CultureSpec,
   PlacementSpec,
   PlacementStep,
