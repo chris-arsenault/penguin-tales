@@ -97,7 +97,6 @@ export type {
   WorldMetadata,
   WorldEntity,
   WorldRelationship,
-  HistoryEvent,
   NarrativeEvent,
   NarrativeEventKind,
   NarrativeEntityRef,

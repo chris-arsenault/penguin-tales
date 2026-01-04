@@ -53,7 +53,6 @@ const mockWorldData = {
     tick: 120,
     epoch: 6,
     era: 'Age of Frost',
-    historyEventCount: 0,
     entityCount: 4,
     relationshipCount: 0,
   },
@@ -65,7 +64,6 @@ const mockWorldData = {
   ],
   relationships: [],
   pressures: {},
-  history: [],
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(

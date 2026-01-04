@@ -69,18 +69,8 @@ export default function TimelineControl({ worldData, loreData, currentTick, onTi
     return () => clearInterval(interval);
   }, [isPlaying, playSpeed, maxTick, currentTick, onTickChange]);
 
-  // Get events for current tick, sorted with simulation events first
-  const currentEvents = worldData.history
-    .filter(e => e.tick === currentTick)
-    .sort((a, b) => {
-      // Simulation events first, then growth, then special
-      const order = { simulation: 0, growth: 1, special: 2 };
-      return order[a.type] - order[b.type];
-    });
-
-  // Get current era
-  const currentEvent = worldData.history.find(e => e.tick <= currentTick);
-  const currentEra = currentEvent?.era || 'unknown';
+  const currentEvents: Array<{ type: string; description: string }> = [];
+  const currentEra = worldData.metadata.era || 'unknown';
 
   // Count entities and relationships at current tick
   const entitiesAtTick = worldData.hardState.filter(e => e.createdAt <= currentTick).length;

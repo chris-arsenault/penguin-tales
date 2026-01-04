@@ -29,7 +29,6 @@ import type {
   StatusRatioMetric,
   CrossCultureRatioMetric,
   SharedRelationshipMetric,
-  CatalyzedEventsMetric,
   ProminenceMultiplierMetric,
   NeighborProminenceMetric,
   NeighborKindCountMetric,
@@ -105,8 +104,6 @@ export function describeMetric(metric: Metric): string {
       return `cross-culture ${metric.relationshipKinds.join('/')} ratio`;
     case 'shared_relationship':
       return `shared ${metric.sharedRelationshipKind} relationships`;
-    case 'catalyzed_events':
-      return 'catalyzed events';
     case 'prominence_multiplier':
       return `prominence multiplier (${metric.mode ?? 'success_chance'})`;
     case 'neighbor_prominence':
@@ -223,9 +220,6 @@ export function evaluateMetric(
 
     case 'shared_relationship':
       return evaluateSharedRelationship(metric, ctx, entity);
-
-    case 'catalyzed_events':
-      return evaluateCatalyzedEvents(metric, entity);
 
     // =========================================================================
     // PROMINENCE METRICS
@@ -645,12 +639,18 @@ function evaluateSharedRelationship(
     ? metric.sharedRelationshipKind
     : [metric.sharedRelationshipKind];
 
-  // Find entities that share a target via the specified relationship(s)
   const direction = metric.sharedDirection ?? 'src';
   const minStrength = metric.minStrength ?? 0;
+  const rels = ctx.graph.getAllRelationships();
+
+  // If via is specified, use multi-hop traversal
+  if (metric.via) {
+    return evaluateSharedRelationshipVia(entity, metric, kinds, direction, minStrength, rels, ctx);
+  }
+
+  // Standard single-hop: Entity → sharedRelationshipKind → Target ← sharedRelationshipKind ← OtherEntity
   const myTargets = new Set<string>();
 
-  const rels = ctx.graph.getAllRelationships();
   for (const link of rels) {
     if (!kinds.includes(link.kind)) continue;
     if ((link.strength ?? 0) < minStrength) continue;
@@ -705,28 +705,147 @@ function evaluateSharedRelationship(
   };
 }
 
-function evaluateCatalyzedEvents(
-  metric: CatalyzedEventsMetric,
-  entity?: HardState
+/**
+ * Multi-hop shared relationship evaluation.
+ * Pattern: Entity → via → Intermediate → sharedRelKind → Target ← sharedRelKind ← OtherIntermediate ← via ← OtherEntity
+ *
+ * Example: Trade alliance detection
+ * Faction A → controls → Location X → trades_with → Location Y ← controls ← Faction B
+ */
+function evaluateSharedRelationshipVia(
+  entity: HardState,
+  metric: SharedRelationshipMetric,
+  sharedKinds: string[],
+  sharedDirection: 'src' | 'dst',
+  minStrength: number,
+  rels: readonly Relationship[],
+  ctx: MetricContext
 ): MetricResult {
-  if (!entity) {
-    return { value: 0, diagnostic: 'no entity for catalyzed events', details: {} };
+  const via = metric.via!;
+  const viaKind = via.relationshipKind;
+  const viaDirection = via.direction ?? 'src';
+
+  // Build indexes for efficient lookup
+  // viaIndex: entity → Set of intermediates reachable via the 'via' relationship
+  const viaIndex = new Map<string, Set<string>>();
+  // reverseViaIndex: intermediate → Set of entities that reach it via 'via'
+  const reverseViaIndex = new Map<string, Set<string>>();
+
+  for (const link of rels) {
+    if (link.kind !== viaKind) continue;
+
+    const sourceId = viaDirection === 'src' ? link.src : link.dst;
+    const intermediateId = viaDirection === 'src' ? link.dst : link.src;
+
+    // Apply intermediate kind filter if specified
+    if (via.intermediateKind) {
+      const intermediate = ctx.graph.getEntity(intermediateId);
+      if (!intermediate || intermediate.kind !== via.intermediateKind) continue;
+    }
+
+    if (!viaIndex.has(sourceId)) viaIndex.set(sourceId, new Set());
+    viaIndex.get(sourceId)!.add(intermediateId);
+
+    if (!reverseViaIndex.has(intermediateId)) reverseViaIndex.set(intermediateId, new Set());
+    reverseViaIndex.get(intermediateId)!.add(sourceId);
   }
 
-  // Access catalyst data if available
-  const catalyst = (entity as { catalyst?: { catalyzedEvents?: number | unknown[] } }).catalyst;
-  const raw = catalyst?.catalyzedEvents;
-  const count = Array.isArray(raw) ? raw.length : (typeof raw === 'number' ? raw : 0);
+  // Find my intermediates
+  const myIntermediates = viaIndex.get(entity.id) ?? new Set<string>();
+  if (myIntermediates.size === 0) {
+    return {
+      value: 0,
+      diagnostic: `shared via ${viaKind}→${sharedKinds.join('/')}: no intermediates`,
+      details: { via: viaKind, sharedRelationshipKind: sharedKinds, intermediateCount: 0 },
+    };
+  }
 
-  let value = count * (metric.coefficient ?? 1);
+  // Build shared relationship index: intermediate → Set of targets
+  const sharedIndex = new Map<string, Set<string>>();
+  // reverseSharedIndex: target → Set of intermediates
+  const reverseSharedIndex = new Map<string, Set<string>>();
+
+  for (const link of rels) {
+    if (!sharedKinds.includes(link.kind)) continue;
+    if ((link.strength ?? 0) < minStrength) continue;
+
+    const intermediateId = sharedDirection === 'src' ? link.src : link.dst;
+    const targetId = sharedDirection === 'src' ? link.dst : link.src;
+
+    if (!sharedIndex.has(intermediateId)) sharedIndex.set(intermediateId, new Set());
+    sharedIndex.get(intermediateId)!.add(targetId);
+
+    if (!reverseSharedIndex.has(targetId)) reverseSharedIndex.set(targetId, new Set());
+    reverseSharedIndex.get(targetId)!.add(intermediateId);
+  }
+
+  // Find targets reachable from my intermediates
+  const myTargets = new Set<string>();
+  for (const intermediateId of myIntermediates) {
+    const targets = sharedIndex.get(intermediateId);
+    if (targets) {
+      for (const targetId of targets) {
+        myTargets.add(targetId);
+      }
+    }
+  }
+
+  if (myTargets.size === 0) {
+    return {
+      value: 0,
+      diagnostic: `shared via ${viaKind}→${sharedKinds.join('/')}: no targets`,
+      details: {
+        via: viaKind,
+        sharedRelationshipKind: sharedKinds,
+        intermediateCount: myIntermediates.size,
+        targetCount: 0,
+      },
+    };
+  }
+
+  // Find other entities whose intermediates also connect to my targets
+  const sharedEntities = new Set<string>();
+  for (const targetId of myTargets) {
+    const otherIntermediates = reverseSharedIndex.get(targetId);
+    if (!otherIntermediates) continue;
+
+    for (const otherIntermediateId of otherIntermediates) {
+      // Skip my own intermediates
+      if (myIntermediates.has(otherIntermediateId)) continue;
+
+      // Find entities that own these intermediates
+      const owners = reverseViaIndex.get(otherIntermediateId);
+      if (owners) {
+        for (const ownerId of owners) {
+          if (ownerId !== entity.id) {
+            sharedEntities.add(ownerId);
+          }
+        }
+      }
+    }
+  }
+
+  let value = sharedEntities.size * (metric.coefficient ?? 1);
   if (metric.cap !== undefined) {
     value = Math.min(value, metric.cap);
   }
 
   return {
     value,
-    diagnostic: `catalyzed events=${count}`,
-    details: { entityId: entity.id, count, coefficient: metric.coefficient, cap: metric.cap },
+    diagnostic: `shared via ${viaKind}→${sharedKinds.join('/')}=${sharedEntities.size}`,
+    details: {
+      via: viaKind,
+      viaDirection,
+      intermediateKind: via.intermediateKind,
+      sharedRelationshipKind: sharedKinds,
+      sharedDirection,
+      intermediateCount: myIntermediates.size,
+      targetCount: myTargets.size,
+      sharedCount: sharedEntities.size,
+      minStrength,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
+    },
   };
 }
 

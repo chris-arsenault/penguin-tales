@@ -146,7 +146,7 @@
         "delta": -15
       }
     ],
-    "enabled": true,
+    "enabled": false,
     "id": "alliance_betrayal",
     "name": "Alliance Betrayal"
   },
@@ -4724,11 +4724,11 @@
       },
       {
         "strength": 0.6,
+        "bidirectional": true,
         "condition": {
           "type": "random_chance",
           "chance": 0.5
         },
-        "bidirectional": true,
         "kind": "enemy_of",
         "src": "$orca1",
         "dst": "$colonyFaction"
@@ -5853,10 +5853,26 @@
         "direction": "dst"
       },
       {
-        "type": "archive_relationship",
+        "type": "set_tag",
         "entity": "$faction1",
-        "relationshipKind": "at_war_with",
-        "with": "$faction2"
+        "tag": "post_war_cooldown",
+        "value": true
+      },
+      {
+        "type": "set_tag",
+        "entity": "$faction2",
+        "tag": "post_war_cooldown",
+        "value": true
+      },
+      {
+        "type": "remove_tag",
+        "entity": "$faction1",
+        "tag": "conflict"
+      },
+      {
+        "type": "remove_tag",
+        "entity": "$faction2",
+        "tag": "conflict"
       },
       {
         "type": "modify_pressure",
@@ -6033,9 +6049,15 @@
       "pickStrategy": "random",
       "filters": [
         {
-          "type": "has_relationship",
-          "kind": "at_war_with",
-          "direction": "both"
+          "type": "component_size",
+          "relationshipKinds": [
+            "enemy_of"
+          ],
+          "min": 3
+        },
+        {
+          "type": "lacks_tag",
+          "tag": "post_war_cooldown"
         }
       ],
       "saturationLimits": [
@@ -6052,7 +6074,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationshipKind": "at_war_with",
+            "relationshipKind": "enemy_of",
             "direction": "both"
           },
           "kind": "faction",
@@ -6063,7 +6085,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationshipKind": "at_war_with",
+            "relationshipKind": "enemy_of",
             "direction": "both"
           },
           "kind": "faction",
@@ -6078,31 +6100,11 @@
           ]
         }
       },
-      "$ally1": {
-        "select": {
-          "from": {
-            "relatedTo": "$target",
-            "relationshipKind": "allied_with",
-            "direction": "both"
-          },
-          "kind": "faction",
-          "pickStrategy": "random",
-          "filters": [
-            {
-              "type": "exclude",
-              "entities": [
-                "$enemy",
-                "$enemy2"
-              ]
-            }
-          ]
-        }
-      },
-      "$ally2": {
+      "$enemy3": {
         "select": {
           "from": {
             "relatedTo": "$enemy",
-            "relationshipKind": "allied_with",
+            "relationshipKind": "enemy_of",
             "direction": "both"
           },
           "kind": "faction",
@@ -6113,8 +6115,7 @@
               "entities": [
                 "$target",
                 "$enemy",
-                "$enemy2",
-                "$ally1"
+                "$enemy2"
               ]
             }
           ]
@@ -6218,18 +6219,6 @@
       },
       {
         "strength": 0.9,
-        "kind": "catalyst_of",
-        "src": "$warWeapon",
-        "dst": "$war"
-      },
-      {
-        "strength": 0.7,
-        "kind": "owned_by",
-        "src": "$warWeapon",
-        "dst": "$target"
-      },
-      {
-        "strength": 0.9,
         "condition": {
           "type": "entity_exists",
           "entity": "$enemy"
@@ -6249,24 +6238,26 @@
         "dst": "$war"
       },
       {
-        "strength": 0.85,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$ally1"
-        },
-        "kind": "participant_in",
-        "src": "$ally1",
-        "dst": "$war"
-      },
-      {
         "strength": 0.8,
         "condition": {
           "type": "entity_exists",
-          "entity": "$ally2"
+          "entity": "$enemy3"
         },
         "kind": "participant_in",
-        "src": "$ally2",
+        "src": "$enemy3",
         "dst": "$war"
+      },
+      {
+        "strength": 0.9,
+        "kind": "catalyst_of",
+        "src": "$warWeapon",
+        "dst": "$war"
+      },
+      {
+        "strength": 0.7,
+        "kind": "owned_by",
+        "src": "$warWeapon",
+        "dst": "$target"
       },
       {
         "strength": 0.7,
@@ -6293,90 +6284,6 @@
         "kind": "triggered_by",
         "src": "$war",
         "dst": "$target"
-      },
-      {
-        "strength": 0.8,
-        "bidirectional": true,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$enemy"
-        },
-        "kind": "at_war_with",
-        "src": "$target",
-        "dst": "$enemy"
-      },
-      {
-        "strength": 0.7,
-        "bidirectional": true,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$enemy2"
-        },
-        "kind": "at_war_with",
-        "src": "$target",
-        "dst": "$enemy2"
-      },
-      {
-        "strength": 0.7,
-        "bidirectional": true,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$ally1"
-        },
-        "kind": "at_war_with",
-        "src": "$ally1",
-        "dst": "$enemy"
-      },
-      {
-        "strength": 0.6,
-        "bidirectional": true,
-        "condition": {
-          "type": "and",
-          "conditions": [
-            {
-              "type": "entity_exists",
-              "entity": "$ally1"
-            },
-            {
-              "type": "entity_exists",
-              "entity": "$enemy2"
-            }
-          ]
-        },
-        "kind": "at_war_with",
-        "src": "$ally1",
-        "dst": "$enemy2"
-      },
-      {
-        "strength": 0.7,
-        "bidirectional": true,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$ally2"
-        },
-        "kind": "at_war_with",
-        "src": "$ally2",
-        "dst": "$target"
-      },
-      {
-        "strength": 0.6,
-        "bidirectional": true,
-        "condition": {
-          "type": "and",
-          "conditions": [
-            {
-              "type": "entity_exists",
-              "entity": "$ally2"
-            },
-            {
-              "type": "entity_exists",
-              "entity": "$ally1"
-            }
-          ]
-        },
-        "kind": "at_war_with",
-        "src": "$ally2",
-        "dst": "$ally1"
       }
     ],
     "stateUpdates": [
@@ -6388,9 +6295,51 @@
       },
       {
         "type": "set_tag",
+        "entity": "$enemy",
+        "tag": "conflict",
+        "value": true
+      },
+      {
+        "type": "set_tag",
+        "entity": "$enemy2",
+        "tag": "conflict",
+        "value": true
+      },
+      {
+        "type": "set_tag",
+        "entity": "$enemy3",
+        "tag": "conflict",
+        "value": true
+      },
+      {
+        "type": "set_tag",
         "entity": "$warzone",
         "tag": "contested",
         "value": true
+      },
+      {
+        "type": "archive_relationship",
+        "entity": "$target",
+        "relationshipKind": "enemy_of",
+        "with": "$enemy"
+      },
+      {
+        "type": "archive_relationship",
+        "entity": "$target",
+        "relationshipKind": "enemy_of",
+        "with": "$enemy2"
+      },
+      {
+        "type": "archive_relationship",
+        "entity": "$enemy",
+        "relationshipKind": "enemy_of",
+        "with": "$enemy2"
+      },
+      {
+        "type": "archive_relationship",
+        "entity": "$enemy",
+        "relationshipKind": "enemy_of",
+        "with": "$enemy3"
       },
       {
         "type": "modify_pressure",

@@ -172,7 +172,6 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
     catalystStats,
     relationshipBreakdown,
     notableEntities,
-    sampleHistory,
     result,
     logs
   } = simState;
@@ -193,7 +192,7 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
 
   // Show final diagnostics when simulation is complete or we have diagnostic data
   const showFinalDiagnostics = status === 'complete' ||
-    entityBreakdown || catalystStats || relationshipBreakdown || notableEntities || sampleHistory;
+    entityBreakdown || catalystStats || relationshipBreakdown || notableEntities;
 
   return (
     <div className="lw-dashboard">
@@ -231,7 +230,6 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
           catalystStats={catalystStats}
           relationshipBreakdown={relationshipBreakdown}
           notableEntities={notableEntities}
-          sampleHistory={sampleHistory}
         />
       )}
 

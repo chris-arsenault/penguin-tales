@@ -10,12 +10,11 @@ export default function FinalDiagnostics({
   entityBreakdown,
   catalystStats,
   relationshipBreakdown,
-  notableEntities,
-  sampleHistory
+  notableEntities
 }) {
   const [activeTab, setActiveTab] = useState('entities');
 
-  const hasDiagnostics = entityBreakdown || catalystStats || relationshipBreakdown || notableEntities || sampleHistory;
+  const hasDiagnostics = entityBreakdown || catalystStats || relationshipBreakdown || notableEntities;
 
   if (!hasDiagnostics) {
     return null;
@@ -32,7 +31,7 @@ export default function FinalDiagnostics({
 
       {/* Tab navigation */}
       <div className="lw-filter-tabs">
-        {['entities', 'relationships', 'agents', 'notable', 'history'].map(tab => (
+        {['entities', 'relationships', 'agents', 'notable'].map(tab => (
           <button
             key={tab}
             className={`lw-filter-tab ${activeTab === tab ? 'active' : ''}`}
@@ -55,9 +54,6 @@ export default function FinalDiagnostics({
         )}
         {activeTab === 'notable' && notableEntities && (
           <NotableEntitiesTab notableEntities={notableEntities} />
-        )}
-        {activeTab === 'history' && sampleHistory && (
-          <HistoryTab sampleHistory={sampleHistory} />
         )}
       </div>
     </div>
@@ -243,38 +239,6 @@ function NotableEntitiesTab({ notableEntities }) {
           <span>No notable entities yet</span>
         </div>
       )}
-    </div>
-  );
-}
-
-function HistoryTab({ sampleHistory }) {
-  return (
-    <div>
-      <div style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--lw-text-secondary)' }}>
-        Total: {sampleHistory.totalEvents} events (showing last {sampleHistory.recentEvents.length})
-      </div>
-      <div className="lw-flex-col lw-gap-sm">
-        {sampleHistory.recentEvents.slice().reverse().map((event, i) => (
-          <div key={i} className="lw-metric-card" style={{ padding: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ fontSize: '11px', color: ACCENT_COLOR }}>
-                Tick {event.tick}
-              </span>
-              <span className="lw-badge" style={{ backgroundColor: 'var(--lw-bg-tertiary)', color: 'var(--lw-text-muted)' }}>
-                {event.type}
-              </span>
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--lw-text-primary)' }}>
-              {event.summary}
-            </div>
-            {event.entityIds.length > 0 && (
-              <div style={{ fontSize: '10px', color: 'var(--lw-text-muted)', marginTop: '4px' }}>
-                {event.entityIds.length} entit{event.entityIds.length === 1 ? 'y' : 'ies'}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

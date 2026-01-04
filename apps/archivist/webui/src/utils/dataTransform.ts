@@ -257,14 +257,10 @@ export function applyTemporalFilter(worldState: WorldState, maxTick: number): Wo
            dstEntity.createdAt <= maxTick;
   });
 
-  // Filter history to only include events up to maxTick
-  const filteredHistory = worldState.history.filter(event => event.tick <= maxTick);
-
   return {
     ...worldState,
     hardState: filteredEntities,
     relationships: filteredRelationships,
-    history: filteredHistory,
     metadata: {
       ...worldState.metadata,
       tick: maxTick,

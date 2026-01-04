@@ -31,7 +31,6 @@ export type Metric =
 
   // Evolution metrics
   | SharedRelationshipMetric
-  | CatalyzedEventsMetric
 
   // Prominence metrics
   | ProminenceMultiplierMetric
@@ -175,30 +174,39 @@ export interface CrossCultureRatioMetric {
  *
  * Supports multiple relationship kinds - entities matching ANY of the kinds
  * will be counted (OR semantics).
+ *
+ * Optional `via` enables multi-hop traversal:
+ * - Without via: Entity → sharedRelationshipKind → Target ← sharedRelationshipKind ← OtherEntity
+ * - With via: Entity → via → Intermediate → sharedRelationshipKind → Target ← sharedRelationshipKind ← Intermediate ← via ← OtherEntity
+ *
+ * Example: Trade alliance detection
+ * ```
+ * Faction A → controls → Location X → trades_with → Location Y ← controls ← Faction B
+ * ```
+ * Config: { via: { relationshipKind: 'controls', direction: 'src' }, sharedRelationshipKind: 'trades_with' }
  */
 export interface SharedRelationshipMetric {
   type: 'shared_relationship';
   /** Relationship kind(s) to check - single string or array */
   sharedRelationshipKind: string | string[];
   sharedDirection?: 'src' | 'dst';
+  /**
+   * Optional intermediate relationship to traverse first.
+   * Enables multi-hop detection: Entity → via → Intermediate → sharedRelationshipKind → Target
+   */
+  via?: {
+    /** Relationship kind to traverse to reach intermediate entities */
+    relationshipKind: string;
+    /** Direction of the via relationship from the source entity (default: 'src') */
+    direction?: 'src' | 'dst';
+    /** Optional kind filter for intermediate entities */
+    intermediateKind?: string;
+  };
   /** Minimum relationship strength to count */
   minStrength?: number;
   coefficient?: number;
   cap?: number;
 }
-
-/**
- * Number of catalyst events for an entity.
- */
-export interface CatalyzedEventsMetric {
-  type: 'catalyzed_events';
-  coefficient?: number;
-  cap?: number;
-}
-
-// =============================================================================
-// PROMINENCE METRICS
-// =============================================================================
 
 /**
  * Prominence multiplier.

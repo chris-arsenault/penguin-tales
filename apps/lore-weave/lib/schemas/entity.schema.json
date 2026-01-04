@@ -52,8 +52,7 @@
     "catalyst": {
       "type": "object",
       "properties": {
-        "canAct": { "type": "boolean" },
-        "catalyzedEvents": { "type": "array" }
+        "canAct": { "type": "boolean" }
       }
     },
     "regionId": { "type": ["string", "null"] },

@@ -72,12 +72,6 @@ export interface WorldEntity {
   temporal?: { startTick: number; endTick: number | null };
   catalyst?: {
     canAct: boolean;
-    catalyzedEvents: Array<{
-      relationshipId?: string;
-      entityId?: string;
-      action: string;
-      tick: number;
-    }>;
   };
   regionId?: string | null;
   allRegionIds?: string[];
@@ -115,19 +109,6 @@ export interface WorldRelationship {
    * Persistent on relationships for debugging and causal queries.
    */
   createdBy?: ExecutionContext;
-}
-
-/**
- * World history event
- */
-export interface HistoryEvent {
-  tick: number;
-  era: string;
-  type: 'growth' | 'simulation' | 'special';
-  description: string;
-  entitiesCreated: string[];
-  relationshipsCreated: WorldRelationship[];
-  entitiesModified: string[];
 }
 
 /**
@@ -328,7 +309,6 @@ export interface WorldMetadata {
   tick: number;
   epoch: number;
   era: string;
-  historyEventCount: number;
   durationMs?: number;
   isComplete?: boolean;
   entityCount?: number;
@@ -354,7 +334,6 @@ export interface WorldOutput {
   hardState: WorldEntity[];
   relationships: WorldRelationship[];
   pressures: Record<string, number>;
-  history: HistoryEvent[];
   /** Narrative events for story generation (optional, enabled via config) */
   narrativeHistory?: NarrativeEvent[];
   coordinateState?: CoordinateState;

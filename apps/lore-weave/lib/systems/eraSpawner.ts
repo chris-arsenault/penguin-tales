@@ -146,17 +146,6 @@ export function createEraSpawnerSystem(config: EraSpawnerConfig): SimulationSyst
       // Apply entry effects for the first era
       const pressureChanges = applyEntryEffects(graphView, firstEraConfig);
 
-      // Create history event
-      graphView.addHistoryEvent({
-        tick: graphView.tick,
-        era: firstEraConfig.id,
-        type: 'special',
-        description: `${firstEraConfig.name} begins`,
-        entitiesCreated: [firstEra.id],
-        relationshipsCreated: [],
-        entitiesModified: []
-      });
-
       graphView.log('info', `[EraSpawner] Started first era: ${firstEraConfig.name}`);
 
       return {

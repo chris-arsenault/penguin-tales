@@ -234,7 +234,21 @@ The reward creates new needs, or enables others' needs. The merchant who gains w
 
 **Need:** Factions compete for territory, resources, or ideology.
 
-**Progression:** `war_declaration` creates new conflicts between unaligned factions. `war_outbreak` escalates existing hostilities into larger multi-faction wars by drawing in allies (2-5 participants). `alliance_betrayal` creates smaller wars when allies turn on each other. `sue_for_peace` and `claim_victory` resolve them.
+**Enmity Formation (3 paths):**
+- `raid` action - Raiding another faction creates `enemy_of` relationships
+- `enmity_from_ideology` system - Factions practicing opposing ideologies develop enmity
+- `alliance_dissolution` - When alliances break (via oath-breaking), former allies become enemies
+
+**War Escalation:** When an `enemy_of` relationship cluster reaches 3+ factions, `war_outbreak` triggers automatically. The template creates a war occurrence and gives all factions in the cluster `participant_in` relationships to that war. The `enemy_of` relationships are archived (consumed by the war).
+
+**War Detection:** Factions are "at war" if they share a `participant_in` relationship to the same active war occurrence. This transitive check replaces direct war relationships.
+
+**Resolution (3 paths):**
+- `sue_for_peace` - War-weary faction negotiates withdrawal, archiving their `participant_in`
+- `claim_victory` - Dominant faction forces opponent's surrender, archiving their `participant_in`
+- `war_apocalypse_resolution` - Catastrophic end where an entity becomes the sole survivor
+
+All resolutions add `post_war_cooldown` tag to prevent immediate re-escalation. `post_war_recovery` removes cooldown and conflict tags after factions exit war.
 
 **Reward:** Winners gain territory/influence. Losers lose prominence. Relationships shift (former enemies become rivals, allies become suspicious).
 
@@ -244,19 +258,26 @@ The reward creates new needs, or enables others' needs. The merchant who gains w
 
 **Need:** Factions seek allies for mutual defense and cultural affinity. The world needs balanced power blocs, not hegemony.
 
-**Formation:** `alliance_formation` (connectionEvolution) - Factions that share `practitioner_of` relationships (practicing the same mystical abilities) may form alliances. Shared traditions create common ground. Alliance formation is capped by `pairComponentSizeLimit: 6` - no alliance bloc can exceed 6 members. This prevents runaway mega-alliances and ensures multiple competing power centers.
+**Formation (2 paths):**
+- `defensive_alliance_formation` - Enemy of my enemy is my friend. Factions sharing a common enemy may form defensive alliances.
+- `alliance_formation` - Mid/late-game alliances via shared `practitioner_of` relationships (practicing the same mystical abilities).
 
-**Progression:** When an ally goes to war, `alliance_defense_call` triggers - call for aid. Factions that honor the call join the war and gain the `honor_bound` tag. Factions that fail to respond are eventually marked `oath_breaker` via `oath_breaker_detector`.
+Both are capped by `pairComponentSizeLimit: 6` - no alliance bloc can exceed 6 members. This prevents runaway mega-alliances and ensures multiple competing power centers.
 
-**Dissolution:** `alliance_dissolution` - Oath breakers lose their alliances over time. Trust erodes, relationships are archived. The `oath_breaker` tag also triggers `oath_breaker_consequences`: prominence loss and weakened alliance bonds.
+**Alliance/Enemy Coherence:**
+- Factions cannot ally if they have `enemy_of` between them
+- Factions cannot ally if they're at war (both `participant_in` same war)
+- `enemy_alliance_breaker` system - If enemies form between allies (via raid or ideology), the alliance is automatically broken
 
-**Reward:** Honored alliances strengthen bonds. Alliance formation increases the `harmony` pressure (+5). Wars decrease harmony (-3 via conflict contagion). Betrayals create lasting reputation damage.
+**Progression:** When an ally goes to war, `alliance_defense_call` triggers - call for aid. Allies join by gaining `participant_in` to the same war occurrence. Factions that fail to respond are eventually marked `oath_breaker` via `oath_breaker_detector`.
 
-**War Resolution:** Wars end via `war_tie_cleanup` when no active war occurrence remains - archiving `at_war_with` relationships and removing conflict tags. Relationships decay naturally over time; weak relationships are archived (not deleted) to preserve history.
+**Dissolution:** `alliance_dissolution` - Oath breakers lose their alliances over time. When an alliance is archived, the former allies become `enemy_of` each other - betrayal breeds enmity. The `oath_breaker` tag also triggers `oath_breaker_consequences`: prominence loss.
 
-**Harmony Pressure Connection:** The harmony pressure oscillates based on alliance/conflict balance. During *The Faction Wars* era, harmony starts deeply negative (-50) and the era cannot exit until harmony recovers above -10. Alliance formation (+5) and conflict spread (-3) create a tug-of-war that drives the era's political dynamics.
+**Reward:** Honored alliances strengthen bonds. Alliance formation increases the `harmony` pressure (+5). Wars decrease harmony (-10 via war_outbreak). Betrayals create lasting reputation damage.
 
-**Loop:** Shared abilities → alliance formation → enemy attacks ally → honor call → join war OR become oath breaker → oath breakers lose alliances → isolated factions seek new allies with shared practices. The cycle creates shifting coalitions across generations.
+**Harmony Pressure Connection:** The harmony pressure oscillates based on alliance/conflict balance. During *The Faction Wars* era, harmony starts deeply negative (-50) and the era cannot exit until harmony recovers above -10. Alliance formation (+5, +3 via defensive alliances) and war outbreak (-10) create a tug-of-war that drives the era's political dynamics.
+
+**Loop:** Shared enemies OR shared abilities → alliance formation → enemy attacks ally → honor call → join war OR become oath breaker → oath breakers lose alliances and become enemies → isolated factions seek new allies. The cycle creates shifting coalitions across generations.
 
 ### The Resource Availability Loop
 

@@ -1,7 +1,5 @@
 static_page "Lore:The Languages of The Berg" do
-  summary <<SUMMARY
-A comprehensive guide to how names work in each culture - Aurora's ice-memory echoes, Nightshelf's whispered fragments, and Orca's deed-chains.
-  SUMMARY
+  summary "A comprehensive guide to how names work in each culture - Aurora's ice-memory echoes, Nightshelf's whispered fragments, and Orca's deed-chains."
   status published
   slug lore-languages
   pageId static_1767431858351_66m1v4
@@ -14,9 +12,7 @@ A comprehensive guide to how names work in each culture - Aurora's ice-memory ec
 end
 
 static_page "World:The Berg" do
-  summary <<SUMMARY
-An overview of The Berg - the vast frozen continent where penguin civilization thrives in the eternal dance between light and dark.
-  SUMMARY
+  summary "An overview of The Berg - the vast frozen continent where penguin civilization thrives in the eternal dance between light and dark."
   status published
   slug world-the-berg
   pageId static_1767431858351_7yvf98
@@ -29,9 +25,7 @@ An overview of The Berg - the vast frozen continent where penguin civilization t
 end
 
 static_page "Cultures:Nightshelf" do
-  summary <<SUMMARY
-The Nightshelf penguins - shadow-dwellers who believe names hold power and secrets are the true currency of existence.
-  SUMMARY
+  summary "The Nightshelf penguins - shadow-dwellers who believe names hold power and secrets are the true currency of existence."
   status published
   slug cultures-nightshelf
   pageId static_1767431858351_97mv5r
@@ -44,9 +38,7 @@ The Nightshelf penguins - shadow-dwellers who believe names hold power and secre
 end
 
 static_page "Cultures:Aurora Stack" do
-  summary <<SUMMARY
-The Aurora Stack penguins - traders, builders, and keepers of ice-memory who believe identity is accumulated through witnessed deeds.
-  SUMMARY
+  summary "The Aurora Stack penguins - traders, builders, and keepers of ice-memory who believe identity is accumulated through witnessed deeds."
   status published
   slug cultures-aurora-stack
   pageId static_1767431858351_ivnaz5
@@ -59,9 +51,7 @@ The Aurora Stack penguins - traders, builders, and keepers of ice-memory who bel
 end
 
 static_page "Lore:The Long Dark" do
-  summary <<SUMMARY
-The four-month polar winter when the sun never rises, survival becomes paramount, and the boundary between worlds grows thin.
-  SUMMARY
+  summary "The four-month polar winter when the sun never rises, survival becomes paramount, and the boundary between worlds grows thin."
   status published
   slug lore-long-dark
   pageId static_1767431858352_5e2u9v
@@ -74,9 +64,7 @@ The four-month polar winter when the sun never rises, survival becomes paramount
 end
 
 static_page "System:Name Forge" do
-  summary <<SUMMARY
-The procedural naming system that gives everything culture-appropriate names - from Aurora's ice-memory echoes to Orca's kill-chains.
-  SUMMARY
+  summary "The procedural naming system that gives everything culture-appropriate names - from Aurora's ice-memory echoes to Orca's kill-chains."
   status published
   slug system-name-forge
   pageId static_1767431858352_758npz
@@ -89,9 +77,7 @@ The procedural naming system that gives everything culture-appropriate names - f
 end
 
 static_page "System:Chronicler" do
-  summary <<SUMMARY
-The wiki viewer you're using right now - presenting generated content as explorable, interconnected pages.
-  SUMMARY
+  summary "The wiki viewer you're using right now - presenting generated content as explorable, interconnected pages."
   status published
   slug system-chronicler
   pageId static_1767431858352_9ej48c
@@ -104,9 +90,7 @@ The wiki viewer you're using right now - presenting generated content as explora
 end
 
 static_page "Cultures:Orca" do
-  summary <<SUMMARY
-The Orca - apex predators whose identity is defined purely by their kills and their place in the eternal hunt.
-  SUMMARY
+  summary "The Orca - apex predators whose identity is defined purely by their kills and their place in the eternal hunt."
   status published
   slug cultures-orca
   pageId static_1767431858352_b4i54u
@@ -119,9 +103,7 @@ The Orca - apex predators whose identity is defined purely by their kills and th
 end
 
 static_page "System:About This Project" do
-  summary <<SUMMARY
-What is Penguin Tales? A procedurally generated world of ice, darkness, and surprisingly complex penguin politics.
-  SUMMARY
+  summary "What is Penguin Tales? A procedurally generated world of ice, darkness, and surprisingly complex penguin politics."
   status published
   slug system-about
   pageId static_1767431858352_ehwju4
@@ -134,9 +116,7 @@ What is Penguin Tales? A procedurally generated world of ice, darkness, and surp
 end
 
 static_page "Lore:The Ice Remembers" do
-  summary <<SUMMARY
-The metaphysical nature of The Berg's ice and how it records, preserves, and sometimes speaks the memories of all who have lived upon it.
-  SUMMARY
+  summary "The metaphysical nature of The Berg's ice and how it records, preserves, and sometimes speaks the memories of all who have lived upon it."
   status published
   slug lore-ice-remembers
   pageId static_1767431858352_ijgryp
@@ -149,9 +129,7 @@ The metaphysical nature of The Berg's ice and how it records, preserves, and som
 end
 
 static_page "System:Illuminator" do
-  summary <<SUMMARY
-The AI enrichment layer that transforms raw generated data into readable prose, backstories, and descriptions.
-  SUMMARY
+  summary "The AI enrichment layer that transforms raw generated data into readable prose, backstories, and descriptions."
   status published
   slug system-illuminator
   pageId static_1767431858352_ird3vm
@@ -164,9 +142,7 @@ The AI enrichment layer that transforms raw generated data into readable prose, 
 end
 
 static_page "Lore:The Before Times" do
-  summary <<SUMMARY
-Ancient artifacts bearing alien serial numbers surface from the deep ice - relics of something that existed before penguins, before The Berg, perhaps before everything.
-  SUMMARY
+  summary "Ancient artifacts bearing alien serial numbers surface from the deep ice - relics of something that existed before penguins, before The Berg, perhaps before everything."
   status published
   slug lore-before-times
   pageId static_1767431858352_izjtsj
@@ -179,9 +155,7 @@ Ancient artifacts bearing alien serial numbers surface from the deep ice - relic
 end
 
 static_page "System:Lore Weave" do
-  summary <<SUMMARY
-The simulation engine that generates world history through templates, systems, and the patient accumulation of procedural chaos.
-  SUMMARY
+  summary "The simulation engine that generates world history through templates, systems, and the patient accumulation of procedural chaos."
   status published
   slug system-lore-weave
   pageId static_1767431858352_tkfq5n
@@ -194,9 +168,7 @@ The simulation engine that generates world history through templates, systems, a
 end
 
 static_page "System:Narrative Design Loops" do
-  summary <<SUMMARY
-The design philosophy and specific gameplay loops that make generated content feel like interconnected stories rather than random events.
-  SUMMARY
+  summary "The design philosophy and specific gameplay loops that make generated content feel like interconnected stories rather than random events."
   status published
   slug system-narrative-loops
   pageId static_1767431858352_udfox3

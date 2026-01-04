@@ -34,11 +34,11 @@
           "newStatus": "intact"
         },
         {
+          "type": "create_relationship",
           "kind": "owned_by",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.8,
-          "type": "create_relationship"
+          "strength": 0.8
         }
       ],
       "descriptionTemplate": "{actor.name} called to {target.name}, who restored it",
@@ -101,11 +101,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "central_to",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.8,
-          "type": "create_relationship"
+          "strength": 0.8
         }
       ],
       "descriptionTemplate": "{actor.name} became central to the practice of {target.name}",
@@ -161,11 +161,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "owned_by",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.8,
-          "type": "create_relationship"
+          "strength": 0.8
         },
         {
           "type": "set_tag",
@@ -201,10 +201,19 @@
       },
       "conditions": [
         {
-          "type": "relationship_count",
-          "relationshipKind": "at_war_with",
-          "direction": "both",
-          "min": 1
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "participant_in",
+                "direction": "out",
+                "targetKind": "occurrence",
+                "targetSubtype": "war",
+                "targetStatus": "active"
+              }
+            ]
+          }
         },
         {
           "type": "relationship_count",
@@ -245,10 +254,9 @@
           ]
         },
         {
-          "type": "has_relationship",
-          "kind": "at_war_with",
-          "with": "$actor",
-          "direction": "both"
+          "type": "shares_related",
+          "relationshipKind": "participant_in",
+          "with": "$actor"
         }
       ]
     },
@@ -256,9 +264,9 @@
       "mutations": [
         {
           "type": "archive_relationship",
-          "entity": "$actor",
-          "relationshipKind": "at_war_with",
-          "with": "$target"
+          "entity": "$target",
+          "relationshipKind": "participant_in",
+          "with": "$instigator"
         },
         {
           "type": "change_status",
@@ -281,6 +289,18 @@
           "type": "set_tag",
           "entity": "$actor",
           "tag": "victorious",
+          "value": true
+        },
+        {
+          "type": "set_tag",
+          "entity": "$actor",
+          "tag": "post_war_cooldown",
+          "value": true
+        },
+        {
+          "type": "set_tag",
+          "entity": "$target",
+          "tag": "post_war_cooldown",
           "value": true
         },
         {
@@ -504,11 +524,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "corrupted_by",
           "src": "$target",
           "dst": "$actor",
-          "strength": 0.7,
-          "type": "create_relationship"
+          "strength": 0.7
         },
         {
           "type": "set_tag",
@@ -588,18 +608,18 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "participant_in",
           "src": "$target",
           "dst": "$actor",
-          "strength": 0.8,
-          "type": "create_relationship"
+          "strength": 0.8
         },
         {
+          "type": "create_relationship",
           "kind": "at_war_with",
           "src": "$target",
           "dst": "$existingParticipant",
-          "strength": 0.6,
-          "type": "create_relationship"
+          "strength": 0.6
         },
         {
           "type": "modify_pressure",
@@ -683,11 +703,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "derived_from",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.8,
-          "type": "create_relationship"
+          "strength": 0.8
         },
         {
           "type": "adjust_prominence",
@@ -745,11 +765,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "adjust_relationship_strength",
           "kind": "participant_in",
           "src": "$target",
           "dst": "$actor",
-          "delta": 0.1,
-          "type": "adjust_relationship_strength"
+          "delta": 0.1
         },
         {
           "type": "modify_pressure",
@@ -814,12 +834,12 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "trades_with",
           "src": "$target",
           "dst": "$target2",
           "strength": 0.6,
-          "bidirectional": true,
-          "type": "create_relationship"
+          "bidirectional": true
         },
         {
           "type": "modify_pressure",
@@ -884,12 +904,12 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "allied_with",
           "src": "$actor",
           "dst": "$target",
           "strength": 0.7,
-          "bidirectional": true,
-          "type": "create_relationship"
+          "bidirectional": true
         },
         {
           "type": "modify_pressure",
@@ -968,11 +988,11 @@
           "with": "$instigator"
         },
         {
+          "type": "create_relationship",
           "kind": "owned_by",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.9,
-          "type": "create_relationship"
+          "strength": 0.9
         },
         {
           "type": "set_tag",
@@ -1042,11 +1062,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "believer_of",
           "src": "$target",
           "dst": "$actor",
-          "strength": 0.7,
-          "type": "create_relationship"
+          "strength": 0.7
         }
       ],
       "descriptionTemplate": "{actor.name} claimed {target.name} among its believers",
@@ -1105,11 +1125,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "blessed_by",
           "src": "$target",
           "dst": "$actor",
-          "strength": 0.6,
-          "type": "create_relationship"
+          "strength": 0.6
         },
         {
           "type": "set_tag",
@@ -1316,11 +1336,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "manifests_at",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.8,
-          "type": "create_relationship"
+          "strength": 0.8
         },
         {
           "type": "modify_pressure",
@@ -1387,11 +1407,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "practitioner_of",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.7,
-          "type": "create_relationship"
+          "strength": 0.7
         }
       ],
       "descriptionTemplate": "mastered the art of {target.name}",
@@ -1450,11 +1470,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "participant_in",
           "src": "$target",
           "dst": "$actor",
-          "strength": 0.8,
-          "type": "create_relationship"
+          "strength": 0.8
         }
       ],
       "descriptionTemplate": "{actor.name} left its memory upon {target.name}",
@@ -1476,7 +1496,7 @@
     "name": "Event Marks Relic"
   },
   {
-    "description": "Attack an enemy faction's territory, weakening their hold on controlled locations",
+    "description": "Attack another faction's territory, creating enmity and weakening their hold",
     "actor": {
       "selection": {
         "kind": "faction",
@@ -1488,26 +1508,32 @@
       "strategy": "by_kind",
       "filters": [
         {
-          "type": "has_relationship",
-          "kind": "at_war_with",
-          "with": "$actor",
-          "direction": "both"
+          "type": "lacks_relationship",
+          "kind": "allied_with",
+          "with": "$actor"
         },
         {
           "type": "has_relationship",
           "kind": "controls",
           "direction": "src"
+        },
+        {
+          "type": "exclude",
+          "entities": [
+            "$actor"
+          ]
         }
       ]
     },
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "enemy_of",
           "src": "$actor",
           "dst": "$target",
           "strength": 0.8,
-          "type": "create_relationship"
+          "bidirectional": true
         },
         {
           "type": "set_tag",
@@ -1586,11 +1612,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "owned_by",
           "src": "$target",
           "dst": "$actor",
-          "strength": 0.8,
-          "type": "create_relationship"
+          "strength": 0.8
         },
         {
           "type": "set_tag",
@@ -1656,11 +1682,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "blessed_by",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.9,
-          "type": "create_relationship"
+          "strength": 0.9
         },
         {
           "type": "remove_tag",
@@ -1743,11 +1769,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "controls",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.8,
-          "type": "create_relationship"
+          "strength": 0.8
         },
         {
           "type": "modify_pressure",
@@ -1821,11 +1847,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "corrupted_by",
           "src": "$target",
           "dst": "$actor",
-          "strength": 0.8,
-          "type": "create_relationship"
+          "strength": 0.8
         },
         {
           "type": "set_tag",
@@ -1892,11 +1918,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "practitioner_of",
           "src": "$target",
           "dst": "$actor",
-          "strength": 0.6,
-          "type": "create_relationship"
+          "strength": 0.6
         },
         {
           "type": "modify_pressure",
@@ -1963,11 +1989,11 @@
           "relationshipKind": "owned_by"
         },
         {
+          "type": "create_relationship",
           "kind": "owned_by",
           "src": "$target",
           "dst": "$actor",
-          "strength": 0.7,
-          "type": "create_relationship"
+          "strength": 0.7
         },
         {
           "type": "set_tag",
@@ -2068,19 +2094,19 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "practitioner_of",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.5,
-          "type": "create_relationship"
+          "strength": 0.5
         },
         {
+          "type": "create_relationship",
           "kind": "enemy_of",
           "src": "$actor",
           "dst": "$victimFaction",
           "strength": 0.6,
-          "bidirectional": true,
-          "type": "create_relationship"
+          "bidirectional": true
         },
         {
           "type": "archive_all_relationships",
@@ -2111,7 +2137,7 @@
     "name": "Steal Foreign Art"
   },
   {
-    "description": "Surrender to end a war, ceding contested territory to the victor",
+    "description": "Surrender to end a war, removing self from the war",
     "actor": {
       "selection": {
         "kind": "faction",
@@ -2119,10 +2145,19 @@
       },
       "conditions": [
         {
-          "type": "relationship_count",
-          "relationshipKind": "at_war_with",
-          "direction": "both",
-          "min": 1
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "participant_in",
+                "direction": "out",
+                "targetKind": "occurrence",
+                "targetSubtype": "war",
+                "targetStatus": "active"
+              }
+            ]
+          }
         }
       ],
       "instigator": {
@@ -2136,6 +2171,12 @@
           "war"
         ],
         "pickStrategy": "random",
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "war_weary"
+          }
+        ],
         "status": "active",
         "required": true
       }
@@ -2151,10 +2192,9 @@
           ]
         },
         {
-          "type": "has_relationship",
-          "kind": "at_war_with",
-          "with": "$actor",
-          "direction": "both"
+          "type": "shares_related",
+          "relationshipKind": "participant_in",
+          "with": "$actor"
         }
       ]
     },
@@ -2163,25 +2203,25 @@
         {
           "type": "archive_relationship",
           "entity": "$actor",
-          "relationshipKind": "at_war_with",
-          "with": "$target"
-        },
-        {
-          "type": "change_status",
-          "entity": "$instigator",
-          "newStatus": "historical"
-        },
-        {
-          "type": "archive_all_relationships",
-          "entity": "$instigator",
           "relationshipKind": "participant_in",
-          "direction": "dst"
+          "with": "$instigator"
         },
         {
           "type": "set_tag",
           "entity": "$actor",
           "tag": "defeated",
           "value": true
+        },
+        {
+          "type": "set_tag",
+          "entity": "$actor",
+          "tag": "post_war_cooldown",
+          "value": true
+        },
+        {
+          "type": "remove_tag",
+          "entity": "$actor",
+          "tag": "conflict"
         },
         {
           "type": "modify_pressure",
@@ -2467,11 +2507,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "commemorates",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.7,
-          "type": "create_relationship"
+          "strength": 0.7
         }
       ],
       "descriptionTemplate": "The tradition of {actor.name} now commemorates {target.name}",
@@ -2589,11 +2629,11 @@
     "outcome": {
       "mutations": [
         {
+          "type": "create_relationship",
           "kind": "owned_by",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.9,
-          "type": "create_relationship"
+          "strength": 0.9
         },
         {
           "type": "set_tag",

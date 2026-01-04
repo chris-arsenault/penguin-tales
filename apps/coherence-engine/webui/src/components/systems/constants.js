@@ -126,7 +126,6 @@ export const METRIC_TYPES = [
   { value: 'connection_count', label: 'Connection Count', desc: 'Total relationships involving entity' },
   { value: 'relationship_count', label: 'Relationship Count', desc: 'Count of specific relationship kind(s)' },
   { value: 'shared_relationship', label: 'Shared Relationship', desc: 'Count entities sharing a specific relationship' },
-  { value: 'catalyzed_events', label: 'Catalyzed Events', desc: 'Number of catalyst events for entity' },
   { value: 'neighbor_prominence', label: 'Neighbor Prominence', desc: 'Average prominence of connected entities' },
 ];
 

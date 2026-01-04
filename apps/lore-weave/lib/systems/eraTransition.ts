@@ -251,17 +251,6 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
         }
       }
 
-      // Create history event
-      graphView.addHistoryEvent({
-        tick: graphView.tick,
-        era: nextEraConfig.id,
-        type: 'special',
-        description: `${currentEraEntity.name} ends. ${nextEraEntity.name} begins.`,
-        entitiesCreated: [nextEraEntity.id],
-        relationshipsCreated: relationshipsAdded,
-        entitiesModified: [currentEraEntity.id]
-      });
-
       return {
         relationshipsAdded,
         entitiesModified: [

@@ -1,10 +1,7 @@
 import { SimulationSystem, SystemResult } from '../engine/types';
 import { FRAMEWORK_TAGS } from '@canonry/world-schema';
 import { HardState, Relationship } from '../core/worldTypes';
-import {
-  calculateAttemptChance,
-  addCatalyzedEvent
-} from '../systems/catalystHelpers';
+import { calculateAttemptChance } from '../systems/catalystHelpers';
 import { WorldRuntime } from '../runtime/worldRuntime';
 import type { UniversalCatalystConfig } from '../engine/systemInterpreter';
 import type { ExecutableAction } from '../engine/actionInterpreter';
@@ -163,16 +160,10 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
         if (outcome.success) {
           actionsSucceeded++;
 
-          // Track that this action type has succeeded at least once
-          graphView.config.actionSuccessTracker?.add(selectedAction.type);
-
-          const historyModifiedIds = new Set<string>();
-
           if (outcome.entitiesModified && outcome.entitiesModified.length > 0) {
             // Add action context to entity modifications for proper narrative attribution
             for (const mod of outcome.entitiesModified) {
               entitiesModified.push({ ...mod, actionContext });
-              historyModifiedIds.add(mod.id);
             }
           }
 
@@ -196,13 +187,6 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             relationshipsAdded.push({ ...rel, actionContext });
           });
 
-          // Record catalyzed event
-          addCatalyzedEvent(agent, {
-            relationshipId: outcome.relationships[0]?.kind || undefined,
-            action: outcome.description,
-            tick: graphView.tick
-          });
-
           entitiesModified.push({
             id: agent.id,
             changes: {
@@ -211,7 +195,6 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             },
             actionContext,
           });
-          historyModifiedIds.add(agent.id);
 
           // Apply prominence increase on success (if action specifies a positive delta)
           // NOTE: Do NOT modify entity directly - let worldEngine apply changes
@@ -229,7 +212,6 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
               actionContext,
             });
             prominenceChanges.push({ entityId: agent.id, entityName: agent.name, direction: 'up' });
-            historyModifiedIds.add(agent.id);
           }
 
           // Apply target prominence change on success (if action specifies a delta)
@@ -248,20 +230,8 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
                 entityName: target.name,
                 direction: targetSuccessDelta > 0 ? 'up' : 'down'
               });
-              historyModifiedIds.add(target.id);
             }
           }
-
-          // Create history event
-          graphView.addHistoryEvent({
-            tick: graphView.tick,
-            era: graphView.currentEra.id,
-            type: 'simulation',
-            description: `${agent.name} ${outcome.description}`,
-            entitiesCreated: outcome.entitiesCreated || [],
-            relationshipsCreated: outcome.relationships,
-            entitiesModified: historyModifiedIds.size > 0 ? Array.from(historyModifiedIds) : [agent.id]
-          });
         } else {
           // Apply prominence decrease on failure (if action specifies a negative delta)
           // NOTE: Do NOT modify entity directly - let worldEngine apply changes
@@ -303,8 +273,7 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
         // NOTE: Action context is now embedded in modifications instead of using enter/exit
         // This ensures WorldEngine can apply the correct context when recording mutations
 
-        // Emit action application event for instrumentation
-        if (emitter) {
+        if (outcome.success) {
           // Calculate epoch from tick (approximate)
           const ticksPerEpoch = graphView.config.ticksPerEpoch || 20;
           const epoch = Math.floor(graphView.tick / ticksPerEpoch);
@@ -357,7 +326,33 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
               prominenceChanges
             }
           };
-          emitter.actionApplication(payload);
+
+          if (emitter) {
+            emitter.actionApplication(payload);
+          }
+
+          const tracker = graphView.config.actionUsageTracker;
+          if (tracker) {
+            tracker.applications.push(payload);
+            tracker.countsByActionId.set(
+              payload.actionId,
+              (tracker.countsByActionId.get(payload.actionId) || 0) + 1
+            );
+            const currentActor = tracker.countsByActorId.get(payload.actorId);
+            if (currentActor) {
+              tracker.countsByActorId.set(payload.actorId, {
+                name: payload.actorName,
+                kind: payload.actorKind,
+                count: currentActor.count + 1
+              });
+            } else {
+              tracker.countsByActorId.set(payload.actorId, {
+                name: payload.actorName,
+                kind: payload.actorKind,
+                count: 1
+              });
+            }
+          }
         }
       });
 

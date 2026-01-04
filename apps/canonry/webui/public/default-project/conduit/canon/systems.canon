@@ -1,17 +1,19 @@
 system thresholdTrigger ability_fade "Ability Fade" do
   enabled true
-  description <<DESCRIPTION
-Abilities without practitioners gradually lose prominence
-  DESCRIPTION
+  description "Abilities without practitioners gradually lose prominence"
   selection do
     kind ability
     status in active discovered emergent
   end
-  condition relationship_count practitioner_of dst lte 0
-  condition time_elapsed 25 since created
-  condition random_chance 0.35
+  when do
+    relationship_count practitioner_of dst <= 0
+    time_elapsed 25 since created
+    random_chance 0.35
+  end
   actions do
-    adjust_prominence self -0.15
+    mutate do
+      prominence adjust self -0.15
+    end
   end
   cluster_mode individual
   throttle 0.2
@@ -19,39 +21,48 @@ end
 
 system thresholdTrigger alliance_defense_call "Alliance Defense Call" do
   enabled true
-  description <<DESCRIPTION
-When an allied faction is at war, allies consider joining the fight to honor their pact
-  DESCRIPTION
+  description "When an allied faction is at war, allies consider joining the fight to honor their pact"
   selection do
     kind faction
     status active
   end
-  condition relationship_exists allied_with both
-  condition relationship_count at_war_with both lte 0
-  path exists do
-    step allied_with any faction any
-    step at_war_with any faction any
+  when do
+    relationship_exists allied_with both
+    path not_exists do
+      step participant_in out occurrence war status active
+    end
+    path exists do
+      step allied_with any faction any
+      step participant_in out occurrence war status active
+    end
+    random_chance 0.25
   end
-  condition random_chance 0.25
   let ally do
     from self via allied_with both
     kind faction
     pick random
-    filter has_relationship at_war_with direction both
+    where do
+      graph_path exists do
+        step participant_in out occurrence war status active
+      end
+    end
     required true
   end
-  let ally_enemy do
-    from ally via at_war_with both
-    kind faction
+  let war do
+    from ally via participant_in out
+    kind occurrence
+    subtype war
     pick random
-    filter lacks_relationship allied_with with self
+    status active
     required true
   end
   actions do
-    rel at_war_with self -> ally_enemy strength 0.6 bidirectional true
-    set_tag self honor_bound true
-    set_tag self conflict true
-    adjust_prominence self 0.25
+    mutate do
+      relationship create participant_in self war strength 0.7
+      tag set self honor_bound true
+      tag set self conflict true
+      prominence adjust self 0.25
+    end
   end
   cluster_mode individual
   throttle 0.4
@@ -60,17 +71,17 @@ end
 
 system thresholdTrigger alliance_dissolution "Alliance Dissolution" do
   enabled true
-  description <<DESCRIPTION
-Oath breakers eventually lose their alliances as trust erodes completely
-  DESCRIPTION
+  description "Oath breakers eventually lose their alliances as trust erodes completely"
   selection do
     kind faction
     status active
   end
-  condition tag_exists oath_breaker
-  condition relationship_exists allied_with both
-  condition time_elapsed 3 since created
-  condition random_chance 0.4
+  when do
+    tag_exists oath_breaker
+    relationship_exists allied_with both
+    time_elapsed 3 since created
+    random_chance 0.4
+  end
   let former_ally do
     from self via allied_with both
     kind faction
@@ -78,18 +89,22 @@ Oath breakers eventually lose their alliances as trust erodes completely
     required true
   end
   actions do
-    archive_relationship self allied_with former_ally
-    remove_tag self honor_bound
+    mutate do
+      relationship archive self allied_with with former_ally
+      relationship create enemy_of self former_ally strength 0.6 bidirectional true
+      tag set self former_ally true
+      tag set former_ally former_ally true
+      tag remove self honor_bound
+    end
   end
   cluster_mode individual
   throttle 0.4
+  pressure harmony -5
 end
 
 system connectionEvolution alliance_formation "Alliance Formation" do
   enabled true
-  description <<DESCRIPTION
-Factions practicing the same abilities may form alliances
-  DESCRIPTION
+  description "Factions practicing the same abilities may form alliances"
   selection do
     kind faction
   end
@@ -101,9 +116,13 @@ Factions practicing the same abilities may form alliances
     threshold gte 1
     probability 0.3
     between_matching true
-    rel allied_with member -> member2 strength 0.5 bidirectional true
+    action do
+      mutate do
+        relationship create allied_with member member2 strength 0.5 bidirectional true
+      end
+    end
   end
-  pair_exclude at_war_with betrayed_by
+  pair_exclude enemy_of betrayed_by
   pair_component_limit allied_with max 6
   throttle 0.15
   pressure harmony 5
@@ -111,31 +130,37 @@ end
 
 system thresholdTrigger anomaly_activation "Anomaly Surges" do
   enabled true
-  description <<DESCRIPTION
-When multiple adjacent anomalies resonate without NPC interference, one surges to an active state capable of crystallizing power.
-  DESCRIPTION
+  description "When multiple adjacent anomalies resonate without NPC interference, one surges to an active state capable of crystallizing power."
   selection do
     kind location
-    filter has_tag anomaly
-    filter has_tag mystical
-    filter lacks_tag active
-    filter lacks_tag depleted
-  end
-  path count_min do
-    count 1
-    step adjacent_to contained_by contains any location any do
-      filter has_tag anomaly
+    where do
+      tag has anomaly
+      tag has mystical
+      tag lacks active
+      tag lacks depleted
     end
   end
-  path count_max do
-    count 0
-    step adjacent_to contained_by contains any location any
-    step resident_of in npc any
+  when do
+    path count_min do
+      count 1
+      step adjacent_to contained_by contains any location any do
+        where do
+          tag has anomaly
+        end
+      end
+    end
+    path count_max do
+      count 0
+      step adjacent_to contained_by contains any location any
+      step resident_of in npc any
+    end
+    random_chance 0.2
   end
-  condition random_chance 0.2
   actions do
-    set_tag self active true
-    adjust_prominence self 0.3
+    mutate do
+      tag set self active true
+      prominence adjust self 0.3
+    end
   end
   cluster_mode individual
   throttle 0.4
@@ -144,13 +169,13 @@ end
 
 system connectionEvolution anomaly_mystical_gain "Anomaly Stirs" do
   enabled true
-  description <<DESCRIPTION
-Anomalous locations gain mystical qualities over time. NPCs residing nearby dampen this effect through their stabilizing presence.
-  DESCRIPTION
+  description "Anomalous locations gain mystical qualities over time. NPCs residing nearby dampen this effect through their stabilizing presence."
   selection do
     kind location
-    filter has_tag anomaly
-    filter lacks_tag mystical
+    where do
+      tag has anomaly
+      tag lacks mystical
+    end
   end
   metric neighbor_kind_count do
     kind npc
@@ -162,12 +187,20 @@ Anomalous locations gain mystical qualities over time. NPCs residing nearby damp
   rule do
     threshold lte 0
     probability 0.5
-    set_tag self mystical true
+    action do
+      mutate do
+        tag set self mystical true
+      end
+    end
   end
   rule do
     threshold gte 1
     probability 0.25
-    set_tag self mystical true
+    action do
+      mutate do
+        tag set self mystical true
+      end
+    end
   end
   throttle 0.3
   pressure magical_stability -2
@@ -175,21 +208,25 @@ end
 
 system thresholdTrigger armed_hero_detector "Armed Hero Detection" do
   enabled true
-  description <<DESCRIPTION
-Heroes who own weapons are tagged as armed, enabling them to hunt orcas
-  DESCRIPTION
+  description "Heroes who own weapons are tagged as armed, enabling them to hunt orcas"
   selection do
     kind npc
     subtype hero
     status alive
-    filter lacks_tag armed
+    where do
+      tag lacks armed
+    end
   end
-  path exists do
-    step owned_by in artifact weapon
+  when do
+    path exists do
+      step owned_by in artifact weapon
+    end
   end
   actions do
-    set_tag self armed true
-    adjust_prominence self 0.3
+    mutate do
+      tag set self armed true
+      prominence adjust self 0.3
+    end
   end
   cluster_mode individual
   throttle 0.1
@@ -197,18 +234,20 @@ end
 
 system graphContagion artifact_corruption_spread "Artifact Corruption" do
   enabled true
-  description <<DESCRIPTION
-Cursed or corrupted artifacts affect their owners
-  DESCRIPTION
+  description "Cursed or corrupted artifacts affect their owners"
   selection do
     kind artifact
-    filter has_tag corrupted
+    where do
+      tag has corrupted
+    end
   end
   contagion tag corrupted
   vector owned_by src 0.3
   transmission 0.15 0.1 0.5
   infection_action do
-    set_tag target corrupted true
+    mutate do
+      tag set target corrupted true
+    end
   end
   throttle 0.5
   cooldown 10
@@ -216,17 +255,19 @@ end
 
 system thresholdTrigger artifact_degradation "Artifact Degradation" do
   enabled true
-  description <<DESCRIPTION
-Over time, artifacts may become damaged
-  DESCRIPTION
+  description "Over time, artifacts may become damaged"
   selection do
     kind artifact
     status intact
   end
-  condition time_elapsed 40
-  condition random_chance 0.1
+  when do
+    time_elapsed 40
+    random_chance 0.1
+  end
   actions do
-    change_status self damaged
+    mutate do
+      status change self damaged
+    end
   end
   cluster_mode individual
   throttle 0.6
@@ -234,17 +275,19 @@ end
 
 system thresholdTrigger artifact_destruction "Artifact Destruction" do
   enabled true
-  description <<DESCRIPTION
-Damaged artifacts may be destroyed over time
-  DESCRIPTION
+  description "Damaged artifacts may be destroyed over time"
   selection do
     kind artifact
     status damaged
   end
-  condition time_elapsed 20
-  condition random_chance 0.15
+  when do
+    time_elapsed 20
+    random_chance 0.15
+  end
   actions do
-    change_status self destroyed
+    mutate do
+      status change self destroyed
+    end
   end
   cluster_mode individual
   throttle 0.7
@@ -252,9 +295,7 @@ end
 
 system graphContagion belief_contagion "Ideological Spread" do
   enabled true
-  description <<DESCRIPTION
-Models ideological spread through social networks using SIR epidemic model
-  DESCRIPTION
+  description "Models ideological spread through social networks using SIR epidemic model"
   selection do
     kind faction
   end
@@ -266,7 +307,9 @@ Models ideological spread through social networks using SIR epidemic model
   vector splinter_of both 0.3
   transmission 0.25 0.1 0.95
   infection_action do
-    rel believer_of self -> contagion_source strength 0.5
+    mutate do
+      relationship create believer_of self contagion_source strength 0.5
+    end
   end
   recovery do
     base_rate 0.02
@@ -298,22 +341,28 @@ end
 
 system thresholdTrigger cleansed_isolation_decay "Sacred Ground Fades" do
   enabled true
-  description <<DESCRIPTION
-Cleansed locations without nearby sanctified neighbors lose their protection as the wards weaken
-  DESCRIPTION
+  description "Cleansed locations without nearby sanctified neighbors lose their protection as the wards weaken"
   selection do
     kind location
-    filter has_tag cleansed
+    where do
+      tag has cleansed
+    end
   end
-  path count_max do
-    count 0
-    step adjacent_to any location any do
-      filter has_tag cleansed
+  when do
+    path count_max do
+      count 0
+      step adjacent_to any location any do
+        where do
+          tag has cleansed
+        end
+      end
     end
   end
   actions do
-    remove_tag self cleansed
-    mutate pressure magical_stability -= 2
+    mutate do
+      tag remove self cleansed
+      pressure modify magical_stability -2
+    end
   end
   cluster_mode individual
   throttle 0.3
@@ -321,14 +370,14 @@ end
 
 system clusterFormation combat_technique_formation "Combat Technique Formation" do
   enabled true
-  description <<DESCRIPTION
-Clusters combat abilities into unified fighting styles. Only top practitioners by prominence become 'masters' with direct links to the meta-ability.
-  DESCRIPTION
+  description "Clusters combat abilities into unified fighting styles. Only top practitioners by prominence become 'masters' with direct links to the meta-ability."
   run_at_epoch_end true
   selection do
     kind ability
     subtype combat
-    filter lacks_tag meta-entity
+    where do
+      tag lacks meta-entity
+    end
   end
   clustering do
     min_size 5
@@ -350,10 +399,14 @@ Clusters combat abilities into unified fighting styles. Only top practitioners b
   master_selection do
     pick weighted
     max 2
-    filter matches_culture meta
+    where do
+      culture matches meta
+    end
   end
   member_updates do
-    change_status member subsumed
+    mutate do
+      status change member subsumed
+    end
   end
   post_process do
     pressure security 2
@@ -361,10 +414,9 @@ Clusters combat abilities into unified fighting styles. Only top practitioners b
 end
 
 system graphContagion conflict_contagion "Conflict Spread" do
-  enabled true
-  description <<DESCRIPTION
-Spreads conflicts through alliance networks - allies of enemies become enemies (but not between allies)
-  DESCRIPTION
+  enabled false
+  _disabled_reason "at_war_with eliminated. War participation determined by participant_in to war occurrence."
+  description "Spreads conflicts through alliance networks - allies of enemies become enemies (but not between allies)"
   selection do
     kind faction
   end
@@ -373,7 +425,9 @@ Spreads conflicts through alliance networks - allies of enemies become enemies (
   vector splinter_of both 0.3
   transmission 0.25 0.1 0.7
   infection_action do
-    rel at_war_with self -> source strength 0.4 bidirectional true
+    mutate do
+      relationship create at_war_with self source strength 0.4 bidirectional true
+    end
   end
   exclude_relationships allied_with
   throttle 0.1
@@ -383,15 +437,15 @@ end
 
 system thresholdTrigger control_collapse "Control Collapse" do
   enabled true
-  description <<DESCRIPTION
-When a faction's control over a location weakens below threshold, they lose control entirely
-  DESCRIPTION
+  description "When a faction's control over a location weakens below threshold, they lose control entirely"
   selection do
     kind faction
     status active
   end
-  condition relationship_count controls src gte 1
-  condition random_chance 0.25
+  when do
+    relationship_count controls src >= 1
+    random_chance 0.25
+  end
   let weak_territory do
     from self via controls src
     kind location
@@ -399,10 +453,12 @@ When a faction's control over a location weakens below threshold, they lose cont
     required true
   end
   actions do
-    archive_relationship self controls weak_territory
-    set_tag weak_territory contested true
-    set_tag weak_territory crisis true
-    adjust_prominence self -0.25
+    mutate do
+      relationship archive self controls with weak_territory
+      tag set weak_territory contested true
+      tag set weak_territory crisis true
+      prominence adjust self -0.25
+    end
   end
   cluster_mode individual
   throttle 0.5
@@ -411,23 +467,27 @@ end
 
 system thresholdTrigger corruption_crisis "Corruption Crisis" do
   enabled true
-  description <<DESCRIPTION
-Severely corrupted locations trigger a crisis that kills inhabitants and spreads fear
-  DESCRIPTION
+  description "Severely corrupted locations trigger a crisis that kills inhabitants and spreads fear"
   selection do
     kind location
-    filter has_tag corrupted
-    filter lacks_tag crisis
+    where do
+      tag has corrupted
+      tag lacks crisis
+    end
   end
-  condition tag_exists corrupted
-  path count_min do
-    count 2
-    step occupies in npc any status alive
+  when do
+    tag_exists corrupted
+    path count_min do
+      count 2
+      step occupies in npc any status alive
+    end
   end
   actions do
-    set_tag self crisis true
-    mutate pressure security -= 10
-    mutate pressure magical_stability -= 5
+    mutate do
+      tag set self crisis true
+      pressure modify security -10
+      pressure modify magical_stability -5
+    end
   end
   cluster_mode individual
   throttle 0.15
@@ -435,38 +495,42 @@ end
 
 system thresholdTrigger corruption_harm "Corruption Harm" do
   enabled true
-  description <<DESCRIPTION
-NPCs residing in corrupted locations are harmed by the corruption - first corrupted, then killed
-  DESCRIPTION
+  description "NPCs residing in corrupted locations are harmed by the corruption - first corrupted, then killed"
   selection do
     kind npc
     status alive
   end
-  path exists do
-    step resident_of out location any
+  when do
+    path exists do
+      step resident_of out location any
+    end
+    random_chance 0.08
   end
-  condition random_chance 0.08
   let home do
     from self via resident_of src
     kind location
-    filter has_tag corrupted
+    where do
+      tag has corrupted
+    end
     required true
   end
   actions do
-    conditional do
-      condition tag_exists cursed
-      then do
-        change_status self historical
-      end
-      else do
-        conditional do
-          condition tag_exists corrupted
-          then do
-            set_tag self cursed true
-            archive_all_relationships self owned_by direction dst
-          end
-          else do
-            set_tag self corrupted true
+    mutate do
+      conditional do
+        tag_exists cursed
+        then do
+          status change self historical
+        end
+        else do
+          conditional do
+            tag_exists corrupted
+            then do
+              tag set self cursed true
+              relationship archive self owned_by all direction dst
+            end
+            else do
+              tag set self corrupted true
+            end
           end
         end
       end
@@ -479,9 +543,7 @@ end
 
 system tagDiffusion cultural_drift "Cultural Evolution" do
   enabled true
-  description <<DESCRIPTION
-Connected colonies become more similar (trade, friendly), isolated colonies diverge (secretive, hidden)
-  DESCRIPTION
+  description "Connected colonies become more similar (trade, friendly), isolated colonies diverge (secretive, hidden)"
   selection do
     kind location
     subtype colony
@@ -495,17 +557,21 @@ end
 
 system thresholdTrigger depleted_recovery "Anomaly Recovers" do
   enabled true
-  description <<DESCRIPTION
-Depleted anomalies slowly recover their potential over time.
-  DESCRIPTION
+  description "Depleted anomalies slowly recover their potential over time."
   selection do
     kind location
-    filter has_tag depleted
+    where do
+      tag has depleted
+    end
   end
-  condition time_elapsed 8 since updated
-  condition random_chance 0.25
+  when do
+    time_elapsed 8 since updated
+    random_chance 0.25
+  end
   actions do
-    remove_tag self depleted
+    mutate do
+      tag remove self depleted
+    end
   end
   cluster_mode individual
   throttle 0.5
@@ -513,64 +579,117 @@ end
 
 system thresholdTrigger devout_believer_detector "Devout Believer Detection" do
   enabled true
-  description <<DESCRIPTION
-Factions with strong belief relationships are marked as devout
-  DESCRIPTION
+  description "Factions with strong belief relationships are marked as devout"
   selection do
     kind faction
     status active
   end
-  condition relationship_count believer_of src gte 1
-  condition lacks_tag devout
+  when do
+    relationship_count believer_of src >= 1
+    lacks_tag devout
+  end
   actions do
-    set_tag self devout true
-    adjust_prominence self 0.25
+    mutate do
+      tag set self devout true
+      prominence adjust self 0.25
+    end
   end
   cluster_mode individual
   throttle 0.2
 end
 
+system thresholdTrigger enemy_alliance_breaker "Enemy Alliance Breaker" do
+  enabled true
+  description "If factions become enemies while allied, the alliance is broken"
+  selection do
+    kind faction
+  end
+  when do
+    relationship_exists allied_with both
+    relationship_exists enemy_of both
+  end
+  actions do
+    mutate do
+      for_each_related enemy_of both do
+        relationship archive self allied_with with related
+        tag set self former_ally true
+        tag set related former_ally true
+      end
+    end
+  end
+  cluster_mode individual
+  pressure harmony -3
+end
+
+system connectionEvolution enmity_from_ideology "Ideological Divergence" do
+  enabled true
+  description "Factions with no shared ideological practice develop enmity (worldview incompatibility)"
+  selection do
+    kind faction
+    where do
+      tag lacks post_war_cooldown
+    end
+  end
+  metric shared_relationship do
+    relationship practitioner_of
+    direction src
+  end
+  rule do
+    threshold eq 0
+    probability 0.08
+    between_matching true
+    action do
+      mutate do
+        relationship create enemy_of self partner strength 0.5 bidirectional true
+      end
+    end
+  end
+  pair_exclude enemy_of allied_with
+  throttle 0.1
+  pressure harmony -2
+end
+
 system eraSpawner era_spawner "Era Initialization" do
   enabled true
-  description <<DESCRIPTION
-Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras.
-  DESCRIPTION
+  description "Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras."
   ticks_per_era 25
 end
 
 system eraTransition era_transition "Era Progression" do
   enabled true
-  description <<DESCRIPTION
-Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future → current → historical.
-  DESCRIPTION
+  description "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future → current → historical."
   prominence_snapshot enabled false min_prominence renowned
 end
 
 system thresholdTrigger heresy_war_trigger "Heresy War" do
   enabled true
-  description <<DESCRIPTION
-Devout factions are more likely to declare war on factions with apostate or different beliefs
-  DESCRIPTION
+  description "Devout factions are more likely to declare war on factions with apostate or different beliefs"
   selection do
     kind faction
     status active
   end
-  condition tag_exists devout
-  condition relationship_count at_war_with both lte 0
-  condition random_chance 0.12
+  when do
+    tag_exists devout
+    relationship_count at_war_with both <= 0
+    random_chance 0.12
+  end
   let heretic do
     from graph
     kind faction
     pick random
-    filter has_tag apostate
-    filter lacks_relationship at_war_with with self
-    filter lacks_relationship allied_with with self
+    where do
+      tag has apostate
+      relationship lacks at_war_with with self
+      relationship lacks allied_with with self
+    end
     required true
   end
   actions do
-    rel at_war_with self -> heretic strength 0.7 bidirectional true
-    set_tag self conflict true
-    set_tag self religious_war true
+    mutate do
+      relationship create at_war_with self heretic strength 0.7 bidirectional true
+      tag set self conflict true
+      tag set self religious_war true
+    end
   end
   cluster_mode individual
   throttle 0.5
@@ -579,31 +698,33 @@ end
 
 system thresholdTrigger heroic_sacrifice "Heroic Sacrifice" do
   enabled true
-  description <<DESCRIPTION
-Heroes caught in wars occasionally fall, their weapons becoming legendary
-  DESCRIPTION
+  description "Heroes caught in wars occasionally fall, their weapons becoming legendary"
   selection do
     kind npc
     subtype hero
     status alive
   end
-  when any do
-    path exists do
-      step member_of out faction any
-      step at_war_with any faction any
+  when do
+    when any do
+      path exists do
+        step member_of out faction any
+        step participant_in out occurrence war status active
+      end
+      path exists do
+        step leader_of out faction any
+        step participant_in out occurrence war status active
+      end
     end
-    path exists do
-      step leader_of out faction any
-      step at_war_with any faction any
-    end
+    random_chance 0.04
   end
-  condition random_chance 0.04
   actions do
-    change_status self historical
-    for_each_related owned_by in artifact do
-      set_tag related legendary true
-      set_tag related hero_relic true
-      adjust_prominence related 0.4
+    mutate do
+      status change self historical
+      for_each_related owned_by in artifact do
+        tag set related legendary true
+        tag set related hero_relic true
+        prominence adjust related 0.4
+      end
     end
   end
   cluster_mode individual
@@ -612,30 +733,30 @@ end
 
 system thresholdTrigger ice_memory_witness "The Ice Remembers" do
   enabled true
-  description <<DESCRIPTION
-The ice witnesses deeds at significant locations, annotating those present with echoes
-  DESCRIPTION
+  description "The ice witnesses deeds at significant locations, annotating those present with echoes"
   selection do
     kind npc
     subtype in hero merchant outlaw mayor orca
     status alive
   end
-  path exists do
-    step resident_of out location any
+  when do
+    path exists do
+      step resident_of out location any
+    end
+    prominence max marginal
   end
-  condition prominence max marginal
   actions do
-    set_tag self ice_witnessed true
-    adjust_prominence self 0.2
+    mutate do
+      tag set self ice_witnessed true
+      prominence adjust self 0.2
+    end
   end
   throttle 0.3
 end
 
 system clusterFormation legal_code_formation "Legal Code Formation" do
   enabled true
-  description <<DESCRIPTION
-Clusters rules into unified legal codes with governance factions
-  DESCRIPTION
+  description "Clusters rules into unified legal codes with governance factions"
   run_at_epoch_end true
   selection do
     kind rule
@@ -664,14 +785,14 @@ end
 
 system clusterFormation magic_school_formation "Magic School Formation" do
   enabled true
-  description <<DESCRIPTION
-Clusters magic abilities into unified schools. Only top practitioners by prominence become 'masters' with direct links to the meta-ability.
-  DESCRIPTION
+  description "Clusters magic abilities into unified schools. Only top practitioners by prominence become 'masters' with direct links to the meta-ability."
   run_at_epoch_end true
   selection do
     kind ability
     subtype magic
-    filter lacks_tag meta-entity
+    where do
+      tag lacks meta-entity
+    end
   end
   clustering do
     min_size 5
@@ -692,10 +813,14 @@ Clusters magic abilities into unified schools. Only top practitioners by promine
   master_selection do
     pick weighted
     max 2
-    filter matches_culture meta
+    where do
+      culture matches meta
+    end
   end
   member_updates do
-    change_status member subsumed
+    mutate do
+      status change member subsumed
+    end
   end
   post_process do
     pressure security 2
@@ -704,9 +829,7 @@ end
 
 system connectionEvolution merchant_prosperity "Trade Network Growth" do
   enabled true
-  description <<DESCRIPTION
-Trade-connected factions controlling thriving colonies gain influence
-  DESCRIPTION
+  description "Trade-connected factions controlling thriving colonies gain influence"
   selection do
     kind faction
     subtype company
@@ -718,24 +841,32 @@ Trade-connected factions controlling thriving colonies gain influence
   rule do
     threshold gte 1
     probability 0.7
-    adjust_prominence self 0.2
+    action do
+      mutate do
+        prominence adjust self 0.2
+      end
+    end
   end
   rule do
     threshold lte 0
     probability 0.8
-    adjust_prominence self -0.15
+    action do
+      mutate do
+        prominence adjust self -0.15
+      end
+    end
   end
   throttle 0.15
 end
 
 system connectionEvolution mystical_decay "Mystical Fades" do
   enabled true
-  description <<DESCRIPTION
-Mystical qualities fade from locations over time. NPCs residing nearby dampen this effect, stabilizing the mystical energy.
-  DESCRIPTION
+  description "Mystical qualities fade from locations over time. NPCs residing nearby dampen this effect, stabilizing the mystical energy."
   selection do
     kind location
-    filter has_tag mystical
+    where do
+      tag has mystical
+    end
   end
   metric neighbor_kind_count do
     kind npc
@@ -747,32 +878,42 @@ Mystical qualities fade from locations over time. NPCs residing nearby dampen th
   rule do
     threshold lte 0
     probability 0.2
-    remove_tag self mystical
+    action do
+      mutate do
+        tag remove self mystical
+      end
+    end
   end
   rule do
     threshold gte 1
     probability 0.04
-    remove_tag self mystical
+    action do
+      mutate do
+        tag remove self mystical
+      end
+    end
   end
   throttle 0.3
 end
 
 system thresholdTrigger oath_breaker_consequences "Oath Breaker Consequences" do
   enabled true
-  description <<DESCRIPTION
-Oath breakers suffer ongoing reputation damage and weakened alliances
-  DESCRIPTION
+  description "Oath breakers suffer ongoing reputation damage and weakened alliances"
   selection do
     kind faction
     status active
   end
-  condition tag_exists oath_breaker
-  condition time_elapsed 5
-  condition random_chance 0.2
+  when do
+    tag_exists oath_breaker
+    time_elapsed 5
+    random_chance 0.2
+  end
   actions do
-    adjust_prominence self -0.15
-    for_each_related allied_with both faction do
-      rel allied_with self -> related delta -0.15
+    mutate do
+      prominence adjust self -0.15
+      for_each_related allied_with both faction do
+        relationship adjust allied_with self related -0.15
+      end
     end
   end
   cluster_mode individual
@@ -781,25 +922,27 @@ end
 
 system thresholdTrigger oath_breaker_detector "Oath Breaker Detection" do
   enabled true
-  description <<DESCRIPTION
-Allied factions that don't join wars are marked as oath breakers and lose reputation
-  DESCRIPTION
+  description "Allied factions that don't join wars are marked as oath breakers and lose reputation"
   selection do
     kind faction
     status active
   end
-  condition relationship_exists allied_with both
-  condition lacks_tag honor_bound
-  condition lacks_tag oath_breaker
-  path exists do
-    step allied_with any faction any
-    step at_war_with any faction any
+  when do
+    relationship_exists allied_with both
+    lacks_tag honor_bound
+    lacks_tag oath_breaker
+    path exists do
+      step allied_with any faction any
+      step participant_in out occurrence war status active
+    end
+    time_elapsed 10
+    random_chance 0.15
   end
-  condition time_elapsed 10
-  condition random_chance 0.15
   actions do
-    set_tag self oath_breaker true
-    adjust_prominence self -0.25
+    mutate do
+      tag set self oath_breaker true
+      prominence adjust self -0.25
+    end
   end
   cluster_mode individual
   throttle 0.5
@@ -808,17 +951,19 @@ end
 
 system thresholdTrigger occurrence_resolution "Occurrence Resolution" do
   enabled true
-  description <<DESCRIPTION
-Active events settle into history over time
-  DESCRIPTION
+  description "Active events settle into history over time"
   selection do
     kind occurrence
     status active
     excludeSubtypes war
   end
-  condition time_elapsed 6 since created
+  when do
+    time_elapsed 6 since created
+  end
   actions do
-    change_status self historical
+    mutate do
+      status change self historical
+    end
   end
   cluster_mode individual
   throttle 0.6
@@ -827,31 +972,33 @@ end
 
 system thresholdTrigger old_age_mortality "Old Age Mortality" do
   enabled true
-  description <<DESCRIPTION
-Aging NPCs occasionally pass away, their artifacts inherited or lost
-  DESCRIPTION
+  description "Aging NPCs occasionally pass away, their artifacts inherited or lost"
   selection do
     kind npc
     status alive
   end
-  condition time_elapsed 80 since created
-  condition random_chance 0.02
+  when do
+    time_elapsed 80 since created
+    random_chance 0.02
+  end
   let faction do
     from self via member_of src
     kind faction
     pick random
   end
   actions do
-    change_status self historical
-    for_each_related owned_by in artifact do
-      conditional do
-        condition random_chance 0.6
-        then do
-          change_status related lost
-          archive_relationship related owned_by self
-        end
-        else do
-          transfer_relationship related owned_by from self to faction if entity_exists faction
+    mutate do
+      status change self historical
+      for_each_related owned_by in artifact do
+        conditional do
+          random_chance 0.6
+          then do
+            status change related lost
+            relationship archive related owned_by with self
+          end
+          else do
+            relationship transfer owned_by related from self to faction if entity_exists faction
+          end
         end
       end
     end
@@ -862,17 +1009,24 @@ end
 
 system thresholdTrigger post_war_recovery "Post-War Recovery" do
   enabled true
-  description <<DESCRIPTION
-Factions without active wars shed conflict tags
-  DESCRIPTION
+  description "Factions without active wars shed conflict and cooldown tags"
   selection do
     kind faction
-    filter has_any_tag conflict hostile
+    where do
+      tag has_any conflict hostile post_war_cooldown
+    end
   end
-  condition relationship_count at_war_with both lte 0
+  when do
+    path not_exists do
+      step participant_in out occurrence war status active
+    end
+  end
   actions do
-    remove_tag self conflict
-    remove_tag self hostile
+    mutate do
+      tag remove self conflict
+      tag remove self hostile
+      tag remove self post_war_cooldown
+    end
   end
   cluster_mode individual
   throttle 0.5
@@ -882,21 +1036,25 @@ end
 
 system thresholdTrigger power_vacuum_detector "Leadership Crisis" do
   enabled true
-  description <<DESCRIPTION
-Detects factions with historical (deceased) leaders and marks them in crisis
-  DESCRIPTION
+  description "Detects factions with historical (deceased) leaders and marks them in crisis"
   selection do
     kind faction
-    filter lacks_tag power_vacuum
+    where do
+      tag lacks power_vacuum
+    end
   end
-  when any do
-    condition relationship_exists leader_of dst target_kind npc target_status historical
-    condition relationship_count leader_of dst lte 0
+  when do
+    when any do
+      relationship_exists leader_of dst target_kind npc target_status historical
+      relationship_count leader_of dst <= 0
+    end
   end
   actions do
-    set_tag self power_vacuum true
-    set_tag self crisis true
-    set_tag self political true
+    mutate do
+      tag set self power_vacuum true
+      tag set self crisis true
+      tag set self political true
+    end
   end
   cluster_mode individual
   throttle 0.35
@@ -906,9 +1064,7 @@ end
 
 system connectionEvolution prominence_evolution "Prominence Evolution" do
   enabled true
-  description <<DESCRIPTION
-All entities fade over time; connections slow the decay (inactivity leads to being forgotten)
-  DESCRIPTION
+  description "All entities fade over time; connections slow the decay (inactivity leads to being forgotten)"
   selection do
     kind any
   end
@@ -919,21 +1075,27 @@ All entities fade over time; connections slow the decay (inactivity leads to bei
   rule do
     threshold lte 2
     probability 0.9
-    adjust_prominence self -0.25
+    action do
+      mutate do
+        prominence adjust self -0.25
+      end
+    end
   end
   rule do
     threshold gte 3
     probability 0.75
-    adjust_prominence self -0.15
+    action do
+      mutate do
+        prominence adjust self -0.15
+      end
+    end
   end
   throttle 0.08
 end
 
 system connectionEvolution reflected_glory "Reflected Glory" do
   enabled true
-  description <<DESCRIPTION
-Weak homeostatic pressure. Connected to legends? Slight rise. Connected to the forgotten? Slight fade.
-  DESCRIPTION
+  description "Weak homeostatic pressure. Connected to legends? Slight rise. Connected to the forgotten? Slight fade."
   selection do
     kind any
   end
@@ -944,21 +1106,27 @@ Weak homeostatic pressure. Connected to legends? Slight rise. Connected to the f
   rule do
     threshold gte 3
     probability 0.4
-    adjust_prominence self 0.08
+    action do
+      mutate do
+        prominence adjust self 0.08
+      end
+    end
   end
   rule do
     threshold lte 2
     probability 0.4
-    adjust_prominence self -0.06
+    action do
+      mutate do
+        prominence adjust self -0.06
+      end
+    end
   end
   throttle 0.25
 end
 
 system relationshipMaintenance relationship_maintenance "Relationship Maintenance" do
   enabled true
-  description <<DESCRIPTION
-Handles decay, reinforcement, and culling of relationships. Maintains relationship health over time.
-  DESCRIPTION
+  description "Handles decay, reinforcement, and culling of relationships. Maintains relationship health over time."
   maintenance_frequency 5
   cull_threshold 0.15
   grace_period 20
@@ -968,9 +1136,7 @@ end
 
 system planeDiffusion resource_diffusion "Resource & Trade Flow" do
   enabled true
-  description <<DESCRIPTION
-Prosperity spreads from resource-rich and trade locations
-  DESCRIPTION
+  description "Prosperity spreads from resource-rich and trade locations"
   selection do
     kind location
   end
@@ -984,9 +1150,7 @@ end
 
 system planeDiffusion thermal_diffusion "Thermal Diffusion" do
   enabled true
-  description <<DESCRIPTION
-Heat spreads from anomaly sources, making locations dangerous or safe
-  DESCRIPTION
+  description "Heat spreads from anomaly sources, making locations dangerous or safe"
   selection do
     kind location
   end
@@ -998,22 +1162,53 @@ Heat spreads from anomaly sources, making locations dangerous or safe
   value_tag temperature
 end
 
+system connectionEvolution trade_alliance_formation "Trade Alliance Formation" do
+  enabled true
+  description "Factions with trade connections can form alliances early in the simulation"
+  selection do
+    kind faction
+  end
+  metric shared_relationship do
+    relationship trades_with
+    direction src
+    via relationship controls direction src intermediate_kind location
+  end
+  rule do
+    threshold gte 1
+    probability 0.25
+    between_matching true
+    action do
+      mutate do
+        relationship create allied_with self partner strength 0.4 bidirectional true
+      end
+    end
+  end
+  pair_exclude enemy_of betrayed_by allied_with
+  pair_component_limit allied_with max 6
+  throttle 0.15
+  pressure harmony 3
+end
+
 system thresholdTrigger unarmed_hero_detector "Unarmed Hero Detection" do
   enabled true
-  description <<DESCRIPTION
-Heroes who lose their weapons are no longer armed
-  DESCRIPTION
+  description "Heroes who lose their weapons are no longer armed"
   selection do
     kind npc
     subtype hero
     status alive
-    filter has_tag armed
+    where do
+      tag has armed
+    end
   end
-  path not_exists do
-    step owned_by in artifact weapon
+  when do
+    path not_exists do
+      step owned_by in artifact weapon
+    end
   end
   actions do
-    remove_tag self armed
+    mutate do
+      tag remove self armed
+    end
   end
   cluster_mode individual
   throttle 0.1
@@ -1021,9 +1216,7 @@ end
 
 system universalCatalyst universal_catalyst "Agent Actions" do
   enabled true
-  description <<DESCRIPTION
-Enables agents (NPCs, factions) to perform domain-defined actions. Manages action selection and success/failure.
-  DESCRIPTION
+  description "Enables agents (NPCs, factions) to perform domain-defined actions. Manages action selection and success/failure."
   action_attempt_rate 0.18
   pressure_multiplier 1.1
   prominence_up_chance 1
@@ -1032,19 +1225,19 @@ end
 
 system thresholdTrigger war_casualties "War Casualties" do
   enabled true
-  description <<DESCRIPTION
-NPCs serving factions at war can fall in battle, their artifacts looted or lost
-  DESCRIPTION
+  description "NPCs serving factions at war can fall in battle, their artifacts looted or lost"
   selection do
     kind npc
     status alive
     excludeSubtypes hero mayor
   end
-  path exists do
-    step member_of out faction any
-    step at_war_with any faction any
+  when do
+    path exists do
+      step member_of out faction any
+      step participant_in out occurrence war status active
+    end
+    random_chance 0.08
   end
-  condition random_chance 0.08
   let enemy_faction do
     kind faction
     pick random
@@ -1061,17 +1254,19 @@ NPCs serving factions at war can fall in battle, their artifacts looted or lost
     end
   end
   actions do
-    change_status self historical
-    for_each_related owned_by in artifact do
-      conditional do
-        condition random_chance 0.5
-        then do
-          transfer_relationship related owned_by from self to enemy_faction if entity_exists enemy_faction
-          set_tag related war_trophy true
-        end
-        else do
-          change_status related lost
-          archive_relationship related owned_by self
+    mutate do
+      status change self historical
+      for_each_related owned_by in artifact do
+        conditional do
+          random_chance 0.5
+          then do
+            relationship transfer owned_by related from self to enemy_faction if entity_exists enemy_faction
+            tag set related war_trophy true
+          end
+          else do
+            status change related lost
+            relationship archive related owned_by with self
+          end
         end
       end
     end
@@ -1082,39 +1277,46 @@ end
 
 system thresholdTrigger war_fatigue_detector "War Fatigue" do
   enabled true
-  description <<DESCRIPTION
-Long-running wars become weary and ready to resolve
-  DESCRIPTION
+  description "Long-running wars become weary and ready to resolve"
   selection do
     kind occurrence
     subtype war
     status active
-    filter lacks_tag war_weary
+    where do
+      tag lacks war_weary
+    end
   end
-  condition time_elapsed 5 since created
+  when do
+    time_elapsed 5 since created
+  end
   actions do
-    set_tag self war_weary true
+    mutate do
+      tag set self war_weary true
+    end
   end
   cluster_mode individual
   throttle 0.5
 end
 
 system thresholdTrigger war_tie_cleanup "War Tie Cleanup" do
-  enabled true
-  description <<DESCRIPTION
-Archives stale war ties when no active war occurrence remains and cleans up war-related state
-  DESCRIPTION
+  enabled false
+  _disabled_reason "at_war_with eliminated. No orphaned relationships to clean up."
+  description "Archives stale war ties when no active war occurrence remains and cleans up war-related state"
   selection do
     kind faction
   end
-  condition relationship_count at_war_with both gte 1
-  path not_exists do
-    step participant_in out occurrence war status active
+  when do
+    relationship_count at_war_with both >= 1
+    path not_exists do
+      step participant_in out occurrence war status active
+    end
   end
   actions do
-    archive_all_relationships self at_war_with direction both
-    remove_tag self conflict
-    remove_tag self honor_bound
+    mutate do
+      relationship archive self at_war_with all direction both
+      tag remove self conflict
+      tag remove self honor_bound
+    end
   end
   cluster_mode individual
   throttle 0.4

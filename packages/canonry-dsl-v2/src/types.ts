@@ -48,6 +48,7 @@ export interface AttributeNode {
   key: string;
   value: Value;
   labels?: string[];
+  valueKind?: 'inline' | 'heredoc';
   span: SourceSpan;
 }
 

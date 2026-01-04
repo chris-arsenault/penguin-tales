@@ -6,8 +6,10 @@ generator alliance_betrayal "Alliance Betrayal" do
     pick random
     outbound participant_in <= 1
     notStatus waning
-    filter has_relationship allied_with direction both
-    filter lacks_tag oath_breaker
+    where do
+      relationship has allied_with direction both
+      tag lacks oath_breaker
+    end
   end
   let ally do
     from target via allied_with both
@@ -44,48 +46,21 @@ generator alliance_betrayal "Alliance Betrayal" do
   rel participant_in ally -> war strength 0.9
   rel at_war_with target -> ally strength 0.95 bidirectional true
   rel betrayed_by ally -> target strength 0.95
-  stateUpdates do
-    type archive_relationship
-    entity target
-    relationshipKind allied_with
-    with ally
+  mutate do
+    relationship archive target allied_with with ally
+    tag set target oath_breaker true
+    tag set target conflict true
+    tag set ally betrayed true
+    tag set ally conflict true
+    pressure modify harmony -15
   end
-  stateUpdates do
-    type set_tag
-    entity target
-    tag oath_breaker
-    value true
-  end
-  stateUpdates do
-    type set_tag
-    entity target
-    tag conflict
-    value true
-  end
-  stateUpdates do
-    type set_tag
-    entity ally
-    tag betrayed
-    value true
-  end
-  stateUpdates do
-    type set_tag
-    entity ally
-    tag conflict
-    value true
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId harmony
-    delta -15
-  end
-  enabled true
+  enabled false
 end
 
 generator artifact_crafting "Artifact Crafting" do
   when do
     cap kind artifact <= 18
-    condition any do
+    when any do
       pressure magical_stability >= 20
       pressure security <= -10
     end
@@ -136,18 +111,18 @@ generator artifact_crafting "Artifact Crafting" do
   rel empowered_by artifact ability do
     strength 0.7
     condition do
-      type entity_exists
-      entity ability
+      entity_exists ability
     end
   end
   rel stored_at artifact location do
     strength 0.6
     condition do
-      type entity_exists
-      entity location
+      entity_exists location
     end
   end
-  mutate pressure magical_stability -= 5
+  mutate do
+    pressure modify magical_stability -5
+  end
   enabled true
 end
 
@@ -199,11 +174,12 @@ generator artifact_discovery "Artifact Discovery" do
   rel discovered_by artifact discoverer do
     strength 0.7
     condition do
-      type entity_exists
-      entity discoverer
+      entity_exists discoverer
     end
   end
-  mutate pressure magical_stability -= 3
+  mutate do
+    pressure modify magical_stability -3
+  end
   enabled true
 end
 
@@ -319,9 +295,7 @@ generator colony_founding "Colony Foundation" do
     culture do
       inherit target
     end
-    description <<DESCRIPTION
-The founder who led settlers to establish the new colony
-    DESCRIPTION
+    description "The founder who led settlers to establish the new colony"
     tags founder leader
     placement do
       anchor do
@@ -343,9 +317,7 @@ The founder who led settlers to establish the new colony
     culture do
       inherit target
     end
-    description <<DESCRIPTION
-A pioneer trader who helped establish the new colony
-    DESCRIPTION
+    description "A pioneer trader who helped establish the new colony"
     tags settler trade
     placement do
       anchor do
@@ -367,13 +339,15 @@ A pioneer trader who helped establish the new colony
   rel leader_of founder -> council strength 0.6
   rel resident_of settler -> colony strength 0.4
   rel resident_of founder -> colony strength 0.8
-  mutate pressure resource_availibility -= 25
+  mutate do
+    pressure modify resource_availibility -25
+  end
   enabled true
 end
 
 generator crisis_legislation "Crisis Law" do
   when do
-    condition any do
+    when any do
       pressure security <= -10
       pressure harmony <= -30
     end
@@ -393,8 +367,10 @@ generator crisis_legislation "Crisis Law" do
     kind npc
     subtype in orca outlaw
     pick random
-    filter path not_exists do
-      step related_to any rule law
+    where do
+      graph_path not_exists do
+        step related_to any rule law
+      end
     end
     required true
   end
@@ -428,19 +404,22 @@ generator crisis_legislation "Crisis Law" do
   rel derived_from rule existingRule do
     strength 0.7
     condition do
-      type random_chance
-      chance 0.4
+      random_chance 0.4
     end
   end
   rel related_to mainThreat -> rule strength 0.8
-  mutate pressure security += 40
+  mutate do
+    pressure modify security 40
+  end
   enabled true
 end
 
 generator crystallized_power "Power Crystallizes" do
   choose target from location do
     pick random
-    filter has_tag active
+    where do
+      tag has active
+    end
   end
   create event do
     kind occurrence
@@ -493,28 +472,17 @@ generator crystallized_power "Power Crystallizes" do
   rel occurred_at event -> target strength 1
   rel stored_at artifact -> target strength 0.9
   rel catalyst_of event -> artifact strength 0.8
-  stateUpdates do
-    type remove_tag
-    entity target
-    tag active
-  end
-  stateUpdates do
-    type set_tag
-    entity target
-    tag depleted
-    value true
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId magical_stability
-    delta -8
+  mutate do
+    tag remove target active
+    tag set target depleted true
+    pressure modify magical_stability -8
   end
   enabled true
 end
 
 generator cult_formation "Cult Awakening" do
   when do
-    condition any do
+    when any do
       pressure magical_stability <= 25
       pressure security <= -5
       pressure harmony <= 10
@@ -526,10 +494,12 @@ generator cult_formation "Cult Awakening" do
     subtype in anomaly point_of_interest
     inbound originated_in <= 4
     inbound resident_of <= 5
-    filter has_any_tag mystical secretive dangerous
-    filter path count_max do
-      count 2
-      step originated_in any faction any
+    where do
+      tag has_any mystical secretive dangerous
+      graph_path count_max do
+        count 2
+        step originated_in any faction any
+      end
     end
   end
   let magic do
@@ -550,11 +520,15 @@ generator cult_formation "Cult Awakening" do
     from graph
     kind artifact
     pick random
-    filter path count_max do
-      count 2
-      step central_to out rule any
+    where do
+      graph_path count_max do
+        count 2
+        step central_to out rule any
+      end
     end
-    prefer has_any_tag mystical sacred
+    prefer do
+      tag has_any mystical sacred
+    end
     status intact
     required false
   end
@@ -696,56 +670,51 @@ generator cult_formation "Cult Awakening" do
   rel member_of cultist cult do
     strength 0.75
     condition do
-      type entity_exists
-      entity cultist
+      entity_exists cultist
     end
   end
   rel resident_of cultist target do
     strength 0.7
     condition do
-      type entity_exists
-      entity cultist
+      entity_exists cultist
     end
   end
   rel related_to cult magic do
     strength 0.8
     condition do
-      type entity_exists
-      entity magic
+      entity_exists magic
     end
   end
   rel practitioner_of cultist magic do
     strength 0.4
     condition do
-      type entity_exists
-      entity cultist
+      entity_exists cultist
     end
   end
   rel believer_of cult -> doctrine strength 0.8
   rel believer_of cultist doctrine do
     strength 0.6
     condition do
-      type entity_exists
-      entity cultist
+      entity_exists cultist
     end
   end
   rel related_to doctrine magic do
     strength 0.6
     condition do
-      type entity_exists
-      entity magic
+      entity_exists magic
     end
   end
   rel originated_in doctrine -> target strength 0.7
   rel central_to existingRelic doctrine do
     strength 0.85
     condition do
-      type entity_exists
-      entity existingRelic
+      entity_exists existingRelic
     end
   end
-  mutate pressure magical_stability -= 5
-  mutate pressure security -= 5
+  mutate do
+    pressure modify magical_stability -5
+    pressure modify security -5
+  end
   variants do
     selection first_match
     options do
@@ -776,14 +745,18 @@ generator dark_ritual "Dark Ritual" do
     from graph
     kind location
     pick random
-    filter has_tag cleansed
+    where do
+      tag has cleansed
+    end
     required true
   end
   let adjacentLocations do
     from location via adjacent_to both
     kind location
     pick all
-    filter has_tag cleansed
+    where do
+      tag has cleansed
+    end
     required false
   end
   create ritual do
@@ -817,32 +790,12 @@ generator dark_ritual "Dark Ritual" do
   rel desecrated target -> location strength 0.9
   rel occurred_at ritual -> location strength 1
   rel participant_in target -> ritual strength 0.8
-  stateUpdates do
-    type remove_tag
-    entity location
-    tag cleansed
-  end
-  stateUpdates do
-    type set_tag
-    entity location
-    tag corrupted
-    value true
-  end
-  stateUpdates do
-    type set_tag
-    entity location
-    tag desecrated
-    value true
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId magical_stability
-    delta -15
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId security
-    delta -5
+  mutate do
+    tag remove location cleansed
+    tag set location corrupted true
+    tag set location desecrated true
+    pressure modify magical_stability -15
+    pressure modify security -5
   end
   enabled true
 end
@@ -854,7 +807,9 @@ generator economic_colony_decline "Colony Economic Decline" do
   choose target from location do
     pick random
     subtype colony
-    filter has_tag stressed
+    where do
+      tag has stressed
+    end
     status thriving
   end
   create economic_crisis do
@@ -885,26 +840,11 @@ generator economic_colony_decline "Colony Economic Decline" do
   end
   rel epicenter_of economic_crisis -> target strength 0.8
   rel triggered_by economic_crisis -> target strength 0.5
-  stateUpdates do
-    type change_status
-    entity target
-    newStatus waning
-  end
-  stateUpdates do
-    type set_tag
-    entity target
-    tag stressed
-    value true
-  end
-  stateUpdates do
-    type remove_tag
-    entity target
-    tag thriving
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId resource_availibility
-    delta -8
+  mutate do
+    status change target waning
+    tag set target stressed true
+    tag remove target thriving
+    pressure modify resource_availibility -8
   end
   enabled true
 end
@@ -913,7 +853,9 @@ generator economic_colony_recovery "Colony Economic Recovery" do
   choose target from location do
     pick random
     subtype colony
-    filter has_any_tag trade resource
+    where do
+      tag has_any trade resource
+    end
     status waning
   end
   create revival do
@@ -943,26 +885,11 @@ generator economic_colony_recovery "Colony Economic Recovery" do
     end
   end
   rel epicenter_of revival -> target strength 0.7
-  stateUpdates do
-    type change_status
-    entity target
-    newStatus thriving
-  end
-  stateUpdates do
-    type set_tag
-    entity target
-    tag thriving
-    value true
-  end
-  stateUpdates do
-    type remove_tag
-    entity target
-    tag stressed
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId resource_availibility
-    delta 5
+  mutate do
+    status change target thriving
+    tag set target thriving true
+    tag remove target stressed
+    pressure modify resource_availibility 5
   end
   enabled true
 end
@@ -971,7 +898,7 @@ generator faction_splinter "Faction Splinter" do
   when do
     cap kind faction >= 1
     cap kind faction <= 30
-    condition any do
+    when any do
       pressure harmony <= -10
       pressure security <= -5
       pressure resource_availibility <= -5
@@ -981,13 +908,15 @@ generator faction_splinter "Faction Splinter" do
     pick random
     inbound splinter_of <= 1
     outbound allied_with <= 4
-    filter path count_min do
-      count 1
-      step member_of in npc any
-    end
-    filter path count_min do
-      count 1
-      step controls any location any
+    where do
+      graph_path count_min do
+        count 1
+        step member_of in npc any
+      end
+      graph_path count_min do
+        count 1
+        step controls any location any
+      end
     end
   end
   let members do
@@ -997,7 +926,9 @@ generator faction_splinter "Faction Splinter" do
   let defector do
     from target via member_of dst
     pick random
-    filter lacks_relationship leader_of
+    where do
+      relationship lacks leader_of
+    end
   end
   let location do
     from target via controls src
@@ -1040,9 +971,7 @@ generator faction_splinter "Faction Splinter" do
     culture do
       inherit target
     end
-    description <<DESCRIPTION
-A dissident who joined the splinter faction
-    DESCRIPTION
+    description "A dissident who joined the splinter faction"
     tags criminal
     placement do
       anchor do
@@ -1063,9 +992,7 @@ A dissident who joined the splinter faction
     culture do
       inherit target
     end
-    description <<DESCRIPTION
-A recruit drawn to the splinter faction
-    DESCRIPTION
+    description "A recruit drawn to the splinter faction"
     tags criminal
     placement do
       anchor do
@@ -1111,25 +1038,24 @@ A recruit drawn to the splinter faction
   rel leader_of defector splinter do
     strength 0.9
     condition do
-      type entity_exists
-      entity defector
+      entity_exists defector
     end
   end
   rel member_of defector splinter do
     strength 0.85
     condition do
-      type entity_exists
-      entity defector
+      entity_exists defector
     end
   end
   rel resident_of defector location do
     strength 0.7
     condition do
-      type entity_exists
-      entity defector
+      entity_exists defector
     end
   end
-  mutate pressure harmony -= 5
+  mutate do
+    pressure modify harmony -5
+  end
   variants do
     selection first_match
     options do
@@ -1152,35 +1078,47 @@ generator great_festival "Great Festival" do
     pick random
     subtype colony
     inbound originated_in <= 6
-    filter path count_max do
-      count 2
-      step celebrated_by any rule any
+    where do
+      graph_path count_max do
+        count 2
+        step celebrated_by any rule any
+      end
     end
   end
   let faction1 do
     from graph
     kind faction
     pick random
-    prefer has_any_tag cultural trade organized mystical
+    prefer do
+      tag has_any cultural trade organized mystical
+    end
     required true
   end
   let faction2 do
     from graph
     kind faction
     pick random
-    filter exclude faction1
-    prefer has_any_tag cultural trade organized
+    where do
+      entity exclude faction1
+    end
+    prefer do
+      tag has_any cultural trade organized
+    end
     required true
   end
   let featuredArtifact do
     from graph
     kind artifact
     pick random
-    filter path count_max do
-      count 2
-      step central_to out rule any
+    where do
+      graph_path count_max do
+        count 2
+        step central_to out rule any
+      end
     end
-    prefer has_any_tag cultural sacred ceremonial
+    prefer do
+      tag has_any cultural sacred ceremonial
+    end
     status intact
     required false
   end
@@ -1240,15 +1178,13 @@ generator great_festival "Great Festival" do
   rel celebrated_by festival faction1 do
     strength 0.7
     condition do
-      type entity_exists
-      entity faction1
+      entity_exists faction1
     end
   end
   rel celebrated_by festival faction2 do
     strength 0.7
     condition do
-      type entity_exists
-      entity faction2
+      entity_exists faction2
     end
   end
   rel celebrated_by festival -> herald strength 0.7
@@ -1256,18 +1192,18 @@ generator great_festival "Great Festival" do
   rel member_of herald faction2 do
     strength 0.6
     condition do
-      type entity_exists
-      entity faction2
+      entity_exists faction2
     end
   end
   rel central_to featuredArtifact festival do
     strength 0.8
     condition do
-      type entity_exists
-      entity featuredArtifact
+      entity_exists featuredArtifact
     end
   end
-  mutate pressure harmony += 5
+  mutate do
+    pressure modify harmony 5
+  end
   enabled true
 end
 
@@ -1284,11 +1220,15 @@ generator guild_establishment "Guild Formation" do
     from graph
     kind artifact
     pick random
-    filter path count_max do
-      count 1
-      step stored_at out location any
+    where do
+      graph_path count_max do
+        count 1
+        step stored_at out location any
+      end
     end
-    prefer has_any_tag trade valuable ceremonial
+    prefer do
+      tag has_any trade valuable ceremonial
+    end
     status intact
     required false
   end
@@ -1468,12 +1408,13 @@ generator guild_establishment "Guild Formation" do
   rel stored_at tradeGoods tradeHub do
     strength 0.75
     condition do
-      type entity_exists
-      entity tradeGoods
+      entity_exists tradeGoods
     end
   end
-  mutate pressure resource_availibility -= 15
-  mutate pressure magical_stability += 2
+  mutate do
+    pressure modify resource_availibility -15
+    pressure modify magical_stability 2
+  end
   variants do
     selection first_match
     options do
@@ -1493,7 +1434,7 @@ end
 
 generator hero_emergence "Hero Emergence" do
   when do
-    condition any do
+    when any do
       pressure security <= 0
       pressure harmony <= -20
       pressure resource_availibility <= -10
@@ -1597,26 +1538,25 @@ generator hero_emergence "Hero Emergence" do
   rel member_of hero colonyFaction do
     strength 0.7
     condition do
-      type entity_exists
-      entity colonyFaction
+      entity_exists colonyFaction
     end
   end
   rel practitioner_of hero ability do
     strength 0.6
     condition do
-      type entity_exists
-      entity ability
+      entity_exists ability
     end
   end
   rel taught_by hero mentor do
     strength 0.8
     condition do
-      type entity_exists
-      entity mentor
+      entity_exists mentor
     end
   end
-  mutate pressure security += 20
-  mutate pressure magical_stability -= 5
+  mutate do
+    pressure modify security 20
+    pressure modify magical_stability -5
+  end
   variants do
     selection first_match
     options do
@@ -1637,12 +1577,16 @@ end
 generator ice_memory_thaw "Ice Memory Thaw" do
   choose target from location do
     pick random
-    filter has_tag hidden
+    where do
+      tag has hidden
+    end
   end
   let frozen_ability do
     kind ability
     pick random
-    filter lacks_relationship manifests_at with target
+    where do
+      relationship lacks manifests_at with target
+    end
     status active
   end
   create memory do
@@ -1698,28 +1642,19 @@ generator ice_memory_thaw "Ice Memory Thaw" do
   rel contained_by memory target do
     strength 0.8
     condition do
-      type entity_exists
-      entity memory
+      entity_exists memory
     end
   end
   rel stored_at ancientTome -> memory strength 0.9
   rel manifests_at frozen_ability memory do
     strength 0.6
     condition do
-      type random_chance
-      chance 0.3
+      random_chance 0.3
     end
   end
-  stateUpdates do
-    type set_tag
-    entity target
-    tag discovered
-    value true
-  end
-  stateUpdates do
-    type remove_tag
-    entity target
-    tag hidden
+  mutate do
+    tag set target discovered true
+    tag remove target hidden
   end
   variants do
     selection first_match
@@ -1744,8 +1679,10 @@ generator ideology_emergence "Ideological Movement" do
     outbound believer_of <= 2
     subtypePreferences hero
     minProminence renowned
-    filter path exists do
-      step member_of out faction any
+    where do
+      graph_path exists do
+        step member_of out faction any
+      end
     end
     status alive
   end
@@ -1764,7 +1701,9 @@ generator ideology_emergence "Ideological Movement" do
   let factionMember1 do
     from championFaction via member_of dst
     pick random
-    filter exclude target
+    where do
+      entity exclude target
+    end
     required false
   end
   let existingIdeology do
@@ -1777,11 +1716,15 @@ generator ideology_emergence "Ideological Movement" do
     from graph
     kind artifact
     pick random
-    filter path count_max do
-      count 2
-      step central_to out rule any
+    where do
+      graph_path count_max do
+        count 2
+        step central_to out rule any
+      end
     end
-    prefer has_any_tag political cultural sacred
+    prefer do
+      tag has_any political cultural sacred
+    end
     status intact
     required false
   end
@@ -1816,36 +1759,31 @@ generator ideology_emergence "Ideological Movement" do
   rel originated_in ideology championLocation do
     strength 0.8
     condition do
-      type entity_exists
-      entity championLocation
+      entity_exists championLocation
     end
   end
   rel believer_of factionMember1 ideology do
     strength 0.6
     condition do
-      type entity_exists
-      entity factionMember1
+      entity_exists factionMember1
     end
   end
   rel related_to ideology existingIdeology do
     strength 0.5
     condition do
-      type entity_exists
-      entity existingIdeology
+      entity_exists existingIdeology
     end
   end
   rel believer_of championFaction ideology do
     strength 0.8
     condition do
-      type entity_exists
-      entity championFaction
+      entity_exists championFaction
     end
   end
   rel central_to existingArtifact ideology do
     strength 0.75
     condition do
-      type entity_exists
-      entity existingArtifact
+      entity_exists existingArtifact
     end
   end
   enabled true
@@ -1856,8 +1794,10 @@ generator krill_bloom_migration "Krill Bloom Discovery" do
     pick random
     subtype colony
     inbound originated_in <= 6
-    filter path not_exists do
-      step originated_in any faction company
+    where do
+      graph_path not_exists do
+        step originated_in any faction company
+      end
     end
   end
   variables do
@@ -1870,9 +1810,7 @@ generator krill_bloom_migration "Krill Bloom Discovery" do
     culture do
       inherit target
     end
-    description <<DESCRIPTION
-Massive bioluminescent krill swarms dance in these waters, drawing merchants and hunters from across the berg.
-    DESCRIPTION
+    description "Massive bioluminescent krill swarms dance in these waters, drawing merchants and hunters from across the berg."
     tags resource
     placement do
       anchor do
@@ -1891,9 +1829,7 @@ Massive bioluminescent krill swarms dance in these waters, drawing merchants and
     culture do
       inherit target
     end
-    description <<DESCRIPTION
-A harvesting technique refined to track and gather the krill blooms.
-    DESCRIPTION
+    description "A harvesting technique refined to track and gather the krill blooms."
     tags trade resource organized emergent
     placement do
       anchor do
@@ -1939,8 +1875,10 @@ A harvesting technique refined to track and gather the krill blooms.
   rel originated_in harvestTechnique -> bloom strength 0.8
   rel discovered_by harvestTechnique -> company strength 0.7
   rel adjacent_to bloom -> target strength 0.8 bidirectional true
-  mutate pressure resource_availibility += 5
-  mutate pressure harmony -= 10
+  mutate do
+    pressure modify resource_availibility 5
+    pressure modify harmony -10
+  end
   enabled true
 end
 
@@ -2013,27 +1951,18 @@ generator legend_crystallization "Legend Crystallization" do
   rel originated_in memorial location do
     strength 0.8
     condition do
-      type entity_exists
-      entity location
+      entity_exists location
     end
   end
   rel commemorates location target do
     strength 0.7
     condition do
-      type entity_exists
-      entity location
+      entity_exists location
     end
   end
-  stateUpdates do
-    type set_tag
-    entity target
-    tag legendary
-    value true
-  end
-  stateUpdates do
-    type change_status
-    entity target
-    newStatus fictional
+  mutate do
+    tag set target legendary true
+    status change target fictional
   end
   variants do
     selection first_match
@@ -2063,8 +1992,12 @@ generator location_discovery " Location Discovery" do
     from graph
     kind location
     pick random
-    filter matches_culture target
-    prefer has_tag colony
+    where do
+      culture matches target
+    end
+    prefer do
+      tag has colony
+    end
     required true
   end
   create location do
@@ -2126,11 +2059,12 @@ generator location_discovery " Location Discovery" do
     bidirectional true
     strength 0.6
     condition do
-      type entity_exists
-      entity nearbyLocation
+      entity_exists nearbyLocation
     end
   end
-  mutate pressure resource_availibility += 5
+  mutate do
+    pressure modify resource_availibility 5
+  end
   variants do
     selection first_match
     options do
@@ -2144,10 +2078,8 @@ generator location_discovery " Location Discovery" do
         tag_assign $location mystical true
         tag_assign $location relic_site true
         subtype $location point_of_interest
-        stateUpdates do
-          type remove_tag
-          entity location
-          tag resource
+        mutate do
+          tag remove location resource
         end
       end
     end
@@ -2163,15 +2095,9 @@ generator location_discovery " Location Discovery" do
         tag_assign $location anomaly true
         tag_assign $location mystical true
         subtype $location anomaly
-        stateUpdates do
-          type modify_pressure
-          pressureId magical_stability
-          delta -30
-        end
-        stateUpdates do
-          type remove_tag
-          entity location
-          tag resource
+        mutate do
+          pressure modify magical_stability -30
+          tag remove location resource
         end
       end
     end
@@ -2185,15 +2111,9 @@ generator location_discovery " Location Discovery" do
       apply do
         tag_assign $location conflict true
         subtype $location point_of_interest
-        stateUpdates do
-          type remove_tag
-          entity location
-          tag resource
-        end
-        stateUpdates do
-          type modify_pressure
-          pressureId security
-          delta 5
+        mutate do
+          tag remove location resource
+          pressure modify security 5
         end
       end
     end
@@ -2210,10 +2130,12 @@ generator magic_discovery "Magical Discovery" do
     pick random
     outbound practitioner_of <= 2
     subtypePreferences hero merchant mayor outlaw
-    filter not_has_culture orca
-    filter path count_max do
-      count 2
-      step discovered_by out ability magic
+    where do
+      culture not_has orca
+      graph_path count_max do
+        count 2
+        step discovered_by out ability magic
+      end
     end
     status alive
   end
@@ -2234,11 +2156,15 @@ generator magic_discovery "Magical Discovery" do
     from graph
     kind artifact
     pick random
-    filter path count_max do
-      count 2
-      step empowered_by out ability any
+    where do
+      graph_path count_max do
+        count 2
+        step empowered_by out ability any
+      end
     end
-    prefer has_any_tag mystical magical ancient
+    prefer do
+      tag has_any mystical magical ancient
+    end
     status intact
     required false
   end
@@ -2272,26 +2198,25 @@ generator magic_discovery "Magical Discovery" do
   rel derived_from magic parentMagic do
     strength 1
     condition do
-      type entity_exists
-      entity parentMagic
+      entity_exists parentMagic
     end
   end
   rel discovered_by magic -> target strength 1
   rel manifests_at magic anomaly do
     strength 0.8
     condition do
-      type entity_exists
-      entity anomaly
+      entity_exists anomaly
     end
   end
   rel empowered_by empoweredArtifact magic do
     strength 0.85
     condition do
-      type entity_exists
-      entity empoweredArtifact
+      entity_exists empoweredArtifact
     end
   end
-  mutate pressure magical_stability += 10
+  mutate do
+    pressure modify magical_stability 10
+  end
   enabled true
 end
 
@@ -2303,9 +2228,11 @@ generator orca_combat_technique "Orca Combat Technique" do
     pick random
     subtype orca
     outbound practitioner_of <= 2
-    filter path count_max do
-      count 1
-      step practitioner_of out ability any
+    where do
+      graph_path count_max do
+        count 1
+        step practitioner_of out ability any
+      end
     end
   end
   let otherOrca do
@@ -2313,7 +2240,9 @@ generator orca_combat_technique "Orca Combat Technique" do
     kind npc
     subtype orca
     pick random
-    filter exclude target
+    where do
+      entity exclude target
+    end
   end
   let parentTechnique do
     from graph
@@ -2347,16 +2276,14 @@ generator orca_combat_technique "Orca Combat Technique" do
   rel derived_from technique parentTechnique do
     strength 1
     condition do
-      type entity_exists
-      entity parentTechnique
+      entity_exists parentTechnique
     end
   end
   rel practitioner_of target -> technique strength 0.9
   rel practitioner_of otherOrca technique do
     strength 0.8
     condition do
-      type random_chance
-      chance 0.6
+      random_chance 0.6
     end
   end
   enabled true
@@ -2371,8 +2298,10 @@ generator orca_organized_offensive "Orca Organized Offensive" do
   choose target from location do
     pick random
     subtype colony
-    filter path exists do
-      step occupies any npc orca
+    where do
+      graph_path exists do
+        step occupies any npc orca
+      end
     end
   end
   let warLeader do
@@ -2380,7 +2309,9 @@ generator orca_organized_offensive "Orca Organized Offensive" do
     kind npc
     subtype orca
     pick random
-    filter has_tag war_leader
+    where do
+      tag has war_leader
+    end
     status alive
   end
   create offensive do
@@ -2410,19 +2341,20 @@ generator orca_organized_offensive "Orca Organized Offensive" do
   rel instigated_by offensive warLeader do
     strength 0.9
     condition do
-      type entity_exists
-      entity warLeader
+      entity_exists warLeader
     end
   end
-  mutate pressure security -= 30
-  mutate pressure harmony += 10
+  mutate do
+    pressure modify security -30
+    pressure modify harmony 10
+  end
   enabled true
 end
 
 generator orca_raider_arrival "Orca Raiders Arrive" do
   when do
     entity_count kind npc subtype orca <= 8
-    condition any do
+    when any do
       pressure security <= 40
       era_match the-orca-incursion
     end
@@ -2430,9 +2362,11 @@ generator orca_raider_arrival "Orca Raiders Arrive" do
   choose target from location do
     pick random
     subtype colony
-    filter path count_max do
-      count 2
-      step occupies any npc orca
+    where do
+      graph_path count_max do
+        count 2
+        step occupies any npc orca
+      end
     end
   end
   let defender do
@@ -2540,8 +2474,7 @@ generator orca_raider_arrival "Orca Raiders Arrive" do
   rel taught_by orca1 parentOrca do
     strength 1
     condition do
-      type entity_exists
-      entity parentOrca
+      entity_exists parentOrca
     end
   end
   rel allied_with orca2 -> orca1 strength 0.5
@@ -2550,20 +2483,20 @@ generator orca_raider_arrival "Orca Raiders Arrive" do
   rel enemy_of orca1 -> defender strength 0.8 bidirectional true
   rel enemy_of orca1 colonyFaction do
     strength 0.6
-    condition do
-      type random_chance
-      chance 0.5
-    end
     bidirectional true
+    condition do
+      random_chance 0.5
+    end
   end
   rel practitioner_of orca1 combatAbility do
     strength 0.7
     condition do
-      type entity_exists
-      entity combatAbility
+      entity_exists combatAbility
     end
   end
-  mutate pressure security -= 15
+  mutate do
+    pressure modify security -15
+  end
   variants do
     selection first_match
     options do
@@ -2576,10 +2509,8 @@ generator orca_raider_arrival "Orca Raiders Arrive" do
         tag_assign $orca1 armed_raider true
         tag_assign $orca1 legendary true
         tag_assign $orca1 war_leader true
-        stateUpdates do
-          type modify_pressure
-          pressureId security
-          delta -10
+        mutate do
+          pressure modify security -10
         end
       end
     end
@@ -2608,9 +2539,7 @@ generator orca_war_ritual "Orca War Ritual" do
     culture do
       fixed orca
     end
-    description <<DESCRIPTION
-A dark ritual conducted by the orca war-bands, calling upon ancient powers to strengthen their assault
-    DESCRIPTION
+    description "A dark ritual conducted by the orca war-bands, calling upon ancient powers to strengthen their assault"
     tags orca_ritual dark_magic war_ceremony
     placement do
       anchor do
@@ -2627,9 +2556,7 @@ A dark ritual conducted by the orca war-bands, calling upon ancient powers to st
     culture do
       fixed orca
     end
-    description <<DESCRIPTION
-Savage combat technique empowered by the war ritual
-    DESCRIPTION
+    description "Savage combat technique empowered by the war ritual"
     tags orca_power ritual_granted
     placement do
       anchor do
@@ -2640,7 +2567,9 @@ Savage combat technique empowered by the war ritual
   end
   rel practitioner_of target -> battlePower strength 0.9
   rel catalyst_of ritual -> battlePower strength 0.8
-  mutate pressure security -= 25
+  mutate do
+    pressure modify security -25
+  end
   enabled true
 end
 
@@ -2652,8 +2581,10 @@ generator succession "Leadership Succession" do
   choose target from npc do
     pick random
     subtype mayor
-    filter path exists do
-      step leader_of out location colony
+    where do
+      graph_path exists do
+        step leader_of out location colony
+      end
     end
   end
   let colony do
@@ -2720,28 +2651,18 @@ generator succession "Leadership Succession" do
   rel leader_of successor faction do
     strength 0.8
     condition do
-      type entity_exists
-      entity faction
+      entity_exists faction
     end
   end
   rel member_of successor faction do
     strength 0.75
     condition do
-      type entity_exists
-      entity faction
+      entity_exists faction
     end
   end
-  stateUpdates do
-    type archive_relationship
-    entity target
-    relationshipKind leader_of
-    with colony
-  end
-  stateUpdates do
-    type archive_relationship
-    entity target
-    relationshipKind leader_of
-    with faction
+  mutate do
+    relationship archive target leader_of with colony
+    relationship archive target leader_of with faction
   end
   enabled true
 end
@@ -2749,9 +2670,11 @@ end
 generator succession_crisis "Succession Crisis" do
   choose target from faction do
     pick random
-    filter path count_max do
-      count 0
-      step leader_of in npc any
+    where do
+      graph_path count_max do
+        count 0
+        step leader_of in npc any
+      end
     end
   end
   let crisisSite do
@@ -2789,30 +2712,15 @@ generator succession_crisis "Succession Crisis" do
   rel epicenter_of crisis crisisSite do
     strength 0.7
     condition do
-      type entity_exists
-      entity crisisSite
+      entity_exists crisisSite
     end
   end
   rel triggered_by crisis -> target strength 0.7
-  stateUpdates do
-    type remove_tag
-    entity target
-    tag power_vacuum
-  end
-  stateUpdates do
-    type change_status
-    entity target
-    newStatus waning
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId security
-    delta -12
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId harmony
-    delta -6
+  mutate do
+    tag remove target power_vacuum
+    status change target waning
+    pressure modify security -12
+    pressure modify harmony -6
   end
   enabled true
 end
@@ -2872,14 +2780,15 @@ generator tech_breakthrough "Technological Breakthrough" do
   rel derived_from tech parentTech do
     strength 1
     condition do
-      type entity_exists
-      entity parentTech
+      entity_exists parentTech
     end
   end
   rel practitioner_of target -> tech strength 0.9 catalyzedBy leader
   rel originated_in tech -> location strength 0.7
-  mutate pressure resource_availibility += 5
-  mutate pressure magical_stability -= 3
+  mutate do
+    pressure modify resource_availibility 5
+    pressure modify magical_stability -3
+  end
   enabled true
 end
 
@@ -2888,7 +2797,9 @@ generator thermal_colony_decline "Thermal Decline" do
     pick random
     subtype in colony point_of_interest resource_node anomaly
     inbound epicenter_of <= 2
-    filter has_any_tag dangerous stressed crisis
+    where do
+      tag has_any dangerous stressed crisis
+    end
     status thriving
   end
   create thermal_disaster do
@@ -2919,21 +2830,10 @@ generator thermal_colony_decline "Thermal Decline" do
   end
   rel epicenter_of thermal_disaster -> target strength 0.8
   rel triggered_by thermal_disaster -> target strength 0.5
-  stateUpdates do
-    type change_status
-    entity target
-    newStatus waning
-  end
-  stateUpdates do
-    type set_tag
-    entity target
-    tag stressed
-    value true
-  end
-  stateUpdates do
-    type remove_tag
-    entity target
-    tag thriving
+  mutate do
+    status change target waning
+    tag set target stressed true
+    tag remove target thriving
   end
   enabled true
 end
@@ -2943,7 +2843,9 @@ generator thermal_colony_recovery "Thermal Recovery" do
     pick random
     subtype in colony point_of_interest resource_node anomaly
     inbound epicenter_of <= 2
-    filter has_tag safe
+    where do
+      tag has safe
+    end
     status waning
   end
   create recovery do
@@ -2973,21 +2875,10 @@ generator thermal_colony_recovery "Thermal Recovery" do
     end
   end
   rel epicenter_of recovery -> target strength 0.7
-  stateUpdates do
-    type change_status
-    entity target
-    newStatus thriving
-  end
-  stateUpdates do
-    type set_tag
-    entity target
-    tag thriving
-    value true
-  end
-  stateUpdates do
-    type remove_tag
-    entity target
-    tag stressed
+  mutate do
+    status change target thriving
+    tag set target thriving true
+    tag remove target stressed
   end
   enabled true
 end
@@ -2999,10 +2890,12 @@ generator thermal_migration "Thermal Migration" do
   choose target from location do
     pick random
     inbound related_to <= 3
-    filter has_any_tag fire ice dangerous stressed crisis
-    filter path count_min do
-      count 1
-      step resident_of in npc any
+    where do
+      tag has_any fire ice dangerous stressed crisis
+      graph_path count_min do
+        count 1
+        step resident_of in npc any
+      end
     end
   end
   let migrant do
@@ -3016,8 +2909,10 @@ generator thermal_migration "Thermal Migration" do
     kind location
     subtype colony
     pick random
-    filter lacks_tag dangerous
-    filter exclude target
+    where do
+      tag lacks dangerous
+      entity exclude target
+    end
     status thriving
     required true
   end
@@ -3051,36 +2946,29 @@ generator thermal_migration "Thermal Migration" do
   rel resident_of migrant refuge do
     strength 0.7
     condition do
-      type random_chance
-      chance 0.5
+      random_chance 0.5
     end
   end
   rel contained_by camp refuge do
     strength 0.8
     condition do
-      type entity_exists
-      entity camp
+      entity_exists camp
     end
   end
   rel related_to camp target do
     strength 0.5
     condition do
-      type entity_exists
-      entity camp
+      entity_exists camp
     end
   end
   rel resident_of migrant camp do
     strength 0.6
     condition do
-      type entity_exists
-      entity camp
+      entity_exists camp
     end
   end
-  stateUpdates do
-    type set_tag
-    entity migrant
-    tag emergent
-    value true
+  mutate do
+    tag set migrant emergent true
   end
   enabled true
 end
@@ -3089,8 +2977,10 @@ generator war_apocalypse_resolution "Apocalyptic War Resolution" do
   choose target from occurrence do
     pick random
     subtype war
-    filter not_has_culture orca
-    filter has_tag war_weary
+    where do
+      culture not_has orca
+      tag has war_weary
+    end
     status active
   end
   let faction1 do
@@ -3103,8 +2993,10 @@ generator war_apocalypse_resolution "Apocalyptic War Resolution" do
     from graph
     kind faction
     pick random
-    filter has_relationship participant_in with target direction src
-    filter exclude faction1
+    where do
+      relationship has participant_in with target direction src
+      entity exclude faction1
+    end
     required true
   end
   let warzone do
@@ -3143,49 +3035,27 @@ generator war_apocalypse_resolution "Apocalyptic War Resolution" do
   rel manifests_at cataclysm warzone do
     strength 0.8
     condition do
-      type entity_exists
-      entity warzone
+      entity_exists warzone
     end
   end
   rel practitioner_of faction1 -> cataclysm strength 0.8
   rel practitioner_of faction2 cataclysm do
     strength 0.7
     condition do
-      type entity_exists
-      entity faction2
+      entity_exists faction2
     end
   end
-  stateUpdates do
-    type change_status
-    entity target
-    newStatus historical
-  end
-  stateUpdates do
-    type archive_relationship
-    entity target
-    relationshipKind participant_in
-    direction dst
-  end
-  stateUpdates do
-    type archive_relationship
-    entity faction1
-    relationshipKind at_war_with
-    with faction2
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId harmony
-    delta 12
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId security
-    delta 10
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId magical_stability
-    delta -8
+  mutate do
+    status change target historical
+    relationship archive target participant_in direction dst
+    relationship archive faction1 enemy_of with faction2
+    tag set faction1 post_war_cooldown true
+    tag set faction2 post_war_cooldown true
+    tag remove faction1 conflict
+    tag remove faction2 conflict
+    pressure modify harmony 12
+    pressure modify security 10
+    pressure modify magical_stability -8
   end
   enabled true
 end
@@ -3198,18 +3068,22 @@ generator war_declaration "War Declaration" do
     pick random
     outbound participant_in <= 1
     notStatus waning
-    filter path count_min do
-      count 2
-      step controls any location any
+    where do
+      graph_path count_min do
+        count 2
+        step controls any location any
+      end
     end
   end
   let enemy do
     from graph
     kind faction
     pick random
-    filter exclude target
-    filter lacks_relationship allied_with with target
-    filter lacks_relationship at_war_with with target
+    where do
+      entity exclude target
+      relationship lacks allied_with with target
+      relationship lacks at_war_with with target
+    end
     required true
   end
   create war do
@@ -3240,22 +3114,10 @@ generator war_declaration "War Declaration" do
   rel participant_in target -> war strength 0.9
   rel participant_in enemy -> war strength 0.9
   rel at_war_with target -> enemy strength 0.9 bidirectional true
-  stateUpdates do
-    type set_tag
-    entity target
-    tag conflict
-    value true
-  end
-  stateUpdates do
-    type set_tag
-    entity enemy
-    tag conflict
-    value true
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId harmony
-    delta -6
+  mutate do
+    tag set target conflict true
+    tag set enemy conflict true
+    pressure modify harmony -6
   end
   enabled false
 end
@@ -3264,31 +3126,32 @@ generator war_outbreak "War Outbreak" do
   choose target from faction do
     pick random
     outbound participant_in <= 1
-    filter has_relationship at_war_with direction both
+    where do
+      component_size enemy_of min 3
+      tag lacks post_war_cooldown
+    end
   end
   let enemy do
-    from target via at_war_with both
+    from target via enemy_of both
     kind faction
     pick random
     required true
   end
   let enemy2 do
-    from target via at_war_with both
+    from target via enemy_of both
     kind faction
     pick random
-    filter exclude enemy
+    where do
+      entity exclude enemy
+    end
   end
-  let ally1 do
-    from target via allied_with both
+  let enemy3 do
+    from enemy via enemy_of both
     kind faction
     pick random
-    filter exclude enemy enemy2
-  end
-  let ally2 do
-    from enemy via allied_with both
-    kind faction
-    pick random
-    filter exclude target enemy enemy2 ally1
+    where do
+      entity exclude target enemy enemy2
+    end
   end
   let warzone do
     from target via controls src
@@ -3351,134 +3214,51 @@ generator war_outbreak "War Outbreak" do
     createChance 0.25
   end
   rel participant_in target -> war strength 1
-  rel catalyst_of warWeapon -> war strength 0.9
-  rel owned_by warWeapon -> target strength 0.7
   rel participant_in enemy war do
     strength 0.9
     condition do
-      type entity_exists
-      entity enemy
+      entity_exists enemy
     end
   end
   rel participant_in enemy2 war do
     strength 0.85
     condition do
-      type entity_exists
-      entity enemy2
+      entity_exists enemy2
     end
   end
-  rel participant_in ally1 war do
-    strength 0.85
-    condition do
-      type entity_exists
-      entity ally1
-    end
-  end
-  rel participant_in ally2 war do
+  rel participant_in enemy3 war do
     strength 0.8
     condition do
-      type entity_exists
-      entity ally2
+      entity_exists enemy3
     end
   end
+  rel catalyst_of warWeapon -> war strength 0.9
+  rel owned_by warWeapon -> target strength 0.7
   rel epicenter_of war warzone do
     strength 0.7
     condition do
-      type entity_exists
-      entity warzone
+      entity_exists warzone
     end
   end
   rel derived_from battle_style war do
     strength 0.6
     condition do
-      type entity_exists
-      entity battle_style
+      entity_exists battle_style
     end
   end
   rel triggered_by war -> target strength 0.7
-  rel at_war_with target enemy do
-    strength 0.8
-    bidirectional true
-    condition do
-      type entity_exists
-      entity enemy
-    end
-  end
-  rel at_war_with target enemy2 do
-    strength 0.7
-    bidirectional true
-    condition do
-      type entity_exists
-      entity enemy2
-    end
-  end
-  rel at_war_with ally1 enemy do
-    strength 0.7
-    bidirectional true
-    condition do
-      type entity_exists
-      entity ally1
-    end
-  end
-  rel at_war_with ally1 enemy2 do
-    strength 0.6
-    bidirectional true
-    condition do
-      type and
-      conditions do
-        type entity_exists
-        entity ally1
-      end
-      conditions do
-        type entity_exists
-        entity enemy2
-      end
-    end
-  end
-  rel at_war_with ally2 target do
-    strength 0.7
-    bidirectional true
-    condition do
-      type entity_exists
-      entity ally2
-    end
-  end
-  rel at_war_with ally2 ally1 do
-    strength 0.6
-    bidirectional true
-    condition do
-      type and
-      conditions do
-        type entity_exists
-        entity ally2
-      end
-      conditions do
-        type entity_exists
-        entity ally1
-      end
-    end
-  end
-  stateUpdates do
-    type set_tag
-    entity target
-    tag conflict
-    value true
-  end
-  stateUpdates do
-    type set_tag
-    entity warzone
-    tag contested
-    value true
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId harmony
-    delta -10
-  end
-  stateUpdates do
-    type modify_pressure
-    pressureId security
-    delta -6
+  mutate do
+    tag set target conflict true
+    tag set enemy conflict true
+    tag set enemy2 conflict true
+    tag set enemy3 conflict true
+    tag set warzone contested true
+    relationship archive target enemy_of with enemy
+    relationship archive target enemy_of with enemy2
+    relationship archive enemy enemy_of with enemy2
+    relationship archive enemy enemy_of with enemy3
+    pressure modify harmony -10
+    pressure modify security -6
   end
   variants do
     selection first_match
@@ -3506,10 +3286,12 @@ generator wild_magic_discover "Wild Magical Discovery" do
     pick random
     subtype anomaly
     inbound manifests_at <= 2
-    filter not_has_culture orca
-    filter path count_max do
-      count 2
-      step manifests_at any ability any
+    where do
+      culture not_has orca
+      graph_path count_max do
+        count 2
+        step manifests_at any ability any
+      end
     end
   end
   let discoverer do
@@ -3551,6 +3333,8 @@ generator wild_magic_discover "Wild Magical Discovery" do
   end
   rel manifests_at magic -> target strength 0.8
   rel practitioner_of discoverer -> magic strength 0.8 bidirectional false
-  mutate pressure magical_stability += 15
+  mutate do
+    pressure modify magical_stability 15
+  end
   enabled true
 end

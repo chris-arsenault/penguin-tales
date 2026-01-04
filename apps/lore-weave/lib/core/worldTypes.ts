@@ -13,8 +13,6 @@ export type Relationship = WorldRelationship;
 
 export type CatalystProperties = NonNullable<WorldEntity['catalyst']>;
 
-export type CatalyzedEvent = CatalystProperties['catalyzedEvents'][number];
-
 // Rate limiting for template-based entity creation
 export interface RateLimitState {
   currentThreshold: number;     // Difficulty threshold for next creation

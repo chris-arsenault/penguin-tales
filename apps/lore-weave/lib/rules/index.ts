@@ -92,7 +92,6 @@ export type {
   StatusRatioMetric,
   CrossCultureRatioMetric,
   SharedRelationshipMetric,
-  CatalyzedEventsMetric,
   ProminenceMultiplierMetric,
   DecayRateMetric,
   FalloffMetric,

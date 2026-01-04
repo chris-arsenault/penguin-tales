@@ -1,33 +1,8 @@
 illuminator do
   worldContext do
     name "The Berg"
-    description <<DESCRIPTION
-The Berg is a supernatural iceberg adrift in an endless frozen sea - vast enough to contain mountains, caverns, and civilizations that have never seen its edges. Two penguin colonies survive here: the Aurora Stack, surface dwellers who channel the sky-lights through crystal spires, and the Nightshelf, tunnel dwellers who mine captured fire from volcanic veins deep within the ice. They depend on each other for survival yet differ in everything else - faith, governance, aesthetics, and what they believe the future should hold. Beyond the berg's shores, orca raiders worship a dead god in the deep and conduct increasingly bold raids for resources, slaves, and sacrifices. The aurora pulses with magic. The ice remembers the past. And something vast moves in the darkness below the frozen sea.
-    DESCRIPTION
-    canonFacts <<CANONFACTS
-The Berg is a supernatural iceberg of impossible scale - large enough to contain mountains, caverns, and multiple civilizations. It drifts through an endless frozen sea under perpetual twilight.
-    CANONFACTS
-    canonFacts <<CANONFACTS
-Penguins evolved sapience through exposure to aurora-light over millennia. They possess flipper-dexterity comparable to human hands and stand upright habitually.
-    CANONFACTS
-    canonFacts <<CANONFACTS
-Two penguin civilizations exist: the Aurora Stack (surface dwellers who worship the sky-lights) and the Nightshelf (tunnel dwellers who mine fire from the berg's volcanic core).
-    CANONFACTS
-    canonFacts <<CANONFACTS
-Orca pods are intelligent raiders from the surrounding sea. They worship a dead god whose corpse drifts somewhere in the deep, and conduct blood-rituals to wake it.
-    CANONFACTS
-    canonFacts <<CANONFACTS
-Magic on The Berg draws from three sources: aurora-light (ice/crystal/divination), captured fire (forge/transformation/destruction), and pressure-depth (blood/force/communion with the deep).
-    CANONFACTS
-    canonFacts <<CANONFACTS
-The Berg's ice remembers. Ancient events leave literal impressions - frozen scenes, echo-sounds, emotional residue. The deeper you go, the older the memories.
-    CANONFACTS
-    canonFacts <<CANONFACTS
-No penguin has ever successfully left The Berg and returned. The frozen sea is infinite in all directions. Some say The Berg is the only land that exists.
-    CANONFACTS
-    canonFacts <<CANONFACTS
-The two colonies maintain an uneasy peace through the Flipper Accord - a trade agreement where surface aurora-crystals exchange for deep fire-cores. Neither can survive without the other's resource.
-    CANONFACTS
+    description "The Berg is a supernatural iceberg adrift in an endless frozen sea - vast enough to contain mountains, caverns, and civilizations that have never seen its edges. Two penguin colonies survive here: the Aurora Stack, surface dwellers who channel the sky-lights through crystal spires, and the Nightshelf, tunnel dwellers who mine captured fire from volcanic veins deep within the ice. They depend on each other for survival yet differ in everything else - faith, governance, aesthetics, and what they believe the future should hold. Beyond the berg's shores, orca raiders worship a dead god in the deep and conduct increasingly bold raids for resources, slaves, and sacrifices. The aurora pulses with magic. The ice remembers the past. And something vast moves in the darkness below the frozen sea."
+    canonFacts "The Berg is a supernatural iceberg of impossible scale - large enough to contain mountains, caverns, and multiple civilizations. It drifts through an endless frozen sea under perpetual twilight." "Penguins evolved sapience through exposure to aurora-light over millennia. They possess flipper-dexterity comparable to human hands and stand upright habitually." "Two penguin civilizations exist: the Aurora Stack (surface dwellers who worship the sky-lights) and the Nightshelf (tunnel dwellers who mine fire from the berg's volcanic core)." "Orca pods are intelligent raiders from the surrounding sea. They worship a dead god whose corpse drifts somewhere in the deep, and conduct blood-rituals to wake it." "Magic on The Berg draws from three sources: aurora-light (ice/crystal/divination), captured fire (forge/transformation/destruction), and pressure-depth (blood/force/communion with the deep)." "The Berg's ice remembers. Ancient events leave literal impressions - frozen scenes, echo-sounds, emotional residue. The deeper you go, the older the memories." "No penguin has ever successfully left The Berg and returned. The frozen sea is infinite in all directions. Some say The Berg is the only land that exists." "The two colonies maintain an uneasy peace through the Flipper Accord - a trade agreement where surface aurora-crystals exchange for deep fire-cores. Neither can survive without the other's resource."
     tone <<TONE
 Dark, war-weary fantasy in the tradition of Malazan Book of the Fallen, Brent Weeks, and the Powder Mage trilogy. History is written by survivors who remember the cost. Tragedy happens without ceremony - important figures die in half-sentences, battles end mid-action, and not everything resolves.
 
@@ -73,19 +48,11 @@ Descriptions should read as if written by a war-chronicle keeper or a faction hi
   end
   entityGuidance do
     npc do
-      focus <<FOCUS
-Reveal personality through concrete details: what they carry, wear, or refuse to touch. Physical tics, scars, or habits that tell a story. What they've lost or what they're protecting. How others react to them (fear, respect, pity, avoidance). No one is purely good or evil - everyone has costs, compromises, or things they won't talk about. Include one uncomfortable or unglamorous detail: a coward's streak, a cruel habit, an old shame. Characters should feel like they existed before this moment and will continue after it.
-      FOCUS
-      relationshipUse <<RELATIONSHIPUSE
-ONE [strong] relationship that truly defines or shaped them. Not a catalog of connections - the description should be ABOUT the entity, not a tour of their relationships.
-      RELATIONSHIPUSE
-      proseHint <<PROSEHINT
-Focus on gesture, tic, or signature object. Show how others remember them, mourn them, or joke about them. Someone carries their token. Someone still curses their name fondly. Someone refuses to sit in their chair.
-      PROSEHINT
+      focus "Reveal personality through concrete details: what they carry, wear, or refuse to touch. Physical tics, scars, or habits that tell a story. What they've lost or what they're protecting. How others react to them (fear, respect, pity, avoidance). No one is purely good or evil - everyone has costs, compromises, or things they won't talk about. Include one uncomfortable or unglamorous detail: a coward's streak, a cruel habit, an old shame. Characters should feel like they existed before this moment and will continue after it."
+      relationshipUse "ONE [strong] relationship that truly defines or shaped them. Not a catalog of connections - the description should be ABOUT the entity, not a tour of their relationships."
+      proseHint "Focus on gesture, tic, or signature object. Show how others remember them, mourn them, or joke about them. Someone carries their token. Someone still curses their name fondly. Someone refuses to sit in their chair."
       visualThesis do
-        domain <<DOMAIN
-You design characters for a fighting game roster or anime ensemble cast. Each character must be INSTANTLY RECOGNIZABLE from silhouette alone - like Overwatch heroes or League of Legends champions. The visual thesis is the ONE THING that makes this character's shape unique in the roster.
-        DOMAIN
+        domain "You design characters for a fighting game roster or anime ensemble cast. Each character must be INSTANTLY RECOGNIZABLE from silhouette alone - like Overwatch heroes or League of Legends champions. The visual thesis is the ONE THING that makes this character's shape unique in the roster."
         focus <<FOCUS
 SHAPE ELEMENTS (prioritize structural over gestural):
 - Structural gear: oversized weapons, distinctive hats, floating objects, massive armor
@@ -103,40 +70,24 @@ Pose can SUPPORT the thesis but cannot BE the thesis. A hunched posture is only 
         FRAMING
       end
       visualTraits do
-        domain <<DOMAIN
-You're completing a character design brief for an action figure or concept art. The thesis defines the PRIMARY silhouette. Your job is to add 2-4 ADDITIONAL distinctive features that make this character unique - things the thesis didn't cover. Think action figure accessories: what extra details would the toy include?
-        DOMAIN
+        domain "You're completing a character design brief for an action figure or concept art. The thesis defines the PRIMARY silhouette. Your job is to add 2-4 ADDITIONAL distinctive features that make this character unique - things the thesis didn't cover. Think action figure accessories: what extra details would the toy include?"
         focus <<FOCUS
 TRAITS SHOULD ADD, NOT REPEAT:
 - If thesis mentions robes → traits could add floating orbs, glowing eyes, unusual footwear
 - If thesis mentions armor → traits could add trophy skulls, ritual scars, bound weapons
 - Find what's MISSING from the thesis
         FOCUS
-        framing <<FRAMING
-This is a CHARACTER - traits should describe additional distinctive features that complement the primary silhouette.
-        FRAMING
+        framing "This is a CHARACTER - traits should describe additional distinctive features that complement the primary silhouette."
       end
-      imageInstructions <<IMAGEINSTRUCTIONS
-The main subject is a CHARACTER. Create a portrait that showcases their individual traits as the focal point. The character should feel like a distinct individual, not a generic representative of their species or role.
-      IMAGEINSTRUCTIONS
-      imageAvoid <<IMAGEAVOID
-Flipper/wing gestures as the SOLE identifying element (raised flipper, wing pressed to chest). Characters defined ONLY by body language with no distinctive gear, clothing, or equipment. NOTE: Upright poses are FINE when combined with distinctive structural elements - the issue is poses WITHOUT distinguishing features, not upright poses themselves.
-      IMAGEAVOID
+      imageInstructions "The main subject is a CHARACTER. Create a portrait that showcases their individual traits as the focal point. The character should feel like a distinct individual, not a generic representative of their species or role."
+      imageAvoid "Flipper/wing gestures as the SOLE identifying element (raised flipper, wing pressed to chest). Characters defined ONLY by body language with no distinctive gear, clothing, or equipment. NOTE: Upright poses are FINE when combined with distinctive structural elements - the issue is poses WITHOUT distinguishing features, not upright poses themselves."
     end
     location do
-      focus <<FOCUS
-Anchor in ONE specific sensory detail first - a smell, a sound, a texture underfoot. Not 'cold' but 'the kind of cold that makes your beak ache.' Show what HAPPENED here: scars, stains, cracks that were never repaired, repairs made with wrong materials. Who controls it NOW vs who BUILT it - layers of history in one place. Not every location is haunted or dangerous. Some are just tired. Some are beloved despite being ugly.
-      FOCUS
-      relationshipUse <<RELATIONSHIPUSE
-Show how people USE this place - the regulars, the rituals, the unwritten rules. Include one detail of stubborn life: graffiti, offerings, someone's initials carved where they shouldn't be. What joke do locals tell about this place? What do they refuse to call it by its official name?
-      RELATIONSHIPUSE
-      proseHint <<PROSEHINT
-Anchor in one visceral sensory detail. Show what it costs to be there. What joke do locals tell about this place?
-      PROSEHINT
+      focus "Anchor in ONE specific sensory detail first - a smell, a sound, a texture underfoot. Not 'cold' but 'the kind of cold that makes your beak ache.' Show what HAPPENED here: scars, stains, cracks that were never repaired, repairs made with wrong materials. Who controls it NOW vs who BUILT it - layers of history in one place. Not every location is haunted or dangerous. Some are just tired. Some are beloved despite being ugly."
+      relationshipUse "Show how people USE this place - the regulars, the rituals, the unwritten rules. Include one detail of stubborn life: graffiti, offerings, someone's initials carved where they shouldn't be. What joke do locals tell about this place? What do they refuse to call it by its official name?"
+      proseHint "Anchor in one visceral sensory detail. Show what it costs to be there. What joke do locals tell about this place?"
       visualThesis do
-        domain <<DOMAIN
-You design environments for a video game or animated film. The visual thesis is what makes THIS location visually distinct from other places. Think iconic game levels - each has a defining visual landmark or spatial quality.
-        DOMAIN
+        domain "You design environments for a video game or animated film. The visual thesis is what makes THIS location visually distinct from other places. Think iconic game levels - each has a defining visual landmark or spatial quality."
         focus <<FOCUS
 ENVIRONMENT ELEMENTS:
 - Structures: towers, bridges, walls, platforms, monuments
@@ -152,37 +103,19 @@ DO NOT describe characters or creatures.
         FRAMING
       end
       visualTraits do
-        domain <<DOMAIN
-You're adding detail to an environment design brief for a location. The thesis defines the primary visual landmark. Your job is to add 2-4 ADDITIONAL environmental details that make this place distinctive. Think video game level design: what secondary features, atmospheric effects, or environmental storytelling elements make this location memorable?
-        DOMAIN
-        focus <<FOCUS
-Secondary features, atmospheric effects, environmental storytelling elements that support the primary landmark.
-        FOCUS
-        framing <<FRAMING
-This is a LOCATION - traits should describe additional environmental details and atmospheric qualities.
-        FRAMING
+        domain "You're adding detail to an environment design brief for a location. The thesis defines the primary visual landmark. Your job is to add 2-4 ADDITIONAL environmental details that make this place distinctive. Think video game level design: what secondary features, atmospheric effects, or environmental storytelling elements make this location memorable?"
+        focus "Secondary features, atmospheric effects, environmental storytelling elements that support the primary landmark."
+        framing "This is a LOCATION - traits should describe additional environmental details and atmospheric qualities."
       end
-      imageInstructions <<IMAGEINSTRUCTIONS
-The main subject is a PLACE. Create an environmental shot that captures the atmosphere and character of this location. Include architectural or natural details that make it feel like a real, lived-in space.
-      IMAGEINSTRUCTIONS
-      imageAvoid <<IMAGEAVOID
-Characters as primary focus. Empty sterile spaces without signs of use or history.
-      IMAGEAVOID
+      imageInstructions "The main subject is a PLACE. Create an environmental shot that captures the atmosphere and character of this location. Include architectural or natural details that make it feel like a real, lived-in space."
+      imageAvoid "Characters as primary focus. Empty sterile spaces without signs of use or history."
     end
     faction do
-      focus <<FOCUS
-Every faction has a founding wound - the injustice, defeat, or loss that forged them. Reference it. Show the internal tensions: what do hardliners want vs pragmatists? Include what the faction has DONE - not just what they believe. Actions, not mission statements. Outsiders' views should include fear, contempt, or grudging respect - not neutral acknowledgment. Some factions survive on stubbornness more than purpose. Some on dark humor. Some on spite.
-      FOCUS
-      relationshipUse <<RELATIONSHIPUSE
-Show the culture of belonging - the in-jokes, the shared complaints, the rituals that outsiders find baffling. Include one detail of loyalty that persists despite everything: members who hate the leadership but won't leave, rivals who'd still fight for each other. What do members say about the faction when they're drunk? What do they never say?
-      RELATIONSHIPUSE
-      proseHint <<PROSEHINT
-Show the culture of belonging - in-jokes, shared complaints, rituals that outsiders find baffling. What do members say when drunk?
-      PROSEHINT
+      focus "Every faction has a founding wound - the injustice, defeat, or loss that forged them. Reference it. Show the internal tensions: what do hardliners want vs pragmatists? Include what the faction has DONE - not just what they believe. Actions, not mission statements. Outsiders' views should include fear, contempt, or grudging respect - not neutral acknowledgment. Some factions survive on stubbornness more than purpose. Some on dark humor. Some on spite."
+      relationshipUse "Show the culture of belonging - the in-jokes, the shared complaints, the rituals that outsiders find baffling. Include one detail of loyalty that persists despite everything: members who hate the leadership but won't leave, rivals who'd still fight for each other. What do members say about the faction when they're drunk? What do they never say?"
+      proseHint "Show the culture of belonging - in-jokes, shared complaints, rituals that outsiders find baffling. What do members say when drunk?"
       visualThesis do
-        domain <<DOMAIN
-You design faction identity for a strategy game or worldbuilding project. The visual thesis captures the faction's ESSENCE in one iconic visual - what makes them instantly recognizable as a group.
-        DOMAIN
+        domain "You design faction identity for a strategy game or worldbuilding project. The visual thesis captures the faction's ESSENCE in one iconic visual - what makes them instantly recognizable as a group."
         focus <<FOCUS
 FACTION IDENTITY ELEMENTS:
 - Symbols: banners, insignias, heraldic devices, sacred objects
@@ -198,37 +131,19 @@ This should represent the GROUP, not an individual member.
         FRAMING
       end
       visualTraits do
-        domain <<DOMAIN
-You're adding detail to a faction design brief. The thesis defines the primary visual identity. Your job is to add 2-4 ADDITIONAL elements that reinforce what this faction stands for. Think faction design in strategy games: what secondary symbols, colors, or motifs make them distinctive?
-        DOMAIN
-        focus <<FOCUS
-Secondary symbols, colors, motifs, architectural details that reinforce faction identity.
-        FOCUS
-        framing <<FRAMING
-This is a FACTION - traits should describe additional elements of collective identity (symbols, colors, architectural details, ceremonial objects).
-        FRAMING
+        domain "You're adding detail to a faction design brief. The thesis defines the primary visual identity. Your job is to add 2-4 ADDITIONAL elements that reinforce what this faction stands for. Think faction design in strategy games: what secondary symbols, colors, or motifs make them distinctive?"
+        focus "Secondary symbols, colors, motifs, architectural details that reinforce faction identity."
+        framing "This is a FACTION - traits should describe additional elements of collective identity (symbols, colors, architectural details, ceremonial objects)."
       end
-      imageInstructions <<IMAGEINSTRUCTIONS
-The main subject is an ORGANIZATION. Choose one of: a council of leaders, the faction's headquarters, their banner or symbol, or a representative member in ceremonial attire. The image should convey collective identity and purpose.
-      IMAGEINSTRUCTIONS
-      imageAvoid <<IMAGEAVOID
-Generic group shots. Individual portraits that don't convey faction identity.
-      IMAGEAVOID
+      imageInstructions "The main subject is an ORGANIZATION. Choose one of: a council of leaders, the faction's headquarters, their banner or symbol, or a representative member in ceremonial attire. The image should convey collective identity and purpose."
+      imageAvoid "Generic group shots. Individual portraits that don't convey faction identity."
     end
     occurrence do
-      focus <<FOCUS
-Focus on what was LOST, BROKEN, or CHANGED FOREVER - not lessons learned. Name the dead or the cost. History is paid for. Capture one visceral detail - the smell, the sound, the thing someone dropped and never picked up. Don't explain significance - let the facts do the work. Not every event is tragedy. Some are darkly comic. Some are just exhausting.
-      FOCUS
-      relationshipUse <<RELATIONSHIPUSE
-Show how survivors remember it - the dark jokes they tell, the things they won't discuss. Include one detail of stubborn loyalty or absurd kindness amid chaos. Someone carried someone else. Someone went back. Someone still flinches at a certain sound.
-      RELATIONSHIPUSE
-      proseHint <<PROSEHINT
-Show how survivors remember it - the dark jokes they tell, the things they won't discuss. Someone still flinches at a certain sound.
-      PROSEHINT
+      focus "Focus on what was LOST, BROKEN, or CHANGED FOREVER - not lessons learned. Name the dead or the cost. History is paid for. Capture one visceral detail - the smell, the sound, the thing someone dropped and never picked up. Don't explain significance - let the facts do the work. Not every event is tragedy. Some are darkly comic. Some are just exhausting."
+      relationshipUse "Show how survivors remember it - the dark jokes they tell, the things they won't discuss. Include one detail of stubborn loyalty or absurd kindness amid chaos. Someone carried someone else. Someone went back. Someone still flinches at a certain sound."
+      proseHint "Show how survivors remember it - the dark jokes they tell, the things they won't discuss. Someone still flinches at a certain sound."
       visualThesis do
-        domain <<DOMAIN
-You design key frames for historical moments in an animated film or graphic novel. The visual thesis captures the PIVOTAL MOMENT - the single frame that would represent this event in a history book.
-        DOMAIN
+        domain "You design key frames for historical moments in an animated film or graphic novel. The visual thesis captures the PIVOTAL MOMENT - the single frame that would represent this event in a history book."
         focus <<FOCUS
 EVENT COMPOSITION ELEMENTS:
 - Action: the central dramatic gesture or movement
@@ -244,37 +159,19 @@ Capture the MOMENT, not a static scene.
         FRAMING
       end
       visualTraits do
-        domain <<DOMAIN
-You're adding detail to an event illustration brief. The thesis defines the central dramatic moment. Your job is to add 2-4 ADDITIONAL visual elements that reinforce the event's significance. Think key frame illustration: what environmental details, secondary actions, or atmospheric effects enhance the drama?
-        DOMAIN
-        focus <<FOCUS
-Environmental details, secondary actions, atmospheric effects that enhance the drama.
-        FOCUS
-        framing <<FRAMING
-This is an EVENT - traits should describe additional dramatic elements (environmental effects, secondary actions, atmospheric conditions, visual stakes).
-        FRAMING
+        domain "You're adding detail to an event illustration brief. The thesis defines the central dramatic moment. Your job is to add 2-4 ADDITIONAL visual elements that reinforce the event's significance. Think key frame illustration: what environmental details, secondary actions, or atmospheric effects enhance the drama?"
+        focus "Environmental details, secondary actions, atmospheric effects that enhance the drama."
+        framing "This is an EVENT - traits should describe additional dramatic elements (environmental effects, secondary actions, atmospheric conditions, visual stakes)."
       end
-      imageInstructions <<IMAGEINSTRUCTIONS
-The main subject is an EVENT. Create a dramatic scene capturing the pivotal moment. Show the action as if witnessed firsthand - triumphant, tragic, or transformative.
-      IMAGEINSTRUCTIONS
-      imageAvoid <<IMAGEAVOID
-Static posed scenes. Before/after comparisons. Abstract representations of events.
-      IMAGEAVOID
+      imageInstructions "The main subject is an EVENT. Create a dramatic scene capturing the pivotal moment. Show the action as if witnessed firsthand - triumphant, tragic, or transformative."
+      imageAvoid "Static posed scenes. Before/after comparisons. Abstract representations of events."
     end
     era do
-      focus <<FOCUS
-Eras are defined by what they cost, not what they achieved. Name the central tension that couldn't be resolved - the thing everyone argued about, the wound that wouldn't close. Don't frame eras as 'dark' or 'golden' - show the texture. Golden ages have rot beneath. Dark ages have stubborn hope. Some eras are remembered fondly by exactly the wrong people.
-      FOCUS
-      relationshipUse <<RELATIONSHIPUSE
-What did people hold onto? A song, a ritual, a grudge, a joke that stopped being funny. Show the absurdity of endurance - the things people did to stay sane, the dark humor that got them through. Include one detail of connection that persisted: a trade that continued despite war, a friendship across enemy lines, a tradition no one remembers the origin of.
-      RELATIONSHIPUSE
-      proseHint <<PROSEHINT
-Show the absurdity of endurance - what people did to stay sane, the dark humor that got them through. A trade that continued despite war.
-      PROSEHINT
+      focus "Eras are defined by what they cost, not what they achieved. Name the central tension that couldn't be resolved - the thing everyone argued about, the wound that wouldn't close. Don't frame eras as 'dark' or 'golden' - show the texture. Golden ages have rot beneath. Dark ages have stubborn hope. Some eras are remembered fondly by exactly the wrong people."
+      relationshipUse "What did people hold onto? A song, a ritual, a grudge, a joke that stopped being funny. Show the absurdity of endurance - the things people did to stay sane, the dark humor that got them through. Include one detail of connection that persisted: a trade that continued despite war, a friendship across enemy lines, a tradition no one remembers the origin of."
+      proseHint "Show the absurdity of endurance - what people did to stay sane, the dark humor that got them through. A trade that continued despite war."
       visualThesis do
-        domain <<DOMAIN
-You design chapter headers and era illustrations for a history book or fantasy chronicle. The visual thesis captures the SPIRIT OF THE AGE - what single symbolic image represents this time period?
-        DOMAIN
+        domain "You design chapter headers and era illustrations for a history book or fantasy chronicle. The visual thesis captures the SPIRIT OF THE AGE - what single symbolic image represents this time period?"
         focus <<FOCUS
 ERA VISUALIZATION ELEMENTS:
 - Symbolic landscapes: rising/setting suns, storms gathering, seasons changing
@@ -290,37 +187,19 @@ This is SYMBOLIC - not a specific moment, but the essence of an entire period.
         FRAMING
       end
       visualTraits do
-        domain <<DOMAIN
-You're adding detail to an era illustration. The thesis defines the central symbolic image. Your job is to add 2-4 ADDITIONAL visual elements that reinforce the era's character. Think history book chapter headers: what secondary symbols, atmospheric details, or visual metaphors enhance the mood?
-        DOMAIN
-        focus <<FOCUS
-Secondary symbols, atmospheric details, visual metaphors for the age's character.
-        FOCUS
-        framing <<FRAMING
-This is an ERA - traits should describe additional symbolic elements (atmospheric effects, secondary symbols, visual metaphors for the age's character).
-        FRAMING
+        domain "You're adding detail to an era illustration. The thesis defines the central symbolic image. Your job is to add 2-4 ADDITIONAL visual elements that reinforce the era's character. Think history book chapter headers: what secondary symbols, atmospheric details, or visual metaphors enhance the mood?"
+        focus "Secondary symbols, atmospheric details, visual metaphors for the age's character."
+        framing "This is an ERA - traits should describe additional symbolic elements (atmospheric effects, secondary symbols, visual metaphors for the age's character)."
       end
-      imageInstructions <<IMAGEINSTRUCTIONS
-The main subject is a TIME PERIOD. Create a symbolic or panoramic scene that captures the spirit of this era. Use visual metaphor - rising sun, gathering storm, crumbling walls - to convey the age's defining mood.
-      IMAGEINSTRUCTIONS
-      imageAvoid <<IMAGEAVOID
-Specific dated events. Individual character portraits. Literal historical scenes.
-      IMAGEAVOID
+      imageInstructions "The main subject is a TIME PERIOD. Create a symbolic or panoramic scene that captures the spirit of this era. Use visual metaphor - rising sun, gathering storm, crumbling walls - to convey the age's defining mood."
+      imageAvoid "Specific dated events. Individual character portraits. Literal historical scenes."
     end
     artifact do
-      focus <<FOCUS
-Focus on what it HAS DONE, not just what it IS. Start with a physical detail that tells a story - a notch in the blade, a stain that won't come out, a crack that appeared after a specific use. Artifacts earn their legends. What did this object DO that made it famous? Name a death, a victory, a betrayal. Include the cost - powerful things demand something. What has this artifact taken from its wielders? Show the weight of history: who held it last, who refuses to touch it, what happens to those who carry it too long.
-      FOCUS
-      relationshipUse <<RELATIONSHIPUSE
-If it's lost, show why no one has retrieved it. If it's held, show why no one has stolen it. The relationships around an artifact reveal its true nature.
-      RELATIONSHIPUSE
-      proseHint <<PROSEHINT
-Show the weight of history - who held it last, who refuses to touch it. The cost of wielding it.
-      PROSEHINT
+      focus "Focus on what it HAS DONE, not just what it IS. Start with a physical detail that tells a story - a notch in the blade, a stain that won't come out, a crack that appeared after a specific use. Artifacts earn their legends. What did this object DO that made it famous? Name a death, a victory, a betrayal. Include the cost - powerful things demand something. What has this artifact taken from its wielders? Show the weight of history: who held it last, who refuses to touch it, what happens to those who carry it too long."
+      relationshipUse "If it's lost, show why no one has retrieved it. If it's held, show why no one has stolen it. The relationships around an artifact reveal its true nature."
+      proseHint "Show the weight of history - who held it last, who refuses to touch it. The cost of wielding it."
       visualThesis do
-        domain <<DOMAIN
-You design legendary items for a fantasy RPG or video game. The visual thesis captures what makes THIS artifact instantly recognizable - its defining visual feature.
-        DOMAIN
+        domain "You design legendary items for a fantasy RPG or video game. The visual thesis captures what makes THIS artifact instantly recognizable - its defining visual feature."
         focus <<FOCUS
 ARTIFACT ELEMENTS:
 - Form: sword, staff, orb, tome, crown, amulet, ring, gauntlet
@@ -336,37 +215,19 @@ This should represent the OBJECT itself, not someone holding it.
         FRAMING
       end
       visualTraits do
-        domain <<DOMAIN
-You're adding detail to an artifact design brief. The thesis defines the primary form. Your job is to add 2-4 ADDITIONAL visual details that make this artifact distinctive. Think legendary item design: what secondary details, inscriptions, or magical effects make it memorable?
-        DOMAIN
-        focus <<FOCUS
-Secondary details, inscriptions, magical effects that make the artifact distinctive.
-        FOCUS
-        framing <<FRAMING
-This is an ARTIFACT - traits should describe additional visual elements (material details, magical effects, inscriptions, ornamental features).
-        FRAMING
+        domain "You're adding detail to an artifact design brief. The thesis defines the primary form. Your job is to add 2-4 ADDITIONAL visual details that make this artifact distinctive. Think legendary item design: what secondary details, inscriptions, or magical effects make it memorable?"
+        focus "Secondary details, inscriptions, magical effects that make the artifact distinctive."
+        framing "This is an ARTIFACT - traits should describe additional visual elements (material details, magical effects, inscriptions, ornamental features)."
       end
-      imageInstructions <<IMAGEINSTRUCTIONS
-The main subject is an ARTIFACT or magical object. Create a detailed study of the item as if it were being catalogued in a museum or bestiary. Show the object in isolation or on a pedestal/display, emphasizing its unique features and craftsmanship.
-      IMAGEINSTRUCTIONS
-      imageAvoid <<IMAGEAVOID
-Characters holding the artifact. Action scenes. The artifact as a small detail in a larger scene.
-      IMAGEAVOID
+      imageInstructions "The main subject is an ARTIFACT or magical object. Create a detailed study of the item as if it were being catalogued in a museum or bestiary. Show the object in isolation or on a pedestal/display, emphasizing its unique features and craftsmanship."
+      imageAvoid "Characters holding the artifact. Action scenes. The artifact as a small detail in a larger scene."
     end
     ability do
-      focus <<FOCUS
-Focus on how the magic MANIFESTS and what it COSTS. Magic should feel dangerous or strange, not convenient.
-      FOCUS
-      relationshipUse <<RELATIONSHIPUSE
-Who taught this? Who fears it? Who died learning it wrong?
-      RELATIONSHIPUSE
-      proseHint <<PROSEHINT
-Show the physical sensation of magic - what it smells like, sounds like, what it takes from the user.
-      PROSEHINT
+      focus "Focus on how the magic MANIFESTS and what it COSTS. Magic should feel dangerous or strange, not convenient."
+      relationshipUse "Who taught this? Who fears it? Who died learning it wrong?"
+      proseHint "Show the physical sensation of magic - what it smells like, sounds like, what it takes from the user."
       visualThesis do
-        domain <<DOMAIN
-You design VFX and magical effects for a video game or animated film. The visual thesis is what makes THIS magic visually distinct from other powers. Think spell effects in a fighting game - each power has a unique visual signature.
-        DOMAIN
+        domain "You design VFX and magical effects for a video game or animated film. The visual thesis is what makes THIS magic visually distinct from other powers. Think spell effects in a fighting game - each power has a unique visual signature."
         focus <<FOCUS
 VFX ELEMENTS:
 - Energy patterns: spirals, fractals, geometric shapes, organic flows
@@ -382,37 +243,19 @@ DO NOT describe a character wearing gear or holding items.
         FRAMING
       end
       visualTraits do
-        domain <<DOMAIN
-You're adding detail to a VFX design brief for a magical power. The thesis defines the primary visual effect. Your job is to add 2-4 ADDITIONAL visual properties that make this magic distinctive. Think video game spell effects: what secondary particles, afterimages, or environmental reactions make this power unique?
-        DOMAIN
-        focus <<FOCUS
-Secondary particles, afterimages, environmental reactions that make this power unique.
-        FOCUS
-        framing <<FRAMING
-This is a MAGICAL ABILITY - traits should describe additional visual properties of the magic effect itself.
-        FRAMING
+        domain "You're adding detail to a VFX design brief for a magical power. The thesis defines the primary visual effect. Your job is to add 2-4 ADDITIONAL visual properties that make this magic distinctive. Think video game spell effects: what secondary particles, afterimages, or environmental reactions make this power unique?"
+        focus "Secondary particles, afterimages, environmental reactions that make this power unique."
+        framing "This is a MAGICAL ABILITY - traits should describe additional visual properties of the magic effect itself."
       end
-      imageInstructions <<IMAGEINSTRUCTIONS
-The main subject is a MAGICAL POWER or ability. Focus on the manifestation of the power itself, not on characters using it. Show energy, effects, or the visual signature of this magic in action.
-      IMAGEINSTRUCTIONS
-      imageAvoid <<IMAGEAVOID
-Characters as the focus. Static representations of magic. Abstract symbols alone.
-      IMAGEAVOID
+      imageInstructions "The main subject is a MAGICAL POWER or ability. Focus on the manifestation of the power itself, not on characters using it. Show energy, effects, or the visual signature of this magic in action."
+      imageAvoid "Characters as the focus. Static representations of magic. Abstract symbols alone."
     end
     rule do
-      focus <<FOCUS
-Focus on how the rule CONSTRAINS or ENABLES. Magic systems should feel like they have costs and limits.
-      FOCUS
-      relationshipUse <<RELATIONSHIPUSE
-Who enforces this rule? Who breaks it? What happens to those who test its limits?
-      RELATIONSHIPUSE
-      proseHint <<PROSEHINT
-Show the rule through its exceptions - who has broken it, what happened when they did.
-      PROSEHINT
+      focus "Focus on how the rule CONSTRAINS or ENABLES. Magic systems should feel like they have costs and limits."
+      relationshipUse "Who enforces this rule? Who breaks it? What happens to those who test its limits?"
+      proseHint "Show the rule through its exceptions - who has broken it, what happened when they did."
       visualThesis do
-        domain <<DOMAIN
-You design magic system diagrams and abstract visualizations for a fantasy RPG rulebook. The visual thesis captures the FUNDAMENTAL PRINCIPLE - how does this rule or system manifest visually?
-        DOMAIN
+        domain "You design magic system diagrams and abstract visualizations for a fantasy RPG rulebook. The visual thesis captures the FUNDAMENTAL PRINCIPLE - how does this rule or system manifest visually?"
         focus <<FOCUS
 SYSTEM VISUALIZATION ELEMENTS:
 - Diagrams: flow charts, circular patterns, hierarchical structures
@@ -428,108 +271,62 @@ This is ABSTRACT - not a scene, not a character, but a visualization of a princi
         FRAMING
       end
       visualTraits do
-        domain <<DOMAIN
-You're adding detail to a magic system diagram. The thesis defines the core visual concept. Your job is to add 2-4 ADDITIONAL symbolic or diagrammatic elements that clarify how the system works. Think RPG rulebook illustrations: what secondary symbols, flows, or annotations make the system clearer?
-        DOMAIN
-        focus <<FOCUS
-Secondary symbols, flows, annotations that clarify the system.
-        FOCUS
-        framing <<FRAMING
-This is a MAGICAL SYSTEM - traits should describe additional abstract elements (symbols, flows, connections, visual metaphors for the rules).
-        FRAMING
+        domain "You're adding detail to a magic system diagram. The thesis defines the core visual concept. Your job is to add 2-4 ADDITIONAL symbolic or diagrammatic elements that clarify how the system works. Think RPG rulebook illustrations: what secondary symbols, flows, or annotations make the system clearer?"
+        focus "Secondary symbols, flows, annotations that clarify the system."
+        framing "This is a MAGICAL SYSTEM - traits should describe additional abstract elements (symbols, flows, connections, visual metaphors for the rules)."
       end
-      imageInstructions <<IMAGEINSTRUCTIONS
-The main subject is a MAGICAL SYSTEM or rule. Create an abstract or symbolic representation that conveys how this magic works - perhaps glyphs, energy flows, or the interaction of elemental forces.
-      IMAGEINSTRUCTIONS
-      imageAvoid <<IMAGEAVOID
-Specific characters. Narrative scenes. Literal depictions of magic use.
-      IMAGEAVOID
+      imageInstructions "The main subject is a MAGICAL SYSTEM or rule. Create an abstract or symbolic representation that conveys how this magic works - perhaps glyphs, energy flows, or the interaction of elemental forces."
+      imageAvoid "Specific characters. Narrative scenes. Literal depictions of magic use."
     end
   end
   cultureIdentities do
     visual do
       orca do
-        SPECIES <<SPECIES
-Apex predators. Size and scarification vary by role - raiders lean and scarred, shamans massive and unmarked, warriors somewhere between. Posture ranges from coiled ambush stillness to rigid military display.
-        SPECIES
-        ATTIRE <<ATTIRE
-Minimal - orcas wear function, not fashion. Raiders: kelp-rope harnesses for carrying weapons, nothing else. Warriors: bone-plated shoulder guards, tooth-string bandoliers. Shamans: ceremonial whale-bone headdresses, kelp cloaks heavy with salt. Kill-trophies worn as status: penguin beaks on cords, enemy fins dried and strapped to flanks. No fabric - everything is leather, bone, kelp, or trophy.
-        ATTIRE
+        SPECIES "Apex predators. Size and scarification vary by role - raiders lean and scarred, shamans massive and unmarked, warriors somewhere between. Posture ranges from coiled ambush stillness to rigid military display."
+        ATTIRE "Minimal - orcas wear function, not fashion. Raiders: kelp-rope harnesses for carrying weapons, nothing else. Warriors: bone-plated shoulder guards, tooth-string bandoliers. Shamans: ceremonial whale-bone headdresses, kelp cloaks heavy with salt. Kill-trophies worn as status: penguin beaks on cords, enemy fins dried and strapped to flanks. No fabric - everything is leather, bone, kelp, or trophy."
         ARCHITECTURE "No permanent structures. Temporary hunting camps marked by kelp-rope barriers, bone totems, skull warnings. Sacred spaces are natural formations claimed, not built."
         TECH "Ocean-current weaponry - shock-lances, current-whips, pressure harpoons. Equipment is brutal and functional. Trophy display varies: some drape kills, others maintain austere discipline."
-        MAGIC <<MAGIC
-Blood and pressure. Rituals leave physical marks - scarification, tooth-notching, fin-splitting. Magic manifests as water distortion, pressure waves, cold spots. Dead god symbols are ancient, half-forgotten, inconsistently applied.
-        MAGIC
-        ARTIFACT <<ARTIFACT
-War trophies and kill-markers. Weapons: whale-bone harpoons, sharpened orca teeth on chains, pressure-forged tridents, current-channeling spears. Relics: enemy skulls with etched kill-counts, preserved penguin beaks, blood-stained expedition banners. Materials: whale bone, deep-sea coral, pressure-blackened steel, kelp-leather bindings. Aesthetic: brutal, functional, marked by use and kills. No ornamentation for beauty - only kill-tallies and pack symbols.
-        ARTIFACT
+        MAGIC "Blood and pressure. Rituals leave physical marks - scarification, tooth-notching, fin-splitting. Magic manifests as water distortion, pressure waves, cold spots. Dead god symbols are ancient, half-forgotten, inconsistently applied."
+        ARTIFACT "War trophies and kill-markers. Weapons: whale-bone harpoons, sharpened orca teeth on chains, pressure-forged tridents, current-channeling spears. Relics: enemy skulls with etched kill-counts, preserved penguin beaks, blood-stained expedition banners. Materials: whale bone, deep-sea coral, pressure-blackened steel, kelp-leather bindings. Aesthetic: brutal, functional, marked by use and kills. No ornamentation for beauty - only kill-tallies and pack symbols."
         COLOR_PALETTE "Black and white as base (their natural coloring), blood-red as accent from kills and rituals, deep ocean blue-black for ceremonial contexts. No bright colors - everything muted by salt and depth."
         WEATHER_ASSOCIATION "Storm surges, choppy seas, fog rolling off water. They attack during weather that grounds penguin airships and obscures the aurora. Calm seas make them restless."
         SOUND_SIGNATURE "Whale-song echoes, the slap of water against ice, clicking echolocation, guttural chanting in deep voices, the wet sound of bodies surfacing."
-        DECAY_PATTERN <<DECAY_PATTERN
-Orca things don't decay - they're consumed. Equipment is used until destroyed, then scavenged. Trophies are preserved in salt and pressure. Abandoned camps leave only bone totems that bleach white over decades.
-        DECAY_PATTERN
+        DECAY_PATTERN "Orca things don't decay - they're consumed. Equipment is used until destroyed, then scavenged. Trophies are preserved in salt and pressure. Abandoned camps leave only bone totems that bleach white over decades."
       end
       nightshelf do
-        SPECIES <<SPECIES
-Cave-adapted penguins. Builds range from compact tunnel-runners to broader cavern-dwellers. Bone and crystal mark status but placement varies - some favor crowns, others belts, others hidden talismans.
-        SPECIES
-        ATTIRE <<ATTIRE
-Layered for warmth and utility. Common: heavy fur-lined wraps in charcoal and ember-brown, leather aprons for forge-workers, hooded cloaks for tunnel travel. Status markers: fire-core amulets at the throat, ancestor-bone clasps, bioluminescent thread embroidery visible only in darkness. Stealth-workers: minimal black wrappings, bare flippers for grip. Guild masters: ornate leather coats with brass fittings, multiple tool-belts. Ceremonial: ash-gray robes with glowing ember-thread hems. No bright colors - everything absorbs light.
-        ATTIRE
+        SPECIES "Cave-adapted penguins. Builds range from compact tunnel-runners to broader cavern-dwellers. Bone and crystal mark status but placement varies - some favor crowns, others belts, others hidden talismans."
+        ATTIRE "Layered for warmth and utility. Common: heavy fur-lined wraps in charcoal and ember-brown, leather aprons for forge-workers, hooded cloaks for tunnel travel. Status markers: fire-core amulets at the throat, ancestor-bone clasps, bioluminescent thread embroidery visible only in darkness. Stealth-workers: minimal black wrappings, bare flippers for grip. Guild masters: ornate leather coats with brass fittings, multiple tool-belts. Ceremonial: ash-gray robes with glowing ember-thread hems. No bright colors - everything absorbs light."
         ARCHITECTURE "Subterranean networks mixing natural caverns and carved tunnels. Bioluminescent accents and fire-braziers for light. Sacred spaces go deeper and darker. Public areas glow; private areas don't."
-        TECH <<TECH
-Captured elemental fire drives everything - braziers, forges, engines. Steampunk aesthetic but visibility varies: lamp-bearers are obvious, shadow-workers hide their gear. Bone integrated as structural material and decoration.
-        TECH
+        TECH "Captured elemental fire drives everything - braziers, forges, engines. Steampunk aesthetic but visibility varies: lamp-bearers are obvious, shadow-workers hide their gear. Bone integrated as structural material and decoration."
         MAGIC "Ice and fire in tension. Practical applications over spectacle. Magic users often understated - subtle warmth, quiet frost. Rituals happen in darkness. Effects are felt before seen."
-        ARTIFACT <<ARTIFACT
-Shadow-forged treasures and deep-earth relics. Weapons: obsidian daggers, fire-core hammers, shadow-steel blades that drink light, chain-whips with ember-heads. Relics: flame-heart crystals, bone-carved ancestor masks, bioluminescent orbs, smoke-captured in glass. Tomes: leather-bound grimoires with glowing ink, stone tablets from the deep, scrolls that only reveal text in darkness. Materials: obsidian, volcanic glass, fire-core crystals, shadow-steel, ancestor bone, cavern fungus leather. Aesthetic: flickering between light and shadow, warm cores with dark exteriors, hidden mechanisms, secrets within secrets.
-        ARTIFACT
+        ARTIFACT "Shadow-forged treasures and deep-earth relics. Weapons: obsidian daggers, fire-core hammers, shadow-steel blades that drink light, chain-whips with ember-heads. Relics: flame-heart crystals, bone-carved ancestor masks, bioluminescent orbs, smoke-captured in glass. Tomes: leather-bound grimoires with glowing ink, stone tablets from the deep, scrolls that only reveal text in darkness. Materials: obsidian, volcanic glass, fire-core crystals, shadow-steel, ancestor bone, cavern fungus leather. Aesthetic: flickering between light and shadow, warm cores with dark exteriors, hidden mechanisms, secrets within secrets."
         COLOR_PALETTE "Deep oranges and ember-reds from fire-cores, charcoal blacks and ash grays as base, occasional bioluminescent greens and blues as accents. No bright whites or silvers - those belong to the surface."
         WEATHER_ASSOCIATION "They have no weather underground, but prefer overcast surface conditions when they must travel above. Snowstorms are useful cover. Clear aurora-lit nights feel exposed and dangerous."
         SOUND_SIGNATURE "Crackling fire, dripping water, echoing footsteps, the low hum of geothermal vents, whispered conversations, the clang of forge-hammers in distant tunnels."
-        DECAY_PATTERN <<DECAY_PATTERN
-Fire-tech gutters out when neglected, leaving cold metal husks. Tunnels collapse slowly, becoming rubble-filled dead ends. Bioluminescence fades to darkness. Abandoned spaces are reclaimed by fungal growth and crystalline formations.
-        DECAY_PATTERN
+        DECAY_PATTERN "Fire-tech gutters out when neglected, leaving cold metal husks. Tunnels collapse slowly, becoming rubble-filled dead ends. Bioluminescence fades to darkness. Abandoned spaces are reclaimed by fungal growth and crystalline formations."
       end
       aurora-stack do
-        SPECIES <<SPECIES
-Open-ice penguins. Posture tends tall and proud but varies by role - merchants bustle, mystics stand still, soldiers brace. Crystalline ice integrated into equipment at varying degrees - some carry staves, others wear jewelry, others embed it in armor or tools.
-        SPECIES
-        ATTIRE <<ATTIRE
-Elegant and layered against the wind. Common: flowing white and silver robes with aurora-glass clasps, fur-trimmed hoods for storms. Soldiers: ice-plate armor with crystalline pauldrons, aurora-charged bracers. Mystics: sheer ceremonial gowns that catch and refract aurora-light, crystal circlets. Merchants: practical but fine - embroidered coats, silver thread, subtle status gems. Airship crews: tight-wrapped wind-gear, goggles, harnesses. All favor pale colors - whites, silvers, ice-blues, soft golds. Fire colors are avoided as Nightshelf markers.
-        ATTIRE
+        SPECIES "Open-ice penguins. Posture tends tall and proud but varies by role - merchants bustle, mystics stand still, soldiers brace. Crystalline ice integrated into equipment at varying degrees - some carry staves, others wear jewelry, others embed it in armor or tools."
+        ATTIRE "Elegant and layered against the wind. Common: flowing white and silver robes with aurora-glass clasps, fur-trimmed hoods for storms. Soldiers: ice-plate armor with crystalline pauldrons, aurora-charged bracers. Mystics: sheer ceremonial gowns that catch and refract aurora-light, crystal circlets. Merchants: practical but fine - embroidered coats, silver thread, subtle status gems. Airship crews: tight-wrapped wind-gear, goggles, harnesses. All favor pale colors - whites, silvers, ice-blues, soft golds. Fire colors are avoided as Nightshelf markers."
         ARCHITECTURE "Vertical ice spires with open-air galleries designed to catch aurora-light. Elegant and organic-looking but clearly engineered. Public spaces soar; private quarters are modest cells within the ice."
-        TECH <<TECH
-Ice-magic fusion powers everything. Crystalline conductors, aurora-charged capacitors. Prefer blunt and crushing weapons to blades. Airship crews dress for wind; wall-builders dress for cold; merchants dress for impression.
-        TECH
-        MAGIC <<MAGIC
-Pure ice channeling. Adepts glow faintly from within - intensity varies by power level. Magic manifests as crystalline growth, temperature drops, aurora-reflection. Mundane members show no glow but may carry charged equipment.
-        MAGIC
-        ARTIFACT <<ARTIFACT
-Aurora-touched treasures and ice-crystal relics. Weapons: ice-crystal maces, aurora-glass staves, frost-forged war-hammers, crystalline throwing discs. Relics: preserved aurora-light in crystal prisms, frozen tears of saints, ice-carved genealogy tablets, ceremony bells of pure ice. Tomes: crystal-page books that catch light, aurora-ink manuscripts, frozen memory scrolls, living ice that records speech. Instruments: aurora-tuned chimes, ice-crystal lenses, navigation orbs, weather-sensing devices. Materials: aurora-glass, eternal ice, crystalline conductors, silver-ice alloys, light-catching prisms. Aesthetic: elegant, luminous, prismatic refractions, cold beauty, objects that seem to hold captured starlight.
-        ARTIFACT
+        TECH "Ice-magic fusion powers everything. Crystalline conductors, aurora-charged capacitors. Prefer blunt and crushing weapons to blades. Airship crews dress for wind; wall-builders dress for cold; merchants dress for impression."
+        MAGIC "Pure ice channeling. Adepts glow faintly from within - intensity varies by power level. Magic manifests as crystalline growth, temperature drops, aurora-reflection. Mundane members show no glow but may carry charged equipment."
+        ARTIFACT "Aurora-touched treasures and ice-crystal relics. Weapons: ice-crystal maces, aurora-glass staves, frost-forged war-hammers, crystalline throwing discs. Relics: preserved aurora-light in crystal prisms, frozen tears of saints, ice-carved genealogy tablets, ceremony bells of pure ice. Tomes: crystal-page books that catch light, aurora-ink manuscripts, frozen memory scrolls, living ice that records speech. Instruments: aurora-tuned chimes, ice-crystal lenses, navigation orbs, weather-sensing devices. Materials: aurora-glass, eternal ice, crystalline conductors, silver-ice alloys, light-catching prisms. Aesthetic: elegant, luminous, prismatic refractions, cold beauty, objects that seem to hold captured starlight."
         COLOR_PALETTE "Crystalline blues and silvers as base, prismatic rainbow refractions as accents, soft gold from captured aurora-light. No warm reds or oranges - fire colors belong to the Nightshelf."
         WEATHER_ASSOCIATION "Clear skies with active aurora. Fresh snowfall. Crisp visibility. They feel uneasy in fog, clouds, or underground darkness. Their magic works best when the aurora is visible."
         SOUND_SIGNATURE "Wind chimes, crystal resonance, distant whale-song carried on wind, the hum of aurora-charged equipment, formal speech in large echoing halls, the creak of ice under wind."
-        DECAY_PATTERN <<DECAY_PATTERN
-Ice structures don't rot - they slowly lose clarity, becoming clouded and opaque. Crystal conductors crack along geometric lines. Abandoned aurora-tech goes dark and still, waiting to be recharged. Neglected spires lean and eventually shatter.
-        DECAY_PATTERN
+        DECAY_PATTERN "Ice structures don't rot - they slowly lose clarity, becoming clouded and opaque. Crystal conductors crack along geometric lines. Abandoned aurora-tech goes dark and still, waiting to be recharged. Neglected spires lean and eventually shatter."
       end
       world do
         SPECIES "The Berg itself - supernatural iceberg of impossible scale. Weather is entity, not backdrop."
         ARCHITECTURE "Natural ice formations that seem almost intentional. Crevasses, spires, shelves, grottos. The berg shifts slowly over generations."
         TECH "None. The world is pre-technological, post-magical."
         MAGIC "Ambient and ancient. The ice remembers. Aurora-light carries power. The cold thinks."
-        ARTIFACT <<ARTIFACT
-Primordial relics and berg-born treasures. Weapons: ice that never melts, storm-frozen lightning, solidified aurora. Relics: the berg's own bones, ice that predates memory, formations that move on their own, crystals that hum with the berg's heartbeat. Tomes: weather-patterns that tell stories, ice that records time itself, aurora-light that speaks. Materials: eternal ice, berg-heart crystal, frozen time, solidified memory. Aesthetic: ancient beyond culture, primordial, objects that feel older than the world itself, things that were found rather than made.
-        ARTIFACT
+        ARTIFACT "Primordial relics and berg-born treasures. Weapons: ice that never melts, storm-frozen lightning, solidified aurora. Relics: the berg's own bones, ice that predates memory, formations that move on their own, crystals that hum with the berg's heartbeat. Tomes: weather-patterns that tell stories, ice that records time itself, aurora-light that speaks. Materials: eternal ice, berg-heart crystal, frozen time, solidified memory. Aesthetic: ancient beyond culture, primordial, objects that feel older than the world itself, things that were found rather than made."
         COLOR_PALETTE "Infinite whites and ice-blues, deep blacks in crevasses and the frozen sea, aurora greens and purples in the sky. The berg's palette is the palette of nature before culture claimed it."
         WEATHER_ASSOCIATION "The Berg IS weather. Perpetual twilight, aurora displays, blizzards that last generations, the slow grinding movement of ice. Weather on the berg feels intentional, almost communicative."
         SOUND_SIGNATURE "The deep groaning of shifting ice, wind across endless frozen plains, the crack of calving glaciers, whale-song from the depths, and beneath it all - something like breathing."
-        DECAY_PATTERN <<DECAY_PATTERN
-The Berg does not decay - it transforms. Ice becomes water becomes ice. Crevasses open and close over centuries. Nothing is destroyed, only moved, compressed, or frozen deeper. The only true decay is melting, and the berg resists that with something like will.
-        DECAY_PATTERN
+        DECAY_PATTERN "The Berg does not decay - it transforms. Ice becomes water becomes ice. Crevasses open and close over centuries. Nothing is destroyed, only moved, compressed, or frozen deeper. The only true decay is melting, and the berg resists that with something like will."
       end
     end
     descriptive do

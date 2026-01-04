@@ -15,6 +15,7 @@ export const cannonGrammar = String.raw`
       key,
       value,
       labels: [],
+      valueKind: "inline",
       span: span(location())
     };
   }
@@ -35,6 +36,7 @@ Statement
     / PredicateStatement
     / InStatement
     / FromStatement
+    / FlagAttribute
     / HereDocAttribute
     / Block
     / LabeledAttribute
@@ -178,6 +180,7 @@ LabeledAttribute
         key,
         labels,
         value: values || null,
+        valueKind: "inline",
         span: span(location())
       };
     }
@@ -207,8 +210,17 @@ Attribute
         key,
         value: values,
         labels: [],
+        valueKind: "inline",
         span: span(location())
       };
+    }
+
+FlagAttribute
+  = AxisKeyword _ &LineEnd {
+      return attr("axis", true);
+    }
+  / AxisKeyword _ &EndOfFile {
+      return attr("axis", true);
     }
 
 HereDocAttribute
@@ -221,6 +233,7 @@ HereDocAttribute
         key,
         value: body,
         labels: [],
+        valueKind: "heredoc",
         span: span(location())
       };
     }
@@ -376,6 +389,7 @@ Keyword
 
 LineEnd = _ (Newline / ";")+
 Newline = "\r"? "\n"
+EndOfFile = !.
 
 _ = (Whitespace / Comment)*
 __ = (Whitespace / Comment / Newline)*

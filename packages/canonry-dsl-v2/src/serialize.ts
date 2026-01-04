@@ -46,25 +46,6 @@ const SET_FIELD_KEYS = new Set([
   'culture_id',
   'cultureId'
 ]);
-const HEREDOC_ALWAYS_KEYS = new Set(['canonFacts', 'canon_facts']);
-const HEREDOC_PREFERRED_KEYS = new Set([
-  'description',
-  'summary',
-  'tone',
-  'focus',
-  'relationshipUse',
-  'proseHint',
-  'domain',
-  'framing',
-  'imageInstructions',
-  'imageAvoid',
-  'claudeImagePromptTemplate',
-  'descriptionTemplate',
-  'narrative',
-  'prompt'
-]);
-const HEREDOC_MIN_LENGTH = 200;
-
 export interface CanonFile {
   path: string;
   content: string;
@@ -609,6 +590,16 @@ function formatSystemBlock(item: Record<string, unknown>): string | null {
   if (item.enabled !== undefined) {
     pushInlinePairLine(lines, 'enabled', item.enabled, 1);
   }
+  const metadataEntries = Object.entries(item)
+    .filter(([key, value]) => key !== 'systemType' && key !== 'config' && key !== 'enabled' && value !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b));
+  if (metadataEntries.length > 0) {
+    const metadata: Record<string, unknown> = {};
+    for (const [key, value] of metadataEntries) {
+      metadata[key] = value;
+    }
+    lines.push(...formatAttributeLines(metadata, 1));
+  }
 
   const systemLines = formatSystemConfigLines(systemType, config, 1);
   if (!systemLines) return null;
@@ -795,7 +786,7 @@ function formatSystemSelectionBlock(value: unknown, indentLevel: number): string
   }
 
   if (selection.filters !== undefined) {
-    const filterLines = formatFilterLines(selection.filters, innerIndent, 'filter');
+    const filterLines = formatWhereBlock(selection.filters, innerIndent, 'where');
     if (filterLines) {
       lines.push(...filterLines);
     } else {
@@ -805,7 +796,7 @@ function formatSystemSelectionBlock(value: unknown, indentLevel: number): string
   }
 
   if (selection.preferFilters !== undefined) {
-    const preferLines = formatFilterLines(selection.preferFilters, innerIndent, 'prefer');
+    const preferLines = formatWhereBlock(selection.preferFilters, innerIndent, 'prefer');
     if (preferLines) {
       lines.push(...preferLines);
     } else {
@@ -824,133 +815,34 @@ function formatSystemSelectionBlock(value: unknown, indentLevel: number): string
 }
 
 function formatSystemConditionLines(value: unknown, indentLevel: number): string[] | null {
+  let conditions: unknown[] | null = null;
+  let mode: string | undefined;
+
   if (Array.isArray(value)) {
-    const lines: string[] = [];
-    for (const condition of value) {
-      const conditionLines = formatSystemConditionLine(condition, indentLevel);
-      if (!conditionLines) return null;
-      lines.push(...conditionLines);
-    }
-    return lines;
+    conditions = value;
+  } else if (isRecord(value) && (value.type === 'and' || value.type === 'or') && Array.isArray(value.conditions)) {
+    conditions = value.conditions as unknown[];
+    mode = value.type === 'or' ? 'any' : 'all';
+  } else if (isRecord(value)) {
+    conditions = [value];
+  } else {
+    return null;
   }
-  if (isRecord(value)) {
-    return formatSystemConditionLine(value, indentLevel);
+
+  if (conditions.length === 0) return null;
+
+  const header = `${indent(indentLevel)}when${mode ? ' ' + mode : ''} do`;
+  const lines = [header];
+  for (const condition of conditions) {
+    lines.push(...formatConditionLines(condition, indentLevel + 1));
   }
-  return null;
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
 }
 
 function formatSystemConditionLine(condition: unknown, indentLevel: number): string[] | null {
-  if (!isRecord(condition)) {
-    const inline = formatInlineValue(condition);
-    if (!inline) return null;
-    return [`${indent(indentLevel)}condition ${inline}`];
-  }
-  const cleaned = cloneAndStripRefs(condition) as Record<string, unknown>;
-  const type = cleaned.type;
-  if (typeof type !== 'string') return null;
-
-  if ((type === 'and' || type === 'or') && Array.isArray(cleaned.conditions)) {
-    const mode = type === 'or' ? 'any' : 'all';
-    const lines = [`${indent(indentLevel)}when ${mode} do`];
-    for (const entry of cleaned.conditions) {
-      const entryLines = formatSystemConditionLine(entry, indentLevel + 1);
-      if (!entryLines) return null;
-      lines.push(...entryLines);
-    }
-    lines.push(`${indent(indentLevel)}end`);
-    return lines;
-  }
-
-  if (type === 'graph_path' && isRecord(cleaned.assert)) {
-    return formatGraphPathLines(cleaned.assert, indentLevel, 'path');
-  }
-
-  if (type === 'tag_exists' && typeof cleaned.tag === 'string') {
-    return [`${indent(indentLevel)}condition tag_exists ${formatLabel(cleaned.tag)}`];
-  }
-
-  if (type === 'lacks_tag' && typeof cleaned.tag === 'string') {
-    if (typeof cleaned.entity === 'string') {
-      return [
-        `${indent(indentLevel)}condition lacks_tag ${formatLabel(stripBinding(cleaned.entity))} ${formatLabel(cleaned.tag)}`
-      ];
-    }
-    return [`${indent(indentLevel)}condition lacks_tag ${formatLabel(cleaned.tag)}`];
-  }
-
-  if (type === 'relationship_exists' && typeof cleaned.relationshipKind === 'string') {
-    const parts = [
-      `${indent(indentLevel)}condition`,
-      'relationship_exists',
-      formatLabel(cleaned.relationshipKind)
-    ];
-    if (typeof cleaned.direction === 'string') {
-      parts.push(cleaned.direction);
-    }
-    if (typeof cleaned.targetKind === 'string') {
-      parts.push('target_kind', formatLabel(cleaned.targetKind));
-    }
-    if (typeof cleaned.targetStatus === 'string') {
-      parts.push('target_status', formatLabel(cleaned.targetStatus));
-    }
-    return [parts.join(' ')];
-  }
-
-  if (type === 'relationship_count' && typeof cleaned.relationshipKind === 'string') {
-    const parts = [
-      `${indent(indentLevel)}condition`,
-      'relationship_count',
-      formatLabel(cleaned.relationshipKind)
-    ];
-    if (typeof cleaned.direction === 'string') {
-      parts.push(cleaned.direction);
-    }
-    const min = cleaned.min;
-    const max = cleaned.max;
-    if (typeof min === 'number' && typeof max === 'number' && min !== max) {
-      parts.push('between', String(min), String(max));
-    } else if (typeof min === 'number' && typeof max === 'number' && min === max) {
-      parts.push('eq', String(min));
-    } else if (typeof min === 'number') {
-      parts.push('gte', String(min));
-    } else if (typeof max === 'number') {
-      parts.push('lte', String(max));
-    } else {
-      return null;
-    }
-    return [parts.join(' ')];
-  }
-
-  if (type === 'random_chance' && typeof cleaned.chance === 'number') {
-    return [`${indent(indentLevel)}condition random_chance ${cleaned.chance}`];
-  }
-
-  if (type === 'time_elapsed' && typeof cleaned.minTicks === 'number') {
-    const parts = [`${indent(indentLevel)}condition time_elapsed`, String(cleaned.minTicks)];
-    if (typeof cleaned.since === 'string') {
-      parts.push('since', cleaned.since);
-    }
-    return [parts.join(' ')];
-  }
-
-  if (type === 'prominence') {
-    if (typeof cleaned.min === 'string') {
-      return [`${indent(indentLevel)}condition prominence min ${formatLabel(cleaned.min)}`];
-    }
-    if (typeof cleaned.max === 'string') {
-      return [`${indent(indentLevel)}condition prominence max ${formatLabel(cleaned.max)}`];
-    }
-  }
-
-  if (type === 'entity_exists' && typeof cleaned.entity === 'string') {
-    return [`${indent(indentLevel)}condition entity_exists ${formatLabel(stripBinding(cleaned.entity))}`];
-  }
-
-  if (type === 'not_self') {
-    return [`${indent(indentLevel)}condition not_self`];
-  }
-
-  return formatEntryLineOrBlock('condition', [], cleaned, indentLevel);
+  const lines = formatConditionLines(condition, indentLevel);
+  return lines.length > 0 ? lines : null;
 }
 
 function formatSystemConditionInlineTokens(condition: unknown): string[] | null {
@@ -979,11 +871,23 @@ function formatActionListBlock(
 ): string[] | null {
   if (!Array.isArray(actions)) return null;
   const lines: string[] = [`${indent(indentLevel)}${name} do`];
-  for (const action of actions) {
-    const actionLines = formatActionMutationLine(action, indentLevel + 1);
-    if (!actionLines) return null;
-    lines.push(...actionLines);
-  }
+  const mutateLines = formatMutateBlockLines(actions, indentLevel + 1);
+  if (!mutateLines) return null;
+  lines.push(...mutateLines);
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
+function formatMutationListBlock(
+  name: string,
+  actions: unknown[],
+  indentLevel: number
+): string[] | null {
+  if (!Array.isArray(actions)) return null;
+  const lines: string[] = [`${indent(indentLevel)}${name} do`];
+  const mutationLines = formatActionMutationLines(actions, indentLevel + 1);
+  if (!mutationLines) return null;
+  lines.push(...mutationLines);
   lines.push(`${indent(indentLevel)}end`);
   return lines;
 }
@@ -1006,6 +910,22 @@ function formatMetricBlock(value: unknown, indentLevel: number): string[] | null
     if (remaining.sharedDirection !== undefined) {
       pushInlinePairLine(lines, 'direction', remaining.sharedDirection, innerIndent);
       delete remaining.sharedDirection;
+    }
+    if (remaining.viaRelationship !== undefined) {
+      pushInlinePairLine(lines, 'via_relationship', remaining.viaRelationship, innerIndent);
+      delete remaining.viaRelationship;
+    }
+    if (isRecord(remaining.via)) {
+      const via = remaining.via as Record<string, unknown>;
+      const relationshipKind = via.relationshipKind;
+      const direction = via.direction;
+      const intermediateKind = via.intermediateKind;
+      if (typeof relationshipKind === 'string' && typeof direction === 'string' && typeof intermediateKind === 'string') {
+        lines.push(
+          `${indent(innerIndent)}via relationship ${formatLabel(relationshipKind)} direction ${direction} intermediate_kind ${formatLabel(intermediateKind)}`
+        );
+        delete remaining.via;
+      }
     }
   } else if (type === 'connection_count') {
     if (remaining.relationshipKinds !== undefined) {
@@ -1097,7 +1017,7 @@ function formatRuleBlock(value: unknown, indentLevel: number): string[] | null {
   }
 
   if (action !== undefined) {
-    const actionLines = formatActionMutationLine(action, innerIndent);
+    const actionLines = formatActionListBlock('action', [action], innerIndent);
     if (!actionLines) return null;
     lines.push(...actionLines);
   }
@@ -1255,7 +1175,7 @@ function formatPickerBlock(
   }
 
   if (filters !== undefined) {
-    const filterLines = formatFilterLines(filters, innerIndent, 'filter');
+    const filterLines = formatWhereBlock(filters, innerIndent, 'where');
     if (filterLines) {
       lines.push(...filterLines);
     } else {
@@ -1264,7 +1184,7 @@ function formatPickerBlock(
   }
 
   if (preferFilters !== undefined) {
-    const preferLines = formatFilterLines(preferFilters, innerIndent, 'prefer');
+    const preferLines = formatWhereBlock(preferFilters, innerIndent, 'prefer');
     if (preferLines) {
       lines.push(...preferLines);
     } else {
@@ -1561,7 +1481,10 @@ function formatConnectionEvolutionSystem(config: Record<string, unknown>, indent
     delete remaining.pairExcludeRelationships;
   }
 
-  if (isRecord(remaining.pairComponentSizeLimit)) {
+  if (typeof remaining.pairComponentSizeLimit === 'number') {
+    lines.push(`${indent(indentLevel)}pair_component_limit ${remaining.pairComponentSizeLimit}`);
+    delete remaining.pairComponentSizeLimit;
+  } else if (isRecord(remaining.pairComponentSizeLimit)) {
     const limit = remaining.pairComponentSizeLimit as Record<string, unknown>;
     const kinds = Array.isArray(limit.relationshipKinds) ? limit.relationshipKinds : null;
     const max = limit.max;
@@ -2126,7 +2049,9 @@ function formatVariantApplyBlock(value: unknown, indentLevel: number): string[] 
   }
 
   if (apply.stateUpdates !== undefined) {
-    pushAttributeLine(lines, 'stateUpdates', apply.stateUpdates, innerIndent);
+    const mutateLines = formatMutateBlockLines(apply.stateUpdates as unknown[], innerIndent);
+    if (!mutateLines) return null;
+    lines.push(...mutateLines);
     delete apply.stateUpdates;
   }
 
@@ -2281,8 +2206,10 @@ function formatGeneratorBlock(labels: string[], body: Record<string, unknown>): 
     const stateValue = remaining.stateUpdates;
     const mutationLines = formatMutationEntries(stateValue, 1);
     delete remaining.stateUpdates;
-    if (mutationLines && mutationLines.length > 0) {
-      lines.push(...mutationLines);
+    if (mutationLines !== null) {
+      if (mutationLines.length > 0) {
+        lines.push(...mutationLines);
+      }
     } else {
       pushAttributeLine(lines, 'stateUpdates', cloneAndStripRefs(stateValue), 1);
     }
@@ -2560,7 +2487,7 @@ function formatActionSelectionBlock(
   }
 
   if (selection.filters !== undefined) {
-    const filterLines = formatFilterLines(selection.filters, innerIndent, 'filter');
+    const filterLines = formatWhereBlock(selection.filters, innerIndent, 'where');
     if (filterLines) {
       lines.push(...filterLines);
     } else {
@@ -2570,7 +2497,7 @@ function formatActionSelectionBlock(
   }
 
   if (selection.preferFilters !== undefined) {
-    const preferLines = formatFilterLines(selection.preferFilters, innerIndent, 'prefer');
+    const preferLines = formatWhereBlock(selection.preferFilters, innerIndent, 'prefer');
     if (preferLines) {
       lines.push(...preferLines);
     } else {
@@ -2695,7 +2622,7 @@ function formatActionInstigatorBlock(value: unknown, indentLevel: number): strin
   }
 
   if (instigator.filters !== undefined) {
-    const filterLines = formatFilterLines(instigator.filters, innerIndent, 'filter');
+    const filterLines = formatWhereBlock(instigator.filters, innerIndent, 'where');
     if (filterLines) {
       lines.push(...filterLines);
     } else {
@@ -2705,7 +2632,7 @@ function formatActionInstigatorBlock(value: unknown, indentLevel: number): strin
   }
 
   if (instigator.preferFilters !== undefined) {
-    const preferLines = formatFilterLines(instigator.preferFilters, innerIndent, 'prefer');
+    const preferLines = formatWhereBlock(instigator.preferFilters, innerIndent, 'prefer');
     if (preferLines) {
       lines.push(...preferLines);
     } else {
@@ -2746,11 +2673,11 @@ function formatActionOutcomeLines(value: unknown, indentLevel: number): string[]
   const lines: string[] = [];
 
   if (Array.isArray(mutations)) {
-    const mutationLines = formatActionMutationLines(mutations, indentLevel + 1);
-    if (!mutationLines) return null;
-    if (mutationLines.length > 0) {
+    const mutateLines = formatMutateBlockLines(mutations, indentLevel + 1);
+    if (!mutateLines) return null;
+    if (mutateLines.length > 0) {
       lines.push(`${indent(indentLevel)}on success do`);
-      lines.push(...mutationLines);
+      lines.push(...mutateLines);
       lines.push(`${indent(indentLevel)}end`);
     }
   } else if (mutations !== undefined) {
@@ -2807,6 +2734,18 @@ function formatActionProbabilityLines(value: unknown, indentLevel: number): stri
   return lines.length > 0 ? lines : null;
 }
 
+function formatMutateBlockLines(items: unknown[], indentLevel: number): string[] | null {
+  if (!Array.isArray(items)) return null;
+  if (items.length === 0) return [];
+  const lines: string[] = [];
+  lines.push(`${indent(indentLevel)}mutate do`);
+  const mutationLines = formatActionMutationLines(items, indentLevel + 1);
+  if (!mutationLines) return null;
+  lines.push(...mutationLines);
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
 function formatActionMutationLines(items: unknown[], indentLevel: number): string[] | null {
   const lines: string[] = [];
   for (const item of items) {
@@ -2833,28 +2772,25 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
     delete body.kind;
     delete body.src;
     delete body.dst;
-    const pairs = formatInlinePairs(body);
     const formattedSrc = stripBinding(src);
     const formattedDst = stripBinding(dst);
-    const prefix = `${indent(indentLevel)}rel ${formatLabel(kind)} ${formatLabel(formattedSrc)} -> ${formatLabel(formattedDst)}`;
-    if (pairs !== null) {
-      return [pairs ? `${prefix} ${pairs}` : prefix];
+    let prefix = `${indent(indentLevel)}relationship create ${formatLabel(kind)} ${formatLabel(formattedSrc)} ${formatLabel(formattedDst)}`;
+    if (type === 'adjust_relationship_strength') {
+      const delta = body.delta;
+      if (typeof delta !== 'number') return null;
+      prefix = `${indent(indentLevel)}relationship adjust ${formatLabel(kind)} ${formatLabel(formattedSrc)} ${formatLabel(formattedDst)} ${delta}`;
+      delete body.delta;
     }
-    const header = `${indent(indentLevel)}rel ${formatLabel(kind)} ${formatLabel(formattedSrc)} ${formatLabel(formattedDst)} do`;
-    const lines = [header];
-    const bodyLines = formatAttributeLines(body, indentLevel + 1);
-    if (bodyLines.length > 0) lines.push(...bodyLines);
-    lines.push(`${indent(indentLevel)}end`);
-    return lines;
+    const pairs = formatInlinePairs(body);
+    if (pairs === null) return null;
+    return [pairs ? `${prefix} ${pairs}` : prefix];
   }
 
   if (type === 'modify_pressure') {
     const pressureId = cleaned.pressureId;
     const delta = cleaned.delta;
     if (typeof pressureId !== 'string' || typeof delta !== 'number') return null;
-    const operator = delta < 0 ? '-=' : '+=';
-    const value = Math.abs(delta);
-    return [`${indent(indentLevel)}mutate pressure ${formatLabel(pressureId)} ${operator} ${value}`];
+    return [`${indent(indentLevel)}pressure modify ${formatLabel(pressureId)} ${delta}`];
   }
 
   if (type === 'change_status') {
@@ -2862,7 +2798,7 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
     const status = cleaned.newStatus;
     if (typeof entity !== 'string' || typeof status !== 'string') return null;
     return [
-      `${indent(indentLevel)}change_status ${formatLabel(stripBinding(entity))} ${formatLabel(status)}`
+      `${indent(indentLevel)}status change ${formatLabel(stripBinding(entity))} ${formatLabel(status)}`
     ];
   }
 
@@ -2871,7 +2807,7 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
     const tag = cleaned.tag;
     if (typeof entity !== 'string' || typeof tag !== 'string') return null;
     const parts = [
-      `${indent(indentLevel)}set_tag`,
+      `${indent(indentLevel)}tag set`,
       formatLabel(stripBinding(entity)),
       formatLabel(tag)
     ];
@@ -2890,7 +2826,7 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
     const tag = cleaned.tag;
     if (typeof entity !== 'string' || typeof tag !== 'string') return null;
     return [
-      `${indent(indentLevel)}remove_tag ${formatLabel(stripBinding(entity))} ${formatLabel(tag)}`
+      `${indent(indentLevel)}tag remove ${formatLabel(stripBinding(entity))} ${formatLabel(tag)}`
     ];
   }
 
@@ -2899,7 +2835,7 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
     const delta = cleaned.delta;
     if (typeof entity !== 'string' || typeof delta !== 'number') return null;
     return [
-      `${indent(indentLevel)}adjust_prominence ${formatLabel(stripBinding(entity))} ${delta}`
+      `${indent(indentLevel)}prominence adjust ${formatLabel(stripBinding(entity))} ${delta}`
     ];
   }
 
@@ -2907,13 +2843,15 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
     const entity = cleaned.entity;
     const kind = cleaned.relationshipKind;
     const withEntity = cleaned.with;
-    if (typeof entity !== 'string' || typeof kind !== 'string' || typeof withEntity !== 'string') return null;
+    if (typeof entity !== 'string' || typeof kind !== 'string') return null;
     const parts = [
-      `${indent(indentLevel)}archive_relationship`,
+      `${indent(indentLevel)}relationship archive`,
       formatLabel(stripBinding(entity)),
-      formatLabel(kind),
-      formatLabel(stripBinding(withEntity))
+      formatLabel(kind)
     ];
+    if (typeof withEntity === 'string') {
+      parts.push('with', formatLabel(stripBinding(withEntity)));
+    }
     if (typeof cleaned.direction === 'string') {
       parts.push('direction', cleaned.direction);
     }
@@ -2925,9 +2863,10 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
     const kind = cleaned.relationshipKind;
     if (typeof entity !== 'string' || typeof kind !== 'string') return null;
     const parts = [
-      `${indent(indentLevel)}archive_all_relationships`,
+      `${indent(indentLevel)}relationship archive`,
       formatLabel(stripBinding(entity)),
-      formatLabel(kind)
+      formatLabel(kind),
+      'all'
     ];
     if (typeof cleaned.direction === 'string') {
       parts.push('direction', cleaned.direction);
@@ -2945,9 +2884,9 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
       return null;
     }
     const parts = [
-      `${indent(indentLevel)}transfer_relationship`,
-      formatLabel(stripBinding(entity)),
+      `${indent(indentLevel)}relationship transfer`,
       formatLabel(relationshipKind),
+      formatLabel(stripBinding(entity)),
       'from',
       formatLabel(stripBinding(from)),
       'to',
@@ -2973,10 +2912,18 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
     const relationship = cleaned.relationship ?? cleaned.relationshipKind;
     const direction = cleaned.direction;
     const targetKind = cleaned.targetKind;
+    const targetSubtype = cleaned.targetSubtype;
     const actions = cleaned.actions;
-    if (typeof relationship !== 'string' || typeof direction !== 'string' || typeof targetKind !== 'string') return null;
+    if (typeof relationship !== 'string' || typeof direction !== 'string') return null;
     if (!Array.isArray(actions)) return null;
-    const header = `${indent(indentLevel)}for_each_related ${formatLabel(relationship)} ${direction} ${formatLabel(targetKind)} do`;
+    let header = `${indent(indentLevel)}for_each_related ${formatLabel(relationship)} ${direction}`;
+    if (typeof targetKind === 'string') {
+      header += ` ${formatLabel(targetKind)}`;
+      if (typeof targetSubtype === 'string') {
+        header += ` ${formatLabel(targetSubtype)}`;
+      }
+    }
+    header += ' do';
     const lines = [header];
     for (const action of actions) {
       const actionLines = formatActionMutationLine(action, indentLevel + 1);
@@ -2996,11 +2943,11 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
     const conditionLines = formatSystemConditionLine(condition, indentLevel + 1);
     if (!conditionLines) return null;
     lines.push(...conditionLines);
-    const thenLines = formatActionListBlock('then', thenActions, indentLevel + 1);
+    const thenLines = formatMutationListBlock('then', thenActions, indentLevel + 1);
     if (!thenLines) return null;
     lines.push(...thenLines);
     if (Array.isArray(elseActions) && elseActions.length > 0) {
-      const elseLines = formatActionListBlock('else', elseActions, indentLevel + 1);
+      const elseLines = formatMutationListBlock('else', elseActions, indentLevel + 1);
       if (!elseLines) return null;
       lines.push(...elseLines);
     }
@@ -3009,7 +2956,7 @@ function formatActionMutationLine(item: unknown, indentLevel: number): string[] 
   }
 
   if (type === 'update_rate_limit') {
-    return [`${indent(indentLevel)}update_rate_limit true`];
+    return [`${indent(indentLevel)}rate_limit update`];
   }
 
   return null;
@@ -3131,18 +3078,16 @@ function formatTagLine(item: Record<string, unknown>): string | null {
   }
 
   const description = typeof item.description === 'string' ? item.description : '';
-  const hasKinds = Object.prototype.hasOwnProperty.call(item, 'entityKinds') || Object.prototype.hasOwnProperty.call(item, 'kinds');
-  const hasRelated = Object.prototype.hasOwnProperty.call(item, 'relatedTags') || Object.prototype.hasOwnProperty.call(item, 'related');
-  const hasConflicts = Object.prototype.hasOwnProperty.call(item, 'conflictingTags') || Object.prototype.hasOwnProperty.call(item, 'conflicts');
-  const hasExclusive =
-    Object.prototype.hasOwnProperty.call(item, 'mutuallyExclusiveWith') || Object.prototype.hasOwnProperty.call(item, 'exclusive');
-  const hasAxis = Object.prototype.hasOwnProperty.call(item, 'isAxis') || Object.prototype.hasOwnProperty.call(item, 'axis');
+  const hasKinds = Object.prototype.hasOwnProperty.call(item, 'entityKinds');
+  const hasRelated = Object.prototype.hasOwnProperty.call(item, 'relatedTags');
+  const hasConflicts = Object.prototype.hasOwnProperty.call(item, 'conflictingTags');
+  const hasExclusive = Object.prototype.hasOwnProperty.call(item, 'mutuallyExclusiveWith');
+  const hasAxis = Object.prototype.hasOwnProperty.call(item, 'isAxis');
   const hasTemplates = Object.prototype.hasOwnProperty.call(item, 'templates');
   const hasUsage =
     Object.prototype.hasOwnProperty.call(item, 'minUsage') ||
-    Object.prototype.hasOwnProperty.call(item, 'maxUsage') ||
-    Object.prototype.hasOwnProperty.call(item, 'usage');
-  const hasCount = Object.prototype.hasOwnProperty.call(item, 'usageCount') || Object.prototype.hasOwnProperty.call(item, 'count');
+    Object.prototype.hasOwnProperty.call(item, 'maxUsage');
+  const hasCount = Object.prototype.hasOwnProperty.call(item, 'usageCount');
 
   const remaining = { ...item };
   delete remaining.tag;
@@ -3150,21 +3095,14 @@ function formatTagLine(item: Record<string, unknown>): string | null {
   delete remaining.rarity;
   delete remaining.description;
   delete remaining.entityKinds;
-  delete remaining.kinds;
   delete remaining.relatedTags;
-  delete remaining.related;
   delete remaining.conflictingTags;
-  delete remaining.conflicts;
   delete remaining.mutuallyExclusiveWith;
-  delete remaining.exclusive;
   delete remaining.templates;
   delete remaining.minUsage;
   delete remaining.maxUsage;
-  delete remaining.usage;
   delete remaining.usageCount;
-  delete remaining.count;
   delete remaining.isAxis;
-  delete remaining.axis;
   delete remaining.isFramework;
 
   if (Object.keys(remaining).length > 0) {
@@ -3174,52 +3112,53 @@ function formatTagLine(item: Record<string, unknown>): string | null {
   }
 
   const lines: string[] = [];
-  lines.push(
-    `tag ${formatLabel(tag)} ${formatLabel(category)} ${formatLabel(rarity)} ${quoteString(description)}`
-  );
+  lines.push(`tag ${formatLabel(tag)} do`);
+  lines.push(`${indent(1)}category ${formatLabel(category)}`);
+  lines.push(`${indent(1)}rarity ${formatLabel(rarity)}`);
+  lines.push(`${indent(1)}description ${quoteString(description)}`);
 
   if (hasKinds) {
-    const kindsValue = formatSetInlineValue(item.entityKinds ?? item.kinds);
-    lines.push(`kinds ${kindsValue ?? 'none'}`);
+    const kindsValue = formatSetInlineValue(item.entityKinds);
+    lines.push(`${indent(1)}kinds ${kindsValue ?? 'none'}`);
   }
   if (hasRelated) {
-    const relatedValue = formatSetInlineValue(item.relatedTags ?? item.related);
-    lines.push(`related ${relatedValue ?? 'none'}`);
+    const relatedValue = formatSetInlineValue(item.relatedTags);
+    lines.push(`${indent(1)}related ${relatedValue ?? 'none'}`);
   }
   if (hasConflicts) {
-    const conflictsValue = formatSetInlineValue(item.conflictingTags ?? item.conflicts);
-    lines.push(`conflicts ${conflictsValue ?? 'none'}`);
+    const conflictsValue = formatSetInlineValue(item.conflictingTags);
+    lines.push(`${indent(1)}conflicts ${conflictsValue ?? 'none'}`);
   }
   if (hasExclusive) {
-    const exclusiveValue = formatSetInlineValue(item.mutuallyExclusiveWith ?? item.exclusive);
-    lines.push(`exclusive ${exclusiveValue ?? 'none'}`);
-  }
-  if (hasAxis) {
-    const isAxis = item.isAxis ?? item.axis;
-    lines.push(isAxis === true ? 'axis' : 'axis none');
+    const exclusiveValue = formatSetInlineValue(item.mutuallyExclusiveWith);
+    lines.push(`${indent(1)}exclusive ${exclusiveValue ?? 'none'}`);
   }
   if (hasTemplates) {
     const templatesValue = formatSetInlineValue(item.templates);
-    lines.push(`templates ${templatesValue ?? 'none'}`);
+    lines.push(`${indent(1)}templates ${templatesValue ?? 'none'}`);
   }
   if (hasUsage) {
     const minUsage = item.minUsage;
     const maxUsage = item.maxUsage;
     if (typeof minUsage === 'number' && typeof maxUsage === 'number') {
-      lines.push(`usage ${minUsage} ${maxUsage}`);
+      lines.push(`${indent(1)}usage ${minUsage} ${maxUsage}`);
     } else {
-      lines.push('usage none');
+      lines.push(`${indent(1)}usage none`);
     }
   }
   if (hasCount) {
-    const usageCount = item.usageCount ?? item.count;
+    const usageCount = item.usageCount;
     if (typeof usageCount === 'number') {
-      lines.push(`count ${usageCount}`);
+      lines.push(`${indent(1)}count ${usageCount}`);
     } else {
-      lines.push('count none');
+      lines.push(`${indent(1)}count none`);
     }
   }
+  if (hasAxis) {
+    lines.push(item.isAxis === true ? `${indent(1)}axis` : `${indent(1)}axis none`);
+  }
 
+  lines.push('end');
   return lines.join('\n');
 }
 
@@ -5327,7 +5266,7 @@ function formatConditionLines(condition: unknown, indentLevel: number): string[]
 
   if ((type === 'or' || type === 'and') && Array.isArray(cleaned.conditions)) {
     const mode = type === 'or' ? 'any' : 'all';
-    const lines = [`${indent(indentLevel)}condition ${mode} do`];
+    const lines = [`${indent(indentLevel)}when ${mode} do`];
     for (const entry of cleaned.conditions) {
       lines.push(...formatConditionLines(entry, indentLevel + 1));
     }
@@ -5485,6 +5424,32 @@ function formatConditionLines(condition: unknown, indentLevel: number): string[]
   return formatEntryLineOrBlock('condition', [], cleaned, indentLevel);
 }
 
+function formatConditionBlock(
+  condition: unknown,
+  indentLevel: number,
+  keyword = 'condition'
+): string[] | null {
+  if (condition === undefined || condition === null) return null;
+  let conditions: unknown[] = [];
+  let mode: string | undefined;
+
+  if (isRecord(condition) && (condition.type === 'and' || condition.type === 'or') && Array.isArray(condition.conditions)) {
+    conditions = condition.conditions as unknown[];
+    mode = condition.type === 'or' ? 'any' : 'all';
+  } else {
+    conditions = [condition];
+  }
+
+  if (conditions.length === 0) return null;
+  const header = `${indent(indentLevel)}${keyword}${mode ? ' ' + mode : ''} do`;
+  const lines = [header];
+  for (const entry of conditions) {
+    lines.push(...formatConditionLines(entry, indentLevel + 1));
+  }
+  lines.push(`${indent(indentLevel)}end`);
+  return lines;
+}
+
 function formatSelectionBlock(value: unknown, indentLevel: number): string[] | null {
   if (!isRecord(value)) return null;
   const cleaned = cloneAndStripRefs(value) as Record<string, unknown>;
@@ -5608,7 +5573,7 @@ function formatSelectionBlock(value: unknown, indentLevel: number): string[] | n
   }
 
   if (selection.filters !== undefined) {
-    const filterLines = formatFilterLines(selection.filters, innerIndent, 'filter');
+    const filterLines = formatWhereBlock(selection.filters, innerIndent, 'where');
     if (filterLines) {
       lines.push(...filterLines);
     } else {
@@ -5618,7 +5583,7 @@ function formatSelectionBlock(value: unknown, indentLevel: number): string[] | n
   }
 
   if (selection.preferFilters !== undefined) {
-    const preferLines = formatFilterLines(selection.preferFilters, innerIndent, 'prefer');
+    const preferLines = formatWhereBlock(selection.preferFilters, innerIndent, 'prefer');
     if (preferLines) {
       lines.push(...preferLines);
     } else {
@@ -5669,54 +5634,71 @@ function formatEraEffectLines(
   return lines.length > 0 ? lines : null;
 }
 
-function formatFilterLines(value: unknown, indentLevel: number, keyword: 'filter' | 'prefer'): string[] | null {
+function formatWhereBlock(value: unknown, indentLevel: number, keyword: 'where' | 'prefer'): string[] | null {
   if (!Array.isArray(value)) return null;
+  if (value.length === 0) return [];
   const lines: string[] = [];
+  lines.push(`${indent(indentLevel)}${keyword} do`);
+  const innerIndent = indentLevel + 1;
   for (const entry of value) {
-    const line = formatFilterLine(entry, indentLevel, keyword);
-    if (!line) return null;
-    lines.push(...line);
+    const statement = formatWhereStatement(entry, innerIndent);
+    if (!statement) return null;
+    lines.push(...statement);
   }
+  lines.push(`${indent(indentLevel)}end`);
   return lines;
 }
 
-function formatFilterLine(
-  value: unknown,
-  indentLevel: number,
-  keyword: 'filter' | 'prefer'
-): string[] | null {
+function formatWhereStatement(value: unknown, indentLevel: number): string[] | null {
   if (!isRecord(value)) return null;
   const cleaned = cloneAndStripRefs(value) as Record<string, unknown>;
   const type = cleaned.type;
   if (typeof type !== 'string') return null;
 
   if (type === 'graph_path' && isRecord(cleaned.assert)) {
-    return formatGraphPathLines(cleaned.assert, indentLevel, `${keyword} path`);
+    return formatGraphPathLines(cleaned.assert, indentLevel, 'graph_path');
   }
 
   if (type === 'exclude' && Array.isArray(cleaned.entities)) {
-    const entities = cleaned.entities.map((entry) => formatLabel(String(entry)));
+    const entities = cleaned.entities.map((entry) => formatLabel(stripBinding(String(entry))));
     if (entities.length === 0) return null;
-    return [`${indent(indentLevel)}${keyword} exclude ${entities.join(' ')}`];
+    return [`${indent(indentLevel)}entity exclude ${entities.join(' ')}`];
   }
 
   if (type === 'has_relationship' || type === 'lacks_relationship') {
     const kind = cleaned.kind;
     if (typeof kind !== 'string') return null;
-    const parts = [`${indent(indentLevel)}${keyword}`, type, formatLabel(kind)];
+    const parts = [
+      `${indent(indentLevel)}relationship`,
+      type === 'has_relationship' ? 'has' : 'lacks',
+      formatLabel(kind)
+    ];
     if (typeof cleaned.with === 'string') {
       parts.push('with', formatLabel(stripBinding(cleaned.with)));
     }
-    if (type === 'has_relationship' && typeof cleaned.direction === 'string') {
+    if (typeof cleaned.direction === 'string') {
       parts.push('direction', cleaned.direction);
     }
     return [parts.join(' ')];
   }
 
+  if (type === 'shares_related') {
+    const relationshipKind = cleaned.relationshipKind;
+    const withValue = cleaned.with;
+    if (typeof relationshipKind !== 'string' || typeof withValue !== 'string') return null;
+    return [
+      `${indent(indentLevel)}relationship shares_related ${formatLabel(relationshipKind)} with ${formatLabel(stripBinding(withValue))}`
+    ];
+  }
+
   if (type === 'has_tag' || type === 'lacks_tag') {
     const tag = cleaned.tag;
     if (typeof tag !== 'string') return null;
-    const parts = [`${indent(indentLevel)}${keyword}`, type, formatLabel(tag)];
+    const parts = [
+      `${indent(indentLevel)}tag`,
+      type === 'has_tag' ? 'has' : 'lacks',
+      formatLabel(tag)
+    ];
     if (cleaned.value !== undefined) {
       const valueText = formatInlineValue(cleaned.value);
       if (!valueText) return null;
@@ -5727,19 +5709,66 @@ function formatFilterLine(
 
   if (type === 'has_any_tag' && Array.isArray(cleaned.tags)) {
     const tags = cleaned.tags.map((entry) => formatLabel(String(entry)));
-    return [`${indent(indentLevel)}${keyword} has_any_tag ${tags.join(' ')}`];
+    return [`${indent(indentLevel)}tag has_any ${tags.join(' ')}`];
+  }
+
+  if (type === 'has_tags' && Array.isArray(cleaned.tags)) {
+    const tags = cleaned.tags.map((entry) => formatLabel(String(entry)));
+    return [`${indent(indentLevel)}tag has_all ${tags.join(' ')}`];
+  }
+
+  if (type === 'lacks_any_tag' && Array.isArray(cleaned.tags)) {
+    const tags = cleaned.tags.map((entry) => formatLabel(String(entry)));
+    return [`${indent(indentLevel)}tag lacks_any ${tags.join(' ')}`];
   }
 
   if (type === 'matches_culture' || type === 'not_matches_culture') {
     const withValue = cleaned.with;
     if (typeof withValue !== 'string') return null;
-    return [`${indent(indentLevel)}${keyword} ${type} ${formatLabel(stripBinding(withValue))}`];
+    const op = type === 'matches_culture' ? 'matches' : 'not_matches';
+    return [`${indent(indentLevel)}culture ${op} ${formatLabel(stripBinding(withValue))}`];
   }
 
   if (type === 'has_culture' || type === 'not_has_culture') {
     const culture = cleaned.culture;
     if (typeof culture !== 'string') return null;
-    return [`${indent(indentLevel)}${keyword} ${type} ${formatLabel(culture)}`];
+    const op = type === 'has_culture' ? 'has' : 'not_has';
+    return [`${indent(indentLevel)}culture ${op} ${formatLabel(culture)}`];
+  }
+
+  if (type === 'has_status') {
+    const status = cleaned.status;
+    if (typeof status !== 'string') return null;
+    return [`${indent(indentLevel)}status has ${formatLabel(status)}`];
+  }
+
+  if (type === 'has_prominence') {
+    const minProminence = cleaned.minProminence;
+    if (typeof minProminence !== 'string') return null;
+    return [`${indent(indentLevel)}prominence >= ${formatLabel(minProminence)}`];
+  }
+
+  if (type === 'component_size') {
+    const kindsRaw = Array.isArray(cleaned.relationshipKinds)
+      ? cleaned.relationshipKinds
+      : (cleaned.relationshipKind !== undefined ? [cleaned.relationshipKind] : null);
+    if (!kindsRaw || kindsRaw.length === 0) return null;
+    const kinds = kindsRaw.map((entry) => formatLabel(String(entry)));
+    const parts = [`${indent(indentLevel)}component_size`, ...kinds];
+    const hasMin = typeof cleaned.min === 'number';
+    const hasMax = typeof cleaned.max === 'number';
+    const hasMinStrength = typeof cleaned.minStrength === 'number';
+    if (!hasMin && !hasMax && !hasMinStrength) return null;
+    if (hasMin) {
+      parts.push('min', String(cleaned.min));
+    }
+    if (hasMax) {
+      parts.push('max', String(cleaned.max));
+    }
+    if (hasMinStrength) {
+      parts.push('min_strength', String(cleaned.minStrength));
+    }
+    return [parts.join(' ')];
   }
 
   return null;
@@ -5780,17 +5809,24 @@ function formatGraphPathStepLines(step: unknown, indentLevel: number): string[] 
   const via = step.via;
   const direction = step.direction;
   const targetKind = step.targetKind;
-  const targetSubtype = step.targetSubtype;
-  if (typeof direction !== 'string' || typeof targetKind !== 'string' || typeof targetSubtype !== 'string') return null;
+  const targetSubtype = typeof step.targetSubtype === 'string' ? step.targetSubtype : null;
+  if (typeof direction !== 'string' || typeof targetKind !== 'string') return null;
   const viaText = formatInlineValue(via);
   if (!viaText) return null;
-  const base = `step ${viaText} ${direction} ${formatLabel(targetKind)} ${formatLabel(targetSubtype)}`;
+  const baseParts = ['step', viaText, direction, formatLabel(targetKind)];
+  if (targetSubtype) {
+    baseParts.push(formatLabel(targetSubtype));
+  }
+  const base = baseParts.join(' ');
   const status = typeof step.targetStatus === 'string' ? step.targetStatus : null;
   const filters = Array.isArray(step.filters) ? step.filters : null;
+  const hasFilters = Boolean(filters && filters.length > 0);
 
-  if (!filters || filters.length === 0) {
-    const suffix = status ? ` status ${formatLabel(status)}` : '';
-    return [`${indent(indentLevel)}${base}${suffix}`];
+  if (!hasFilters) {
+    if (!status || targetSubtype) {
+      const suffix = status ? ` status ${formatLabel(status)}` : '';
+      return [`${indent(indentLevel)}${base}${suffix}`];
+    }
   }
 
   const lines = [`${indent(indentLevel)}${base} do`];
@@ -5798,9 +5834,11 @@ function formatGraphPathStepLines(step: unknown, indentLevel: number): string[] 
   if (status) {
     lines.push(`${indent(innerIndent)}status ${formatLabel(status)}`);
   }
-  const filterLines = formatFilterLines(filters, innerIndent, 'filter');
-  if (!filterLines) return null;
-  lines.push(...filterLines);
+  if (hasFilters) {
+    const filterLines = formatWhereBlock(filters, innerIndent, 'where');
+    if (!filterLines) return null;
+    lines.push(...filterLines);
+  }
   lines.push(`${indent(indentLevel)}end`);
   return lines;
 }
@@ -5957,7 +5995,7 @@ function formatLetEntry(
   }
 
   if (select.filters !== undefined) {
-    const filterLines = formatFilterLines(select.filters, innerIndent, 'filter');
+    const filterLines = formatWhereBlock(select.filters, innerIndent, 'where');
     if (filterLines) {
       lines.push(...filterLines);
     } else {
@@ -5967,7 +6005,7 @@ function formatLetEntry(
   }
 
   if (select.preferFilters !== undefined) {
-    const preferLines = formatFilterLines(select.preferFilters, innerIndent, 'prefer');
+    const preferLines = formatWhereBlock(select.preferFilters, innerIndent, 'prefer');
     if (preferLines) {
       lines.push(...preferLines);
     } else {
@@ -5996,18 +6034,7 @@ function formatLetEntry(
 }
 
 function formatMutationEntries(items: unknown[], indentLevel: number): string[] | null {
-  const lines: string[] = [];
-  for (const item of items) {
-    if (!isRecord(item)) return null;
-    if (item.type !== 'modify_pressure') return null;
-    const pressureId = item.pressureId;
-    const delta = item.delta;
-    if (typeof pressureId !== 'string' || typeof delta !== 'number') return null;
-    const operator = delta < 0 ? '-=' : '+=';
-    const value = Math.abs(delta);
-    lines.push(`${indent(indentLevel)}mutate pressure ${pressureId} ${operator} ${value}`);
-  }
-  return lines.length > 0 ? lines : null;
+  return formatMutateBlockLines(items, indentLevel);
 }
 
 function pushAttributeLine(lines: string[], key: string, value: unknown, indentLevel: number): void {
@@ -6203,7 +6230,11 @@ function formatRelationshipEntries(items: unknown[], indentLevel: number): strin
     delete body.kind;
     delete body.src;
     delete body.dst;
-    const pairs = formatInlinePairs(body);
+    const condition = body.condition;
+    delete body.condition;
+    const conditionLines = condition !== undefined ? formatConditionBlock(condition, indentLevel + 1) : null;
+    if (condition !== undefined && !conditionLines) return null;
+    const pairs = conditionLines ? null : formatInlinePairs(body);
     const formattedSrc = stripBinding(src);
     const formattedDst = stripBinding(dst);
     if (pairs !== null) {
@@ -6216,6 +6247,9 @@ function formatRelationshipEntries(items: unknown[], indentLevel: number): strin
     const bodyLines = formatAttributeLines(body, indentLevel + 1);
     if (bodyLines.length > 0) {
       blockLines.push(...bodyLines);
+    }
+    if (conditionLines) {
+      blockLines.push(...conditionLines);
     }
     blockLines.push(`${indent(indentLevel)}end`);
     lines.push(...blockLines);
@@ -6397,7 +6431,6 @@ function isInlineFriendlyValue(value: unknown): boolean {
   if (value === null) return true;
   if (typeof value === 'string') {
     if (value.includes('\n') || value.includes('\r')) return false;
-    if (value.length >= HEREDOC_MIN_LENGTH) return false;
     return true;
   }
   if (typeof value === 'number' || typeof value === 'boolean') return true;
@@ -6423,16 +6456,13 @@ function formatInlineValue(value: unknown): string | null {
 }
 
 function shouldUseHereDoc(key: string, value: string): boolean {
-  if (HEREDOC_ALWAYS_KEYS.has(key)) return true;
-  if (HEREDOC_PREFERRED_KEYS.has(key)) return true;
-  if (value.includes('\n') || value.includes('\r')) return true;
-  if (value.length >= HEREDOC_MIN_LENGTH) return true;
-  return false;
+  if (!(value.includes('\n') || value.includes('\r'))) return false;
+  const lineCount = value.split(/\r?\n/).length;
+  return lineCount >= 2;
 }
 
 function shouldExpandTextArray(key: string, value: unknown[]): value is string[] {
   if (!value.every((entry) => typeof entry === 'string')) return false;
-  if (HEREDOC_ALWAYS_KEYS.has(key)) return true;
   return value.some((entry) => shouldUseHereDoc(key, entry));
 }
 

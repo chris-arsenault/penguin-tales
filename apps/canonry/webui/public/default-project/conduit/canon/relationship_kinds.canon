@@ -1,644 +1,85 @@
-relationship_kind active_during do
-  description <<DESCRIPTION
-Active During
-  DESCRIPTION
-  srcKinds none
-  dstKinds era
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "became active during"
-    ended "became inactive during"
-  end
-end
+relationship_kind active_during "Active During" neutral none fixed src none dst era verbs "became active during" "became inactive during"
 
-relationship_kind adjacent_to do
-  description <<DESCRIPTION
-Adjacent To
-  DESCRIPTION
-  srcKinds location
-  dstKinds location
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "became adjacent to"
-    ended "separated from"
-  end
-end
+relationship_kind adjacent_to "Adjacent To" neutral none fixed src location dst location verbs "became adjacent to" "separated from"
 
-relationship_kind allied_with do
-  description <<DESCRIPTION
-Allied With
-  DESCRIPTION
-  srcKinds faction npc
-  dstKinds faction npc
-  cullable true
-  decayRate slow
-  polarity positive
-  verbs do
-    formed "allied with"
-    ended "broke alliance with"
-  end
-end
+relationship_kind allied_with "Allied With" positive slow cullable src faction npc dst faction npc verbs "allied with" "broke alliance with"
 
-relationship_kind at_war_with do
-  description <<DESCRIPTION
-At War With
-  DESCRIPTION
-  srcKinds faction
-  dstKinds faction
-  cullable true
-  decayRate slow
-  polarity negative
-  verbs do
-    formed "declared war on"
-    ended "made peace with"
-  end
-end
+relationship_kind at_war_with "At War With" negative slow cullable src faction dst faction verbs "declared war on" "made peace with"
 
-relationship_kind believer_of do
-  description <<DESCRIPTION
-Believer Of
-  DESCRIPTION
-  srcKinds npc faction
-  dstKinds rule faction npc
-  cullable true
-  decayRate medium
-  polarity positive
-  verbs do
-    formed "became a believer in"
-    ended "lost faith in"
-  end
-end
+relationship_kind believer_of "Believer Of" positive medium cullable src npc faction dst rule faction npc verbs "became a believer in" "lost faith in"
 
-relationship_kind betrayed_by do
-  description <<DESCRIPTION
-Betrayed By
-  DESCRIPTION
-  srcKinds faction
-  dstKinds faction
-  cullable false
-  decayRate none
-  polarity negative
-  verbs do
-    formed "was betrayed by"
-    ended forgave
-  end
-end
+relationship_kind betrayed_by "Betrayed By" negative none fixed src faction dst faction verbs "was betrayed by" "forgave"
 
-relationship_kind blessed_by do
-  description <<DESCRIPTION
-Blessed By
-  DESCRIPTION
-  srcKinds npc
-  dstKinds artifact
-  cullable true
-  decayRate slow
-  polarity positive
-  verbs do
-    formed "was blessed by"
-    ended "lost the blessing of"
-  end
-end
+relationship_kind blessed_by "Blessed By" positive slow cullable src npc dst artifact verbs "was blessed by" "lost the blessing of"
 
-relationship_kind catalyst_of do
-  description <<DESCRIPTION
-Catalyst Of
-  DESCRIPTION
-  srcKinds artifact
-  dstKinds occurrence
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed catalyzed
-    ended "was absolved of catalyzing"
-  end
-end
+relationship_kind catalyst_of "Catalyst Of" neutral none fixed src artifact dst occurrence verbs "catalyzed" "was absolved of catalyzing"
 
-relationship_kind celebrated_by do
-  description <<DESCRIPTION
-Celebrated By
-  DESCRIPTION
-  srcKinds rule occurrence
-  dstKinds faction npc location
-  cullable true
-  decayRate medium
-  polarity positive
-  verbs do
-    formed "began to be celebrated by"
-    ended "was no longer celebrated by"
-  end
-end
+relationship_kind celebrated_by "Celebrated By" positive medium cullable src rule occurrence dst faction npc location verbs "began to be celebrated by" "was no longer celebrated by"
 
-relationship_kind central_to do
-  description <<DESCRIPTION
-Central To
-  DESCRIPTION
-  srcKinds artifact
-  dstKinds rule
-  cullable true
-  decayRate slow
-  polarity neutral
-  verbs do
-    formed "became central to"
-    ended "was removed from"
-  end
-end
+relationship_kind central_to "Central To" neutral slow cullable src artifact dst rule verbs "became central to" "was removed from"
 
-relationship_kind commemorates do
-  description <<DESCRIPTION
-Commemorates
-  DESCRIPTION
-  srcKinds rule location
-  dstKinds npc occurrence
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "began commemorating"
-    ended "stopped commemorating"
-  end
-end
+relationship_kind commemorates "Commemorates" neutral none fixed src rule location dst npc occurrence verbs "began commemorating" "stopped commemorating"
 
-relationship_kind contained_by do
-  description <<DESCRIPTION
-Contained By
-  DESCRIPTION
-  srcKinds location
-  dstKinds location
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "became part of"
-    ended "separated from"
-  end
-end
+relationship_kind contained_by "Contained By" neutral none fixed src location dst location verbs "became part of" "separated from"
 
-relationship_kind contains do
-  description <<DESCRIPTION
-Contains
-  DESCRIPTION
-  srcKinds none
-  dstKinds none
-  cullable true
-  decayRate medium
-  polarity neutral
-  verbs do
-    formed "began containing"
-    ended released
-  end
-end
+relationship_kind contains "Contains" neutral medium cullable src none dst none verbs "began containing" "released"
 
-relationship_kind controls do
-  description <<DESCRIPTION
-Controls
-  DESCRIPTION
-  srcKinds faction
-  dstKinds location
-  cullable true
-  decayRate slow
-  polarity neutral
-  verbs do
-    formed "gained control of"
-    ended "lost control of"
-  end
-end
+relationship_kind controls "Controls" neutral slow cullable src faction dst location verbs "gained control of" "lost control of"
 
-relationship_kind corrupted_by do
-  description <<DESCRIPTION
-Corrupted By
-  DESCRIPTION
-  srcKinds location
-  dstKinds location ability
-  cullable true
-  decayRate slow
-  polarity negative
-  verbs do
-    formed "fell under corruption from"
-    ended "was cleansed of corruption from"
-  end
-end
+relationship_kind corrupted_by "Corrupted By" negative slow cullable src location dst location ability verbs "fell under corruption from" "was cleansed of corruption from"
 
-relationship_kind created_by do
-  description <<DESCRIPTION
-Created By
-  DESCRIPTION
-  srcKinds artifact
-  dstKinds npc faction
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "was created by"
-    ended "was disowned by"
-  end
-end
+relationship_kind created_by "Created By" neutral none fixed src artifact dst npc faction verbs "was created by" "was disowned by"
 
-relationship_kind created_during do
-  description <<DESCRIPTION
-Created During
-  DESCRIPTION
-  srcKinds none
-  dstKinds era
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "was created during"
-    ended "was destroyed during"
-  end
-end
+relationship_kind created_during "Created During" neutral none fixed src none dst era verbs "was created during" "was destroyed during"
 
-relationship_kind derived_from do
-  description <<DESCRIPTION
-Derived From
-  DESCRIPTION
-  srcKinds ability rule npc
-  dstKinds ability rule npc occurrence
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "derived from"
-    ended "diverged from"
-  end
-end
+relationship_kind derived_from "Derived From" neutral none fixed src ability rule npc dst ability rule npc occurrence verbs "derived from" "diverged from"
 
-relationship_kind discovered_by do
-  description <<DESCRIPTION
-Discovered By
-  DESCRIPTION
-  srcKinds location ability artifact
-  dstKinds npc faction
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "was discovered by"
-    ended "was forgotten by"
-  end
-end
+relationship_kind discovered_by "Discovered By" neutral none fixed src location ability artifact dst npc faction verbs "was discovered by" "was forgotten by"
 
-relationship_kind empowered_by do
-  description <<DESCRIPTION
-Empowered By
-  DESCRIPTION
-  srcKinds artifact
-  dstKinds ability
-  cullable false
-  decayRate none
-  polarity positive
-  verbs do
-    formed "became empowered by"
-    ended "lost empowerment from"
-  end
-end
+relationship_kind empowered_by "Empowered By" positive none fixed src artifact dst ability verbs "became empowered by" "lost empowerment from"
 
-relationship_kind enemy_of do
-  description <<DESCRIPTION
-Enemy Of
-  DESCRIPTION
-  srcKinds npc faction
-  dstKinds npc faction
-  cullable true
-  decayRate medium
-  polarity negative
-  verbs do
-    formed "became enemies with"
-    ended "reconciled with"
-  end
-end
+relationship_kind enemy_of "Enemy Of" negative medium cullable src npc faction dst npc faction verbs "became enemies with" "reconciled with"
 
-relationship_kind epicenter_of do
-  description <<DESCRIPTION
-Epicenter Of
-  DESCRIPTION
-  srcKinds occurrence
-  dstKinds location
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "became the epicenter of"
-    ended "ceased being the epicenter of"
-  end
-end
+relationship_kind epicenter_of "Epicenter Of" neutral none fixed src occurrence dst location verbs "became the epicenter of" "ceased being the epicenter of"
 
-relationship_kind explorer_of do
-  description <<DESCRIPTION
-Explorer Of
-  DESCRIPTION
-  srcKinds npc
-  dstKinds location
-  cullable true
-  decayRate slow
-  polarity neutral
-  verbs do
-    formed "began exploring"
-    ended "ceased exploring"
-  end
-end
+relationship_kind explorer_of "Explorer Of" neutral slow cullable src npc dst location verbs "began exploring" "ceased exploring"
 
-relationship_kind instigated_by do
-  description <<DESCRIPTION
-Instigated By
-  DESCRIPTION
-  srcKinds occurrence
-  dstKinds npc faction
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "was instigated by"
-    ended "was disavowed by"
-  end
-end
+relationship_kind instigated_by "Instigated By" neutral none fixed src occurrence dst npc faction verbs "was instigated by" "was disavowed by"
 
-relationship_kind leader_of do
-  description <<DESCRIPTION
-Leader Of
-  DESCRIPTION
-  srcKinds npc
-  dstKinds faction location
-  cullable false
-  decayRate slow
-  polarity positive
-  verbs do
-    formed "assumed leadership of"
-    ended "relinquished leadership of"
-  end
-end
+relationship_kind leader_of "Leader Of" positive slow fixed src npc dst faction location verbs "assumed leadership of" "relinquished leadership of"
 
-relationship_kind manifests_at do
-  description <<DESCRIPTION
-Manifests At
-  DESCRIPTION
-  srcKinds ability occurrence
-  dstKinds location
-  cullable true
-  decayRate medium
-  polarity neutral
-  verbs do
-    formed "began manifesting at"
-    ended "ceased manifesting at"
-  end
-end
+relationship_kind manifests_at "Manifests At" neutral medium cullable src ability occurrence dst location verbs "began manifesting at" "ceased manifesting at"
 
-relationship_kind member_of do
-  description <<DESCRIPTION
-Member Of
-  DESCRIPTION
-  srcKinds npc
-  dstKinds faction
-  cullable false
-  decayRate slow
-  polarity positive
-  verbs do
-    formed joined
-    ended left
-  end
-end
+relationship_kind member_of "Member Of" positive slow fixed src npc dst faction verbs "joined" "left"
 
-relationship_kind occupies do
-  description <<DESCRIPTION
-Occupies
-  DESCRIPTION
-  srcKinds faction npc
-  dstKinds location
-  cullable true
-  decayRate medium
-  polarity neutral
-  verbs do
-    formed occupied
-    ended "withdrew from"
-  end
-end
+relationship_kind occupies "Occupies" neutral medium cullable src faction npc dst location verbs "occupied" "withdrew from"
 
-relationship_kind occurred_at do
-  description <<DESCRIPTION
-Occurred At
-  DESCRIPTION
-  srcKinds occurrence
-  dstKinds location
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "occurred at"
-    ended "concluded at"
-  end
-end
+relationship_kind occurred_at "Occurred At" neutral none fixed src occurrence dst location verbs "occurred at" "concluded at"
 
-relationship_kind originated_in do
-  description <<DESCRIPTION
-Originated In
-  DESCRIPTION
-  srcKinds ability rule faction
-  dstKinds location faction
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "originated in"
-    ended "distanced from origins in"
-  end
-end
+relationship_kind originated_in "Originated In" neutral none fixed src ability rule faction dst location faction verbs "originated in" "distanced from origins in"
 
-relationship_kind owned_by do
-  description <<DESCRIPTION
-Owned By
-  DESCRIPTION
-  srcKinds artifact
-  dstKinds npc faction
-  cullable true
-  decayRate slow
-  polarity neutral
-  verbs do
-    formed "came into possession of"
-    ended "was lost by"
-  end
-end
+relationship_kind owned_by "Owned By" neutral slow cullable src artifact dst npc faction verbs "came into possession of" "was lost by"
 
-relationship_kind part_of do
-  description <<DESCRIPTION
-Part Of
-  DESCRIPTION
-  srcKinds none
-  dstKinds none
-  cullable false
-  decayRate none
-  polarity positive
-  verbs do
-    formed "became part of"
-    ended "separated from"
-  end
-end
+relationship_kind part_of "Part Of" positive none fixed src none dst none verbs "became part of" "separated from"
 
-relationship_kind participant_in do
-  description <<DESCRIPTION
-Participant In
-  DESCRIPTION
-  srcKinds none
-  dstKinds occurrence
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "participated in"
-    ended "withdrew from"
-  end
-end
+relationship_kind participant_in "Participant In" neutral none fixed src none dst occurrence verbs "participated in" "withdrew from"
 
-relationship_kind practitioner_of do
-  description <<DESCRIPTION
-Practitioner Of
-  DESCRIPTION
-  srcKinds npc faction
-  dstKinds ability
-  cullable false
-  decayRate slow
-  polarity neutral
-  verbs do
-    formed "learned to practice"
-    ended "abandoned practice of"
-  end
-end
+relationship_kind practitioner_of "Practitioner Of" neutral slow fixed src npc faction dst ability verbs "learned to practice" "abandoned practice of"
 
-relationship_kind related_to do
-  description <<DESCRIPTION
-Related To
-  DESCRIPTION
-  srcKinds npc faction ability rule location
-  dstKinds npc faction ability rule location
-  cullable true
-  decayRate slow
-  polarity neutral
-  verbs do
-    formed "became connected to"
-    ended "severed ties with"
-  end
-end
+relationship_kind related_to "Related To" neutral slow cullable src npc faction ability rule location dst npc faction ability rule location verbs "became connected to" "severed ties with"
 
-relationship_kind resident_of do
-  description <<DESCRIPTION
-Resident Of
-  DESCRIPTION
-  srcKinds npc
-  dstKinds location
-  cullable false
-  decayRate slow
-  polarity neutral
-  verbs do
-    formed "settled in"
-    ended "departed from"
-  end
-end
+relationship_kind resident_of "Resident Of" neutral slow fixed src npc dst location verbs "settled in" "departed from"
 
-relationship_kind splinter_of do
-  description <<DESCRIPTION
-Splinter Of
-  DESCRIPTION
-  srcKinds faction
-  dstKinds faction
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "splintered from"
-    ended "reunited with"
-  end
-end
+relationship_kind splinter_of "Splinter Of" neutral none fixed src faction dst faction verbs "splintered from" "reunited with"
 
-relationship_kind stored_at do
-  description <<DESCRIPTION
-Stored At
-  DESCRIPTION
-  srcKinds artifact
-  dstKinds location
-  cullable true
-  decayRate medium
-  polarity neutral
-  verbs do
-    formed "was stored at"
-    ended "was removed from"
-  end
-end
+relationship_kind stored_at "Stored At" neutral medium cullable src artifact dst location verbs "was stored at" "was removed from"
 
-relationship_kind subsumes do
-  description <<DESCRIPTION
-Subsumes
-  DESCRIPTION
-  srcKinds ability rule faction
-  dstKinds ability rule faction
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed subsumed
-    ended released
-  end
-end
+relationship_kind subsumes "Subsumes" neutral none fixed src ability rule faction dst ability rule faction verbs "subsumed" "released"
 
-relationship_kind supersedes do
-  description <<DESCRIPTION
-Supersedes
-  DESCRIPTION
-  srcKinds era
-  dstKinds era
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed superseded
-    ended "was unseated as successor of"
-  end
-end
+relationship_kind supersedes "Supersedes" neutral none fixed src era dst era verbs "superseded" "was unseated as successor of"
 
-relationship_kind taught_by do
-  description <<DESCRIPTION
-Taught By
-  DESCRIPTION
-  srcKinds npc faction
-  dstKinds npc faction
-  cullable true
-  decayRate medium
-  polarity positive
-  verbs do
-    formed "became a student of"
-    ended "concluded studies under"
-  end
-end
+relationship_kind taught_by "Taught By" positive medium cullable src npc faction dst npc faction verbs "became a student of" "concluded studies under"
 
-relationship_kind trades_with do
-  description <<DESCRIPTION
-Trades With
-  DESCRIPTION
-  srcKinds faction npc location
-  dstKinds faction npc location
-  cullable true
-  decayRate medium
-  polarity positive
-  verbs do
-    formed "established trade with"
-    ended "ceased trade with"
-  end
-end
+relationship_kind trades_with "Trades With" positive medium cullable src faction npc location dst faction npc location verbs "established trade with" "ceased trade with"
 
-relationship_kind triggered_by do
-  description <<DESCRIPTION
-Triggered By
-  DESCRIPTION
-  srcKinds occurrence
-  dstKinds none
-  cullable false
-  decayRate none
-  polarity neutral
-  verbs do
-    formed "was triggered by"
-    ended "was resolved despite"
-  end
-end
+relationship_kind triggered_by "Triggered By" neutral none fixed src occurrence dst none verbs "was triggered by" "was resolved despite"

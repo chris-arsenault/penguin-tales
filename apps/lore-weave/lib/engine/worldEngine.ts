@@ -1,4 +1,4 @@
-import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, HistoryEvent, Pressure, SimulationSystem } from '../engine/types';
+import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, Pressure, SimulationSystem } from '../engine/types';
 import { createPressureFromDeclarative, evaluatePressureGrowthWithBreakdown } from './pressureInterpreter';
 import { DeclarativePressure } from './declarativePressureTypes';
 import { TemplateInterpreter, createTemplateFromDeclarative } from './templateInterpreter';
@@ -237,9 +237,12 @@ export class WorldEngine {
       config.executableActions = loadActions(config.actions);
     }
 
-    // Initialize action success tracker for diagnostics
-    // universalCatalyst will add action types here when they succeed
-    config.actionSuccessTracker = new Set<string>();
+    // Initialize action usage tracker for diagnostics (success-only)
+    config.actionUsageTracker = {
+      applications: [],
+      countsByActionId: new Map<string, number>(),
+      countsByActorId: new Map<string, { name: string; kind: string; count: number }>()
+    };
 
     this.statisticsCollector = new StatisticsCollector();
     this.currentEpoch = 0;
@@ -569,19 +572,6 @@ export class WorldEngine {
         }
       });
     }
-
-    // Record initial state as first history event
-    const initialEntityIds = this.graph.getEntityIds();
-    const initialRelationships = this.graph.getRelationships();
-    this.graph.history.push({
-      tick: 0,
-      era: config.eras[0].id,
-      type: 'special',
-      description: `World initialized: ${initialEntityIds.length} entities, ${initialRelationships.length} relationships`,
-      entitiesCreated: initialEntityIds,
-      relationshipsCreated: initialRelationships,
-      entitiesModified: []
-    });
 
     // Create genesis narrative event for seed entities
     const genesisEvent = this.buildGenesisEvent(config.eras[0].id);
@@ -1036,7 +1026,11 @@ export class WorldEngine {
 
     // Reset tracking maps
     this.templateRunCounts.clear();
-    this.config.actionSuccessTracker?.clear();
+    if (this.config.actionUsageTracker) {
+      this.config.actionUsageTracker.applications = [];
+      this.config.actionUsageTracker.countsByActionId.clear();
+      this.config.actionUsageTracker.countsByActorId.clear();
+    }
     this.systemMetrics.clear();
     this.metaEntitiesFormed = [];
     this.lastRelationshipCount = 0;
@@ -1126,19 +1120,6 @@ export class WorldEngine {
         }
       });
     }
-
-    // Record initial state as first history event
-    const initialEntityIds = this.graph.getEntityIds();
-    const initialRelationships = this.graph.getRelationships();
-    this.graph.history.push({
-      tick: 0,
-      era: this.config.eras[0].id,
-      type: 'special',
-      description: `World reset: ${initialEntityIds.length} entities, ${initialRelationships.length} relationships`,
-      entitiesCreated: initialEntityIds,
-      relationshipsCreated: initialRelationships,
-      entitiesModified: []
-    });
 
     this.updateReachabilityMetrics();
 
@@ -1583,31 +1564,23 @@ export class WorldEngine {
 
     // Catalyst statistics
     const agents = entities.filter(e => e.catalyst?.canAct);
-    const activeAgents = agents.filter(e => e.catalyst && e.catalyst.catalyzedEvents.length > 0);
-    const agentActions = new Map<string, { name: string; kind: string; count: number }>();
+    const actionUsage = this.config.actionUsageTracker;
+    const actionCountsByActor = actionUsage?.countsByActorId ?? new Map<string, { name: string; kind: string; count: number }>();
+    const actionCountsByActionId = actionUsage?.countsByActionId ?? new Map<string, number>();
 
-    entities.forEach(e => {
-      if (e.catalyst?.catalyzedEvents?.length) {
-        agentActions.set(e.id, {
-          name: e.name,
-          kind: e.kind,
-          count: e.catalyst.catalyzedEvents.length
-        });
-      }
-    });
+    const activeAgents = actionCountsByActor.size;
 
-    const topAgents = Array.from(agentActions.entries())
+    const topAgents = Array.from(actionCountsByActor.entries())
       .map(([id, data]) => ({ id, name: data.name, kind: data.kind, actionCount: data.count }))
       .sort((a, b) => b.actionCount - a.actionCount)
       .slice(0, 10);
 
-    const totalActions = Array.from(agentActions.values()).reduce((sum, a) => sum + a.count, 0);
+    const totalActions = Array.from(actionCountsByActor.values()).reduce((sum, a) => sum + a.count, 0);
 
     // Compute unused actions (actions that have never succeeded)
     const allActions = this.config.executableActions || [];
-    const successTracker = this.config.actionSuccessTracker || new Set<string>();
     const unusedActions = allActions
-      .filter(action => !successTracker.has(action.type))
+      .filter(action => !actionCountsByActionId.has(action.type))
       .map(action => ({
         actionId: action.type,
         actionName: action.name
@@ -1615,9 +1588,9 @@ export class WorldEngine {
 
     this.emitter.catalystStats({
       totalAgents: agents.length,
-      activeAgents: activeAgents.length,
+      activeAgents,
       totalActions,
-      uniqueActors: agentActions.size,
+      uniqueActors: actionCountsByActor.size,
       topAgents,
       unusedActions
     });
@@ -1654,19 +1627,6 @@ export class WorldEngine {
 
     this.emitter.notableEntities({ mythic, renowned });
 
-    // Sample history events (last 10)
-    const history = this.graph.history;
-    const recentEvents = history.slice(-10).map(h => ({
-      tick: h.tick,
-      type: h.type,
-      summary: h.description,
-      entityIds: h.entitiesCreated || []
-    }));
-
-    this.emitter.sampleHistory({
-      totalEvents: history.length,
-      recentEvents
-    });
   }
 
   /**
@@ -1824,14 +1784,12 @@ export class WorldEngine {
         era: this.graph.currentEra.name,
         entityCount: entities.length,
         relationshipCount: relationships.length,
-        historyEventCount: this.graph.history.length,
         durationMs,
         reachability: this.getReachabilityMetrics(),
         enrichmentTriggers: {}
       },
       hardState: entities,
       relationships,
-      history: this.graph.history,
       narrativeHistory: this.graph.narrativeHistory.length > 0 ? this.graph.narrativeHistory : undefined,
       pressures: Object.fromEntries(this.graph.pressures),
       coordinateState
@@ -2291,20 +2249,7 @@ export class WorldEngine {
     //   this.queueRelationshipEnrichment(relationshipsThisTick);
     // }
 
-    if (totalRelationships > 0 || totalModifications > 0) {
-      // Record significant ticks only
-      this.graph.history.push({
-        tick: this.graph.tick,
-        era: era.id,
-        type: 'simulation',
-        description: `Systems: +${totalRelationships} relationships, ${totalModifications} modifications`,
-        entitiesCreated: [],
-        relationshipsCreated: relationshipsThisTick,
-        entitiesModified: modifiedEntityIds
-      });
-    }
-
-    // Flush narrative events and add to history
+    // Flush narrative events and add to narrative history
     const narrativeEvents = this.stateChangeTracker.flush();
     if (narrativeEvents.length > 0) {
       this.graph.narrativeHistory.push(...narrativeEvents);
@@ -2476,10 +2421,6 @@ export class WorldEngine {
     return this.graph;
   }
 
-  public getHistory(): HistoryEvent[] {
-    return this.graph.history;
-  }
-
   public finalizeNameLogging(): void {
     // Print name-forge generation stats
     if (this.nameForgeService) {
@@ -2510,7 +2451,6 @@ export class WorldEngine {
         era: this.graph.currentEra.name,
         entityCount: entities.length,
         relationshipCount: relationships.length,
-        historyEventCount: this.graph.history.length,
         metaEntityCount: metaEntities.length,
         metaEntityFormation: {
           totalFormed: this.metaEntitiesFormed.length,
@@ -2523,7 +2463,6 @@ export class WorldEngine {
       hardState: entities,
       relationships,
       pressures: Object.fromEntries(this.graph.pressures),
-      history: this.graph.history,  // Export ALL events, not just last 50
       narrativeHistory: this.graph.narrativeHistory.length > 0 ? this.graph.narrativeHistory : undefined
       // loreRecords moved to @illuminator
     };

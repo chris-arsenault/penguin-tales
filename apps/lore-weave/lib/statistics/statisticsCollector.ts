@@ -355,7 +355,6 @@ export class StatisticsCollector {
       generationTimeMs,
       finalEntityCount: graph.getEntityCount(),
       finalRelationshipCount: graph.getRelationshipCount(),
-      finalHistoryEventCount: graph.history.length,
       epochStats: this.epochStats,
       distributionStats,
       enrichmentStats: enrichmentAnalytics,

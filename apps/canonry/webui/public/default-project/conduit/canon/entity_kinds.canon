@@ -1,7 +1,5 @@
 entity_kind ability do
-  description <<DESCRIPTION
-Abilities & Techniques
-  DESCRIPTION
+  description "Abilities & Techniques"
   category power
   subtype technology Technology
   subtype combat "Combat Technique"
@@ -38,9 +36,7 @@ Abilities & Techniques
 end
 
 entity_kind artifact do
-  description <<DESCRIPTION
-Artifacts & Relics
-  DESCRIPTION
+  description "Artifacts & Relics"
   category object
   subtype weapon Weapon
   subtype relic Relic
@@ -76,9 +72,7 @@ Artifacts & Relics
 end
 
 entity_kind faction do
-  description <<DESCRIPTION
-Factions
-  DESCRIPTION
+  description Factions
   category collective
   subtype political Political
   subtype criminal Criminal
@@ -115,9 +109,7 @@ Factions
 end
 
 entity_kind location do
-  description <<DESCRIPTION
-Locations
-  DESCRIPTION
+  description Locations
   category place
   subtype colony Colony
   subtype anomaly Anomaly
@@ -153,9 +145,7 @@ Locations
 end
 
 entity_kind npc do
-  description <<DESCRIPTION
-NPCs
-  DESCRIPTION
+  description NPCs
   category character
   subtype merchant Merchant
   subtype mayor Mayor authority
@@ -192,9 +182,7 @@ NPCs
 end
 
 entity_kind occurrence do
-  description <<DESCRIPTION
-Events & Occurrences
-  DESCRIPTION
+  description "Events & Occurrences"
   category event
   subtype war War
   subtype succession_crisis "Succession Crisis"
@@ -212,9 +200,7 @@ Events & Occurrences
 end
 
 entity_kind rule do
-  description <<DESCRIPTION
-Laws & Traditions
-  DESCRIPTION
+  description "Laws & Traditions"
   category concept
   subtype law Law
   subtype social "Social Custom"

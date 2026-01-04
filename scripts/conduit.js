@@ -211,17 +211,26 @@ async function listFiles(dir, extension) {
 }
 
 async function resolveCanonRoot(dir) {
-  const canonDir = path.join(dir, 'canon');
-  try {
-    const stats = await stat(canonDir);
-    if (!stats.isDirectory()) {
-      return dir;
+  const candidates = [
+    path.join(dir, 'conduit', 'canon'),
+    path.join(dir, 'canon'),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      const stats = await stat(candidate);
+      if (!stats.isDirectory()) continue;
+      const canonFiles = await listFiles(candidate, '.canon');
+      if (canonFiles.length > 0) {
+        return candidate;
+      }
+    } catch (error) {
+      // ignore missing candidate
     }
-  } catch (error) {
-    return dir;
   }
-  const canonFiles = await listFiles(canonDir, '.canon');
-  return canonFiles.length > 0 ? canonDir : dir;
+
+  const canonFiles = await listFiles(dir, '.canon');
+  return canonFiles.length > 0 ? dir : dir;
 }
 
 async function ensureDirectory(dir) {

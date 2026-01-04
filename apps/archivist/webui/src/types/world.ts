@@ -2,7 +2,6 @@ import type {
   CanonrySchemaSlice,
   CultureDefinition,
   EntityKindDefinition,
-  HistoryEvent,
   Prominence as CanonryProminence,
   SemanticCoordinates,
   SemanticRegion,
@@ -117,6 +116,5 @@ export type {
   CanonrySchemaSlice,
   CultureDefinition,
   EntityKindDefinition,
-  HistoryEvent,
   Validation,
 };

@@ -37,6 +37,8 @@
     "ui:build": "cd apps/lore-weave/webui && npm run build",
     "ui:preview": "cd apps/lore-weave/webui && npm run preview",
     "canonry": "npx concurrently -n proxy,canonry,name-forge,cosmographer,coherence,lore-weave,illuminator,archivist,chronicler -c white,blue,yellow,magenta,cyan,green,red,gray,white \"node scripts/dev-proxy.js\" \"cd apps/canonry/webui && npm run dev\" \"cd apps/name-forge/webui && npm run dev\" \"cd apps/cosmographer/webui && npm run dev\" \"cd apps/coherence-engine/webui && npm run dev\" \"cd apps/lore-weave/webui && npm run dev\" \"cd apps/illuminator/webui && npm run dev\" \"cd apps/archivist/webui && npm run dev\" \"cd apps/chronicler/webui && npm run dev\"",
+    "validate": "node scripts/validate-schemas.cjs",
+    "validate:verbose": "node scripts/validate-schemas.cjs --verbose",
     "test": "node -e \"console.log('Tests archived; no tests to run.');\"",
     "test:framework": "node -e \"console.log('Tests archived; no tests to run.');\"",
     "install:canonry": "cd apps/canonry/webui && npm install && cd ../../name-forge/webui && npm install && cd ../../cosmographer/webui && npm install && cd ../../coherence-engine/webui && npm install && cd ../../lore-weave/webui && npm install && cd ../../archivist/webui && npm install && cd ../../illuminator/webui && npm install && cd ../../chronicler/webui && npm install && cd ../../../packages/world-schema && npm install"

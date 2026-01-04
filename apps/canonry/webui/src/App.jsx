@@ -248,7 +248,6 @@ function isWorldOutput(candidate) {
     candidate.metadata &&
     Array.isArray(candidate.hardState) &&
     Array.isArray(candidate.relationships) &&
-    Array.isArray(candidate.history) &&
     candidate.pressures &&
     typeof candidate.pressures === 'object'
   );

@@ -31,7 +31,6 @@ import type {
   CatalystStatsPayload,
   RelationshipBreakdownPayload,
   NotableEntitiesPayload,
-  SampleHistoryPayload,
   SimulationResultPayload,
   StateExportPayload,
   ErrorPayload
@@ -67,7 +66,6 @@ export interface SimulationState {
   catalystStats: CatalystStatsPayload | null;
   relationshipBreakdown: RelationshipBreakdownPayload | null;
   notableEntities: NotableEntitiesPayload | null;
-  sampleHistory: SampleHistoryPayload | null;
   result: SimulationResultPayload | null;
   // State export (for intermediate Archivist export)
   stateExport: StateExportPayload | null;
@@ -109,7 +107,6 @@ const initialState: SimulationState = {
   catalystStats: null,
   relationshipBreakdown: null,
   notableEntities: null,
-  sampleHistory: null,
   result: null,
   stateExport: null,
   error: null,
@@ -191,14 +188,9 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
           };
 
         case 'action_application':
-          // Keep only last 1000 action applications (for trace visualization)
-          const newActionApps = [...prev.actionApplications, message.payload];
-          if (newActionApps.length > 1000) {
-            newActionApps.splice(0, newActionApps.length - 1000);
-          }
           return {
             ...prev,
-            actionApplications: newActionApps
+            actionApplications: [...prev.actionApplications, message.payload]
           };
 
         case 'pressure_update':
@@ -275,12 +267,6 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
           return {
             ...prev,
             notableEntities: message.payload
-          };
-
-        case 'sample_history':
-          return {
-            ...prev,
-            sampleHistory: message.payload
           };
 
         case 'complete':
@@ -421,7 +407,6 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
         catalystStats: null,
         relationshipBreakdown: null,
         notableEntities: null,
-        sampleHistory: null,
         result: null,
         error: null
       }));

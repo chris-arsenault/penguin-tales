@@ -1429,7 +1429,6 @@
         { "$ref": "#/$defs/StatusRatioMetric" },
         { "$ref": "#/$defs/CrossCultureRatioMetric" },
         { "$ref": "#/$defs/SharedRelationshipMetric" },
-        { "$ref": "#/$defs/CatalyzedEventsMetric" },
         { "$ref": "#/$defs/ProminenceMultiplierMetric" },
         { "$ref": "#/$defs/NeighborProminenceMetric" },
         { "$ref": "#/$defs/NeighborKindCountMetric" },
@@ -1602,6 +1601,7 @@
     "SharedRelationshipMetric": {
       "type": "object",
       "required": ["type", "sharedRelationshipKind"],
+      "description": "Count entities sharing a relationship target. Optional 'via' enables multi-hop: Entity → via → Intermediate → sharedRelKind → Target",
       "properties": {
         "type": { "const": "shared_relationship" },
         "sharedRelationshipKind": {
@@ -1612,18 +1612,18 @@
           "description": "Relationship kind(s) to check for shared targets"
         },
         "sharedDirection": { "enum": ["src", "dst"] },
+        "via": {
+          "type": "object",
+          "description": "Optional intermediate relationship for multi-hop traversal. Example: Faction → controls → Location → trades_with → Location",
+          "required": ["relationshipKind"],
+          "properties": {
+            "relationshipKind": { "$ref": "#/$defs/NonEmptyString", "description": "Relationship kind to traverse to reach intermediate entities" },
+            "direction": { "enum": ["src", "dst"], "description": "Direction of the via relationship from source (default: src)" },
+            "intermediateKind": { "$ref": "#/$defs/NonEmptyString", "description": "Optional kind filter for intermediate entities" }
+          },
+          "additionalProperties": false
+        },
         "minStrength": { "type": "number", "minimum": 0, "maximum": 1 },
-        "coefficient": { "type": "number" },
-        "cap": { "type": "number" }
-      },
-      "additionalProperties": false
-    },
-
-    "CatalyzedEventsMetric": {
-      "type": "object",
-      "required": ["type"],
-      "properties": {
-        "type": { "const": "catalyzed_events" },
         "coefficient": { "type": "number" },
         "cap": { "type": "number" }
       },

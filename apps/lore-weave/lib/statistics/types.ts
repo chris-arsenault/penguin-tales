@@ -157,7 +157,6 @@ export interface SimulationStatistics {
   // Final counts
   finalEntityCount: number;
   finalRelationshipCount: number;
-  finalHistoryEventCount: number;
 
   // Per-epoch tracking
   epochStats: EpochStats[];

@@ -1,9 +1,7 @@
 pressure harmony "Cultural Harmony" do
   initial_value 0
   homeostasis 0.25
-  description <<DESCRIPTION
-Are the clans getting along? Positive values mean little inter-culture strife, negative values mean war could break out at any point.
-  DESCRIPTION
+  description "Are the clans getting along? Positive values mean little inter-culture strife, negative values mean war could break out at any point."
   growth do
     positive_feedback do
       tag_count libertarian follower organized coefficient 0.2
@@ -22,9 +20,7 @@ end
 pressure magical_stability "Magical Stability" do
   initial_value 30
   homeostasis 0.25
-  description <<DESCRIPTION
-How stable the 'bergs native magic is. Positive values mean less wild magic is appearing, negative values mean anomalies happen frequently.  Penguins can harness the wild magic to stabilize it. Cults exploit it to their own devices
-  DESCRIPTION
+  description "How stable the 'bergs native magic is. Positive values mean less wild magic is appearing, negative values mean anomalies happen frequently.  Penguins can harness the wild magic to stabilize it. Cults exploit it to their own devices"
   growth do
     positive_feedback do
       entity_count kind ability subtype magic coefficient 3
@@ -39,9 +35,7 @@ end
 pressure resource_availibility "Resource Availibility" do
   initial_value 15
   homeostasis 0.1
-  description <<DESCRIPTION
-How many unused resources there are. Positive = plenty of resources, negative = resource crisis.
-  DESCRIPTION
+  description "How many unused resources there are. Positive = plenty of resources, negative = resource crisis."
   growth do
     positive_feedback do
       entity_count kind location subtype resource_node coefficient 1.5
@@ -56,9 +50,7 @@ end
 pressure security "Iceberg Security" do
   initial_value 0
   homeostasis 0.25
-  description <<DESCRIPTION
-How well defended the 'berg is. Positive values mean no external threat / enough defenses, negative values mean a looming external threat (probably orcas)
-  DESCRIPTION
+  description "How well defended the 'berg is. Positive values mean no external threat / enough defenses, negative values mean a looming external threat (probably orcas)"
   growth do
     positive_feedback do
       entity_count kind npc subtype hero coefficient 0.8

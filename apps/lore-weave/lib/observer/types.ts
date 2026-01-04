@@ -6,7 +6,7 @@
  */
 
 import { HardState, Relationship } from '../core/worldTypes';
-import { Era, HistoryEvent } from '../engine/types';
+import { Era } from '../engine/types';
 import type { WorldOutput } from '@canonry/world-schema';
 
 // =============================================================================
@@ -184,8 +184,8 @@ export interface CoordinateStatsPayload {
 }
 
 /**
- * Action application payload - emitted when an action is selected and executed by an agent
- * Only emitted for actions that were actually selected to run (not all available actions)
+ * Action application payload - emitted only when an action succeeds
+ * Tracks the selected action, participants, and outcome details.
  */
 export interface ActionApplicationPayload {
   tick: number;
@@ -336,16 +336,6 @@ export interface NotableEntitiesPayload {
   }>;
 }
 
-export interface SampleHistoryPayload {
-  totalEvents: number;
-  recentEvents: Array<{
-    tick: number;
-    type: string;
-    summary: string;
-    entityIds: string[];
-  }>;
-}
-
 /**
  * Detailed pressure change breakdown emitted per tick
  * Allows UI to show exactly what's contributing to pressure changes
@@ -465,7 +455,6 @@ export type SimulationEvent =
   | { type: 'catalyst_stats'; payload: CatalystStatsPayload }
   | { type: 'relationship_breakdown'; payload: RelationshipBreakdownPayload }
   | { type: 'notable_entities'; payload: NotableEntitiesPayload }
-  | { type: 'sample_history'; payload: SampleHistoryPayload }
   | { type: 'complete'; payload: SimulationResultPayload }
   | { type: 'state_export'; payload: StateExportPayload }
   | { type: 'error'; payload: ErrorPayload };
@@ -505,7 +494,6 @@ export interface ISimulationEmitter {
   catalystStats(payload: CatalystStatsPayload): void;
   relationshipBreakdown(payload: RelationshipBreakdownPayload): void;
   notableEntities(payload: NotableEntitiesPayload): void;
-  sampleHistory(payload: SampleHistoryPayload): void;
   complete(payload: SimulationResultPayload): void;
   stateExport(payload: StateExportPayload): void;
   error(payload: ErrorPayload): void;

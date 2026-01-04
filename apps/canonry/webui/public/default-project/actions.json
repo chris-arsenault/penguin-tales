@@ -148,7 +148,7 @@
   {
     "id": "sue_for_peace",
     "name": "Sue for Peace",
-    "description": "Surrender to end a war, ceding contested territory to the victor",
+    "description": "Surrender to end a war, removing self from the war",
     "actor": {
       "selection": {
         "strategy": "by_kind",
@@ -165,15 +165,30 @@
           "war"
         ],
         "status": "active",
+        "filters": [
+          {
+            "type": "has_tag",
+            "tag": "war_weary"
+          }
+        ],
         "pickStrategy": "random",
         "required": true
       },
       "conditions": [
         {
-          "type": "relationship_count",
-          "relationshipKind": "at_war_with",
-          "direction": "both",
-          "min": 1
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "participant_in",
+                "direction": "out",
+                "targetKind": "occurrence",
+                "targetSubtype": "war",
+                "targetStatus": "active"
+              }
+            ]
+          }
         }
       ]
     },
@@ -188,10 +203,9 @@
           ]
         },
         {
-          "type": "has_relationship",
-          "kind": "at_war_with",
-          "with": "$actor",
-          "direction": "both"
+          "type": "shares_related",
+          "relationshipKind": "participant_in",
+          "with": "$actor"
         }
       ]
     },
@@ -200,25 +214,31 @@
         {
           "type": "archive_relationship",
           "entity": "$actor",
-          "relationshipKind": "at_war_with",
-          "with": "$target"
-        },
-        {
-          "type": "change_status",
-          "entity": "$instigator",
-          "newStatus": "historical"
-        },
-        {
-          "type": "archive_all_relationships",
-          "entity": "$instigator",
           "relationshipKind": "participant_in",
-          "direction": "dst"
+          "with": "$instigator"
+        },
+        {
+          "type": "archive_relationship",
+          "entity": "$actor",
+          "relationshipKind": "enemy_of",
+          "with": "$target"
         },
         {
           "type": "set_tag",
           "entity": "$actor",
           "tag": "defeated",
           "value": true
+        },
+        {
+          "type": "set_tag",
+          "entity": "$actor",
+          "tag": "post_war_cooldown",
+          "value": true
+        },
+        {
+          "type": "remove_tag",
+          "entity": "$actor",
+          "tag": "conflict"
         },
         {
           "type": "modify_pressure",
@@ -288,10 +308,13 @@
       },
       "conditions": [
         {
-          "type": "relationship_count",
-          "relationshipKind": "at_war_with",
-          "direction": "both",
-          "min": 1
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              { "via": "participant_in", "direction": "out", "targetKind": "occurrence", "targetStatus": "active", "targetSubtype": "war" }
+            ]
+          }
         },
         {
           "type": "relationship_count",
@@ -307,15 +330,12 @@
       "filters": [
         {
           "type": "exclude",
-          "entities": [
-            "$actor"
-          ]
+          "entities": ["$actor"]
         },
         {
-          "type": "has_relationship",
-          "kind": "at_war_with",
-          "with": "$actor",
-          "direction": "both"
+          "type": "shares_related",
+          "relationshipKind": "participant_in",
+          "with": "$actor"
         }
       ]
     },
@@ -323,9 +343,9 @@
       "mutations": [
         {
           "type": "archive_relationship",
-          "entity": "$actor",
-          "relationshipKind": "at_war_with",
-          "with": "$target"
+          "entity": "$target",
+          "relationshipKind": "participant_in",
+          "with": "$instigator"
         },
         {
           "type": "change_status",
@@ -339,6 +359,12 @@
           "direction": "dst"
         },
         {
+          "type": "archive_relationship",
+          "entity": "$actor",
+          "relationshipKind": "enemy_of",
+          "with": "$target"
+        },
+        {
           "type": "set_tag",
           "entity": "$target",
           "tag": "defeated",
@@ -348,6 +374,18 @@
           "type": "set_tag",
           "entity": "$actor",
           "tag": "victorious",
+          "value": true
+        },
+        {
+          "type": "set_tag",
+          "entity": "$actor",
+          "tag": "post_war_cooldown",
+          "value": true
+        },
+        {
+          "type": "set_tag",
+          "entity": "$target",
+          "tag": "post_war_cooldown",
           "value": true
         },
         {
@@ -382,11 +420,24 @@
   {
     "id": "raid",
     "name": "Raid",
-    "description": "Attack an enemy faction's territory, weakening their hold on controlled locations",
+    "description": "Attack another faction's territory, creating enmity and weakening their hold",
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "faction"
+        "kind": "faction",
+        "saturationLimits": [
+          {
+            "relationshipKind": "enemy_of",
+            "direction": "both",
+            "maxCount": 2
+          }
+        ],
+        "filters": [
+          {
+            "type": "lacks_tag",
+            "tag": "raid_cooldown"
+          }
+        ]
       }
     },
     "targeting": {
@@ -394,15 +445,23 @@
       "kind": "faction",
       "filters": [
         {
-          "type": "has_relationship",
-          "kind": "at_war_with",
-          "with": "$actor",
-          "direction": "both"
+          "type": "lacks_relationship",
+          "kind": "allied_with",
+          "with": "$actor"
+        },
+        {
+          "type": "lacks_relationship",
+          "kind": "enemy_of",
+          "with": "$actor"
         },
         {
           "type": "has_relationship",
           "kind": "controls",
           "direction": "src"
+        },
+        {
+          "type": "exclude",
+          "entities": ["$actor"]
         }
       ]
     },
@@ -413,12 +472,19 @@
           "kind": "enemy_of",
           "src": "$actor",
           "dst": "$target",
-          "strength": 0.8
+          "strength": 0.8,
+          "bidirectional": true
         },
         {
           "type": "set_tag",
           "entity": "$target",
           "tag": "raided",
+          "value": true
+        },
+        {
+          "type": "set_tag",
+          "entity": "$actor",
+          "tag": "raid_cooldown",
           "value": true
         },
         {
@@ -440,7 +506,7 @@
     },
     "probability": {
       "baseSuccessChance": 0.35,
-      "baseWeight": 0.5,
+      "baseWeight": 0.2,
       "pressureModifiers": [
         {
           "pressure": "harmony",
@@ -787,13 +853,6 @@
           "src": "$target",
           "dst": "$actor",
           "strength": 0.8
-        },
-        {
-          "type": "create_relationship",
-          "kind": "at_war_with",
-          "src": "$target",
-          "dst": "$existingParticipant",
-          "strength": 0.6
         },
         {
           "type": "modify_pressure",

@@ -2,13 +2,11 @@ import { HardState, Relationship, EntityTags } from '../core/worldTypes';
 import { FRAMEWORK_STATUS } from '@canonry/world-schema';
 import { prominenceThreshold, prominenceLabel, type ProminenceLabel } from '../rules/types';
 import { DistributionTargets } from '../statistics/types';
-import type { ISimulationEmitter } from '../observer/types';
+import type { ISimulationEmitter, ActionApplicationPayload } from '../observer/types';
 import type { Condition } from '../rules/conditions/types';
 import type { ModifyPressureMutation } from '../rules/mutations/types';
-import type { CanonrySchemaSlice, HistoryEvent as CanonryHistoryEvent, NarrativeEvent } from '@canonry/world-schema';
+import type { CanonrySchemaSlice, NarrativeEvent } from '@canonry/world-schema';
 import type { MutationTracker } from '../narrative/mutationTracker.js';
-
-export type HistoryEvent = CanonryHistoryEvent;
 
 // =============================================================================
 // DEBUG CONFIGURATION
@@ -260,7 +258,6 @@ export interface Graph {
   tick: number;
   currentEra: Era;
   pressures: Map<string, number>;
-  history: HistoryEvent[];
   /** Narrative events for story generation (optional, enabled via config) */
   narrativeHistory: NarrativeEvent[];
   relationshipCooldowns: Map<string, Map<string, number>>;
@@ -562,9 +559,9 @@ export interface EngineConfig {
   // Used by universalCatalyst system to execute agent actions
   executableActions?: import('./actionInterpreter').ExecutableAction[];
 
-  // Action success tracking - populated by universalCatalyst when actions succeed
-  // Used for diagnostics to report which actions have never succeeded
-  actionSuccessTracker?: Set<string>;
+  // Action usage tracking - populated by universalCatalyst when actions succeed
+  // Used for diagnostics and validity checks (success-only)
+  actionUsageTracker?: ActionUsageTracker;
 
   entityRegistries?: EntityOperatorRegistry[];
 
@@ -613,6 +610,12 @@ export interface EngineConfig {
 
   // Narrative event tracking configuration (optional - defaults to disabled)
   narrativeConfig?: NarrativeConfig;
+}
+
+export interface ActionUsageTracker {
+  applications: ActionApplicationPayload[];
+  countsByActionId: Map<string, number>;
+  countsByActorId: Map<string, { name: string; kind: string; count: number }>;
 }
 
 /**
@@ -699,7 +702,6 @@ export class GraphStore implements Graph {
   tick: number = 0;
   currentEra!: Era;
   pressures: Map<string, number> = new Map();
-  history: HistoryEvent[] = [];
   narrativeHistory: NarrativeEvent[] = [];
   relationshipCooldowns: Map<string, Map<string, number>> = new Map();
   // LLM fields moved to @illuminator

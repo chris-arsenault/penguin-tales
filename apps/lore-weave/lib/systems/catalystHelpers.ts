@@ -5,7 +5,7 @@
  * These are domain-agnostic and work with any entity type.
  */
 
-import { HardState, Relationship, CatalystProperties, CatalyzedEvent } from '../core/worldTypes';
+import { HardState, Relationship } from '../core/worldTypes';
 import { Graph } from '../engine/types';
 import { FRAMEWORK_ENTITY_KINDS } from '@canonry/world-schema';
 import { getProminenceMultiplierValue } from '../rules';
@@ -93,41 +93,6 @@ export function getCatalyzedEvents(
 }
 
 /**
- * Get count of events catalyzed by entity
- * Used for prominence evolution calculations
- * @param graph - The world graph
- * @param entityId - ID of the catalyst entity
- * @returns Number of events catalyzed
- */
-export function getCatalyzedEventCount(
-  graph: Graph,
-  entityId: string
-): number {
-  const entity = graph.getEntity(entityId);
-  if (!entity?.catalyst) {
-    return 0;
-  }
-
-  return entity.catalyst.catalyzedEvents.length;
-}
-
-/**
- * Add a catalyzed event to an entity's record
- * @param entity - The catalyst entity
- * @param event - The event to record
- */
-export function addCatalyzedEvent(
-  entity: HardState,
-  event: CatalyzedEvent
-): void {
-  if (!entity.catalyst) {
-    return;
-  }
-
-  entity.catalyst.catalyzedEvents.push(event);
-}
-
-/**
  * Check if entity has a specific relationship
  * @param entity - The entity to check
  * @param relationshipKind - The relationship kind to look for
@@ -175,8 +140,7 @@ export function initializeCatalyst(
   canAct: boolean
 ): void {
   entity.catalyst = {
-    canAct,
-    catalyzedEvents: []
+    canAct
   };
 }
 
@@ -195,7 +159,6 @@ export function initializeCatalystSmart(entity: HardState): void {
   }
 
   entity.catalyst = {
-    canAct: true,
-    catalyzedEvents: []
+    canAct: true
   };
 }

@@ -14,13 +14,7 @@ axis power "Power" emergent -> legendary
 
 axis pragmatism "Pragmatism" mundane -> mystical
 
-axis purpose Purpose do
-  description <<DESCRIPTION
-The intended use of the artifact
-  DESCRIPTION
-  lowTag destructive
-  highTag protective
-end
+axis purpose "Purpose" destructive -> protective "The intended use of the artifact"
 
 axis structure "Structure" chaotic -> organized
 

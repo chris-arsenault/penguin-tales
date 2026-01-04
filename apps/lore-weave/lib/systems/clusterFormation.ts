@@ -687,21 +687,6 @@ export function createClusterFormationSystem(
         }
       }
 
-      // Record in history
-      if (metaEntitiesCreated.length > 0) {
-        const allCreated = [...metaEntitiesCreated, ...factionsCreated];
-        graphView.addHistoryEvent({
-          tick: graphView.tick,
-          era: graphView.currentEra.id,
-          type: 'special',
-          description: `${metaEntitiesCreated.length} ${config.name} from ${entitiesModified.length} entities` +
-            (factionsCreated.length > 0 ? `, ${factionsCreated.length} governance factions` : ''),
-          entitiesCreated: allCreated,
-          relationshipsCreated: relationshipsAdded,
-          entitiesModified: entitiesModified.map(e => e.id)
-        });
-      }
-
       // Pressure changes
       const pressureChanges = metaEntitiesCreated.length > 0
         ? (config.postProcess?.pressureChanges ?? { stability: 2 })

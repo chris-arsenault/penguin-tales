@@ -177,14 +177,6 @@ export class WorldRuntime implements Graph {
     this.graph.pressures = value;
   }
 
-  /** History events (mutable) */
-  get history(): import('../engine/types').HistoryEvent[] {
-    return this.graph.history;
-  }
-  set history(value: import('../engine/types').HistoryEvent[]) {
-    this.graph.history = value;
-  }
-
   /** Narrative events for story generation (mutable) */
   get narrativeHistory(): import('@canonry/world-schema').NarrativeEvent[] {
     return this.graph.narrativeHistory;
@@ -518,13 +510,6 @@ export class WorldRuntime implements Graph {
   }
 
   /**
-   * Get history events from the graph.
-   */
-  getHistory(): readonly import('../engine/types').HistoryEvent[] {
-    return this.graph.history;
-  }
-
-  /**
    * Add an entity to the graph.
    * For coordinate-aware placement, use placeWithCulture() instead.
    */
@@ -761,14 +746,6 @@ export class WorldRuntime implements Graph {
   // ============================================================================
   // These methods support framework-level systems (era management, culling, etc.)
   // Domain code should NOT use these - use the standard mutations above.
-
-  /**
-   * Add a history event to the graph.
-   * Used by framework systems to record significant events.
-   */
-  addHistoryEvent(event: import('../engine/types').HistoryEvent): void {
-    this.graph.history.push(event);
-  }
 
   /**
    * Set the current era (by config reference).

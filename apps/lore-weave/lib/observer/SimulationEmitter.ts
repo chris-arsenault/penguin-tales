@@ -28,7 +28,6 @@ import {
   CatalystStatsPayload,
   RelationshipBreakdownPayload,
   NotableEntitiesPayload,
-  SampleHistoryPayload,
   SimulationResultPayload,
   StateExportPayload,
   ErrorPayload,
@@ -137,10 +136,6 @@ export class SimulationEmitter implements ISimulationEmitter {
 
   notableEntities(payload: NotableEntitiesPayload): void {
     this.emit({ type: 'notable_entities', payload });
-  }
-
-  sampleHistory(payload: SampleHistoryPayload): void {
-    this.emit({ type: 'sample_history', payload });
   }
 
   complete(payload: SimulationResultPayload): void {

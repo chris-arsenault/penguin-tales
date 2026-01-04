@@ -60,30 +60,37 @@
             "pickStrategy": "random",
             "filters": [
               {
-                "type": "has_relationship",
-                "kind": "at_war_with",
-                "direction": "both"
+                "type": "graph_path",
+                "assert": {
+                  "check": "exists",
+                  "path": [
+                    {
+                      "via": "participant_in",
+                      "direction": "out",
+                      "targetKind": "occurrence",
+                      "targetSubtype": "war",
+                      "targetStatus": "active"
+                    }
+                  ]
+                }
               }
             ]
           }
         },
-        "$ally_enemy": {
+        "$war": {
           "required": true,
           "select": {
             "from": {
               "relatedTo": "$ally",
-              "relationshipKind": "at_war_with",
-              "direction": "both"
+              "relationshipKind": "participant_in",
+              "direction": "out"
             },
-            "kind": "faction",
+            "kind": "occurrence",
+            "subtypes": [
+              "war"
+            ],
             "pickStrategy": "random",
-            "filters": [
-              {
-                "type": "lacks_relationship",
-                "kind": "allied_with",
-                "with": "$self"
-              }
-            ]
+            "status": "active"
           }
         }
       },
@@ -101,10 +108,19 @@
           "direction": "both"
         },
         {
-          "type": "relationship_count",
-          "relationshipKind": "at_war_with",
-          "direction": "both",
-          "max": 0
+          "type": "graph_path",
+          "assert": {
+            "check": "not_exists",
+            "path": [
+              {
+                "via": "participant_in",
+                "direction": "out",
+                "targetKind": "occurrence",
+                "targetSubtype": "war",
+                "targetStatus": "active"
+              }
+            ]
+          }
         },
         {
           "type": "graph_path",
@@ -118,10 +134,11 @@
                 "targetSubtype": "any"
               },
               {
-                "via": "at_war_with",
-                "direction": "any",
-                "targetKind": "faction",
-                "targetSubtype": "any"
+                "via": "participant_in",
+                "direction": "out",
+                "targetKind": "occurrence",
+                "targetSubtype": "war",
+                "targetStatus": "active"
               }
             ]
           }
@@ -133,12 +150,11 @@
       ],
       "actions": [
         {
-          "kind": "at_war_with",
+          "type": "create_relationship",
+          "kind": "participant_in",
           "src": "$self",
-          "dst": "$ally_enemy",
-          "strength": 0.6,
-          "bidirectional": true,
-          "type": "create_relationship"
+          "dst": "$war",
+          "strength": 0.7
         },
         {
           "type": "set_tag",
@@ -219,11 +235,34 @@
           "with": "$former_ally"
         },
         {
+          "type": "create_relationship",
+          "kind": "enemy_of",
+          "src": "$self",
+          "dst": "$former_ally",
+          "strength": 0.6,
+          "bidirectional": true
+        },
+        {
+          "type": "set_tag",
+          "entity": "$self",
+          "tag": "former_ally",
+          "value": true
+        },
+        {
+          "type": "set_tag",
+          "entity": "$former_ally",
+          "tag": "former_ally",
+          "value": true
+        },
+        {
           "type": "remove_tag",
           "entity": "$self",
           "tag": "honor_bound"
         }
       ],
+      "pressureChanges": {
+        "harmony": -5
+      },
       "id": "alliance_dissolution",
       "name": "Alliance Dissolution"
     },
@@ -239,7 +278,7 @@
         "sharedDirection": "src"
       },
       "pairExcludeRelationships": [
-        "at_war_with",
+        "enemy_of",
         "betrayed_by"
       ],
       "pairComponentSizeLimit": {
@@ -262,12 +301,12 @@
           "probability": 0.3,
           "betweenMatching": true,
           "action": {
+            "type": "create_relationship",
             "kind": "allied_with",
             "src": "$member",
             "dst": "$member2",
             "strength": 0.5,
-            "bidirectional": true,
-            "type": "create_relationship"
+            "bidirectional": true
           }
         }
       ],
@@ -628,11 +667,11 @@
         "maxProbability": 0.95
       },
       "infectionAction": {
+        "type": "create_relationship",
         "kind": "believer_of",
         "src": "$self",
         "dst": "$contagion_source",
-        "strength": 0.5,
-        "type": "create_relationship"
+        "strength": 0.5
       },
       "recovery": {
         "baseRate": 0.02,
@@ -880,12 +919,12 @@
         "maxProbability": 0.7
       },
       "infectionAction": {
+        "type": "create_relationship",
         "kind": "at_war_with",
         "src": "$self",
         "dst": "$source",
         "strength": 0.4,
-        "bidirectional": true,
-        "type": "create_relationship"
+        "bidirectional": true
       },
       "excludeRelationships": [
         "allied_with"
@@ -914,7 +953,8 @@
       "id": "conflict_contagion",
       "name": "Conflict Spread"
     },
-    "enabled": true
+    "enabled": false,
+    "_disabled_reason": "at_war_with eliminated. War participation determined by participant_in to war occurrence."
   },
   {
     "systemType": "thresholdTrigger",
@@ -1283,6 +1323,112 @@
     "enabled": true
   },
   {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "description": "If factions become enemies while allied, the alliance is broken",
+      "clusterMode": "individual",
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction"
+      },
+      "conditions": [
+        {
+          "type": "relationship_exists",
+          "relationshipKind": "allied_with",
+          "direction": "both"
+        },
+        {
+          "type": "relationship_exists",
+          "relationshipKind": "enemy_of",
+          "direction": "both"
+        }
+      ],
+      "actions": [
+        {
+          "type": "for_each_related",
+          "relationship": "enemy_of",
+          "direction": "both",
+          "actions": [
+            {
+              "type": "archive_relationship",
+              "entity": "$self",
+              "relationshipKind": "allied_with",
+              "with": "$related"
+            },
+            {
+              "type": "set_tag",
+              "entity": "$self",
+              "tag": "former_ally",
+              "value": true
+            },
+            {
+              "type": "set_tag",
+              "entity": "$related",
+              "tag": "former_ally",
+              "value": true
+            }
+          ]
+        }
+      ],
+      "pressureChanges": {
+        "harmony": -3
+      },
+      "id": "enemy_alliance_breaker",
+      "name": "Enemy Alliance Breaker"
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "connectionEvolution",
+    "config": {
+      "description": "Factions with no shared ideological practice develop enmity (worldview incompatibility)",
+      "metric": {
+        "type": "shared_relationship",
+        "sharedRelationshipKind": "practitioner_of",
+        "sharedDirection": "src"
+      },
+      "pairExcludeRelationships": [
+        "enemy_of",
+        "allied_with"
+      ],
+      "throttleChance": 0.1,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "filters": [
+          {
+            "type": "lacks_tag",
+            "tag": "post_war_cooldown"
+          }
+        ]
+      },
+      "rules": [
+        {
+          "condition": {
+            "operator": "==",
+            "threshold": 0
+          },
+          "probability": 0.08,
+          "betweenMatching": true,
+          "action": {
+            "type": "create_relationship",
+            "kind": "enemy_of",
+            "src": "$self",
+            "dst": "$partner",
+            "strength": 0.5,
+            "bidirectional": true
+          }
+        }
+      ],
+      "pressureChanges": {
+        "harmony": -2
+      },
+      "id": "enmity_from_ideology",
+      "name": "Ideological Divergence"
+    },
+    "enabled": true
+  },
+  {
     "systemType": "eraSpawner",
     "config": {
       "description": "Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras.",
@@ -1360,12 +1506,12 @@
       ],
       "actions": [
         {
+          "type": "create_relationship",
           "kind": "at_war_with",
           "src": "$self",
           "dst": "$heretic",
           "strength": 0.7,
-          "bidirectional": true,
-          "type": "create_relationship"
+          "bidirectional": true
         },
         {
           "type": "set_tag",
@@ -1418,10 +1564,11 @@
                     "targetSubtype": "any"
                   },
                   {
-                    "via": "at_war_with",
-                    "direction": "any",
-                    "targetKind": "faction",
-                    "targetSubtype": "any"
+                    "via": "participant_in",
+                    "direction": "out",
+                    "targetKind": "occurrence",
+                    "targetSubtype": "war",
+                    "targetStatus": "active"
                   }
                 ]
               }
@@ -1438,10 +1585,11 @@
                     "targetSubtype": "any"
                   },
                   {
-                    "via": "at_war_with",
-                    "direction": "any",
-                    "targetKind": "faction",
-                    "targetSubtype": "any"
+                    "via": "participant_in",
+                    "direction": "out",
+                    "targetKind": "occurrence",
+                    "targetSubtype": "war",
+                    "targetStatus": "active"
                   }
                 ]
               }
@@ -1463,7 +1611,6 @@
           "type": "for_each_related",
           "relationship": "owned_by",
           "direction": "in",
-          "targetKind": "artifact",
           "actions": [
             {
               "type": "set_tag",
@@ -1482,7 +1629,8 @@
               "entity": "$related",
               "delta": 0.4
             }
-          ]
+          ],
+          "targetKind": "artifact"
         }
       ],
       "id": "heroic_sacrifice",
@@ -1826,16 +1974,16 @@
           "type": "for_each_related",
           "relationship": "allied_with",
           "direction": "both",
-          "targetKind": "faction",
           "actions": [
             {
+              "type": "adjust_relationship_strength",
               "kind": "allied_with",
               "src": "$self",
               "dst": "$related",
-              "delta": -0.15,
-              "type": "adjust_relationship_strength"
+              "delta": -0.15
             }
-          ]
+          ],
+          "targetKind": "faction"
         }
       ],
       "id": "oath_breaker_consequences",
@@ -1880,10 +2028,11 @@
                 "targetSubtype": "any"
               },
               {
-                "via": "at_war_with",
-                "direction": "any",
-                "targetKind": "faction",
-                "targetSubtype": "any"
+                "via": "participant_in",
+                "direction": "out",
+                "targetKind": "occurrence",
+                "targetSubtype": "war",
+                "targetStatus": "active"
               }
             ]
           }
@@ -1999,7 +2148,6 @@
           "type": "for_each_related",
           "relationship": "owned_by",
           "direction": "in",
-          "targetKind": "artifact",
           "actions": [
             {
               "type": "conditional",
@@ -2034,7 +2182,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "targetKind": "artifact"
         }
       ],
       "id": "old_age_mortality",
@@ -2045,7 +2194,7 @@
   {
     "systemType": "thresholdTrigger",
     "config": {
-      "description": "Factions without active wars shed conflict tags",
+      "description": "Factions without active wars shed conflict and cooldown tags",
       "clusterMode": "individual",
       "throttleChance": 0.5,
       "selection": {
@@ -2056,17 +2205,27 @@
             "type": "has_any_tag",
             "tags": [
               "conflict",
-              "hostile"
+              "hostile",
+              "post_war_cooldown"
             ]
           }
         ]
       },
       "conditions": [
         {
-          "type": "relationship_count",
-          "relationshipKind": "at_war_with",
-          "direction": "both",
-          "max": 0
+          "type": "graph_path",
+          "assert": {
+            "check": "not_exists",
+            "path": [
+              {
+                "via": "participant_in",
+                "direction": "out",
+                "targetKind": "occurrence",
+                "targetSubtype": "war",
+                "targetStatus": "active"
+              }
+            ]
+          }
         }
       ],
       "actions": [
@@ -2079,6 +2238,11 @@
           "type": "remove_tag",
           "entity": "$self",
           "tag": "hostile"
+        },
+        {
+          "type": "remove_tag",
+          "entity": "$self",
+          "tag": "post_war_cooldown"
         }
       ],
       "pressureChanges": {
@@ -2340,6 +2504,62 @@
     "enabled": true
   },
   {
+    "systemType": "connectionEvolution",
+    "config": {
+      "description": "Factions with trade connections can form alliances early in the simulation",
+      "metric": {
+        "type": "shared_relationship",
+        "sharedRelationshipKind": "trades_with",
+        "sharedDirection": "src",
+        "via": {
+          "relationshipKind": "controls",
+          "direction": "src",
+          "intermediateKind": "location"
+        }
+      },
+      "pairExcludeRelationships": [
+        "enemy_of",
+        "betrayed_by",
+        "allied_with"
+      ],
+      "pairComponentSizeLimit": {
+        "relationshipKinds": [
+          "allied_with"
+        ],
+        "max": 6
+      },
+      "throttleChance": 0.15,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction"
+      },
+      "rules": [
+        {
+          "condition": {
+            "operator": ">=",
+            "threshold": 1
+          },
+          "probability": 0.25,
+          "betweenMatching": true,
+          "action": {
+            "type": "create_relationship",
+            "kind": "allied_with",
+            "src": "$self",
+            "dst": "$partner",
+            "strength": 0.4,
+            "bidirectional": true
+          }
+        }
+      ],
+      "pressureChanges": {
+        "harmony": 3
+      },
+      "id": "trade_alliance_formation",
+      "name": "Trade Alliance Formation"
+    },
+    "enabled": true
+  },
+  {
     "systemType": "thresholdTrigger",
     "config": {
       "description": "Heroes who lose their weapons are no longer armed",
@@ -2449,10 +2669,11 @@
                 "targetSubtype": "any"
               },
               {
-                "via": "at_war_with",
-                "direction": "any",
-                "targetKind": "faction",
-                "targetSubtype": "any"
+                "via": "participant_in",
+                "direction": "out",
+                "targetKind": "occurrence",
+                "targetSubtype": "war",
+                "targetStatus": "active"
               }
             ]
           }
@@ -2472,7 +2693,6 @@
           "type": "for_each_related",
           "relationship": "owned_by",
           "direction": "in",
-          "targetKind": "artifact",
           "actions": [
             {
               "type": "conditional",
@@ -2513,7 +2733,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "targetKind": "artifact"
         }
       ],
       "id": "war_casualties",
@@ -2618,6 +2839,7 @@
       "id": "war_tie_cleanup",
       "name": "War Tie Cleanup"
     },
-    "enabled": true
+    "enabled": false,
+    "_disabled_reason": "at_war_with eliminated. No orphaned relationships to clean up."
   }
 ]

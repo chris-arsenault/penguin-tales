@@ -595,6 +595,18 @@
             "type": { "const": "graph_path" },
             "assert": { "$ref": "#/$defs/GraphPathAssertion" }
           }
+        },
+        {
+          "type": "object",
+          "required": ["type", "relationshipKinds"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "component_size" },
+            "relationshipKinds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
+            "min": { "type": "integer", "minimum": 1 },
+            "max": { "type": "integer", "minimum": 1 },
+            "minStrength": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
         }
       ]
     },
@@ -900,6 +912,19 @@
             "type": { "const": "remove_tag" },
             "entity": { "$ref": "#/$defs/NonEmptyString" },
             "tag": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "relationship", "direction", "actions"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "for_each_related" },
+            "relationship": { "$ref": "#/$defs/NonEmptyString", "description": "Relationship kind to traverse" },
+            "direction": { "enum": ["src", "dst", "both", "in", "out", "any"], "description": "Direction to traverse" },
+            "targetKind": { "$ref": "#/$defs/NonEmptyString", "description": "Filter to target kind" },
+            "targetSubtype": { "$ref": "#/$defs/NonEmptyString", "description": "Filter to target subtype" },
+            "actions": { "type": "array", "items": { "$ref": "#/$defs/StateUpdateRule" }, "description": "Actions to execute for each related entity (binds $related)" }
           }
         }
       ]

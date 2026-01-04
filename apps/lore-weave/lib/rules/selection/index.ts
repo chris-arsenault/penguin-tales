@@ -310,7 +310,8 @@ export function applyPickStrategy(
 
 /**
  * Apply saturation limits to filter out entities that have too many relationships.
- * Always counts relationships in both directions (any).
+ * Counts unique connected entities, not raw relationships.
+ * This handles bidirectional relationships correctly (A→B and B→A count as one connection).
  */
 export function applySaturationLimits(
   entities: HardState[],
@@ -321,8 +322,11 @@ export function applySaturationLimits(
 
   return entities.filter((entity) => {
     for (const limit of limits) {
-      let count = 0;
       const relationships = ctx.graph.getRelationships(entity.id, limit.relationshipKind);
+
+      // Use a Set to count unique connected entities, not raw relationships
+      // This correctly handles bidirectional relationships stored as two records
+      const connectedEntities = new Set<string>();
 
       for (const rel of relationships) {
         const otherId = rel.src === entity.id ? rel.dst : rel.src;
@@ -330,10 +334,10 @@ export function applySaturationLimits(
           const otherEntity = ctx.graph.getEntity(otherId);
           if (!otherEntity || otherEntity.kind !== limit.fromKind) continue;
         }
-        count++;
+        connectedEntities.add(otherId);
       }
 
-      if (count >= limit.maxCount) {
+      if (connectedEntities.size >= limit.maxCount) {
         return false;
       }
     }

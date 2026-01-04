@@ -215,16 +215,6 @@ export function createGrowthSystem(
         }
       }
 
-      graphView.addHistoryEvent({
-        tick: graphView.tick,
-        era: era.id,
-        type: 'growth',
-        description: result.description,
-        entitiesCreated: newIds,
-        relationshipsCreated: result.relationships as Relationship[],
-        entitiesModified: []
-      });
-
       // Record creation batch for narrative event generation
       if (newIds.length > 0) {
         // Summarize relationships by kind

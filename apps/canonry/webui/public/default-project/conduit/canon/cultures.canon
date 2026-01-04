@@ -1,8 +1,6 @@
 culture aurora-stack do
   name "Aurora Stack"
-  description <<DESCRIPTION
-The orderly, sunlit colony on the bright face of Aurora Berg
-  DESCRIPTION
+  description "The orderly, sunlit colony on the bright face of Aurora Berg"
   color "#FFD700"
   axis_bias ability 60 69 69
   axis_bias faction 80 75 60
@@ -16,9 +14,7 @@ end
 
 culture nightshelf do
   name "Nightfall Shelf"
-  description <<DESCRIPTION
-The shadowed colony on the dark side of Aurora Berg
-  DESCRIPTION
+  description "The shadowed colony on the dark side of Aurora Berg"
   color "#9370DB"
   axis_bias faction 40 45 50
   axis_bias location 35 55 40
@@ -31,9 +27,7 @@ end
 
 culture orca do
   name "Orca Raiders"
-  description <<DESCRIPTION
-The fearsome orca predators of the deep waters
-  DESCRIPTION
+  description "The fearsome orca predators of the deep waters"
   color "#2F4F4F"
   axis_bias faction 55 20 40
   axis_bias location 20 30 20
@@ -46,9 +40,7 @@ end
 
 culture world do
   name World
-  description <<DESCRIPTION
-General World Entities
-  DESCRIPTION
+  description "General World Entities"
   color "#ff6b81"
   _key culture_1764955015643
 end
@@ -2677,9 +2669,7 @@ end
 
 lexeme_list ancient_relic_epithets do
   culture aurora-stack.id nightshelf.id orca.id
-  description <<DESCRIPTION
-Grandiose epithets for ancient alien relics
-  DESCRIPTION
+  description "Grandiose epithets for ancient alien relics"
   source manual
   entry Apocalypse
   entry Extinction
@@ -2705,9 +2695,7 @@ end
 
 lexeme_list ancient_relic_types do
   culture aurora-stack.id nightshelf.id orca.id
-  description <<DESCRIPTION
-Weapon/device types for ancient alien relics
-  DESCRIPTION
+  description "Weapon/device types for ancient alien relics"
   source manual
   entry Cannon
   entry Array
@@ -2733,9 +2721,7 @@ end
 
 lexeme_list aurora_artifact_modifiers do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Modifiers for Aurora artifacts
-  DESCRIPTION
+  description "Modifiers for Aurora artifacts"
   source manual
   entry eternal
   entry frozen
@@ -2752,9 +2738,7 @@ end
 
 lexeme_list aurora_artifact_nouns do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Artifact-related nouns for Aurora Stack
-  DESCRIPTION
+  description "Artifact-related nouns for Aurora Stack"
   source manual
   entry scepter
   entry crown
@@ -2780,9 +2764,7 @@ end
 
 lexeme_list aurora_clan_markers do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Clan/lineage prefix markers for patronymic names. Used as name'marker pattern.
-  DESCRIPTION
+  description "Clan/lineage prefix markers for patronymic names. Used as name'marker pattern."
   source manual
   entry val
   entry kria
@@ -2798,9 +2780,7 @@ end
 
 lexeme_list aurora_disaster_types do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Types of natural or magical disasters
-  DESCRIPTION
+  description "Types of natural or magical disasters"
   source manual
   entry Calving
   entry Collapse
@@ -2816,9 +2796,7 @@ end
 
 lexeme_list aurora_faction_groups do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Generated collective list: groups of people, organizations, plurals. ethereal in nature, trade focused, ice and gold.
-  DESCRIPTION
+  description "Generated collective list: groups of people, organizations, plurals. ethereal in nature, trade focused, ice and gold."
   source llm
   entry Frostlings
   entry Covenant
@@ -2849,9 +2827,7 @@ end
 
 lexeme_list aurora_family_types do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Generated collective list: types of family units appropriate for a penguin (e.g. clan, herd)
-  DESCRIPTION
+  description "Generated collective list: types of family units appropriate for a penguin (e.g. clan, herd)"
   source llm
   entry rookery
   entry waddle
@@ -2933,9 +2909,7 @@ end
 
 lexeme_list aurora_gen_trade do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Generated material list: things super magic penguin would trade with or for. etheral constructs. tangible echos.
-  DESCRIPTION
+  description "Generated material list: things super magic penguin would trade with or for. etheral constructs. tangible echos."
   source llm
   entry aether
   entry starlight
@@ -2981,9 +2955,7 @@ end
 
 lexeme_list aurora_hero_deeds do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Legendary deed-names and epithets for heroic NPCs
-  DESCRIPTION
+  description "Legendary deed-names and epithets for heroic NPCs"
   source manual
   entry Fissure-Sealer
   entry Tide-Turner
@@ -3004,9 +2976,7 @@ end
 
 lexeme_list aurora_hero_epithets do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Grandiose epithets preceding hero names
-  DESCRIPTION
+  description "Grandiose epithets preceding hero names"
   source manual
   entry "the Undaunted"
   entry "the Radiant"
@@ -3027,9 +2997,7 @@ end
 
 lexeme_list aurora_holiday_types do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Generated title list: types of events, celebrations, occurrences that happen in the cold ice
-  DESCRIPTION
+  description "Generated title list: types of events, celebrations, occurrences that happen in the cold ice"
   source llm
   entry Remembrance
   entry Celebration
@@ -3062,9 +3030,7 @@ end
 
 lexeme_list aurora_ice_echoes do
   culture aurora-stack.id
-  description <<DESCRIPTION
-What the ice remembers - parenthetical annotations for names. These are witnessed qualities, birth circumstances, ancestor echoes.
-  DESCRIPTION
+  description "What the ice remembers - parenthetical annotations for names. These are witnessed qualities, birth circumstances, ancestor echoes."
   source manual
   entry dawn-found
   entry frost-born
@@ -3090,9 +3056,7 @@ end
 
 lexeme_list aurora_instrument_nouns do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Penguin-specific musical instruments for Aurora Stack
-  DESCRIPTION
+  description "Penguin-specific musical instruments for Aurora Stack"
   source manual
   entry glaciolin
   entry frostflute
@@ -3110,9 +3074,7 @@ end
 
 lexeme_list aurora_law_terms do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Generated abstract list: rigid penguin abstract constructs
-  DESCRIPTION
+  description "Generated abstract list: rigid penguin abstract constructs"
   source llm
   entry frost
   entry steel
@@ -3148,9 +3110,7 @@ end
 
 lexeme_list aurora_lineage_markers do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Family and bloodline markers for noble NPCs
-  DESCRIPTION
+  description "Family and bloodline markers for noble NPCs"
   source manual
   entry "of the First Shelf"
   entry Dawn-born
@@ -3171,9 +3131,7 @@ end
 
 lexeme_list aurora_magic_part_a do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Generated element list: ethereal ice magic
-  DESCRIPTION
+  description "Generated element list: ethereal ice magic"
   source llm
   entry frost
   entry chill
@@ -3209,9 +3167,7 @@ end
 
 lexeme_list aurora_magic_part_c do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Generated celestial list: ethereial ice magic outcomes
-  DESCRIPTION
+  description "Generated celestial list: ethereial ice magic outcomes"
   source llm
   entry star
   entry moon
@@ -3247,9 +3203,7 @@ end
 
 lexeme_list aurora_magic_partb do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Generated verb list: etherial ice magic actions
-  DESCRIPTION
+  description "Generated verb list: etherial ice magic actions"
   source llm
   entry freeze
   entry crystallize
@@ -3284,9 +3238,7 @@ end
 
 lexeme_list aurora_merchant_ranks do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Trade-specific honorifics and ranks for merchant NPCs
-  DESCRIPTION
+  description "Trade-specific honorifics and ranks for merchant NPCs"
   source manual
   entry Factor
   entry Assessor
@@ -3307,9 +3259,7 @@ end
 
 lexeme_list aurora_nature do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Light, trade, and location words for Aurora Stack culture
-  DESCRIPTION
+  description "Light, trade, and location words for Aurora Stack culture"
   source manual
   entry sun
   entry light
@@ -3382,9 +3332,7 @@ end
 
 lexeme_list aurora_noble_titles do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Formal titles for mayors and political leaders
-  DESCRIPTION
+  description "Formal titles for mayors and political leaders"
   source manual
   entry High-Beak
   entry Arch-Warden
@@ -3405,9 +3353,7 @@ end
 
 lexeme_list aurora_outlaw_nicknames do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Notorious nicknames for criminal and outlaw NPCs
-  DESCRIPTION
+  description "Notorious nicknames for criminal and outlaw NPCs"
   source manual
   entry "the Slick"
   entry Cold-Flip
@@ -3428,9 +3374,7 @@ end
 
 lexeme_list aurora_place_echoes do
   culture aurora-stack.id
-  description <<DESCRIPTION
-What the ice remembers about places - parenthetical annotations for locations/regions.
-  DESCRIPTION
+  description "What the ice remembers about places - parenthetical annotations for locations/regions."
   source manual
   entry sunward
   entry remembered
@@ -3446,9 +3390,7 @@ end
 
 lexeme_list aurora_progress_verbs do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Generated verb list: penguin progress verbs, new technology, developmental penguin goods
-  DESCRIPTION
+  description "Generated verb list: penguin progress verbs, new technology, developmental penguin goods"
   source llm
   entry waddle
   entry slide
@@ -3484,9 +3426,7 @@ end
 
 lexeme_list aurora_tech do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Generated noun list: technology used by good penguins
-  DESCRIPTION
+  description "Generated noun list: technology used by good penguins"
   source llm
   entry beacon
   entry shell
@@ -3520,9 +3460,7 @@ end
 
 lexeme_list aurora_titles do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Aurora honorifics
-  DESCRIPTION
+  description "Aurora honorifics"
   source manual
   entry High-Beak
   entry Auditor
@@ -3532,9 +3470,7 @@ end
 
 lexeme_list aurora_war_epithets do
   culture aurora-stack.id
-  description <<DESCRIPTION
-Names for wars and major conflicts
-  DESCRIPTION
+  description "Names for wars and major conflicts"
   source manual
   entry Schism
   entry Fracture
@@ -3550,9 +3486,7 @@ end
 
 lexeme_list nightshelf_artifact_nouns do
   culture nightshelf.id
-  description <<DESCRIPTION
-Artifact-related nouns for Nightshelf
-  DESCRIPTION
+  description "Artifact-related nouns for Nightshelf"
   source manual
   entry mask
   entry veil
@@ -3570,9 +3504,7 @@ end
 
 lexeme_list nightshelf_criminal_epithets do
   culture nightshelf.id
-  description <<DESCRIPTION
-Epithets for criminal and outlaw NPCs
-  DESCRIPTION
+  description "Epithets for criminal and outlaw NPCs"
   source manual
   entry "the Unseen"
   entry Void-touched
@@ -3593,9 +3525,7 @@ end
 
 lexeme_list nightshelf_disaster_types do
   culture nightshelf.id
-  description <<DESCRIPTION
-Disaster types for Nightshelf
-  DESCRIPTION
+  description "Disaster types for Nightshelf"
   source manual
   entry Collapsum
   entry Ruptio
@@ -3611,9 +3541,7 @@ end
 
 lexeme_list nightshelf_faction_groups do
   culture nightshelf.id
-  description <<DESCRIPTION
-Generated collective list: secrative and cryptic slightly evil ice ccold organizations
-  DESCRIPTION
+  description "Generated collective list: secrative and cryptic slightly evil ice ccold organizations"
   source llm
   entry Cabal
   entry Coven
@@ -3684,9 +3612,7 @@ end
 
 lexeme_list nightshelf_gen_trade do
   culture nightshelf.id
-  description <<DESCRIPTION
-Generated material list: things super magic penguin would trade with or for. etheral constructs. tangible echos. (copied from aurora-stack)
-  DESCRIPTION
+  description "Generated material list: things super magic penguin would trade with or for. etheral constructs. tangible echos. (copied from aurora-stack)"
   source llm
   entry aether
   entry starlight
@@ -3732,9 +3658,7 @@ end
 
 lexeme_list nightshelf_hero_epithets do
   culture nightshelf.id
-  description <<DESCRIPTION
-Heroic epithets for legendary Nightshelf NPCs
-  DESCRIPTION
+  description "Heroic epithets for legendary Nightshelf NPCs"
   source manual
   entry "Lux in Tenebris"
   entry "the Undimmed"
@@ -3755,9 +3679,7 @@ end
 
 lexeme_list nightshelf_holiday_types do
   culture nightshelf.id
-  description <<DESCRIPTION
-Generated title list: types of events, celebrations, occurrences that happen in the cold ice (copied from aurora-stack)
-  DESCRIPTION
+  description "Generated title list: types of events, celebrations, occurrences that happen in the cold ice (copied from aurora-stack)"
   source llm
   entry Observance
   entry Convocation
@@ -3787,9 +3709,7 @@ end
 
 lexeme_list nightshelf_instrument_nouns do
   culture nightshelf.id
-  description <<DESCRIPTION
-Penguin-specific musical instruments for Nightshelf
-  DESCRIPTION
+  description "Penguin-specific musical instruments for Nightshelf"
   source manual
   entry shadowpipes
   entry cryptchimes
@@ -3807,9 +3727,7 @@ end
 
 lexeme_list nightshelf_latin_roots do
   culture nightshelf.id
-  description <<DESCRIPTION
-Latin-influenced roots for truncated names. These are partial - the full name is never spoken.
-  DESCRIPTION
+  description "Latin-influenced roots for truncated names. These are partial - the full name is never spoken."
   source manual
   entry umbra
   entry nox
@@ -3829,9 +3747,7 @@ end
 
 lexeme_list nightshelf_latin_titles do
   culture nightshelf.id
-  description <<DESCRIPTION
-Latin-style titles for Nightshelf nobility and officials
-  DESCRIPTION
+  description "Latin-style titles for Nightshelf nobility and officials"
   source manual
   entry Dominus
   entry Domina
@@ -3852,9 +3768,7 @@ end
 
 lexeme_list nightshelf_magic_part_a do
   culture nightshelf.id
-  description <<DESCRIPTION
-Generated element list: ethereal ice magic (copied from aurora-stack)
-  DESCRIPTION
+  description "Generated element list: ethereal ice magic (copied from aurora-stack)"
   source llm
   entry frost
   entry chill
@@ -3890,9 +3804,7 @@ end
 
 lexeme_list nightshelf_magic_part_c do
   culture nightshelf.id
-  description <<DESCRIPTION
-Generated celestial list: ethereial ice magic outcomes (copied from aurora-stack)
-  DESCRIPTION
+  description "Generated celestial list: ethereial ice magic outcomes (copied from aurora-stack)"
   source llm
   entry star
   entry moon
@@ -3924,9 +3836,7 @@ end
 
 lexeme_list nightshelf_magic_partb do
   culture nightshelf.id
-  description <<DESCRIPTION
-Generated verb list: etherial ice magic actions (copied from aurora-stack)
-  DESCRIPTION
+  description "Generated verb list: etherial ice magic actions (copied from aurora-stack)"
   source llm
   entry freeze
   entry crystallize
@@ -3961,9 +3871,7 @@ end
 
 lexeme_list nightshelf_merchant_ranks do
   culture nightshelf.id
-  description <<DESCRIPTION
-Trade titles for Nightshelf merchants
-  DESCRIPTION
+  description "Trade titles for Nightshelf merchants"
   source manual
   entry Mercator
   entry Negotiator
@@ -3984,9 +3892,7 @@ end
 
 lexeme_list nightshelf_nature do
   culture nightshelf.id
-  description <<DESCRIPTION
-Light and trade words (copied from aurora-stack)
-  DESCRIPTION
+  description "Light and trade words (copied from aurora-stack)"
   source manual
   entry sun
   entry light
@@ -4000,9 +3906,7 @@ end
 
 lexeme_list nightshelf_noble_titles do
   culture nightshelf.id
-  description <<DESCRIPTION
-Formal titles for Nightshelf mayors and leaders
-  DESCRIPTION
+  description "Formal titles for Nightshelf mayors and leaders"
   source manual
   entry Archon
   entry Umbra-Rex
@@ -4023,9 +3927,7 @@ end
 
 lexeme_list nightshelf_shadow_gen do
   culture nightshelf.id
-  description <<DESCRIPTION
-Generated core list: Shadow and mystery words
-  DESCRIPTION
+  description "Generated core list: Shadow and mystery words"
   source llm
   entry shade
   entry shroud
@@ -4080,9 +3982,7 @@ end
 
 lexeme_list nightshelf_titles do
   culture nightshelf.id
-  description <<DESCRIPTION
-Nightshelf honorifics
-  DESCRIPTION
+  description "Nightshelf honorifics"
   source manual
   entry Shadow-Broker
   entry Fissure-Walker
@@ -4092,9 +3992,7 @@ end
 
 lexeme_list nightshelf_war_names do
   culture nightshelf.id
-  description <<DESCRIPTION
-War and conflict names for Nightshelf
-  DESCRIPTION
+  description "War and conflict names for Nightshelf"
   source manual
   entry Obscurum
   entry Tenebrae
@@ -4110,9 +4008,7 @@ end
 
 lexeme_list nightshelf_whisper_ends do
   culture nightshelf.id
-  description <<DESCRIPTION
-Suffixes that indicate the name trails to whisper/silence - use with ~
-  DESCRIPTION
+  description "Suffixes that indicate the name trails to whisper/silence - use with ~"
   source manual
   entry ius
   entry aea
@@ -4130,9 +4026,7 @@ end
 
 lexeme_list nightshelf_whisper_roots do
   culture nightshelf.id
-  description <<DESCRIPTION
-Core Latin-ish shadow and mystery word roots
-  DESCRIPTION
+  description "Core Latin-ish shadow and mystery word roots"
   source manual
   entry umbra
   entry nox
@@ -4153,9 +4047,7 @@ end
 
 lexeme_list orca_artifact_nouns do
   culture orca.id
-  description <<DESCRIPTION
-Artifact-related nouns for Orca
-  DESCRIPTION
+  description "Artifact-related nouns for Orca"
   source manual
   entry fang
   entry tooth
@@ -4172,9 +4064,7 @@ end
 
 lexeme_list orca_bloodnames do
   culture orca.id
-  description <<DESCRIPTION
-Fearsome bloodnames for outlaw and criminal orcas
-  DESCRIPTION
+  description "Fearsome bloodnames for outlaw and criminal orcas"
   source manual
   entry Red-Maw
   entry Death-Fin
@@ -4195,9 +4085,7 @@ end
 
 lexeme_list orca_celebration_types do
   culture orca.id
-  description <<DESCRIPTION
-Brutal celebration/feast names for Orca culture
-  DESCRIPTION
+  description "Brutal celebration/feast names for Orca culture"
   source manual
   entry blood-feast
   entry kill-day
@@ -4213,9 +4101,7 @@ end
 
 lexeme_list orca_combat_actions do
   culture orca.id
-  description <<DESCRIPTION
-Generated verb list: primative combat actions, things orcas do that are violent
-  DESCRIPTION
+  description "Generated verb list: primative combat actions, things orcas do that are violent"
   source llm
   entry breach
   entry cleave
@@ -4251,9 +4137,7 @@ end
 
 lexeme_list orca_deed_root do
   culture orca.id
-  description <<DESCRIPTION
-Harsh action roots for deed-chains - what an orca DID to become named
-  DESCRIPTION
+  description "Harsh action roots for deed-chains - what an orca DID to become named"
   source manual
   entry rend
   entry gnash
@@ -4271,9 +4155,7 @@ end
 
 lexeme_list orca_disaster_epithets do
   culture orca.id
-  description <<DESCRIPTION
-Disaster names for Orca culture
-  DESCRIPTION
+  description "Disaster names for Orca culture"
   source manual
   entry Depthquake
   entry Stormwrack
@@ -4289,9 +4171,7 @@ end
 
 lexeme_list orca_epithets do
   culture orca.id
-  description <<DESCRIPTION
-Fearsome titles and epithets for orca predators
-  DESCRIPTION
+  description "Fearsome titles and epithets for orca predators"
   source manual
   entry Crusher
   entry Ravager
@@ -4317,9 +4197,7 @@ end
 
 lexeme_list orca_faction_types do
   culture orca.id
-  description <<DESCRIPTION
-Brutal faction/group names for Orca culture
-  DESCRIPTION
+  description "Brutal faction/group names for Orca culture"
   source manual
   entry pod
   entry pack
@@ -4337,9 +4215,7 @@ end
 
 lexeme_list orca_instrument_nouns do
   culture orca.id
-  description <<DESCRIPTION
-Penguin-specific musical instruments for Orca
-  DESCRIPTION
+  description "Penguin-specific musical instruments for Orca"
   source manual
   entry warhowl-horn
   entry bonedrum
@@ -4357,9 +4233,7 @@ end
 
 lexeme_list orca_kill_titles do
   culture orca.id
-  description <<DESCRIPTION
-Kill-count and hunt-based titles for legendary orcas
-  DESCRIPTION
+  description "Kill-count and hunt-based titles for legendary orcas"
   source manual
   entry Hundred-Kill
   entry Seal-Bane
@@ -4380,9 +4254,7 @@ end
 
 lexeme_list orca_law_words do
   culture orca.id
-  description <<DESCRIPTION
-Brutal law/tradition names for Orca culture
-  DESCRIPTION
+  description "Brutal law/tradition names for Orca culture"
   source manual
   entry blood-law
   entry kill-right
@@ -4398,9 +4270,7 @@ end
 
 lexeme_list orca_location_nouns do
   culture orca.id
-  description <<DESCRIPTION
-Brutal location names for Orca culture
-  DESCRIPTION
+  description "Brutal location names for Orca culture"
   source manual
   entry killing-ground
   entry blood-reef
@@ -4418,9 +4288,7 @@ end
 
 lexeme_list orca_power do
   culture orca.id
-  description <<DESCRIPTION
-Strength and hunting words
-  DESCRIPTION
+  description "Strength and hunting words"
   source manual
   entry hunt
   entry blood
@@ -4434,9 +4302,7 @@ end
 
 lexeme_list orca_power_words do
   culture orca.id
-  description <<DESCRIPTION
-Generated core list: Strength and hunting words that deal with oceans / naval predators.
-  DESCRIPTION
+  description "Generated core list: Strength and hunting words that deal with oceans / naval predators."
   source llm
   entry hunt
   entry blood
@@ -4519,9 +4385,7 @@ end
 
 lexeme_list orca_prey_glyph do
   culture orca.id
-  description <<DESCRIPTION
-Harsh compressed words for prey types in Orca language - these ARE the prey, compressed into guttural sounds
-  DESCRIPTION
+  description "Harsh compressed words for prey types in Orca language - these ARE the prey, compressed into guttural sounds"
   source manual
   entry kzul
   entry threk
@@ -4537,9 +4401,7 @@ end
 
 lexeme_list orca_region_names do
   culture orca.id
-  description <<DESCRIPTION
-Generated place list: places where orcas do things such as hunting grounds, waters, terretories. make them violent, preditorial, evil
-  DESCRIPTION
+  description "Generated place list: places where orcas do things such as hunting grounds, waters, terretories. make them violent, preditorial, evil"
   source llm
   entry blight
   entry maw
@@ -4565,9 +4427,7 @@ end
 
 lexeme_list orca_superlatives do
   culture orca.id
-  description <<DESCRIPTION
-Generated epithet list: superlatives that an marital artists would like (e.g. extreme, awesome, divine)
-  DESCRIPTION
+  description "Generated epithet list: superlatives that an marital artists would like (e.g. extreme, awesome, divine)"
   source llm
   entry Unbroken
   entry Fearless
@@ -4601,9 +4461,7 @@ end
 
 lexeme_list orca_territory_glyph do
   culture orca.id
-  description <<DESCRIPTION
-Harsh compressed territory/hunting ground words
-  DESCRIPTION
+  description "Harsh compressed territory/hunting ground words"
   source manual
   entry grund
   entry zund
@@ -4618,9 +4476,7 @@ end
 
 lexeme_list orca_war_epithets do
   culture orca.id
-  description <<DESCRIPTION
-War and conflict names for Orca
-  DESCRIPTION
+  description "War and conflict names for Orca"
   source manual
   entry Bloodtide
   entry Gorewake
@@ -4636,9 +4492,7 @@ end
 
 lexeme_list orca_warrior_ranks do
   culture orca.id
-  description <<DESCRIPTION
-Warrior ranks and titles for Orca heroes
-  DESCRIPTION
+  description "Warrior ranks and titles for Orca heroes"
   source manual
   entry Fang
   entry Maw
@@ -4659,9 +4513,7 @@ end
 
 lexeme_list world_disaster_types do
   culture world.id
-  description <<DESCRIPTION
-Generic disaster types
-  DESCRIPTION
+  description "Generic disaster types"
   source manual
   entry Catastrophe
   entry Collapse
@@ -4677,9 +4529,7 @@ end
 
 lexeme_list world_generic_epithets do
   culture world.id
-  description <<DESCRIPTION
-Generic epithets for notable figures
-  DESCRIPTION
+  description "Generic epithets for notable figures"
   source manual
   entry "the Great"
   entry "the Wise"
@@ -4695,9 +4545,7 @@ end
 
 lexeme_list world_generic_titles do
   culture world.id
-  description <<DESCRIPTION
-Generic honorific titles
-  DESCRIPTION
+  description "Generic honorific titles"
   source manual
   entry Elder
   entry Master
@@ -4713,9 +4561,7 @@ end
 
 lexeme_list world_war_types do
   culture world.id
-  description <<DESCRIPTION
-Generic war and conflict types
-  DESCRIPTION
+  description "Generic war and conflict types"
   source manual
   entry Conflict
   entry War

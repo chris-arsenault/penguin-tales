@@ -20,8 +20,7 @@ export type {
   Relationship,
   ProminenceLabel,
   EntityTags,
-  CatalystProperties,
-  CatalyzedEvent
+  CatalystProperties
 } from './core/worldTypes';
 
 export type {
@@ -31,7 +30,6 @@ export type {
   GrowthTemplate,
   SimulationSystem,
   EngineConfig,
-  HistoryEvent,
   SystemResult,
   TemplateResult,
   EntityOperatorRegistry,
@@ -149,8 +147,6 @@ export {
   canPerformAction,
   recordCatalyst,
   getCatalyzedEvents,
-  getCatalyzedEventCount,
-  addCatalyzedEvent,
   calculateAttemptChance
 } from './systems/catalystHelpers';
 
@@ -412,7 +408,6 @@ export type {
   CatalystStatsPayload,
   RelationshipBreakdownPayload,
   NotableEntitiesPayload,
-  SampleHistoryPayload,
   SimulationResultPayload,
   ErrorPayload,
   WorkerInboundMessage,

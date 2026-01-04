@@ -1,295 +1,487 @@
-tag anomaly location rare "Strange, supernatural, or reality-bending phenomenon"
-kinds location ability occurrence
-related mystical
-conflicts mundane
-axis
+tag anomaly do
+  category location
+  rarity rare
+  description "Strange, supernatural, or reality-bending phenomenon"
+  kinds location ability occurrence
+  related mystical
+  conflicts mundane
+  axis
+end
 
-tag authoritarian trait common "Rule through power and might"
-kinds rule
-related none
-conflicts libertarian
-exclusive libertarian
-axis
-templates none
-usage 1 50
-count 0
+tag authoritarian do
+  category trait
+  rarity common
+  description "Rule through power and might"
+  kinds rule
+  related none
+  conflicts libertarian
+  exclusive libertarian
+  templates none
+  usage 1 50
+  count 0
+  axis
+end
 
-tag central location common "At the heart of civilization, well-connected, accessible"
-kinds location
-related trade safe
-conflicts hidden
-exclusive hidden
-axis
+tag central do
+  category location
+  rarity common
+  description "At the heart of civilization, well-connected, accessible"
+  kinds location
+  related trade safe
+  conflicts hidden
+  exclusive hidden
+  axis
+end
 
-tag chaotic trait uncommon "Disorganized, unpredictable, or anarchic"
-kinds faction npc
-related criminal
-conflicts organized
-exclusive organized
-axis
+tag chaotic do
+  category trait
+  rarity uncommon
+  description "Disorganized, unpredictable, or anarchic"
+  kinds faction npc
+  related criminal
+  conflicts organized
+  exclusive organized
+  axis
+end
 
-tag colony location common "New tag description"
-kinds none
-related none
-conflicts none
-exclusive ice
-axis
-templates none
-usage 1 50
-count 0
+tag colony do
+  category location
+  rarity common
+  description "New tag description"
+  kinds none
+  related none
+  conflicts none
+  exclusive ice
+  templates none
+  usage 1 50
+  count 0
+  axis
+end
 
-tag combat-style trait uncommon "Combat-focused style or doctrine"
-kinds ability
-related none
-conflicts none
+tag combat-style do
+  category trait
+  rarity uncommon
+  description "Combat-focused style or doctrine"
+  kinds ability
+  related none
+  conflicts none
+end
 
-tag conflict status uncommon "Involved in or caused by warfare, strife, or crisis"
-kinds npc faction occurrence rule
-related hostile crisis
-conflicts peaceful
+tag conflict do
+  category status
+  rarity uncommon
+  description "Involved in or caused by warfare, strife, or crisis"
+  kinds npc faction occurrence rule
+  related hostile crisis
+  conflicts peaceful
+end
 
-tag crisis status rare "Emergency situation requiring urgent response"
-kinds occurrence rule faction
-related conflict power_vacuum
-conflicts none
+tag crisis do
+  category status
+  rarity rare
+  description "Emergency situation requiring urgent response"
+  kinds occurrence rule faction
+  related conflict power_vacuum
+  conflicts none
+end
 
-tag cultural theme common "Related to traditions, festivals, or social customs"
-kinds rule occurrence faction
-related legendary political
-conflicts none
+tag cultural do
+  category theme
+  rarity common
+  description "Related to traditions, festivals, or social customs"
+  kinds rule occurrence faction
+  related legendary political
+  conflicts none
+end
 
-tag dangerous trait uncommon "Hazardous, risky, or threatening environment"
-kinds location
-related anomaly external
-conflicts safe
-axis
+tag dangerous do
+  category trait
+  rarity uncommon
+  description "Hazardous, risky, or threatening environment"
+  kinds location
+  related anomaly external
+  conflicts safe
+  axis
+end
 
-tag discovered status common "Recently found, explored, or uncovered"
-kinds location ability
-related emergent resource
-conflicts none
+tag discovered do
+  category status
+  rarity common
+  description "Recently found, explored, or uncovered"
+  kinds location ability
+  related emergent resource
+  conflicts none
+end
 
-tag east trait common ""
-exclusive west
-axis
+tag east do
+  category trait
+  rarity common
+  description ""
+  exclusive west
+  axis
+end
 
-tag emergent location uncommon "Recently risen, discovered, or newly prominent"
-kinds npc location faction ability
-related discovered
-conflicts legendary
-exclusive legendary
-axis
+tag emergent do
+  category location
+  rarity uncommon
+  description "Recently risen, discovered, or newly prominent"
+  kinds npc location faction ability
+  related discovered
+  conflicts legendary
+  exclusive legendary
+  axis
+end
 
-tag external affiliation rare "Comes from outside the penguin colonies - outsider or invader"
-kinds npc faction
-related hostile raider orca
-conflicts none
+tag external do
+  category affiliation
+  rarity rare
+  description "Comes from outside the penguin colonies - outsider or invader"
+  kinds npc faction
+  related hostile raider orca
+  conflicts none
+end
 
-tag fire trait common "Hot as a Hamburgler"
-kinds none
-related none
-conflicts ice
-exclusive ice
-axis
-templates none
-usage 1 50
-count 0
+tag fire do
+  category trait
+  rarity common
+  description "Hot as a Hamburgler"
+  kinds none
+  related none
+  conflicts ice
+  exclusive ice
+  templates none
+  usage 1 50
+  count 0
+  axis
+end
 
-tag follower trait common "Follows or supports others rather than leading"
-kinds npc
-related none
-conflicts leader
-exclusive leader
-axis
+tag follower do
+  category trait
+  rarity common
+  description "Follows or supports others rather than leading"
+  kinds npc
+  related none
+  conflicts leader
+  exclusive leader
+  axis
+end
 
-tag friendly behavior common "Cooperative, peaceful, or allied disposition"
-kinds npc faction
-related trade diplomatic
-conflicts hostile
-exclusive hostile
-axis
+tag friendly do
+  category behavior
+  rarity common
+  description "Cooperative, peaceful, or allied disposition"
+  kinds npc faction
+  related trade diplomatic
+  conflicts hostile
+  exclusive hostile
+  axis
+end
 
-tag hidden trait uncommon "Remote, hard to find, or off the beaten path"
-kinds location
-related secretive anomaly
-conflicts central
-exclusive central
-axis
+tag hidden do
+  category trait
+  rarity uncommon
+  description "Remote, hard to find, or off the beaten path"
+  kinds location
+  related secretive anomaly
+  conflicts central
+  exclusive central
+  axis
+end
 
-tag hostile behavior uncommon "Aggressive, threatening, or antagonistic disposition"
-kinds npc faction
-related external raider
-conflicts friendly
-exclusive friendly
-axis
+tag hostile do
+  category behavior
+  rarity uncommon
+  description "Aggressive, threatening, or antagonistic disposition"
+  kinds npc faction
+  related external raider
+  conflicts friendly
+  exclusive friendly
+  axis
+end
 
-tag ice trait common "Dang that shit is coooooold"
-kinds none
-related none
-conflicts fire
-exclusive fire colony
-axis
-templates none
-usage 1 50
-count 0
+tag ice do
+  category trait
+  rarity common
+  description "Dang that shit is coooooold"
+  kinds none
+  related none
+  conflicts fire
+  exclusive fire colony
+  templates none
+  usage 1 50
+  count 0
+  axis
+end
 
-tag immune status uncommon "Resistant to contagion or ideological spread"
-kinds npc
-related none
-conflicts none
+tag immune do
+  category status
+  rarity uncommon
+  description "Resistant to contagion or ideological spread"
+  kinds npc
+  related none
+  conflicts none
+end
 
-tag influential behavior uncommon "Has significant power or sway over others"
-kinds npc faction
-related leader political legendary
-conflicts none
-axis
+tag influential do
+  category behavior
+  rarity uncommon
+  description "Has significant power or sway over others"
+  kinds npc faction
+  related leader political legendary
+  conflicts none
+  axis
+end
 
-tag innovation trait uncommon "Breakthrough or novel discovery"
-kinds ability rule
-related technology emergent
-conflicts none
+tag innovation do
+  category trait
+  rarity uncommon
+  description "Breakthrough or novel discovery"
+  kinds ability rule
+  related technology emergent
+  conflicts none
+end
 
-tag leader trait uncommon "Holds authority or leads others"
-kinds npc
-related influential political
-conflicts follower
-exclusive follower
-axis
+tag leader do
+  category trait
+  rarity uncommon
+  description "Holds authority or leads others"
+  kinds npc
+  related influential political
+  conflicts follower
+  exclusive follower
+  axis
+end
 
-tag legendary trait rare "Subject of legends, myths, or historical significance"
-kinds npc location faction ability occurrence
-related influential cultural
-conflicts emergent
-exclusive emergent
-axis
+tag legendary do
+  category trait
+  rarity rare
+  description "Subject of legends, myths, or historical significance"
+  kinds npc location faction ability occurrence
+  related influential cultural
+  conflicts emergent
+  exclusive emergent
+  axis
+end
 
-tag libertarian trait common "Rule through respect and information exchange"
-kinds rule
-related none
-conflicts authoritarian
-exclusive authoritarian
-axis
-templates none
-usage 1 50
-count 0
+tag libertarian do
+  category trait
+  rarity common
+  description "Rule through respect and information exchange"
+  kinds rule
+  related none
+  conflicts authoritarian
+  exclusive authoritarian
+  templates none
+  usage 1 50
+  count 0
+  axis
+end
 
-tag mundane theme common "Practical, non-magical, everyday nature"
-kinds npc location faction ability
-related technology
-conflicts mystical
-exclusive mystical
-axis
+tag mundane do
+  category theme
+  rarity common
+  description "Practical, non-magical, everyday nature"
+  kinds npc location faction ability
+  related technology
+  conflicts mystical
+  exclusive mystical
+  axis
+end
 
-tag mystical theme uncommon "Associated with magic, anomalies, or the supernatural"
-kinds npc location faction ability
-related anomaly
-conflicts mundane
-exclusive mundane
-axis
+tag mystical do
+  category theme
+  rarity uncommon
+  description "Associated with magic, anomalies, or the supernatural"
+  kinds npc location faction ability
+  related anomaly
+  conflicts mundane
+  exclusive mundane
+  axis
+end
 
-tag north trait common ""
-exclusive south
-axis
+tag north do
+  category trait
+  rarity common
+  description ""
+  exclusive south
+  axis
+end
 
-tag orca affiliation rare "Associated with Orca Raiders - fearsome predators"
-kinds npc faction ability
-related external hostile raider
-conflicts none
+tag orca do
+  category affiliation
+  rarity rare
+  description "Associated with Orca Raiders - fearsome predators"
+  kinds npc faction ability
+  related external hostile raider
+  conflicts none
+end
 
-tag organized trait common "Well-structured, disciplined, or hierarchical"
-kinds faction npc
-related political
-conflicts chaotic
-exclusive chaotic
-axis
+tag organized do
+  category trait
+  rarity common
+  description "Well-structured, disciplined, or hierarchical"
+  kinds faction npc
+  related political
+  conflicts chaotic
+  exclusive chaotic
+  axis
+end
 
-tag political affiliation common "Involved in governance, succession, or political maneuvering"
-kinds npc faction rule
-related leader influential
-conflicts none
+tag political do
+  category affiliation
+  rarity common
+  description "Involved in governance, succession, or political maneuvering"
+  kinds npc faction rule
+  related leader influential
+  conflicts none
+end
 
-tag power_vacuum status rare "Leadership void creating instability"
-kinds faction location
-related crisis political
-conflicts none
+tag power_vacuum do
+  category status
+  rarity rare
+  description "Leadership void creating instability"
+  kinds faction location
+  related crisis political
+  conflicts none
+end
 
-tag raider behavior rare "Engages in raiding, plundering, or predatory activities"
-kinds npc faction
-related hostile external orca
-conflicts trade
+tag raider do
+  category behavior
+  rarity rare
+  description "Engages in raiding, plundering, or predatory activities"
+  kinds npc faction
+  related hostile external orca
+  conflicts trade
+end
 
-tag resource location common "Source of valuable materials, food, or strategic value"
-kinds location
-related discovered trade
-conflicts none
+tag resource do
+  category location
+  rarity common
+  description "Source of valuable materials, food, or strategic value"
+  kinds location
+  related discovered trade
+  conflicts none
+end
 
-tag safe trait common "Protected, secure, low danger"
-kinds location
-related central trade
-conflicts dangerous
-axis
+tag safe do
+  category trait
+  rarity common
+  description "Protected, secure, low danger"
+  kinds location
+  related central trade
+  conflicts dangerous
+  axis
+end
 
-tag secretive behavior uncommon "Operates in shadows, hidden, or clandestine"
-kinds npc faction location
-related mystical hidden
-conflicts central
-axis
+tag secretive do
+  category behavior
+  rarity uncommon
+  description "Operates in shadows, hidden, or clandestine"
+  kinds npc faction location
+  related mystical hidden
+  conflicts central
+  axis
+end
 
-tag south trait common ""
-exclusive north
-axis
+tag south do
+  category trait
+  rarity common
+  description ""
+  exclusive north
+  axis
+end
 
-tag splinter status rare "Split off from a parent organization"
-kinds faction
-related conflict political
-conflicts none
+tag splinter do
+  category status
+  rarity rare
+  description "Split off from a parent organization"
+  kinds faction
+  related conflict political
+  conflicts none
+end
 
-tag stressed status uncommon "Under environmental, economic, or social pressure"
-kinds location faction
-related crisis resource
-conflicts thriving
+tag stressed do
+  category status
+  rarity uncommon
+  description "Under environmental, economic, or social pressure"
+  kinds location faction
+  related crisis resource
+  conflicts thriving
+end
 
-tag sys_resource_value status common "sys tag for tracking diffusin"
-kinds none
-related none
-conflicts none
-templates none
-usage 1 50
-count 0
+tag sys_resource_value do
+  category status
+  rarity common
+  description "sys tag for tracking diffusin"
+  kinds none
+  related none
+  conflicts none
+  templates none
+  usage 1 50
+  count 0
+end
 
-tag technology theme common "Involves practical innovation, tools, or engineering"
-kinds ability faction
-related mundane innovation
-conflicts none
+tag technology do
+  category theme
+  rarity common
+  description "Involves practical innovation, tools, or engineering"
+  kinds ability faction
+  related mundane innovation
+  conflicts none
+end
 
-tag temperature status common "Thermal diffusion value tag"
-kinds location
-related none
-conflicts none
+tag temperature do
+  category status
+  rarity common
+  description "Thermal diffusion value tag"
+  kinds location
+  related none
+  conflicts none
+end
 
-tag thriving status common "Prosperous, growing, or flourishing"
-kinds location faction
-related trade safe
-conflicts stressed
+tag thriving do
+  category status
+  rarity common
+  description "Prosperous, growing, or flourishing"
+  kinds location faction
+  related trade safe
+  conflicts stressed
+end
 
-tag trade behavior common "Engages in commerce, trade routes, or economic activity"
-kinds npc faction location
-related friendly
-conflicts raider
+tag trade do
+  category behavior
+  rarity common
+  description "Engages in commerce, trade routes, or economic activity"
+  kinds npc faction location
+  related friendly
+  conflicts raider
+end
 
-tag war_weary status rare "Exhausted by prolonged conflict and ready to resolve"
-kinds occurrence
-related conflict crisis
-conflicts none
+tag war_weary do
+  category status
+  rarity rare
+  description "Exhausted by prolonged conflict and ready to resolve"
+  kinds occurrence
+  related conflict crisis
+  conflicts none
+end
 
-tag west trait common ""
-exclusive east
-axis
+tag west do
+  category trait
+  rarity common
+  description ""
+  exclusive east
+  axis
+end
 
-tag wild trait rare "New magic appears at random"
-kinds none
-related none
-conflicts none
-templates none
-usage 1 50
-count 0
+tag wild do
+  category trait
+  rarity rare
+  description "New magic appears at random"
+  kinds none
+  related none
+  conflicts none
+  templates none
+  usage 1 50
+  count 0
+end
