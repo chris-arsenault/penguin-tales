@@ -40,8 +40,6 @@
       "dark_ritual": 0.3
     },
     "systemModifiers": {
-      "border_friction": 0,
-      "artifact_covetousness": 0,
       "anomaly_mystical_gain": 1.2,
       "mystical_decay": 1,
       "anomaly_activation": 1,
@@ -72,7 +70,6 @@
       "alliance_formation": 0.5,
       "trade_alliance_formation": 1.2,
       "enmity_from_ideology": 0.3,
-      "enemy_alliance_breaker": 1,
       "reflected_glory": 1,
       "magic_school_formation": 0.8,
       "combat_technique_formation": 0.5,
@@ -103,7 +100,7 @@
     "exitConditions": [
       {
         "type": "time_elapsed",
-        "minTicks": 25,
+        "minTicks": 30,
         "since": "created"
       },
       {
@@ -133,7 +130,7 @@
     "summary": "The bounty of the Thaw dwindles as colonies multiply beyond what the waters can sustain. Trade routes become battle lines; old alliances fracture along cultural fault lines between the pragmatic Abyssal Trench and the mystical Aurora Stack. Factions emerge within colonies, each claiming the true path to survival. Heroes rise not from exploration but from war, their names etched in the ice memorials that dot every berg.",
     "templateWeights": {
       "colony_founding": 0.2,
-      "krill_bloom_migration": 1.2,
+      "krill_bloom_migration": 0,
       "hero_emergence": 1.2,
       "orca_raider_arrival": 0,
       "faction_splinter": 1.3,
@@ -163,22 +160,19 @@
       "orca_war_ritual": 0,
       "orca_organized_offensive": 0,
       "orca_combat_technique": 0,
-      "guild_establishment": 0.4,
+      "guild_establishment": 0,
       "magic_discovery": 0.5,
       "dark_ritual": 0.6
     },
     "systemModifiers": {
-      "border_friction": 1,
-      "artifact_covetousness": 1,
       "anomaly_mystical_gain": 0.8,
       "mystical_decay": 1.2,
       "anomaly_activation": 0.6,
       "depleted_recovery": 1,
       "conflict_contagion": 2,
       "alliance_formation": 2,
-      "trade_alliance_formation": 1.0,
+      "trade_alliance_formation": 1,
       "enmity_from_ideology": 1.5,
-      "enemy_alliance_breaker": 1,
       "artifact_degradation": 1.5,
       "artifact_destruction": 1.2,
       "artifact_corruption_spread": 1,
@@ -237,7 +231,7 @@
     "exitConditions": [
       {
         "type": "time_elapsed",
-        "minTicks": 25,
+        "minTicks": 46,
         "since": "created"
       },
       {
@@ -307,8 +301,6 @@
       "dark_ritual": 1.2
     },
     "systemModifiers": {
-      "border_friction": 0.5,
-      "artifact_covetousness": 0.5,
       "anomaly_mystical_gain": 1.5,
       "mystical_decay": 0.8,
       "anomaly_activation": 1.2,
@@ -342,7 +334,6 @@
       "alliance_formation": 0.8,
       "trade_alliance_formation": 1.5,
       "enmity_from_ideology": 0.8,
-      "enemy_alliance_breaker": 1,
       "reflected_glory": 1,
       "armed_hero_detector": 1,
       "devout_believer_detector": 1,
@@ -371,7 +362,7 @@
     "exitConditions": [
       {
         "type": "time_elapsed",
-        "minTicks": 25,
+        "minTicks": 30,
         "since": "created"
       },
       {
@@ -437,8 +428,6 @@
       "dark_ritual": 0.8
     },
     "systemModifiers": {
-      "border_friction": 0.5,
-      "artifact_covetousness": 0.5,
       "anomaly_mystical_gain": 1,
       "mystical_decay": 1,
       "anomaly_activation": 1.5,
@@ -447,7 +436,6 @@
       "alliance_formation": 2.5,
       "trade_alliance_formation": 0.5,
       "enmity_from_ideology": 0.3,
-      "enemy_alliance_breaker": 1,
       "artifact_degradation": 1.2,
       "artifact_destruction": 1,
       "artifact_corruption_spread": 0.8,
@@ -511,7 +499,7 @@
     "exitConditions": [
       {
         "type": "time_elapsed",
-        "minTicks": 25,
+        "minTicks": 45,
         "since": "created"
       },
       {
@@ -586,8 +574,6 @@
       "dark_ritual": 0.4
     },
     "systemModifiers": {
-      "border_friction": 0.5,
-      "artifact_covetousness": 0.5,
       "anomaly_mystical_gain": 0.6,
       "mystical_decay": 1.2,
       "anomaly_activation": 0.4,
@@ -602,7 +588,6 @@
       "alliance_formation": 1.5,
       "trade_alliance_formation": 1.5,
       "enmity_from_ideology": 0.3,
-      "enemy_alliance_breaker": 1,
       "legal_code_formation": 2,
       "era_spawner": 1,
       "era_transition": 1,

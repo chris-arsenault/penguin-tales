@@ -141,7 +141,7 @@
       },
       "throttleChance": 0.15,
       "pressureChanges": {
-        "harmony": 5
+        "harmony": 10
       },
       "selection": {
         "strategy": "by_kind",
@@ -160,7 +160,10 @@
         "strategy": "by_kind",
         "kind": "faction",
         "filters": [
-          { "type": "lacks_tag", "tag": "post_war_cooldown" }
+          {
+            "type": "lacks_tag",
+            "tag": "post_war_cooldown"
+          }
         ]
       },
       "metric": {
@@ -241,68 +244,14 @@
         "allied_with"
       ],
       "pairComponentSizeLimit": {
-        "relationshipKinds": ["allied_with"],
+        "relationshipKinds": [
+          "allied_with"
+        ],
         "max": 6
       },
       "throttleChance": 0.15,
       "pressureChanges": {
         "harmony": 3
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "enemy_alliance_breaker",
-      "name": "Enemy Alliance Breaker",
-      "description": "If factions become enemies while allied, the alliance is broken",
-      "conditions": [
-        {
-          "type": "relationship_exists",
-          "relationshipKind": "allied_with",
-          "direction": "both"
-        },
-        {
-          "type": "relationship_exists",
-          "relationshipKind": "enemy_of",
-          "direction": "both"
-        }
-      ],
-      "actions": [
-        {
-          "type": "for_each_related",
-          "relationship": "enemy_of",
-          "direction": "both",
-          "actions": [
-            {
-              "type": "archive_relationship",
-              "entity": "$self",
-              "relationshipKind": "allied_with",
-              "with": "$related"
-            },
-            {
-              "type": "set_tag",
-              "entity": "$self",
-              "tag": "former_ally",
-              "value": true
-            },
-            {
-              "type": "set_tag",
-              "entity": "$related",
-              "tag": "former_ally",
-              "value": true
-            }
-          ]
-        }
-      ],
-      "clusterMode": "individual",
-      "pressureChanges": {
-        "harmony": -3
-      },
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction"
       }
     },
     "enabled": true
@@ -799,7 +748,13 @@
           "assert": {
             "check": "not_exists",
             "path": [
-              { "via": "participant_in", "direction": "out", "targetKind": "occurrence", "targetSubtype": "war", "targetStatus": "active" }
+              {
+                "via": "participant_in",
+                "direction": "out",
+                "targetKind": "occurrence",
+                "targetSubtype": "war",
+                "targetStatus": "active"
+              }
             ]
           }
         }
@@ -817,9 +772,17 @@
         },
         {
           "type": "conditional",
-          "condition": { "type": "time_elapsed", "minTicks": 5, "since": "updated" },
+          "condition": {
+            "type": "time_elapsed",
+            "minTicks": 5,
+            "since": "updated"
+          },
           "thenActions": [
-            { "type": "remove_tag", "entity": "$self", "tag": "post_war_cooldown" }
+            {
+              "type": "remove_tag",
+              "entity": "$self",
+              "tag": "post_war_cooldown"
+            }
           ]
         }
       ],
@@ -840,41 +803,6 @@
               "hostile",
               "post_war_cooldown"
             ]
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "raid_cooldown_removal",
-      "name": "Raid Cooldown Removal",
-      "description": "Factions recover from raid exhaustion after some time",
-      "conditions": [
-        {
-          "type": "time_elapsed",
-          "minTicks": 15,
-          "since": "updated"
-        }
-      ],
-      "actions": [
-        {
-          "type": "remove_tag",
-          "tag": "raid_cooldown",
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.3,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "filters": [
-          {
-            "type": "has_tag",
-            "tag": "raid_cooldown"
           }
         ]
       }
@@ -2008,7 +1936,9 @@
               "direction": "out"
             },
             "kind": "occurrence",
-            "subtypes": ["war"],
+            "subtypes": [
+              "war"
+            ],
             "status": "active",
             "pickStrategy": "random"
           },

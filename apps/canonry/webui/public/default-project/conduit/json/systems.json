@@ -1323,62 +1323,6 @@
     "enabled": true
   },
   {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "description": "If factions become enemies while allied, the alliance is broken",
-      "clusterMode": "individual",
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction"
-      },
-      "conditions": [
-        {
-          "type": "relationship_exists",
-          "relationshipKind": "allied_with",
-          "direction": "both"
-        },
-        {
-          "type": "relationship_exists",
-          "relationshipKind": "enemy_of",
-          "direction": "both"
-        }
-      ],
-      "actions": [
-        {
-          "type": "for_each_related",
-          "relationship": "enemy_of",
-          "direction": "both",
-          "actions": [
-            {
-              "type": "archive_relationship",
-              "entity": "$self",
-              "relationshipKind": "allied_with",
-              "with": "$related"
-            },
-            {
-              "type": "set_tag",
-              "entity": "$self",
-              "tag": "former_ally",
-              "value": true
-            },
-            {
-              "type": "set_tag",
-              "entity": "$related",
-              "tag": "former_ally",
-              "value": true
-            }
-          ]
-        }
-      ],
-      "pressureChanges": {
-        "harmony": -3
-      },
-      "id": "enemy_alliance_breaker",
-      "name": "Enemy Alliance Breaker"
-    },
-    "enabled": true
-  },
-  {
     "systemType": "connectionEvolution",
     "config": {
       "description": "Factions with no shared ideological practice develop enmity (worldview incompatibility)",

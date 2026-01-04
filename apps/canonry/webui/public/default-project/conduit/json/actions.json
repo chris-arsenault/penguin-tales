@@ -806,7 +806,16 @@
     "actor": {
       "selection": {
         "kind": "faction",
-        "strategy": "by_kind"
+        "strategy": "by_kind",
+        "filters": [
+          {
+            "type": "has_any_tag",
+            "tags": [
+              "chaotic",
+              "splinter"
+            ]
+          }
+        ]
       }
     },
     "targeting": {
@@ -877,7 +886,14 @@
       "selection": {
         "kind": "faction",
         "strategy": "by_kind"
-      }
+      },
+      "conditions": [
+        {
+          "type": "pressure",
+          "pressureId": "harmony",
+          "min": -30
+        }
+      ]
     },
     "targeting": {
       "kind": "faction",
@@ -1534,12 +1550,6 @@
           "dst": "$target",
           "strength": 0.8,
           "bidirectional": true
-        },
-        {
-          "type": "set_tag",
-          "entity": "$target",
-          "tag": "raided",
-          "value": true
         },
         {
           "type": "modify_pressure",

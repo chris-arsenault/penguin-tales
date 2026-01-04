@@ -135,7 +135,7 @@
           "relationshipKinds": [
             "allied_with"
           ],
-          "coefficient": 0.1
+          "coefficient": 0.3
         },
         {
           "type": "relationship_count",
@@ -148,7 +148,7 @@
       "negativeFeedback": [
         {
           "type": "tag_count",
-          "coefficient": 0.8,
+          "coefficient": 0.3,
           "tags": [
             "splinter",
             "leader",

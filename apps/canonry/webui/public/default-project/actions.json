@@ -243,7 +243,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "harmony",
-          "delta": 6
+          "delta": 10
         },
         {
           "type": "modify_pressure",
@@ -263,15 +263,11 @@
       "pressureModifiers": [
         {
           "pressure": "harmony",
-          "multiplier": -0.3
+          "multiplier": 0.3
         },
         {
           "pressure": "security",
-          "multiplier": -0.2
-        },
-        {
-          "pressure": "resource_availibility",
-          "multiplier": -0.2
+          "multiplier": 0.2
         }
       ]
     },
@@ -312,7 +308,13 @@
           "assert": {
             "check": "exists",
             "path": [
-              { "via": "participant_in", "direction": "out", "targetKind": "occurrence", "targetStatus": "active", "targetSubtype": "war" }
+              {
+                "via": "participant_in",
+                "direction": "out",
+                "targetKind": "occurrence",
+                "targetStatus": "active",
+                "targetSubtype": "war"
+              }
             ]
           }
         },
@@ -330,7 +332,9 @@
       "filters": [
         {
           "type": "exclude",
-          "entities": ["$actor"]
+          "entities": [
+            "$actor"
+          ]
         },
         {
           "type": "shares_related",
@@ -431,14 +435,15 @@
             "direction": "both",
             "maxCount": 2
           }
-        ],
-        "filters": [
-          {
-            "type": "lacks_tag",
-            "tag": "raid_cooldown"
-          }
         ]
-      }
+      },
+      "conditions": [
+        {
+          "type": "pressure",
+          "pressureId": "harmony",
+          "min": -30
+        }
+      ]
     },
     "targeting": {
       "strategy": "by_kind",
@@ -461,7 +466,9 @@
         },
         {
           "type": "exclude",
-          "entities": ["$actor"]
+          "entities": [
+            "$actor"
+          ]
         }
       ]
     },
@@ -476,21 +483,9 @@
           "bidirectional": true
         },
         {
-          "type": "set_tag",
-          "entity": "$target",
-          "tag": "raided",
-          "value": true
-        },
-        {
-          "type": "set_tag",
-          "entity": "$actor",
-          "tag": "raid_cooldown",
-          "value": true
-        },
-        {
           "type": "modify_pressure",
           "pressureId": "harmony",
-          "delta": -3
+          "delta": -1.5
         },
         {
           "type": "modify_pressure",
@@ -510,11 +505,7 @@
       "pressureModifiers": [
         {
           "pressure": "harmony",
-          "multiplier": 0.6
-        },
-        {
-          "pressure": "security",
-          "multiplier": 0.4
+          "multiplier": -0.6
         }
       ]
     },
@@ -831,20 +822,7 @@
         }
       ]
     },
-    "variables": {
-      "$existingParticipant": {
-        "select": {
-          "from": {
-            "relatedTo": "$actor",
-            "relationshipKind": "participant_in",
-            "direction": "dst"
-          },
-          "kind": "faction",
-          "pickStrategy": "random"
-        },
-        "required": true
-      }
-    },
+    "variables": {},
     "outcome": {
       "mutations": [
         {
@@ -930,11 +908,11 @@
     },
     "probability": {
       "baseSuccessChance": 0.4,
-      "baseWeight": 0.7,
+      "baseWeight": 0.2,
       "pressureModifiers": [
         {
           "pressure": "harmony",
-          "multiplier": 0.6
+          "multiplier": -0.6
         },
         {
           "pressure": "security",
@@ -1500,7 +1478,14 @@
           "outlaw",
           "orca"
         ],
-        "status": "alive"
+        "status": "alive",
+        "saturationLimits": [
+          {
+            "relationshipKind": "owned_by",
+            "direction": "dst",
+            "maxCount": 2
+          }
+        ]
       }
     },
     "targeting": {
@@ -1549,7 +1534,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "harmony",
-          "delta": -3
+          "delta": -1
         }
       ],
       "descriptionTemplate": "{actor.name} stole the artifact {target.name}",
@@ -1815,7 +1800,7 @@
   {
     "id": "weapon_chooses_wielder",
     "name": "Weapon Chooses Wielder",
-    "description": "A weapon of legend selects a worthy hero to carry it forward",
+    "description": "A weapon of legend selects a worthy hero - either finding its first owner or abandoning a fallen/corrupted one",
     "actor": {
       "selection": {
         "strategy": "by_kind",
@@ -1826,14 +1811,49 @@
         "statuses": [
           "intact",
           "damaged"
-        ],
-        "filters": [
-          {
-            "type": "lacks_relationship",
-            "kind": "owned_by"
-          }
         ]
-      }
+      },
+      "conditions": [
+        {
+          "type": "or",
+          "conditions": [
+            {
+              "type": "graph_path",
+              "assert": {
+                "check": "not_exists",
+                "path": [
+                  {
+                    "via": "owned_by",
+                    "direction": "src",
+                    "targetKind": "npc",
+                    "targetSubtype": "any"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "graph_path",
+              "assert": {
+                "check": "exists",
+                "path": [
+                  {
+                    "via": "owned_by",
+                    "direction": "src",
+                    "targetKind": "npc",
+                    "targetSubtype": "any",
+                    "filters": [
+                      {
+                        "type": "has_tag",
+                        "tag": "corrupted"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
     },
     "targeting": {
       "strategy": "by_kind",
@@ -1850,8 +1870,33 @@
       ],
       "pickStrategy": "random"
     },
+    "variables": {
+      "$previousOwner": {
+        "select": {
+          "from": {
+            "relatedTo": "$actor",
+            "relationshipKind": "owned_by",
+            "direction": "src"
+          },
+          "kind": "npc",
+          "pickStrategy": "first"
+        },
+        "required": false
+      }
+    },
     "outcome": {
       "mutations": [
+        {
+          "type": "archive_all_relationships",
+          "entity": "$actor",
+          "relationshipKind": "owned_by",
+          "direction": "src"
+        },
+        {
+          "type": "remove_tag",
+          "entity": "$previousOwner",
+          "tag": "armed"
+        },
         {
           "type": "create_relationship",
           "kind": "owned_by",

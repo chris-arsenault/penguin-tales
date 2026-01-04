@@ -947,6 +947,12 @@
           "type": "entity_exists",
           "entity": "$warLeader"
         }
+      },
+      {
+        "kind": "participant_in",
+        "src": "$warLeader",
+        "dst": "$offensive",
+        "strength": 0.8
       }
     ],
     "stateUpdates": [
@@ -2300,6 +2306,24 @@
               "type": "has_tag",
               "tag": "cleansed"
             }
+          ],
+          "preferFilters": [
+            {
+              "type": "graph_path",
+              "assert": {
+                "check": "count_min",
+                "count": 1,
+                "path": [
+                  {
+                    "via": "resident_of",
+                    "direction": "in",
+                    "targetKind": "npc",
+                    "targetSubtype": "hero",
+                    "targetStatus": "alive"
+                  }
+                ]
+              }
+            }
           ]
         },
         "required": true
@@ -3058,7 +3082,9 @@
       "filters": [
         {
           "type": "component_size",
-          "relationshipKinds": ["enemy_of"],
+          "relationshipKinds": [
+            "enemy_of"
+          ],
           "min": 3
         },
         {
@@ -3387,12 +3413,12 @@
       "status": "active",
       "filters": [
         {
-          "type": "not_has_culture",
-          "culture": "orca"
-        },
-        {
           "type": "has_tag",
           "tag": "war_weary"
+        },
+        {
+          "type": "has_culture",
+          "culture": "orca"
         }
       ],
       "pickStrategy": "random"
@@ -3467,35 +3493,25 @@
           "type": "entity_exists",
           "entity": "$faction2"
         }
+      },
+      {
+        "kind": "participant_in",
+        "src": "$faction1",
+        "dst": "$target",
+        "strength": 0.8
+      },
+      {
+        "kind": "participant_in",
+        "src": "$faction2",
+        "dst": "$target",
+        "strength": 0.8
       }
     ],
     "stateUpdates": [
       {
-        "type": "for_each_related",
-        "relationship": "participant_in",
-        "direction": "in",
-        "targetKind": "faction",
-        "actions": [
-          { "type": "set_tag", "entity": "$related", "tag": "post_war_cooldown", "value": true },
-          { "type": "remove_tag", "entity": "$related", "tag": "conflict" },
-          { "type": "archive_relationship", "entity": "$related", "relationshipKind": "enemy_of", "with": "any" }
-        ]
-      },
-      {
-        "type": "change_status",
-        "entity": "$target",
-        "newStatus": "historical"
-      },
-      {
-        "type": "archive_relationship",
-        "entity": "$target",
-        "relationshipKind": "participant_in",
-        "direction": "dst"
-      },
-      {
         "type": "modify_pressure",
         "pressureId": "harmony",
-        "delta": 12
+        "delta": 20
       },
       {
         "type": "modify_pressure",
@@ -3506,16 +3522,22 @@
         "type": "modify_pressure",
         "pressureId": "magical_stability",
         "delta": -8
+      },
+      {
+        "type": "change_status",
+        "entity": "$orca",
+        "newStatus": "historical"
+      },
+      {
+        "type": "change_status",
+        "entity": "$target",
+        "newStatus": "historical"
       }
     ],
     "variables": {
       "$faction1": {
         "select": {
-          "from": {
-            "relatedTo": "$target",
-            "relationshipKind": "participant_in",
-            "direction": "dst"
-          },
+          "from": "graph",
           "kind": "faction",
           "pickStrategy": "random"
         },
@@ -3528,12 +3550,6 @@
           "pickStrategy": "random",
           "filters": [
             {
-              "type": "has_relationship",
-              "kind": "participant_in",
-              "with": "$target",
-              "direction": "src"
-            },
-            {
               "type": "exclude",
               "entities": [
                 "$faction1"
@@ -3541,17 +3557,32 @@
             }
           ]
         },
-        "required": true
+        "required": false
       },
       "$warzone": {
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationshipKind": "epicenter_of",
-            "direction": "src"
+            "relationshipKind": "occurred_at",
+            "direction": "both"
           },
           "kind": "location",
           "pickStrategy": "random"
+        },
+        "required": true
+      },
+      "$orca": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationshipKind": "instigated_by",
+            "direction": "both"
+          },
+          "kind": "npc",
+          "pickStrategy": "random",
+          "subtypes": [
+            "orca"
+          ]
         }
       }
     },
@@ -6194,303 +6225,5 @@
       }
     ],
     "enabled": true
-  },
-  {
-    "id": "war_declaration",
-    "name": "War Declaration",
-    "applicability": [
-      {
-        "type": "pressure",
-        "pressureId": "harmony",
-        "max": 20
-      }
-    ],
-    "selection": {
-      "strategy": "by_kind",
-      "kind": "faction",
-      "notStatus": "waning",
-      "saturationLimits": [
-        {
-          "relationshipKind": "participant_in",
-          "direction": "out",
-          "maxCount": 1
-        }
-      ],
-      "filters": [
-        {
-          "type": "graph_path",
-          "assert": {
-            "check": "count_min",
-            "path": [
-              {
-                "via": "controls",
-                "direction": "any",
-                "targetKind": "location",
-                "targetSubtype": "any"
-              }
-            ],
-            "count": 2
-          }
-        }
-      ],
-      "pickStrategy": "random"
-    },
-    "variables": {
-      "$enemy": {
-        "select": {
-          "from": "graph",
-          "kind": "faction",
-          "filters": [
-            {
-              "type": "exclude",
-              "entities": [
-                "$target"
-              ]
-            },
-            {
-              "type": "lacks_relationship",
-              "kind": "allied_with",
-              "with": "$target"
-            },
-            {
-              "type": "lacks_relationship",
-              "kind": "at_war_with",
-              "with": "$target"
-            }
-          ],
-          "pickStrategy": "random"
-        },
-        "required": true
-      }
-    },
-    "creation": [
-      {
-        "entityRef": "$war",
-        "kind": "occurrence",
-        "subtype": "war",
-        "status": "active",
-        "prominence": "recognized",
-        "culture": {
-          "inherit": "$target"
-        },
-        "description": {
-          "template": "A war declared by {aggressor} against {defender}",
-          "replacements": {
-            "aggressor": "$target.name",
-            "defender": "$enemy.name"
-          }
-        },
-        "tags": {
-          "declared_war": true
-        },
-        "placement": {
-          "anchor": {
-            "type": "refs_centroid",
-            "refs": [
-              "$target",
-              "$enemy"
-            ],
-            "jitter": 0.1
-          },
-          "steps": [
-            "anchor_region",
-            "sparse",
-            "random"
-          ]
-        }
-      }
-    ],
-    "relationships": [
-      {
-        "kind": "participant_in",
-        "src": "$target",
-        "dst": "$war",
-        "strength": 0.9
-      },
-      {
-        "kind": "participant_in",
-        "src": "$enemy",
-        "dst": "$war",
-        "strength": 0.9
-      },
-      {
-        "kind": "at_war_with",
-        "src": "$target",
-        "dst": "$enemy",
-        "strength": 0.9,
-        "bidirectional": true
-      }
-    ],
-    "stateUpdates": [
-      {
-        "type": "set_tag",
-        "entity": "$target",
-        "tag": "conflict",
-        "value": true
-      },
-      {
-        "type": "set_tag",
-        "entity": "$enemy",
-        "tag": "conflict",
-        "value": true
-      },
-      {
-        "type": "modify_pressure",
-        "pressureId": "harmony",
-        "delta": -6
-      }
-    ],
-    "enabled": false
-  },
-  {
-    "id": "alliance_betrayal",
-    "name": "Alliance Betrayal",
-    "applicability": [
-      {
-        "type": "pressure",
-        "pressureId": "harmony",
-        "max": 20
-      }
-    ],
-    "selection": {
-      "strategy": "by_kind",
-      "kind": "faction",
-      "notStatus": "waning",
-      "saturationLimits": [
-        {
-          "relationshipKind": "participant_in",
-          "direction": "out",
-          "maxCount": 1
-        }
-      ],
-      "filters": [
-        {
-          "type": "has_relationship",
-          "kind": "allied_with",
-          "direction": "both"
-        },
-        {
-          "type": "lacks_tag",
-          "tag": "oath_breaker"
-        }
-      ],
-      "pickStrategy": "random"
-    },
-    "variables": {
-      "$ally": {
-        "select": {
-          "from": {
-            "relatedTo": "$target",
-            "relationshipKind": "allied_with",
-            "direction": "both"
-          },
-          "kind": "faction",
-          "pickStrategy": "random"
-        },
-        "required": true
-      }
-    },
-    "creation": [
-      {
-        "entityRef": "$war",
-        "kind": "occurrence",
-        "subtype": "war",
-        "status": "active",
-        "prominence": "renowned",
-        "culture": {
-          "inherit": "$target"
-        },
-        "description": {
-          "template": "A betrayal war when {betrayer} turned against their ally {victim}",
-          "replacements": {
-            "betrayer": "$target.name",
-            "victim": "$ally.name"
-          }
-        },
-        "tags": {
-          "betrayal_war": true
-        },
-        "placement": {
-          "anchor": {
-            "type": "refs_centroid",
-            "refs": [
-              "$target",
-              "$ally"
-            ],
-            "jitter": 0.1
-          },
-          "steps": [
-            "anchor_region",
-            "sparse",
-            "random"
-          ]
-        }
-      }
-    ],
-    "relationships": [
-      {
-        "kind": "participant_in",
-        "src": "$target",
-        "dst": "$war",
-        "strength": 0.9
-      },
-      {
-        "kind": "participant_in",
-        "src": "$ally",
-        "dst": "$war",
-        "strength": 0.9
-      },
-      {
-        "kind": "at_war_with",
-        "src": "$target",
-        "dst": "$ally",
-        "strength": 0.95,
-        "bidirectional": true
-      },
-      {
-        "kind": "betrayed_by",
-        "src": "$ally",
-        "dst": "$target",
-        "strength": 0.95
-      }
-    ],
-    "stateUpdates": [
-      {
-        "type": "archive_relationship",
-        "entity": "$target",
-        "relationshipKind": "allied_with",
-        "with": "$ally"
-      },
-      {
-        "type": "set_tag",
-        "entity": "$target",
-        "tag": "oath_breaker",
-        "value": true
-      },
-      {
-        "type": "set_tag",
-        "entity": "$target",
-        "tag": "conflict",
-        "value": true
-      },
-      {
-        "type": "set_tag",
-        "entity": "$ally",
-        "tag": "betrayed",
-        "value": true
-      },
-      {
-        "type": "set_tag",
-        "entity": "$ally",
-        "tag": "conflict",
-        "value": true
-      },
-      {
-        "type": "modify_pressure",
-        "pressureId": "harmony",
-        "delta": -15
-      }
-    ],
-    "enabled": false
   }
 ]
