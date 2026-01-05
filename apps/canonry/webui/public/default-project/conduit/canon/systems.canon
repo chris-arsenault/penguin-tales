@@ -66,7 +66,7 @@ system thresholdTrigger alliance_defense_call "Alliance Defense Call" do
   end
   cluster_mode individual
   throttle 0.4
-  pressure harmony -3
+  pressure cultural_harmony -3
 end
 
 system thresholdTrigger alliance_dissolution "Alliance Dissolution" do
@@ -99,7 +99,7 @@ system thresholdTrigger alliance_dissolution "Alliance Dissolution" do
   end
   cluster_mode individual
   throttle 0.4
-  pressure harmony -5
+  pressure cultural_harmony -5
 end
 
 system connectionEvolution alliance_formation "Alliance Formation" do
@@ -125,10 +125,10 @@ system connectionEvolution alliance_formation "Alliance Formation" do
   pair_exclude enemy_of betrayed_by
   pair_component_limit allied_with max 6
   throttle 0.15
-  pressure harmony 5
+  pressure cultural_harmony 10
 end
 
-system thresholdTrigger anomaly_activation "Anomaly Surges" do
+system thresholdTrigger anomaly_activation "Anomaly Activation" do
   enabled true
   description "When multiple adjacent anomalies resonate without NPC interference, one surges to an active state capable of crystallizing power."
   selection do
@@ -167,7 +167,7 @@ system thresholdTrigger anomaly_activation "Anomaly Surges" do
   pressure magical_stability -5
 end
 
-system connectionEvolution anomaly_mystical_gain "Anomaly Stirs" do
+system connectionEvolution anomaly_mystical_gain "Anomaly Mystical Gain" do
   enabled true
   description "Anomalous locations gain mystical qualities over time. NPCs residing nearby dampen this effect through their stabilizing presence."
   selection do
@@ -206,7 +206,7 @@ system connectionEvolution anomaly_mystical_gain "Anomaly Stirs" do
   pressure magical_stability -2
 end
 
-system thresholdTrigger armed_hero_detector "Armed Hero Detection" do
+system thresholdTrigger armed_hero_detector "Armed Hero Detector" do
   enabled true
   description "Heroes who own weapons are tagged as armed, enabling them to hunt orcas"
   selection do
@@ -232,7 +232,7 @@ system thresholdTrigger armed_hero_detector "Armed Hero Detection" do
   throttle 0.1
 end
 
-system graphContagion artifact_corruption_spread "Artifact Corruption" do
+system graphContagion artifact_corruption_spread "Artifact Corruption Spread" do
   enabled true
   description "Cursed or corrupted artifacts affect their owners"
   selection do
@@ -293,7 +293,7 @@ system thresholdTrigger artifact_destruction "Artifact Destruction" do
   throttle 0.7
 end
 
-system graphContagion belief_contagion "Ideological Spread" do
+system graphContagion belief_contagion "Belief Contagion" do
   enabled true
   description "Models ideological spread through social networks using SIR epidemic model"
   selection do
@@ -339,7 +339,7 @@ system graphContagion belief_contagion "Ideological Spread" do
   end
 end
 
-system thresholdTrigger cleansed_isolation_decay "Sacred Ground Fades" do
+system thresholdTrigger cleansed_isolation_decay "Cleansed Isolation Decay" do
   enabled true
   description "Cleansed locations without nearby sanctified neighbors lose their protection as the wards weaken"
   selection do
@@ -409,11 +409,11 @@ system clusterFormation combat_technique_formation "Combat Technique Formation" 
     end
   end
   post_process do
-    pressure security 2
+    pressure iceberg_security 2
   end
 end
 
-system graphContagion conflict_contagion "Conflict Spread" do
+system graphContagion conflict_contagion "Conflict Contagion" do
   enabled false
   _disabled_reason "at_war_with eliminated. War participation determined by participant_in to war occurrence."
   description "Spreads conflicts through alliance networks - allies of enemies become enemies (but not between allies)"
@@ -432,7 +432,7 @@ system graphContagion conflict_contagion "Conflict Spread" do
   exclude_relationships allied_with
   throttle 0.1
   cooldown 4
-  pressure harmony -3
+  pressure cultural_harmony -3
 end
 
 system thresholdTrigger control_collapse "Control Collapse" do
@@ -462,7 +462,7 @@ system thresholdTrigger control_collapse "Control Collapse" do
   end
   cluster_mode individual
   throttle 0.5
-  pressure security -3
+  pressure iceberg_security -3
 end
 
 system thresholdTrigger corruption_crisis "Corruption Crisis" do
@@ -485,7 +485,7 @@ system thresholdTrigger corruption_crisis "Corruption Crisis" do
   actions do
     mutate do
       tag set self crisis true
-      pressure modify security -10
+      pressure modify iceberg_security -10
       pressure modify magical_stability -5
     end
   end
@@ -541,7 +541,7 @@ system thresholdTrigger corruption_harm "Corruption Harm" do
   pressure magical_stability -2
 end
 
-system tagDiffusion cultural_drift "Cultural Evolution" do
+system tagDiffusion cultural_drift "Cultural Drift" do
   enabled true
   description "Connected colonies become more similar (trade, friendly), isolated colonies diverge (secretive, hidden)"
   selection do
@@ -552,10 +552,10 @@ system tagDiffusion cultural_drift "Cultural Evolution" do
   convergence tags trade friendly central organized resource thriving min_connections 1 probability 0.3 max_shared_tags 2
   divergence tags hidden secretive mystical max_connections 0 probability 0.3
   max_tags 10
-  divergence_pressure harmony 2 -10
+  divergence_pressure cultural_harmony 2 -10
 end
 
-system thresholdTrigger depleted_recovery "Anomaly Recovers" do
+system thresholdTrigger depleted_recovery "Depleted Recovery" do
   enabled true
   description "Depleted anomalies slowly recover their potential over time."
   selection do
@@ -577,7 +577,7 @@ system thresholdTrigger depleted_recovery "Anomaly Recovers" do
   throttle 0.5
 end
 
-system thresholdTrigger devout_believer_detector "Devout Believer Detection" do
+system thresholdTrigger devout_believer_detector "Devout Believer Detector" do
   enabled true
   description "Factions with strong belief relationships are marked as devout"
   selection do
@@ -598,30 +598,7 @@ system thresholdTrigger devout_believer_detector "Devout Believer Detection" do
   throttle 0.2
 end
 
-system thresholdTrigger enemy_alliance_breaker "Enemy Alliance Breaker" do
-  enabled true
-  description "If factions become enemies while allied, the alliance is broken"
-  selection do
-    kind faction
-  end
-  when do
-    relationship_exists allied_with both
-    relationship_exists enemy_of both
-  end
-  actions do
-    mutate do
-      for_each_related enemy_of both do
-        relationship archive self allied_with with related
-        tag set self former_ally true
-        tag set related former_ally true
-      end
-    end
-  end
-  cluster_mode individual
-  pressure harmony -3
-end
-
-system connectionEvolution enmity_from_ideology "Ideological Divergence" do
+system connectionEvolution enmity_from_ideology "Enmity From Ideology" do
   enabled true
   description "Factions with no shared ideological practice develop enmity (worldview incompatibility)"
   selection do
@@ -646,22 +623,21 @@ system connectionEvolution enmity_from_ideology "Ideological Divergence" do
   end
   pair_exclude enemy_of allied_with
   throttle 0.1
-  pressure harmony -2
+  pressure cultural_harmony -2
 end
 
-system eraSpawner era_spawner "Era Initialization" do
+system eraSpawner era_spawner "Era Spawner" do
   enabled true
   description "Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras."
-  ticks_per_era 25
 end
 
-system eraTransition era_transition "Era Progression" do
+system eraTransition era_transition "Era Transition" do
   enabled true
   description "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future → current → historical."
   prominence_snapshot enabled false min_prominence renowned
 end
 
-system thresholdTrigger heresy_war_trigger "Heresy War" do
+system thresholdTrigger heresy_war_trigger "Heresy War Trigger" do
   enabled true
   description "Devout factions are more likely to declare war on factions with apostate or different beliefs"
   selection do
@@ -670,7 +646,7 @@ system thresholdTrigger heresy_war_trigger "Heresy War" do
   end
   when do
     tag_exists devout
-    relationship_count at_war_with both <= 0
+    relationship_count enemy_of both <= 0
     random_chance 0.12
   end
   let heretic do
@@ -679,21 +655,21 @@ system thresholdTrigger heresy_war_trigger "Heresy War" do
     pick random
     where do
       tag has apostate
-      relationship lacks at_war_with with self
+      relationship lacks enemy_of with self
       relationship lacks allied_with with self
     end
     required true
   end
   actions do
     mutate do
-      relationship create at_war_with self heretic strength 0.7 bidirectional true
+      relationship create enemy_of self heretic strength 0.7 bidirectional true
       tag set self conflict true
       tag set self religious_war true
     end
   end
   cluster_mode individual
   throttle 0.5
-  pressure harmony -1
+  pressure cultural_harmony -1
 end
 
 system thresholdTrigger heroic_sacrifice "Heroic Sacrifice" do
@@ -731,7 +707,7 @@ system thresholdTrigger heroic_sacrifice "Heroic Sacrifice" do
   throttle 0.3
 end
 
-system thresholdTrigger ice_memory_witness "The Ice Remembers" do
+system thresholdTrigger ice_memory_witness "Ice Memory Witness" do
   enabled true
   description "The ice witnesses deeds at significant locations, annotating those present with echoes"
   selection do
@@ -779,7 +755,7 @@ system clusterFormation legal_code_formation "Legal Code Formation" do
     create_governance_faction true
     governance_faction_subtype political
     governance_relationship related_to
-    pressure security 5
+    pressure iceberg_security 5
   end
 end
 
@@ -823,11 +799,11 @@ system clusterFormation magic_school_formation "Magic School Formation" do
     end
   end
   post_process do
-    pressure security 2
+    pressure iceberg_security 2
   end
 end
 
-system connectionEvolution merchant_prosperity "Trade Network Growth" do
+system connectionEvolution merchant_prosperity "Merchant Prosperity" do
   enabled true
   description "Trade-connected factions controlling thriving colonies gain influence"
   selection do
@@ -859,7 +835,7 @@ system connectionEvolution merchant_prosperity "Trade Network Growth" do
   throttle 0.15
 end
 
-system connectionEvolution mystical_decay "Mystical Fades" do
+system connectionEvolution mystical_decay "Mystical Decay" do
   enabled true
   description "Mystical qualities fade from locations over time. NPCs residing nearby dampen this effect, stabilizing the mystical energy."
   selection do
@@ -920,7 +896,7 @@ system thresholdTrigger oath_breaker_consequences "Oath Breaker Consequences" do
   throttle 0.4
 end
 
-system thresholdTrigger oath_breaker_detector "Oath Breaker Detection" do
+system thresholdTrigger oath_breaker_detector "Oath Breaker Detector" do
   enabled true
   description "Allied factions that don't join wars are marked as oath breakers and lose reputation"
   selection do
@@ -946,7 +922,7 @@ system thresholdTrigger oath_breaker_detector "Oath Breaker Detection" do
   end
   cluster_mode individual
   throttle 0.5
-  pressure harmony -2
+  pressure cultural_harmony -2
 end
 
 system thresholdTrigger occurrence_resolution "Occurrence Resolution" do
@@ -967,7 +943,7 @@ system thresholdTrigger occurrence_resolution "Occurrence Resolution" do
   end
   cluster_mode individual
   throttle 0.6
-  pressure harmony 2
+  pressure cultural_harmony 2
 end
 
 system thresholdTrigger old_age_mortality "Old Age Mortality" do
@@ -1025,16 +1001,21 @@ system thresholdTrigger post_war_recovery "Post-War Recovery" do
     mutate do
       tag remove self conflict
       tag remove self hostile
-      tag remove self post_war_cooldown
+      conditional do
+        time_elapsed 5 since updated
+        then do
+          tag remove self post_war_cooldown
+        end
+      end
     end
   end
   cluster_mode individual
   throttle 0.5
-  pressure harmony 3
-  pressure security 2
+  pressure cultural_harmony 3
+  pressure iceberg_security 2
 end
 
-system thresholdTrigger power_vacuum_detector "Leadership Crisis" do
+system thresholdTrigger power_vacuum_detector "Power Vacuum Detector" do
   enabled true
   description "Detects factions with historical (deceased) leaders and marks them in crisis"
   selection do
@@ -1058,8 +1039,8 @@ system thresholdTrigger power_vacuum_detector "Leadership Crisis" do
   end
   cluster_mode individual
   throttle 0.35
-  pressure harmony -1
-  pressure security -8
+  pressure cultural_harmony -1
+  pressure iceberg_security -8
 end
 
 system connectionEvolution prominence_evolution "Prominence Evolution" do
@@ -1134,7 +1115,7 @@ system relationshipMaintenance relationship_maintenance "Relationship Maintenanc
   max_strength 1
 end
 
-system planeDiffusion resource_diffusion "Resource & Trade Flow" do
+system planeDiffusion resource_diffusion "Resource Diffusion" do
   enabled true
   description "Prosperity spreads from resource-rich and trade locations"
   selection do
@@ -1186,10 +1167,10 @@ system connectionEvolution trade_alliance_formation "Trade Alliance Formation" d
   pair_exclude enemy_of betrayed_by allied_with
   pair_component_limit allied_with max 6
   throttle 0.15
-  pressure harmony 3
+  pressure cultural_harmony 3
 end
 
-system thresholdTrigger unarmed_hero_detector "Unarmed Hero Detection" do
+system thresholdTrigger unarmed_hero_detector "Unarmed Hero Detector" do
   enabled true
   description "Heroes who lose their weapons are no longer armed"
   selection do
@@ -1214,7 +1195,7 @@ system thresholdTrigger unarmed_hero_detector "Unarmed Hero Detection" do
   throttle 0.1
 end
 
-system universalCatalyst universal_catalyst "Agent Actions" do
+system universalCatalyst universal_catalyst "Universal Catalyst" do
   enabled true
   description "Enables agents (NPCs, factions) to perform domain-defined actions. Manages action selection and success/failure."
   action_attempt_rate 0.18
@@ -1275,7 +1256,7 @@ system thresholdTrigger war_casualties "War Casualties" do
   throttle 0.5
 end
 
-system thresholdTrigger war_fatigue_detector "War Fatigue" do
+system thresholdTrigger war_fatigue_detector "War Fatigue Detector" do
   enabled true
   description "Long-running wars become weary and ready to resolve"
   selection do
@@ -1320,5 +1301,5 @@ system thresholdTrigger war_tie_cleanup "War Tie Cleanup" do
   end
   cluster_mode individual
   throttle 0.4
-  pressure harmony 4
+  pressure cultural_harmony 4
 end

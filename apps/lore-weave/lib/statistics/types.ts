@@ -5,6 +5,7 @@
  */
 
 import { ProminenceLabel } from '../core/worldTypes';
+import type { EpochEraSummary } from '../engine/types';
 
 // ============================================================================
 // EPOCH AND DISTRIBUTION STATS
@@ -13,7 +14,7 @@ import { ProminenceLabel } from '../core/worldTypes';
 export interface EpochStats {
   epoch: number;
   tick: number;
-  era: string;
+  era: EpochEraSummary;
 
   // Entity metrics
   totalEntities: number;
@@ -120,7 +121,6 @@ export interface TemporalStats {
 
   // Era progression
   erasVisited: string[];
-  ticksPerEra: Record<string, number>;
 
   // Generation efficiency
   entitiesPerTick: number;

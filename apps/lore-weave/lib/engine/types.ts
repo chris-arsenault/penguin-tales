@@ -151,6 +151,18 @@ export interface Era {
   entryEffects?: EraTransitionEffects;
 }
 
+export interface EpochEraTransitionSummary {
+  tick: number;
+  from: { id: string; name: string };
+  to: { id: string; name: string };
+}
+
+export interface EpochEraSummary {
+  start: { id: string; name: string };
+  end: { id: string; name: string };
+  transitions: EpochEraTransitionSummary[];
+}
+
 /**
  * Entity creation settings
  * Framework enforces: coordinates → tags → name ordering
@@ -173,6 +185,13 @@ export interface CreateEntitySettings {
   placementStrategy?: string;  // Optional - for debugging (e.g., 'near_entity', 'in_culture_region')
   regionId?: string | null;  // Primary region containing this entity
   allRegionIds?: string[];   // All regions containing this entity (for overlapping regions)
+}
+
+export interface GrowthPhaseCompletion {
+  epoch: number;
+  eraId: string;
+  tick: number;
+  reason: 'target_met' | 'exhausted';
 }
 
 // Graph data representation (world state + mutations)
@@ -265,6 +284,7 @@ export interface Graph {
   // loreIndex?: LoreIndex;
   // loreRecords: LoreRecord[];
   rateLimitState: import('../core/worldTypes').RateLimitState;
+  growthPhaseHistory: GrowthPhaseCompletion[];
   growthMetrics: {
     relationshipsPerTick: number[];
     averageGrowthRate: number;
@@ -712,6 +732,7 @@ export class GraphStore implements Graph {
     lastCreationTick: 0,
     creationsThisEpoch: 0
   };
+  growthPhaseHistory: GrowthPhaseCompletion[] = [];
   growthMetrics: { relationshipsPerTick: number[]; averageGrowthRate: number } = {
     relationshipsPerTick: [],
     averageGrowthRate: 0

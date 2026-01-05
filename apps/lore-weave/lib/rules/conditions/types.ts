@@ -47,6 +47,7 @@ export type Condition =
   // Rate limiting conditions
   | CooldownElapsedCondition
   | CreationsPerEpochCondition
+  | GrowthPhasesCompleteCondition
 
   // Probability conditions
   | RandomChanceCondition
@@ -229,6 +230,16 @@ export interface CooldownElapsedCondition {
 export interface CreationsPerEpochCondition {
   type: 'creations_per_epoch';
   maxPerEpoch: number;
+}
+
+/**
+ * Check number of completed growth phases in an era.
+ */
+export interface GrowthPhasesCompleteCondition {
+  type: 'growth_phases_complete';
+  minPhases: number;
+  /** Optional explicit era id (defaults to current era) */
+  eraId?: string;
 }
 
 // =============================================================================

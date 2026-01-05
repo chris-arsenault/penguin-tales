@@ -1,60 +1,91 @@
-generator alliance_betrayal "Alliance Betrayal" do
-  when do
-    pressure harmony <= 20
-  end
-  choose target from faction do
+generator apocalyptic_war_resolution "Apocalyptic War Resolution" do
+  choose target from occurrence do
     pick random
-    outbound participant_in <= 1
-    notStatus waning
+    subtype war
     where do
-      relationship has allied_with direction both
-      tag lacks oath_breaker
+      tag has war_weary
+      culture has orca
     end
+    status active
   end
-  let ally do
-    from target via allied_with both
+  let faction1 do
+    from graph
     kind faction
     pick random
     required true
   end
-  create war do
-    kind occurrence
-    subtype war
+  let faction2 do
+    from graph
+    kind faction
+    pick random
+    where do
+      entity exclude faction1
+    end
+    required false
+  end
+  let warzone do
+    from target via occurred_at both
+    kind location
+    pick random
+    required true
+  end
+  let orca do
+    from target via instigated_by both
+    kind npc
+    subtype orca
+    pick random
+  end
+  create cataclysm do
+    kind ability
+    subtype magic
     status active
-    prominence renowned
+    prominence mythic
     culture do
       inherit target
     end
     description do
-      template "A betrayal war when {betrayer} turned against their ally {victim}"
+      template "A cataclysmic spell born from the war known as {warName}"
       replacements do
-        betrayer target.name
-        victim ally.name
+        warName target.name
       end
     end
-    tags betrayal_war
+    tags mystical conflict cultural
     placement do
       anchor do
-        type refs_centroid
-        refs $target $ally
-        jitter 0.1
+        type culture
+        id $target.culture
       end
-      steps anchor_region sparse random
+      regionPolicy do
+        allowEmergent true
+        preferSparse true
+      end
+      steps seed_region sparse random
     end
   end
-  rel participant_in target -> war strength 0.9
-  rel participant_in ally -> war strength 0.9
-  rel at_war_with target -> ally strength 0.95 bidirectional true
-  rel betrayed_by ally -> target strength 0.95
-  mutate do
-    relationship archive target allied_with with ally
-    tag set target oath_breaker true
-    tag set target conflict true
-    tag set ally betrayed true
-    tag set ally conflict true
-    pressure modify harmony -15
+  rel derived_from cataclysm -> target strength 1
+  rel manifests_at cataclysm warzone do
+    strength 0.8
+    condition do
+      entity_exists warzone
+    end
   end
-  enabled false
+  rel practitioner_of faction1 -> cataclysm strength 0.8
+  rel practitioner_of faction2 cataclysm do
+    strength 0.7
+    condition do
+      entity_exists faction2
+    end
+  end
+  rel participant_in faction1 -> target strength 0.8
+  rel participant_in faction2 -> target strength 0.8
+  mutate do
+    pressure modify cultural_harmony 20
+    pressure modify iceberg_security 10
+    pressure modify magical_stability -8
+    status change orca historical
+    status change target historical
+  end
+  enabled true
 end
 
 generator artifact_crafting "Artifact Crafting" do
@@ -62,7 +93,7 @@ generator artifact_crafting "Artifact Crafting" do
     cap kind artifact <= 18
     when any do
       pressure magical_stability >= 20
-      pressure security <= -10
+      pressure iceberg_security <= -10
     end
   end
   choose target from npc do
@@ -183,10 +214,10 @@ generator artifact_discovery "Artifact Discovery" do
   enabled true
 end
 
-generator colony_founding "Colony Foundation" do
+generator colony_founding "Colony Founding" do
   when do
     pressure resource_availibility >= -20
-    entity_count kind location subtype colony <= 4
+    entity_count kind location subtype colony <= 6
   end
   choose target from location do
     pick random
@@ -345,11 +376,11 @@ generator colony_founding "Colony Foundation" do
   enabled true
 end
 
-generator crisis_legislation "Crisis Law" do
+generator crisis_legislation "Crisis Legislation" do
   when do
     when any do
-      pressure security <= -10
-      pressure harmony <= -30
+      pressure iceberg_security <= -10
+      pressure cultural_harmony <= -30
     end
   end
   choose target from location do
@@ -409,12 +440,12 @@ generator crisis_legislation "Crisis Law" do
   end
   rel related_to mainThreat -> rule strength 0.8
   mutate do
-    pressure modify security 40
+    pressure modify iceberg_security 40
   end
   enabled true
 end
 
-generator crystallized_power "Power Crystallizes" do
+generator crystallized_power "Crystallized Power" do
   choose target from location do
     pick random
     where do
@@ -480,18 +511,16 @@ generator crystallized_power "Power Crystallizes" do
   enabled true
 end
 
-generator cult_formation "Cult Awakening" do
+generator cult_formation "Cult Formation" do
   when do
     when any do
       pressure magical_stability <= 25
-      pressure security <= -5
-      pressure harmony <= 10
+      pressure iceberg_security <= -5
     end
-    entity_count kind faction subtype cult <= 12
   end
   choose target from location do
     pick random
-    subtype in anomaly point_of_interest
+    subtype in anomaly point_of_interest colony
     inbound originated_in <= 4
     inbound resident_of <= 5
     where do
@@ -501,6 +530,14 @@ generator cult_formation "Cult Awakening" do
         step originated_in any faction any
       end
     end
+  end
+  let existingIdeology do
+    from graph
+    kind rule
+    subtype ideology
+    pick random
+    status proposed
+    required true
   end
   let magic do
     from graph
@@ -534,7 +571,19 @@ generator cult_formation "Cult Awakening" do
   end
   create cult do
     kind faction
-    subtype cult
+    subtype do
+      conditional do
+        when do
+          condition do
+            type pressure_check
+            pressureId magical_stability
+            min 0
+          end
+          then criminal
+        end
+        otherwise cult
+      end
+    end
     status illegal
     prominence marginal
     culture do
@@ -585,6 +634,7 @@ generator cult_formation "Cult Awakening" do
       end
       steps anchor_region seed_region sparse random
     end
+    createChance 0.4
   end
   create acolyte1 do
     kind npc
@@ -664,6 +714,7 @@ generator cult_formation "Cult Awakening" do
     createChance 0.35
   end
   rel originated_in cult -> target strength 1
+  rel believer_of cult -> existingIdeology strength 0.8
   rel owned_by sacredRelic -> cult strength 0.9
   rel member_of acolyte1 -> cult strength 0.5
   rel member_of acolyte2 -> cult strength 0.4
@@ -713,7 +764,7 @@ generator cult_formation "Cult Awakening" do
   end
   mutate do
     pressure modify magical_stability -5
-    pressure modify security -5
+    pressure modify iceberg_security -5
   end
   variants do
     selection first_match
@@ -747,6 +798,12 @@ generator dark_ritual "Dark Ritual" do
     pick random
     where do
       tag has cleansed
+    end
+    prefer do
+      graph_path count_min do
+        count 1
+        step resident_of in npc hero status alive
+      end
     end
     required true
   end
@@ -795,12 +852,12 @@ generator dark_ritual "Dark Ritual" do
     tag set location corrupted true
     tag set location desecrated true
     pressure modify magical_stability -15
-    pressure modify security -5
+    pressure modify iceberg_security -5
   end
   enabled true
 end
 
-generator economic_colony_decline "Colony Economic Decline" do
+generator economic_colony_decline "Economic Colony Decline" do
   when do
     pressure resource_availibility >= -20
   end
@@ -849,7 +906,7 @@ generator economic_colony_decline "Colony Economic Decline" do
   enabled true
 end
 
-generator economic_colony_recovery "Colony Economic Recovery" do
+generator economic_colony_recovery "Economic Colony Recovery" do
   choose target from location do
     pick random
     subtype colony
@@ -899,8 +956,8 @@ generator faction_splinter "Faction Splinter" do
     cap kind faction >= 1
     cap kind faction <= 30
     when any do
-      pressure harmony <= -10
-      pressure security <= -5
+      pressure cultural_harmony <= -10
+      pressure iceberg_security <= -5
       pressure resource_availibility <= -5
     end
   end
@@ -938,7 +995,16 @@ generator faction_splinter "Faction Splinter" do
   create splinter do
     kind faction
     subtype do
-      inherit target
+      conditional do
+        when do
+          condition do
+            type target_subtype
+            equals criminal
+          end
+          then criminal
+        end
+        otherwise political
+      end
     end
     status waning
     prominence marginal
@@ -1033,7 +1099,7 @@ generator faction_splinter "Faction Splinter" do
   rel catalyst_of contestedRelic -> splinter strength 0.9
   rel member_of recruit1 -> splinter strength 0.5
   rel member_of recruit2 -> splinter strength 0.4
-  rel at_war_with splinter -> target strength 0.7 bidirectional true
+  rel enemy_of splinter -> target strength 0.7 bidirectional true
   rel occupies splinter -> location strength 0.6
   rel leader_of defector splinter do
     strength 0.9
@@ -1054,7 +1120,7 @@ generator faction_splinter "Faction Splinter" do
     end
   end
   mutate do
-    pressure modify harmony -5
+    pressure modify cultural_harmony -5
   end
   variants do
     selection first_match
@@ -1202,19 +1268,20 @@ generator great_festival "Great Festival" do
     end
   end
   mutate do
-    pressure modify harmony 5
+    pressure modify cultural_harmony 5
   end
   enabled true
 end
 
-generator guild_establishment "Guild Formation" do
+generator guild_establishment "Guild Establishment" do
   when do
     pressure resource_availibility >= -20
   end
   choose target from location do
     pick random
     subtype colony
-    inbound originated_in <= 6
+    inbound originated_in <= 2
+    both trade_route_to location <= 1
   end
   let tradeGoods do
     from graph
@@ -1435,8 +1502,8 @@ end
 generator hero_emergence "Hero Emergence" do
   when do
     when any do
-      pressure security <= 0
-      pressure harmony <= -20
+      pressure iceberg_security <= 0
+      pressure cultural_harmony <= -20
       pressure resource_availibility <= -10
       pressure magical_stability <= 5
     end
@@ -1554,7 +1621,7 @@ generator hero_emergence "Hero Emergence" do
     end
   end
   mutate do
-    pressure modify security 20
+    pressure modify iceberg_security 20
     pressure modify magical_stability -5
   end
   variants do
@@ -1673,7 +1740,7 @@ generator ice_memory_thaw "Ice Memory Thaw" do
   enabled true
 end
 
-generator ideology_emergence "Ideological Movement" do
+generator ideology_emergence "Ideology Emergence" do
   choose target from npc do
     pick random
     outbound believer_of <= 2
@@ -1789,18 +1856,19 @@ generator ideology_emergence "Ideological Movement" do
   enabled true
 end
 
-generator krill_bloom_migration "Krill Bloom Discovery" do
+generator krill_bloom_discovery "Krill Bloom Discovery" do
   choose target from location do
     pick random
     subtype colony
-    inbound originated_in <= 6
-    where do
-      graph_path not_exists do
-        step originated_in any faction company
-      end
-    end
+    inbound originated_in <= 4
+    both adjacent_to location <= 2
   end
-  variables do
+  let sponsor do
+    from target via originated_in dst
+    kind faction
+    subtype company
+    pick first
+    required true
   end
   create bloom do
     kind location
@@ -1841,6 +1909,7 @@ generator krill_bloom_migration "Krill Bloom Discovery" do
     end
   end
   create company do
+    createChance 0.5
     kind faction
     prominence marginal
     status active
@@ -1873,11 +1942,106 @@ generator krill_bloom_migration "Krill Bloom Discovery" do
   rel controls company -> bloom strength 0.8
   rel practitioner_of company -> harvestTechnique strength 0.7
   rel originated_in harvestTechnique -> bloom strength 0.8
-  rel discovered_by harvestTechnique -> company strength 0.7
   rel adjacent_to bloom -> target strength 0.8 bidirectional true
+  rel practitioner_of sponsor -> harvestTechnique strength 0.7
+  rel discovered_by harvestTechnique -> sponsor strength 0.7
   mutate do
     pressure modify resource_availibility 5
-    pressure modify harmony -10
+    pressure modify cultural_harmony -10
+  end
+  enabled true
+end
+
+generator leadership_succession "Leadership Succession" do
+  when do
+    entity_count kind npc subtype mayor <= 16
+    random_chance 0.7
+  end
+  choose target from npc do
+    pick random
+    subtype mayor
+    where do
+      graph_path exists do
+        step leader_of out location colony
+      end
+    end
+  end
+  let colony do
+    from target via leader_of src
+    kind location
+    subtype colony
+    pick random
+    required true
+  end
+  let faction do
+    from target via leader_of both
+    kind faction
+    pick first
+  end
+  create successor do
+    kind npc
+    subtype mayor
+    status alive
+    prominence marginal
+    culture do
+      inherit target
+    end
+    description do
+      template "Successor to {predecessorName} in {colonyName}"
+      replacements do
+        predecessorName target.name
+        colonyName colony.name
+      end
+    end
+    tags political leader
+    placement do
+      anchor do
+        type sparse
+        preferPeriphery false
+      end
+    end
+  end
+  create aide do
+    kind npc
+    subtype mayor
+    status alive
+    prominence marginal
+    culture do
+      inherit target
+    end
+    description do
+      template "A minor official serving the leadership in {colonyName}"
+      replacements do
+        colonyName colony.name
+      end
+    end
+    tags bureaucrat
+    placement do
+      anchor do
+        type sparse
+        preferPeriphery false
+      end
+    end
+  end
+  rel taught_by successor -> target strength 1
+  rel allied_with aide -> successor strength 0.4
+  rel leader_of successor -> colony strength 0.9
+  rel resident_of successor -> colony strength 0.85
+  rel leader_of successor faction do
+    strength 0.8
+    condition do
+      entity_exists faction
+    end
+  end
+  rel member_of successor faction do
+    strength 0.75
+    condition do
+      entity_exists faction
+    end
+  end
+  mutate do
+    relationship archive target leader_of with colony
+    relationship archive target leader_of with faction
   end
   enabled true
 end
@@ -2106,14 +2270,14 @@ generator location_discovery " Location Discovery" do
       when do
         type pressure_compare
         pressureA resource_availibility
-        pressureB security
+        pressureB iceberg_security
       end
       apply do
         tag_assign $location conflict true
         subtype $location point_of_interest
         mutate do
           tag remove location resource
-          pressure modify security 5
+          pressure modify iceberg_security 5
         end
       end
     end
@@ -2121,7 +2285,7 @@ generator location_discovery " Location Discovery" do
   enabled true
 end
 
-generator magic_discovery "Magical Discovery" do
+generator magic_discovery "Magic Discovery" do
   when do
     entity_count kind ability subtype magic <= 20
     pressure magical_stability between -50 50
@@ -2344,18 +2508,19 @@ generator orca_organized_offensive "Orca Organized Offensive" do
       entity_exists warLeader
     end
   end
+  rel participant_in warLeader -> offensive strength 0.8
   mutate do
-    pressure modify security -30
-    pressure modify harmony 10
+    pressure modify iceberg_security -30
+    pressure modify cultural_harmony 10
   end
   enabled true
 end
 
-generator orca_raider_arrival "Orca Raiders Arrive" do
+generator orca_raider_arrival "Orca Raider Arrival" do
   when do
     entity_count kind npc subtype orca <= 8
     when any do
-      pressure security <= 40
+      pressure iceberg_security <= 40
       era_match the-orca-incursion
     end
   end
@@ -2495,7 +2660,7 @@ generator orca_raider_arrival "Orca Raiders Arrive" do
     end
   end
   mutate do
-    pressure modify security -15
+    pressure modify iceberg_security -15
   end
   variants do
     selection first_match
@@ -2510,7 +2675,7 @@ generator orca_raider_arrival "Orca Raiders Arrive" do
         tag_assign $orca1 legendary true
         tag_assign $orca1 war_leader true
         mutate do
-          pressure modify security -10
+          pressure modify iceberg_security -10
         end
       end
     end
@@ -2568,101 +2733,7 @@ generator orca_war_ritual "Orca War Ritual" do
   rel practitioner_of target -> battlePower strength 0.9
   rel catalyst_of ritual -> battlePower strength 0.8
   mutate do
-    pressure modify security -25
-  end
-  enabled true
-end
-
-generator succession "Leadership Succession" do
-  when do
-    entity_count kind npc subtype mayor <= 16
-    random_chance 0.7
-  end
-  choose target from npc do
-    pick random
-    subtype mayor
-    where do
-      graph_path exists do
-        step leader_of out location colony
-      end
-    end
-  end
-  let colony do
-    from target via leader_of src
-    kind location
-    subtype colony
-    pick random
-    required true
-  end
-  let faction do
-    from target via leader_of both
-    kind faction
-    pick first
-  end
-  create successor do
-    kind npc
-    subtype mayor
-    status alive
-    prominence marginal
-    culture do
-      inherit target
-    end
-    description do
-      template "Successor to {predecessorName} in {colonyName}"
-      replacements do
-        predecessorName target.name
-        colonyName colony.name
-      end
-    end
-    tags political leader
-    placement do
-      anchor do
-        type sparse
-        preferPeriphery false
-      end
-    end
-  end
-  create aide do
-    kind npc
-    subtype mayor
-    status alive
-    prominence marginal
-    culture do
-      inherit target
-    end
-    description do
-      template "A minor official serving the leadership in {colonyName}"
-      replacements do
-        colonyName colony.name
-      end
-    end
-    tags bureaucrat
-    placement do
-      anchor do
-        type sparse
-        preferPeriphery false
-      end
-    end
-  end
-  rel taught_by successor -> target strength 1
-  rel allied_with aide -> successor strength 0.4
-  rel leader_of successor -> colony strength 0.9
-  rel resident_of successor -> colony strength 0.85
-  rel leader_of successor faction do
-    strength 0.8
-    condition do
-      entity_exists faction
-    end
-  end
-  rel member_of successor faction do
-    strength 0.75
-    condition do
-      entity_exists faction
-    end
-  end
-  mutate do
-    relationship archive target leader_of with colony
-    relationship archive target leader_of with faction
+    pressure modify iceberg_security -25
   end
   enabled true
 end
@@ -2719,13 +2790,13 @@ generator succession_crisis "Succession Crisis" do
   mutate do
     tag remove target power_vacuum
     status change target waning
-    pressure modify security -12
-    pressure modify harmony -6
+    pressure modify iceberg_security -12
+    pressure modify cultural_harmony -6
   end
   enabled true
 end
 
-generator tech_breakthrough "Technological Breakthrough" do
+generator tech_breakthrough "Tech Breakthrough" do
   choose target from faction do
     pick random
     outbound practitioner_of <= 2
@@ -2792,7 +2863,7 @@ generator tech_breakthrough "Technological Breakthrough" do
   enabled true
 end
 
-generator thermal_colony_decline "Thermal Decline" do
+generator thermal_colony_decline "Thermal Colony Decline" do
   choose target from location do
     pick random
     subtype in colony point_of_interest resource_node anomaly
@@ -2838,7 +2909,7 @@ generator thermal_colony_decline "Thermal Decline" do
   enabled true
 end
 
-generator thermal_colony_recovery "Thermal Recovery" do
+generator thermal_colony_recovery "Thermal Colony Recovery" do
   choose target from location do
     pick random
     subtype in colony point_of_interest resource_node anomaly
@@ -2973,153 +3044,88 @@ generator thermal_migration "Thermal Migration" do
   enabled true
 end
 
-generator war_apocalypse_resolution "Apocalyptic War Resolution" do
-  choose target from occurrence do
-    pick random
-    subtype war
-    where do
-      culture not_has orca
-      tag has war_weary
-    end
-    status active
-  end
-  let faction1 do
-    from target via participant_in dst
-    kind faction
-    pick random
-    required true
-  end
-  let faction2 do
-    from graph
-    kind faction
-    pick random
-    where do
-      relationship has participant_in with target direction src
-      entity exclude faction1
-    end
-    required true
-  end
-  let warzone do
-    from target via epicenter_of src
-    kind location
-    pick random
-  end
-  create cataclysm do
-    kind ability
-    subtype magic
-    status active
-    prominence mythic
-    culture do
-      inherit target
-    end
-    description do
-      template "A cataclysmic spell born from the war known as {warName}"
-      replacements do
-        warName target.name
-      end
-    end
-    tags mystical conflict cultural
-    placement do
-      anchor do
-        type culture
-        id $target.culture
-      end
-      regionPolicy do
-        allowEmergent true
-        preferSparse true
-      end
-      steps seed_region sparse random
-    end
-  end
-  rel derived_from cataclysm -> target strength 1
-  rel manifests_at cataclysm warzone do
-    strength 0.8
-    condition do
-      entity_exists warzone
-    end
-  end
-  rel practitioner_of faction1 -> cataclysm strength 0.8
-  rel practitioner_of faction2 cataclysm do
-    strength 0.7
-    condition do
-      entity_exists faction2
-    end
-  end
-  mutate do
-    status change target historical
-    relationship archive target participant_in direction dst
-    relationship archive faction1 enemy_of with faction2
-    tag set faction1 post_war_cooldown true
-    tag set faction2 post_war_cooldown true
-    tag remove faction1 conflict
-    tag remove faction2 conflict
-    pressure modify harmony 12
-    pressure modify security 10
-    pressure modify magical_stability -8
-  end
-  enabled true
-end
-
-generator war_declaration "War Declaration" do
+generator thermal_vent_discovery "Thermal Vent Discovery" do
   when do
-    pressure harmony <= 20
+    pressure resource_availibility <= 10
   end
-  choose target from faction do
+  choose target from location do
     pick random
-    outbound participant_in <= 1
-    notStatus waning
-    where do
-      graph_path count_min do
-        count 2
-        step controls any location any
-      end
-    end
+    subtype colony
+    both adjacent_to location <= 1
   end
-  let enemy do
-    from graph
-    kind faction
-    pick random
-    where do
-      entity exclude target
-      relationship lacks allied_with with target
-      relationship lacks at_war_with with target
-    end
-    required true
+  variables do
   end
-  create war do
-    kind occurrence
-    subtype war
+  create anomaly do
+    kind location
+    subtype anomaly
     status active
-    prominence recognized
+    prominence marginal
     culture do
       inherit target
     end
-    description do
-      template "A war declared by {aggressor} against {defender}"
-      replacements do
-        aggressor target.name
-        defender enemy.name
-      end
-    end
-    tags declared_war
+    description "A geothermal vent releasing heat and strange energies from deep below the ice."
+    tags mystical dangerous geothermal
     placement do
       anchor do
-        type refs_centroid
-        refs $target $enemy
-        jitter 0.1
+        type entity
+        ref target
+        stickToRegion true
       end
       steps anchor_region sparse random
     end
   end
-  rel participant_in target -> war strength 0.9
-  rel participant_in enemy -> war strength 0.9
-  rel at_war_with target -> enemy strength 0.9 bidirectional true
-  mutate do
-    tag set target conflict true
-    tag set enemy conflict true
-    pressure modify harmony -6
+  create vent do
+    kind location
+    subtype resource_node
+    status thriving
+    prominence recognized
+    culture do
+      inherit target
+    end
+    description "Mineral-rich waters warmed by geothermal activity, attracting life and resources."
+    tags resource mystical guarded
+    placement do
+      anchor do
+        type entity
+        ref anomaly
+        stickToRegion true
+      end
+      steps anchor_region sparse random
+    end
   end
-  enabled false
+  create hermit do
+    kind npc
+    subtype hero
+    status active
+    prominence marginal
+    culture do
+      inherit target
+    end
+    description do
+      template "A solitary hermit who has made their home near the thermal vents of {colonyName}, guarding its secrets."
+      replacements do
+        colonyName target.name
+      end
+    end
+    tags hermit mystical secretive
+    placement do
+      anchor do
+        type entity
+        ref vent
+        stickToRegion true
+      end
+      steps anchor_region sparse random
+    end
+  end
+  rel adjacent_to vent -> anomaly strength 0.9 bidirectional true
+  rel adjacent_to vent -> target strength 0.7 bidirectional true
+  rel resident_of hermit -> vent strength 0.9
+  rel guardian_of hermit -> anomaly strength 0.8
+  mutate do
+    pressure modify resource_availibility 8
+    pressure modify magical_stability -5
+  end
+  enabled true
 end
 
 generator war_outbreak "War Outbreak" do
@@ -3257,8 +3263,8 @@ generator war_outbreak "War Outbreak" do
     relationship archive target enemy_of with enemy2
     relationship archive enemy enemy_of with enemy2
     relationship archive enemy enemy_of with enemy3
-    pressure modify harmony -10
-    pressure modify security -6
+    pressure modify cultural_harmony -10
+    pressure modify iceberg_security -6
   end
   variants do
     selection first_match
@@ -3277,7 +3283,7 @@ generator war_outbreak "War Outbreak" do
   enabled true
 end
 
-generator wild_magic_discover "Wild Magical Discovery" do
+generator wild_magical_discovery "Wild Magical Discovery" do
   when do
     pressure magical_stability between -100 10
     entity_count kind ability subtype magic <= 15

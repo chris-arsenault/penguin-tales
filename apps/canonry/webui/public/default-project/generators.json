@@ -8,12 +8,12 @@
         "conditions": [
           {
             "type": "pressure",
-            "pressureId": "security",
+            "pressureId": "iceberg_security",
             "max": 0
           },
           {
             "type": "pressure",
-            "pressureId": "harmony",
+            "pressureId": "cultural_harmony",
             "max": -20
           },
           {
@@ -191,7 +191,7 @@
     "stateUpdates": [
       {
         "type": "modify_pressure",
-        "pressureId": "security",
+        "pressureId": "iceberg_security",
         "delta": 20
       },
       {
@@ -258,7 +258,7 @@
     }
   },
   {
-    "id": "succession",
+    "id": "leadership_succession",
     "name": "Leadership Succession",
     "applicability": [
       {
@@ -266,10 +266,6 @@
         "kind": "npc",
         "subtype": "mayor",
         "max": 16
-      },
-      {
-        "type": "random_chance",
-        "chance": 0.7
       }
     ],
     "selection": {
@@ -442,7 +438,7 @@
   },
   {
     "id": "orca_raider_arrival",
-    "name": "Orca Raiders Arrive",
+    "name": "Orca Raider Arrival",
     "applicability": [
       {
         "type": "entity_count",
@@ -455,7 +451,7 @@
         "conditions": [
           {
             "type": "pressure",
-            "pressureId": "security",
+            "pressureId": "iceberg_security",
             "max": 40
           },
           {
@@ -659,7 +655,7 @@
     "stateUpdates": [
       {
         "type": "modify_pressure",
-        "pressureId": "security",
+        "pressureId": "iceberg_security",
         "delta": -15
       }
     ],
@@ -734,7 +730,7 @@
             "stateUpdates": [
               {
                 "type": "modify_pressure",
-                "pressureId": "security",
+                "pressureId": "iceberg_security",
                 "delta": -10
               }
             ]
@@ -843,7 +839,7 @@
     "stateUpdates": [
       {
         "type": "modify_pressure",
-        "pressureId": "security",
+        "pressureId": "iceberg_security",
         "delta": -25
       }
     ],
@@ -958,12 +954,12 @@
     "stateUpdates": [
       {
         "type": "modify_pressure",
-        "pressureId": "security",
+        "pressureId": "iceberg_security",
         "delta": -30
       },
       {
         "type": "modify_pressure",
-        "pressureId": "harmony",
+        "pressureId": "cultural_harmony",
         "delta": 10
       }
     ],
@@ -1007,12 +1003,12 @@
         "conditions": [
           {
             "type": "pressure",
-            "pressureId": "harmony",
+            "pressureId": "cultural_harmony",
             "max": -10
           },
           {
             "type": "pressure",
-            "pressureId": "security",
+            "pressureId": "iceberg_security",
             "max": -5
           },
           {
@@ -1285,7 +1281,7 @@
     "stateUpdates": [
       {
         "type": "modify_pressure",
-        "pressureId": "harmony",
+        "pressureId": "cultural_harmony",
         "delta": -5
       }
     ],
@@ -1352,7 +1348,7 @@
   },
   {
     "id": "guild_establishment",
-    "name": "Guild Formation",
+    "name": "Guild Establishment",
     "applicability": [
       {
         "type": "pressure",
@@ -1746,22 +1742,12 @@
   },
   {
     "id": "cult_formation",
-    "name": "Cult Awakening",
+    "name": "Cult Formation",
     "applicability": [
       {
-        "type": "or",
-        "conditions": [
-          {
-            "type": "pressure",
-            "pressureId": "magical_stability",
-            "max": 25
-          },
-          {
-            "type": "pressure",
-            "pressureId": "security",
-            "max": -5
-          }
-        ]
+        "type": "pressure",
+        "pressureId": "magical_stability",
+        "max": 50
       }
     ],
     "selection": {
@@ -2123,7 +2109,7 @@
       },
       {
         "type": "modify_pressure",
-        "pressureId": "security",
+        "pressureId": "iceberg_security",
         "delta": -5
       }
     ],
@@ -2331,7 +2317,7 @@
       },
       {
         "type": "modify_pressure",
-        "pressureId": "security",
+        "pressureId": "iceberg_security",
         "delta": -5
       }
     ],
@@ -2391,7 +2377,7 @@
   },
   {
     "id": "colony_founding",
-    "name": "Colony Foundation",
+    "name": "Colony Founding",
     "applicability": [
       {
         "type": "pressure",
@@ -2894,7 +2880,7 @@
           "when": {
             "type": "pressure_compare",
             "pressureA": "resource_availibility",
-            "pressureB": "security"
+            "pressureB": "iceberg_security"
           },
           "apply": {
             "subtype": {
@@ -2913,7 +2899,7 @@
               },
               {
                 "type": "modify_pressure",
-                "pressureId": "security",
+                "pressureId": "iceberg_security",
                 "delta": 5
               }
             ]
@@ -2923,7 +2909,7 @@
     }
   },
   {
-    "id": "krill_bloom_migration",
+    "id": "krill_bloom_discovery",
     "name": "Krill Bloom Discovery",
     "applicability": [],
     "selection": {
@@ -3095,7 +3081,7 @@
       },
       {
         "type": "modify_pressure",
-        "pressureId": "harmony",
+        "pressureId": "cultural_harmony",
         "delta": -10
       }
     ],
@@ -3506,12 +3492,12 @@
       },
       {
         "type": "modify_pressure",
-        "pressureId": "harmony",
+        "pressureId": "cultural_harmony",
         "delta": -10
       },
       {
         "type": "modify_pressure",
-        "pressureId": "security",
+        "pressureId": "iceberg_security",
         "delta": -6
       }
     ],
@@ -3614,7 +3600,7 @@
     }
   },
   {
-    "id": "war_apocalypse_resolution",
+    "id": "apocalyptic_war_resolution",
     "name": "Apocalyptic War Resolution",
     "applicability": [],
     "selection": {
@@ -3723,12 +3709,12 @@
     "stateUpdates": [
       {
         "type": "modify_pressure",
-        "pressureId": "harmony",
+        "pressureId": "cultural_harmony",
         "delta": 20
       },
       {
         "type": "modify_pressure",
-        "pressureId": "security",
+        "pressureId": "iceberg_security",
         "delta": 10
       },
       {
@@ -3744,6 +3730,11 @@
       {
         "type": "change_status",
         "entity": "$target",
+        "newStatus": "historical"
+      },
+      {
+        "type": "change_status",
+        "entity": "$faction1",
         "newStatus": "historical"
       }
     ],
@@ -3900,12 +3891,12 @@
       },
       {
         "type": "modify_pressure",
-        "pressureId": "security",
+        "pressureId": "iceberg_security",
         "delta": -12
       },
       {
         "type": "modify_pressure",
-        "pressureId": "harmony",
+        "pressureId": "cultural_harmony",
         "delta": -6
       }
     ],
@@ -4100,20 +4091,20 @@
   },
   {
     "id": "crisis_legislation",
-    "name": "Crisis Law",
+    "name": "Crisis Legislation",
     "applicability": [
       {
         "type": "or",
         "conditions": [
           {
             "type": "pressure",
-            "pressureId": "security",
-            "max": -10
+            "pressureId": "iceberg_security",
+            "max": 0
           },
           {
             "type": "pressure",
-            "pressureId": "harmony",
-            "max": -30
+            "pressureId": "cultural_harmony",
+            "max": -15
           }
         ]
       }
@@ -4195,7 +4186,7 @@
     "stateUpdates": [
       {
         "type": "modify_pressure",
-        "pressureId": "security",
+        "pressureId": "iceberg_security",
         "delta": 40
       }
     ],
@@ -4411,7 +4402,7 @@
     "stateUpdates": [
       {
         "type": "modify_pressure",
-        "pressureId": "harmony",
+        "pressureId": "cultural_harmony",
         "delta": 5
       }
     ],
@@ -4502,7 +4493,7 @@
   },
   {
     "id": "tech_breakthrough",
-    "name": "Technological Breakthrough",
+    "name": "Tech Breakthrough",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -4512,7 +4503,7 @@
         {
           "relationshipKind": "practitioner_of",
           "direction": "out",
-          "maxCount": 2
+          "maxCount": 4
         }
       ]
     },
@@ -4602,8 +4593,7 @@
             "direction": "src"
           },
           "pickStrategy": "random"
-        },
-        "required": true
+        }
       },
       "$leader": {
         "select": {
@@ -4773,7 +4763,7 @@
   },
   {
     "id": "magic_discovery",
-    "name": "Magical Discovery",
+    "name": "Magic Discovery",
     "applicability": [
       {
         "type": "entity_count",
@@ -4973,7 +4963,7 @@
   },
   {
     "id": "ideology_emergence",
-    "name": "Ideological Movement",
+    "name": "Ideology Emergence",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -5200,7 +5190,7 @@
   },
   {
     "id": "thermal_colony_decline",
-    "name": "Thermal Decline",
+    "name": "Thermal Colony Decline",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -5304,7 +5294,7 @@
   },
   {
     "id": "thermal_colony_recovery",
-    "name": "Thermal Recovery",
+    "name": "Thermal Colony Recovery",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -5399,12 +5389,7 @@
   {
     "id": "thermal_migration",
     "name": "Thermal Migration",
-    "applicability": [
-      {
-        "type": "random_chance",
-        "chance": 0.55
-      }
-    ],
+    "applicability": [],
     "selection": {
       "strategy": "by_kind",
       "kind": "location",
@@ -5737,7 +5722,7 @@
   },
   {
     "id": "economic_colony_decline",
-    "name": "Colony Economic Decline",
+    "name": "Economic Colony Decline",
     "applicability": [
       {
         "type": "pressure",
@@ -5838,7 +5823,7 @@
   },
   {
     "id": "economic_colony_recovery",
-    "name": "Colony Economic Recovery",
+    "name": "Economic Colony Recovery",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -5929,7 +5914,7 @@
     "enabled": true
   },
   {
-    "id": "wild_magic_discover",
+    "id": "wild_magical_discovery",
     "name": "Wild Magical Discovery",
     "applicability": [
       {
@@ -6076,7 +6061,7 @@
           },
           {
             "type": "pressure",
-            "pressureId": "security",
+            "pressureId": "iceberg_security",
             "max": -10
           }
         ]
@@ -6319,7 +6304,7 @@
   },
   {
     "id": "crystallized_power",
-    "name": "Power Crystallizes",
+    "name": "Crystallized Power",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",

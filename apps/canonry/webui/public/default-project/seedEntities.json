@@ -200,7 +200,8 @@
     "tags": {
       "colony": true,
       "secretive": true,
-      "anomaly": true
+      "anomaly": true,
+      "dangerous": true
     },
     "coordinates": {
       "x": 12,
@@ -364,7 +365,8 @@
     "culture": "aurora-stack",
     "tags": {
       "colony": true,
-      "secretive": true
+      "secretive": true,
+      "resource": true
     },
     "coordinates": {
       "x": 92,
@@ -387,7 +389,8 @@
     "culture": "aurora-stack",
     "tags": {
       "anomaly": true,
-      "secretive": true
+      "secretive": true,
+      "dangerous": true
     },
     "coordinates": {
       "x": 90,
@@ -409,7 +412,8 @@
     "prominence": 1.5,
     "culture": "nightshelf",
     "tags": {
-      "secretive": true
+      "secretive": true,
+      "dangerous": true
     },
     "coordinates": {
       "x": 95,

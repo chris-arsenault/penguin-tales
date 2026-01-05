@@ -106,8 +106,8 @@ export default function SimulationRunner({
     scaleFactor: 1.0,
     defaultMinDistance: 5,
     pressureDeltaSmoothing: 10,
-    ticksPerEpoch: 25,
-    maxEpochs: 10,
+    ticksPerEpoch: 20,
+    maxEpochs: 14,
     maxTicks: 500,
     // Narrative event tracking
     narrativeEnabled: true,

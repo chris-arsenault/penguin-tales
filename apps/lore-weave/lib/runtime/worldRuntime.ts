@@ -201,6 +201,14 @@ export class WorldRuntime implements Graph {
     this.graph.growthMetrics = value;
   }
 
+  /** Growth phase history (mutable) */
+  get growthPhaseHistory(): import('../engine/types').GrowthPhaseCompletion[] {
+    return this.graph.growthPhaseHistory;
+  }
+  set growthPhaseHistory(value: import('../engine/types').GrowthPhaseCompletion[]) {
+    this.graph.growthPhaseHistory = value;
+  }
+
   /** Optional subtype metrics (mutable) */
   get subtypeMetrics(): Map<string, number> | undefined {
     return this.graph.subtypeMetrics;

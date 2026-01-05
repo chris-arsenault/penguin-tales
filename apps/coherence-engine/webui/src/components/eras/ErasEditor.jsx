@@ -52,7 +52,7 @@ export default function ErasEditor({
       systemModifiers: {},
       entryConditions: [],
       entryEffects: { mutations: [] },
-      exitConditions: [{ type: 'time_elapsed', minTicks: 50 }],
+      exitConditions: [{ type: 'growth_phases_complete', minPhases: 2 }],
       exitEffects: { mutations: [] },
     };
     onChange([...eras, newEra]);

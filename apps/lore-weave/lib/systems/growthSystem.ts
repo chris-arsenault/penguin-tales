@@ -1,4 +1,4 @@
-import { GrowthTemplate, SimulationSystem, Era, EngineConfig } from '../engine/types';
+import { GrowthTemplate, SimulationSystem, Era, EngineConfig, GrowthPhaseCompletion } from '../engine/types';
 import { DeclarativeTemplate } from '../engine/declarativeTypes';
 import { TemplateInterpreter } from '../engine/templateInterpreter';
 import { PopulationTracker, PopulationMetrics } from '../statistics/populationTracker';
@@ -50,6 +50,7 @@ export interface GrowthSystemDependencies {
   calculateGrowthTarget: () => number;
   sampleTemplate: (era: Era, applicableTemplates: GrowthTemplate[], metrics: PopulationMetrics) => GrowthTemplate | undefined;
   getCurrentEpoch: () => number;
+  getEpochEra: () => Era;
 }
 
 export interface GrowthEpochSummary {
@@ -74,6 +75,8 @@ interface GrowthState {
   templatesApplied: number;
   templatesUsed: Set<string>;
   yieldSamples: number[];
+  phaseCompleted: boolean;
+  epochEra?: Era;
 }
 
 export function createGrowthSystem(
@@ -86,7 +89,8 @@ export function createGrowthSystem(
     entitiesCreated: 0,
     templatesApplied: 0,
     templatesUsed: new Set(),
-    yieldSamples: []
+    yieldSamples: [],
+    phaseCompleted: false
   };
 
   const maxTemplatesPerTick = config.maxTemplatesPerTick ?? 5;
@@ -99,6 +103,21 @@ export function createGrowthSystem(
     const avg = state.yieldSamples.reduce((sum, val) => sum + val, 0) / state.yieldSamples.length;
     // Avoid runaway budgets from unlucky zeros
     return Math.max(1, avg);
+  }
+
+  function recordPhaseCompletion(graphView: WorldRuntime, reason: GrowthPhaseCompletion['reason']): void {
+    if (state.phaseCompleted) return;
+    if (state.epochTarget <= 0) return;
+    const eraId = state.epochEra?.id ?? deps.getEpochEra().id;
+    if (!eraId) return;
+
+    state.phaseCompleted = true;
+    graphView.growthPhaseHistory.push({
+      epoch: state.epoch,
+      eraId,
+      tick: graphView.tick,
+      reason
+    });
   }
 
   async function applyTemplateOnce(
@@ -346,6 +365,8 @@ export function createGrowthSystem(
       state.entitiesCreated = 0;
       state.templatesApplied = 0;
       state.templatesUsed.clear();
+      state.phaseCompleted = false;
+      state.epochEra = era;
 
       deps.emitter.log('info', `[Growth] Planning epoch ${state.epoch} in era ${era.name} with target ${state.epochTarget}`);
     },
@@ -367,19 +388,22 @@ export function createGrowthSystem(
       state.templatesApplied = 0;
       state.templatesUsed.clear();
       state.yieldSamples = [];
+      state.phaseCompleted = false;
     },
 
     apply: async (graphView: WorldRuntime, modifier: number) => {
-      const era = graphView.currentEra;
-
       if (state.epoch !== deps.getCurrentEpoch()) {
         state.epochTarget = deps.calculateGrowthTarget();
         state.entitiesCreated = 0;
         state.templatesApplied = 0;
         state.templatesUsed.clear();
         state.epoch = deps.getCurrentEpoch();
-        deps.emitter.log('info', `[Growth] Auto-sync epoch ${state.epoch} in era ${era.name} with target ${state.epochTarget}`);
+        state.phaseCompleted = false;
+        state.epochEra = deps.getEpochEra();
+        const syncedEra = state.epochEra ?? deps.getEpochEra();
+        deps.emitter.log('info', `[Growth] Auto-sync epoch ${state.epoch} in era ${syncedEra.name} with target ${state.epochTarget}`);
       }
+      const era = state.epochEra ?? deps.getEpochEra();
 
       if (modifier <= 0) {
         return {
@@ -392,6 +416,7 @@ export function createGrowthSystem(
 
       const remainingEntities = Math.max(0, state.epochTarget - state.entitiesCreated);
       if (remainingEntities === 0) {
+        recordPhaseCompletion(graphView, 'target_met');
         return {
           relationshipsAdded: [],
           entitiesModified: [],
@@ -427,6 +452,7 @@ export function createGrowthSystem(
           for (const [templateId, reason] of rejectionReasons) {
             graphView.debug('templates', `  ${templateId}: ${reason}`);
           }
+          recordPhaseCompletion(graphView, 'exhausted');
           break;
         }
 
@@ -457,6 +483,10 @@ export function createGrowthSystem(
         if (state.entitiesCreated >= state.epochTarget) {
           break;
         }
+      }
+
+      if (state.entitiesCreated >= state.epochTarget) {
+        recordPhaseCompletion(graphView, 'target_met');
       }
 
       return {

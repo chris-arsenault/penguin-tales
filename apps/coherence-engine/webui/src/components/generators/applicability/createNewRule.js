@@ -37,6 +37,8 @@ export function createNewRule(type, pressures) {
       return { ...newRule, min: 'recognized' };
     case 'time_elapsed':
       return { ...newRule, minTicks: 10, since: 'updated' };
+    case 'growth_phases_complete':
+      return { ...newRule, minPhases: 2 };
     case 'era_match':
       return { ...newRule, eras: [] };
     case 'random_chance':

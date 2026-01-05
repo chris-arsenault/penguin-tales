@@ -29,7 +29,7 @@ distribution_targets do
         comment "Major settlements (2 initial + limited growth)"
       end
       resource_node do
-        target 12
+        target 7
         comment "Resource locations (krill blooms, hunting grounds)"
       end
       point_of_interest do
@@ -43,8 +43,8 @@ distribution_targets do
     end
     faction do
       political do
-        target 10
-        comment "Major political factions (including splinters)"
+        target 4
+        comment "Major political factions (from splinters)"
       end
       company do
         target 7
@@ -55,7 +55,7 @@ distribution_targets do
         comment "Criminal syndicates"
       end
       cult do
-        target 8
+        target 4
         comment "Mystical factions"
       end
     end

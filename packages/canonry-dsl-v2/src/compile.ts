@@ -2075,6 +2075,7 @@ const SYSTEM_CONDITION_KEYS = new Set([
   'relationship_count',
   'random_chance',
   'time_elapsed',
+  'growth_phases_complete',
   'prominence',
   'entity_exists',
   'not_self',
@@ -2517,6 +2518,32 @@ function parseSystemConditionTokens(
         ctx.diagnostics.push({
           severity: 'error',
           message: 'time_elapsed only supports: since <created|updated>',
+          span
+        });
+        return null;
+      }
+    }
+    return condition;
+  }
+
+  if (type === 'growth_phases_complete') {
+    const minPhases = rest[0];
+    if (typeof minPhases !== 'number') {
+      ctx.diagnostics.push({
+        severity: 'error',
+        message: 'growth_phases_complete requires a numeric phase count',
+        span
+      });
+      return null;
+    }
+    const condition: Record<string, unknown> = { type: 'growth_phases_complete', minPhases };
+    if (rest.length > 1) {
+      if (rest[1] === 'era' && typeof rest[2] === 'string') {
+        condition.eraId = rest[2];
+      } else {
+        ctx.diagnostics.push({
+          severity: 'error',
+          message: 'growth_phases_complete only supports: era <eraId>',
           span
         });
         return null;
@@ -4544,10 +4571,6 @@ function buildEraSpawnerSystem(
   for (const stmt of statements) {
     if (stmt.type === 'attribute') {
       if (applySystemCommonAttribute(stmt, result, ctx)) continue;
-      if (stmt.key === 'ticks_per_era' || stmt.key === 'ticksPerEra') {
-        config.ticksPerEra = valueToJson(stmt.value, ctx.diagnostics, ctx.parent);
-        continue;
-      }
       ctx.diagnostics.push({
         severity: 'error',
         message: `Unsupported eraSpawner attribute "${stmt.key}"`,
@@ -10924,6 +10947,7 @@ function buildConditionsFromStatements(statements: StatementNode[], ctx: Generat
     'tag_exists',
     'random_chance',
     'time_elapsed',
+    'growth_phases_complete',
     'entity_exists',
     'not_self',
     'era_match'

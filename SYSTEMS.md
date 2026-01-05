@@ -12,3 +12,9 @@
 - **What it does not control**: It does not set per-era overrides, does not change system behavior, and does not force creation. If no template can create a subtype (or it is gated behind hard preconditions), targets will not be met.
 - **Coupling reality**: Templates often create multiple subtypes at once. Homeostasis can only bias selection, so bundles can overshoot one subtype while chasing another.
 - **Dependency on lifecycle**: Targets are for current counts, not cumulative creation. High attrition (e.g., NPCs) can keep a subtype under target even when it is created frequently.
+
+## Growth Phases and Eras
+- **Epochs**: An epoch is `ticksPerEpoch` simulation ticks; the run is bounded by `maxEpochs`.
+- **Growth phases**: Growth runs across ticks in the epoch until the target is met or templates are exhausted; completion is recorded at the tick it happens.
+- **Era correlation**: Each completed growth phase is attributed to the era that is current at completion time.
+- **Era exits**: Use `growth_phases_complete` in era exit conditions to require N completed growth phases during the era; transitions can happen mid-epoch.

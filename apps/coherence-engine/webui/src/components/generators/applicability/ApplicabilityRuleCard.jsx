@@ -81,6 +81,8 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
         return `prominence ${rule.min || '?'}-${rule.max || '?'}`;
       case 'time_elapsed':
         return `${rule.minTicks || '?'} ticks since ${rule.since || 'updated'}`;
+      case 'growth_phases_complete':
+        return `${rule.minPhases ?? '?'} growth phases${rule.eraId ? ` in ${rule.eraId}` : ''}`;
       case 'era_match':
         return rule.eras?.length ? rule.eras.join(', ') : 'No eras selected';
       case 'random_chance':
@@ -506,6 +508,40 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                     { value: 'created', label: 'Created' },
                   ]}
                 />
+              </>
+            )}
+
+            {rule.type === 'growth_phases_complete' && (
+              <>
+                <div className="form-group">
+                  <label className="label">Min Growth Phases</label>
+                  <NumberInput
+                    value={rule.minPhases}
+                    onChange={(v) => updateField('minPhases', v ?? 0)}
+                    min={0}
+                    integer
+                  />
+                </div>
+                {eraOptions.length > 0 ? (
+                  <ReferenceDropdown
+                    label="Era (optional)"
+                    value={rule.eraId || ''}
+                    onChange={(v) => updateField('eraId', v || undefined)}
+                    options={[{ value: '', label: 'Current era' }, ...eraOptions]}
+                    placeholder="Current era"
+                  />
+                ) : (
+                  <div className="form-group">
+                    <label className="label">Era Id (optional)</label>
+                    <input
+                      type="text"
+                      value={rule.eraId || ''}
+                      onChange={(e) => updateField('eraId', e.target.value || undefined)}
+                      className="input"
+                      placeholder="Current era"
+                    />
+                  </div>
+                )}
               </>
             )}
 

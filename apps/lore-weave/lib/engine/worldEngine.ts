@@ -1,4 +1,4 @@
-import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, Pressure, SimulationSystem } from '../engine/types';
+import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, Pressure, SimulationSystem, EpochEraSummary, EpochEraTransitionSummary } from '../engine/types';
 import { createPressureFromDeclarative, evaluatePressureGrowthWithBreakdown } from './pressureInterpreter';
 import { DeclarativePressure } from './declarativePressureTypes';
 import { TemplateInterpreter, createTemplateFromDeclarative } from './templateInterpreter';
@@ -62,6 +62,8 @@ export class WorldEngine {
   private graph: Graph;
   private runtime!: WorldRuntime;
   private currentEpoch: number;
+  private epochEra: Era | null = null;
+  private epochEraTransitions: EpochEraTransitionSummary[] = [];
   private startTime: number = 0;  // Track simulation duration
   private simulationRunId: string = '';  // Unique ID for this simulation run
   private statisticsCollector: StatisticsCollector;  // Statistics tracking for fitness evaluation
@@ -432,7 +434,8 @@ export class WorldEngine {
       trackPressureModification: this.trackPressureModification.bind(this),
       calculateGrowthTarget: () => this.calculateGrowthTarget(),
       sampleTemplate: (era: Era, templates: GrowthTemplate[], metrics: PopulationMetrics) => this.sampleSingleTemplate(era, templates, metrics),
-      getCurrentEpoch: () => this.currentEpoch
+      getCurrentEpoch: () => this.currentEpoch,
+      getEpochEra: () => this.epochEra ?? this.graph.currentEra
     };
 
     for (const sys of config.systems) {
@@ -1022,6 +1025,8 @@ export class WorldEngine {
     this.simulationStarted = false;
     this.simulationComplete = false;
     this.currentEpoch = 0;
+    this.epochEra = null;
+    this.epochEraTransitions = [];
     this.startTime = 0;
 
     // Reset tracking maps
@@ -1270,15 +1275,17 @@ export class WorldEngine {
     // Era progression is handled by eraTransition system, not selectEra()
     // The eraTransition system manages era entity status and updates graph.currentEra
     const previousEra = this.graph.currentEra;
-    const era = this.graph.currentEra;
+    const epochEra = this.graph.currentEra;
+    this.epochEra = epochEra;
+    this.epochEraTransitions = [];
 
     // Emit epoch start event
     this.emitter.epochStart({
       epoch: this.currentEpoch,
       era: {
-        id: era.id,
-        name: era.name,
-        summary: era.summary
+        id: epochEra.id,
+        name: epochEra.name,
+        summary: epochEra.summary
       },
       tick: this.graph.tick
     });
@@ -1292,7 +1299,7 @@ export class WorldEngine {
 
     // Initialize distributed growth for this epoch
     if (this.growthSystem) {
-      this.growthSystem.startEpoch(era);
+      this.growthSystem.startEpoch(epochEra);
       this.lastGrowthSummary = null;
     } else {
       this.lastGrowthSummary = null;
@@ -1301,6 +1308,7 @@ export class WorldEngine {
 
     // Simulation phase
     for (let i = 0; i < this.config.ticksPerEpoch; i++) {
+      const tickEra = this.graph.currentEra;
       // Capture pressure values BEFORE any modifications this tick
       // This ensures previousValue in pressure_update reflects true start-of-tick values
       this.tickStartPressures.clear();
@@ -1309,10 +1317,10 @@ export class WorldEngine {
       }
 
       // Run simulation tick first so system pressure changes are tracked
-      await this.runSimulationTick(era);
+      await this.runSimulationTick(tickEra);
 
       // Update pressures (calculates feedback, emits pressure_update with all mods from this tick)
-      this.updatePressures(era);
+      this.updatePressures(tickEra);
       this.graph.tick++;
       this.updateReachabilityMetrics();
 
@@ -1341,15 +1349,17 @@ export class WorldEngine {
       });
     }
 
-    // Apply era special rules if any
-    if (era.specialRules) {
-      era.specialRules(this.runtime);
-    }
-
     // Meta-entity formation is now handled by SimulationSystems (run at epoch end)
 
     // Prune and consolidate
     this.pruneAndConsolidate();
+
+    const endEra = this.graph.currentEra;
+    const eraSummary: EpochEraSummary = {
+      start: { id: epochEra.id, name: epochEra.name },
+      end: { id: endEra.id, name: endEra.name },
+      transitions: [...this.epochEraTransitions]
+    };
 
     // Record epoch statistics
     const entitiesCreated = this.graph.getEntityCount() - initialEntityCount;
@@ -1359,11 +1369,12 @@ export class WorldEngine {
       this.currentEpoch,
       entitiesCreated,
       relationshipsCreated,
-      this.lastGrowthSummary?.target ?? 0
+      this.lastGrowthSummary?.target ?? 0,
+      eraSummary
     );
 
     // Emit epoch stats
-    this.emitEpochStats(era, entitiesCreated, relationshipsCreated, this.lastGrowthSummary?.target ?? 0);
+    this.emitEpochStats(eraSummary, entitiesCreated, relationshipsCreated, this.lastGrowthSummary?.target ?? 0);
 
     // Emit diagnostics (updated each epoch for visibility during stepping)
     this.emitDiagnostics();
@@ -1372,7 +1383,7 @@ export class WorldEngine {
     // so dashboards update during stepping, not just at finalize
     this.emitEpochFeedback();
 
-    this.queueEraNarrative(previousEra, era);
+    this.queueEraNarrative(previousEra, endEra);
 
     // Check for significant entity changes and enrich them
     this.queueChangeEnrichments();
@@ -1381,7 +1392,7 @@ export class WorldEngine {
   /**
    * Emit epoch statistics via emitter
    */
-  private emitEpochStats(era: Era, entitiesCreated: number, relationshipsCreated: number, growthTarget: number): void {
+  private emitEpochStats(era: EpochEraSummary, entitiesCreated: number, relationshipsCreated: number, growthTarget: number): void {
     const byKind: Record<string, number> = {};
     this.graph.forEachEntity((entity) => {
       byKind[entity.kind] = (byKind[entity.kind] || 0) + 1;
@@ -1389,7 +1400,7 @@ export class WorldEngine {
 
     this.emitter.epochStats({
       epoch: this.currentEpoch,
-      era: era.name,
+      era,
       entitiesByKind: byKind,
       relationshipCount: this.graph.getRelationshipCount({ includeHistorical: true }),
       pressures: Object.fromEntries(this.graph.pressures),
@@ -1918,29 +1929,72 @@ export class WorldEngine {
 
     if (totalRemaining === 0) return 0;
 
-    // Calculate epoch progress
-    const totalEpochs = this.getTotalEpochs();
-    const epochsRemaining = Math.max(1, totalEpochs - this.currentEpoch);
-    const epochProgress = this.currentEpoch / Math.max(1, totalEpochs - 1); // 0 at start, 1 at end
+    const growthPhaseHistory = this.graph.growthPhaseHistory ?? [];
+    const completedPhasesByEra = new Map<string, number>();
+    for (const entry of growthPhaseHistory) {
+      completedPhasesByEra.set(entry.eraId, (completedPhasesByEra.get(entry.eraId) || 0) + 1);
+    }
+    const completedPhasesTotal = growthPhaseHistory.length;
 
-    // Apply front-loaded slope: early epochs get more growth, later epochs get less
-    // slopeMultiplier ranges from 1.3 (epoch 0) to 0.7 (final epoch)
+    const expectedPhasesByEra = new Map<string, number>();
+    for (const era of this.config.eras) {
+      let expected = 0;
+      const exitConditions = era.exitConditions ?? [];
+      for (const condition of exitConditions) {
+        if (condition.type !== 'growth_phases_complete') continue;
+        if (condition.eraId && condition.eraId !== era.id) continue;
+        expected = Math.max(expected, Math.max(0, condition.minPhases ?? 0));
+      }
+      expectedPhasesByEra.set(era.id, expected);
+    }
+
+    const currentEraId = this.graph.currentEra?.id ?? '';
+    const currentEraExpected = expectedPhasesByEra.get(currentEraId) ?? 0;
+    const currentEraCompleted = completedPhasesByEra.get(currentEraId) ?? 0;
+    const currentEraRemaining = Math.max(0, currentEraExpected - currentEraCompleted);
+
+    const seenEraIds = new Set(
+      this.graph.findEntities({ kind: FRAMEWORK_ENTITY_KINDS.ERA, includeHistorical: true })
+        .map(entity => entity.subtype)
+    );
+
+    let phasesRemaining = currentEraRemaining;
+    for (const era of this.config.eras) {
+      if (era.id === currentEraId) continue;
+      if (seenEraIds.has(era.id)) continue;
+      phasesRemaining += expectedPhasesByEra.get(era.id) ?? 0;
+    }
+
+    const totalPlannedPhases = completedPhasesTotal + phasesRemaining;
+    const rawPhaseProgress = completedPhasesTotal / Math.max(1, totalPlannedPhases - 1);
+    const phaseProgress = Math.min(1, Math.max(0, rawPhaseProgress));
+
+    // Apply front-loaded slope: early growth phases get more growth, later phases get less
+    // slopeMultiplier ranges from 1.3 (phase 0) to 0.7 (final phase)
     const slope = 0.3;
-    const slopeMultiplier = 1 + slope - (epochProgress * slope * 2);
+    const finalEraConfig = this.config.eras[this.config.eras.length - 1];
+    const isFinalEra = finalEraConfig ? currentEraId === finalEraConfig.id : false;
+    const exhaustPlannedPhases = phasesRemaining <= 0;
+    const forceBudgetConsumption = isFinalEra || exhaustPlannedPhases;
+    const slopeMultiplier = forceBudgetConsumption ? 1 : 1 + slope - (phaseProgress * slope * 2);
 
-    // Dynamic target: spread remaining entities over remaining epochs with slope
-    const baseTarget = Math.ceil(totalRemaining / epochsRemaining);
+    // Dynamic target: spread remaining entities over remaining growth phases with slope
+    const finalEraExpected = finalEraConfig ? (expectedPhasesByEra.get(finalEraConfig.id) ?? 0) : 0;
+    const finalEraCompleted = finalEraConfig ? (completedPhasesByEra.get(finalEraConfig.id) ?? 0) : 0;
+    const remainingFinalPhases = Math.max(1, finalEraExpected - finalEraCompleted);
+    const remainingPhasesBudget = isFinalEra ? remainingFinalPhases : Math.max(1, phasesRemaining);
+    const baseTarget = Math.ceil(totalRemaining / remainingPhasesBudget);
     const slopedTarget = Math.ceil(baseTarget * slopeMultiplier);
 
     // Add some variance for organic feel (±20%)
-    const variance = 0.2;
+    const variance = forceBudgetConsumption ? 0 : 0.2;
     const target = Math.floor(slopedTarget * (1 - variance + Math.random() * variance * 2));
 
     // Cap at reasonable bounds
     return Math.max(this.growthBounds.min, Math.min(this.growthBounds.max, target));
   }
 
-  private async runSimulationTick(era: Era): Promise<void> {
+  private async runSimulationTick(tickEra: Era): Promise<void> {
     let totalRelationships = 0;
     let totalModifications = 0;
     const relationshipsThisTick: Relationship[] = [];
@@ -1950,14 +2004,17 @@ export class WorldEngine {
     this.mutationTracker.setTick(this.graph.tick);
 
     // Initialize narrative tracking for this tick
-    this.stateChangeTracker.startTick(this.graph, this.graph.tick, era.id);
+    this.stateChangeTracker.startTick(this.graph, this.graph.tick, tickEra.id);
 
     // Budget enforcement
     const budget = this.config.relationshipBudget?.maxPerSimulationTick || Infinity;
     let relationshipsAddedThisTick = 0;
 
     for (const system of this.runtimeSystems) {
-      const baseModifier = getSystemModifier(era, system.id);
+      const modifierEra = this.growthSystem && system === this.growthSystem && this.epochEra
+        ? this.epochEra
+        : tickEra;
+      const baseModifier = getSystemModifier(modifierEra, system.id);
       if (baseModifier === 0) continue; // System disabled by era
 
       const modifier = baseModifier;
@@ -2168,14 +2225,19 @@ export class WorldEngine {
           this.trackPressureModification(pressure, delta, { type: 'system', systemId: system.id });
         }
 
+        const eraTransition = result.details?.eraTransition as {
+          fromEra: string;
+          fromEraId: string;
+          toEra: string;
+          toEraId: string;
+        } | undefined;
+
+        if (eraTransition) {
+          this.recordEpochEraTransition(eraTransition);
+        }
+
         // Check for era transition and generate narrative event
-        if (result.details?.eraTransition && this.stateChangeTracker.isEnabled()) {
-          const eraTransition = result.details.eraTransition as {
-            fromEra: string;
-            fromEraId: string;
-            toEra: string;
-            toEraId: string;
-          };
+        if (eraTransition && this.stateChangeTracker.isEnabled()) {
           const oldEra = this.graph.getEntity(
             this.graph.getEntities({ includeHistorical: true })
               .find(e => e.kind === 'era' && e.name === eraTransition.fromEra)?.id || ''
@@ -2270,6 +2332,24 @@ export class WorldEngine {
     this.monitorRelationshipGrowth();
   }
   
+  private recordEpochEraTransition(transition: {
+    fromEra: string;
+    fromEraId: string;
+    toEra: string;
+    toEraId: string;
+  }): void {
+    const entry: EpochEraTransitionSummary = {
+      tick: this.graph.tick,
+      from: { id: transition.fromEraId, name: transition.fromEra },
+      to: { id: transition.toEraId, name: transition.toEra }
+    };
+    const last = this.epochEraTransitions[this.epochEraTransitions.length - 1];
+    if (last && last.tick === entry.tick && last.from.id === entry.from.id && last.to.id === entry.to.id) {
+      return;
+    }
+    this.epochEraTransitions.push(entry);
+  }
+
   private updatePressures(era: Era): void {
     // Collect detailed pressure changes for emitting
     const pressureDetails: PressureChangeDetail[] = [];

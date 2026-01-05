@@ -7,6 +7,7 @@ export { STRENGTH_LEVELS } from '../shared';
 
 // Transition condition types (unified rules)
 export const CONDITION_TYPES = [
+  { value: 'growth_phases_complete', label: 'Growth Phases Complete', description: 'Transition after N growth phases' },
   { value: 'time_elapsed', label: 'Time Elapsed', description: 'Transition after minimum ticks' },
   { value: 'pressure', label: 'Pressure Range', description: 'Based on pressure levels' },
   { value: 'entity_count', label: 'Entity Count', description: 'Based on entity population' },

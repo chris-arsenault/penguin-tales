@@ -52,6 +52,7 @@ function MiniSection({ title, icon, count, children, isEmpty, emptyMessage }) {
  * @param {Array} props.availablePressuresForExit
  * @param {Array} props.pressures - All pressures for display
  * @param {Object} props.schema - Domain schema
+ * @param {Array} props.eras - All eras for era-specific conditions
  */
 export function TransitionsGrid({
   entryConditions = [],
@@ -74,6 +75,7 @@ export function TransitionsGrid({
   availablePressuresForExit = [],
   pressures = [],
   schema,
+  eras = [],
 }) {
   return (
     <div className="transitions-grid">
@@ -101,6 +103,7 @@ export function TransitionsGrid({
               onRemove={() => onRemoveEntryCondition(index)}
               pressures={pressures}
               schema={schema}
+              eras={eras}
             />
           ))}
           <AddItemButton
@@ -167,6 +170,7 @@ export function TransitionsGrid({
               onRemove={() => onRemoveExitCondition(index)}
               pressures={pressures}
               schema={schema}
+              eras={eras}
             />
           ))}
           <AddItemButton

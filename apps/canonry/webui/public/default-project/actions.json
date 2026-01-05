@@ -69,7 +69,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": -2
         }
       ],
@@ -80,7 +80,7 @@
       }
     },
     "probability": {
-      "baseSuccessChance": 0.3,
+      "baseSuccessChance": 0.5,
       "baseWeight": 1,
       "pressureModifiers": [
         {
@@ -88,7 +88,7 @@
           "multiplier": -1
         },
         {
-          "pressure": "security",
+          "pressure": "iceberg_security",
           "multiplier": -1
         }
       ]
@@ -139,7 +139,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": 2
         }
       ],
@@ -154,11 +154,11 @@
       "baseWeight": 0.8,
       "pressureModifiers": [
         {
-          "pressure": "harmony",
+          "pressure": "cultural_harmony",
           "multiplier": -0.6
         },
         {
-          "pressure": "security",
+          "pressure": "iceberg_security",
           "multiplier": -0.3
         }
       ]
@@ -262,12 +262,12 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": 10
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": 3
         }
       ],
@@ -282,11 +282,11 @@
       "baseWeight": 0.25,
       "pressureModifiers": [
         {
-          "pressure": "harmony",
+          "pressure": "cultural_harmony",
           "multiplier": 0.3
         },
         {
-          "pressure": "security",
+          "pressure": "iceberg_security",
           "multiplier": 0.2
         }
       ]
@@ -414,12 +414,12 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": 8
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": 5
         }
       ],
@@ -434,7 +434,7 @@
       "baseWeight": 0.3,
       "pressureModifiers": [
         {
-          "pressure": "security",
+          "pressure": "iceberg_security",
           "multiplier": 0.3
         }
       ]
@@ -460,7 +460,7 @@
       "conditions": [
         {
           "type": "pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "min": -30
         }
       ]
@@ -504,19 +504,19 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": -1.5
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": -2
         }
       ],
       "descriptionTemplate": "raided {target.name}'s territory",
       "actorProminenceDelta": {
-        "onSuccess": 0.055,
-        "onFailure": 0.028
+        "onSuccess": 0.201,
+        "onFailure": 0.103
       }
     },
     "probability": {
@@ -524,7 +524,7 @@
       "baseWeight": 0.2,
       "pressureModifiers": [
         {
-          "pressure": "harmony",
+          "pressure": "cultural_harmony",
           "multiplier": -0.6
         }
       ]
@@ -532,7 +532,7 @@
     "enabled": true
   },
   {
-    "id": "establish_trade",
+    "id": "establish_trade_route",
     "name": "Establish Trade Route",
     "description": "Create trade connection between two thriving locations",
     "actor": {
@@ -582,8 +582,8 @@
       ],
       "descriptionTemplate": "established trade route between {target.name} and {target2.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.044,
-        "onFailure": 0.022
+        "onSuccess": 0.161,
+        "onFailure": 0.081
       }
     },
     "probability": {
@@ -595,7 +595,7 @@
           "multiplier": -0.6
         },
         {
-          "pressure": "security",
+          "pressure": "iceberg_security",
           "multiplier": 0.2
         }
       ]
@@ -670,8 +670,8 @@
       ],
       "descriptionTemplate": "corrupted {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.16,
-        "onFailure": 0.08
+        "onSuccess": 0.112,
+        "onFailure": 0.056
       }
     },
     "probability": {
@@ -738,8 +738,12 @@
       ],
       "descriptionTemplate": "manifested at {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.034,
-        "onFailure": 0.017
+        "onSuccess": 0.087,
+        "onFailure": 0.043
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.3,
+        "onFailure": 0.15
       }
     },
     "probability": {
@@ -764,6 +768,23 @@
         "kind": "ability",
         "subtypes": [
           "technology"
+        ],
+        "filters": [
+          {
+            "type": "graph_path",
+            "assert": {
+              "check": "count_max",
+              "path": [
+                {
+                  "via": "practitioner_of",
+                  "direction": "in",
+                  "targetKind": "faction",
+                  "targetSubtype": "any"
+                }
+              ],
+              "count": 3
+            }
+          }
         ]
       }
     },
@@ -784,6 +805,13 @@
           "kind": "practitioner_of",
           "with": "$actor"
         }
+      ],
+      "saturationLimits": [
+        {
+          "relationshipKind": "practitioner_of",
+          "direction": "out",
+          "maxCount": 3
+        }
       ]
     },
     "outcome": {
@@ -803,8 +831,8 @@
       ],
       "descriptionTemplate": "spread to {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.038,
-        "onFailure": 0.019
+        "onSuccess": 0.097,
+        "onFailure": 0.049
       }
     },
     "probability": {
@@ -862,7 +890,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": -5
         }
       ],
@@ -877,11 +905,11 @@
       "baseWeight": 0.9,
       "pressureModifiers": [
         {
-          "pressure": "harmony",
+          "pressure": "cultural_harmony",
           "multiplier": 0.6
         },
         {
-          "pressure": "security",
+          "pressure": "iceberg_security",
           "multiplier": 0.4
         }
       ]
@@ -924,7 +952,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": -3
         }
       ],
@@ -939,11 +967,11 @@
       "baseWeight": 0.2,
       "pressureModifiers": [
         {
-          "pressure": "harmony",
+          "pressure": "cultural_harmony",
           "multiplier": -0.6
         },
         {
-          "pressure": "security",
+          "pressure": "iceberg_security",
           "multiplier": 0.4
         }
       ]
@@ -1012,6 +1040,10 @@
       ],
       "descriptionTemplate": "spread corruption to {target.name}",
       "actorProminenceDelta": {
+        "onSuccess": 0.073,
+        "onFailure": 0.037
+      },
+      "targetProminenceDelta": {
         "onSuccess": 0.02,
         "onFailure": 0.01
       }
@@ -1083,7 +1115,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": 0.5
         }
       ],
@@ -1163,7 +1195,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": 0.5
         }
       ],
@@ -1233,7 +1265,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": 1
         }
       ],
@@ -1318,8 +1350,8 @@
       ],
       "descriptionTemplate": "mastered the art of {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.021,
-        "onFailure": 0.011
+        "onSuccess": 0.077,
+        "onFailure": 0.04
       }
     },
     "probability": {
@@ -1331,7 +1363,7 @@
           "multiplier": 0.4
         },
         {
-          "pressure": "security",
+          "pressure": "iceberg_security",
           "multiplier": 0.2
         }
       ]
@@ -1400,14 +1432,14 @@
         },
         {
           "type": "adjust_prominence",
-          "delta": 0.064,
+          "delta": 0.164,
           "entity": "$actor"
         }
       ],
       "descriptionTemplate": "echoed through the event of {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.106,
-        "onFailure": 0.053
+        "onSuccess": 0.272,
+        "onFailure": 0.136
       }
     },
     "probability": {
@@ -1415,7 +1447,7 @@
       "baseWeight": 0.25,
       "pressureModifiers": [
         {
-          "pressure": "harmony",
+          "pressure": "cultural_harmony",
           "multiplier": -0.2
         },
         {
@@ -1489,7 +1521,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": 3
         }
       ],
@@ -1500,7 +1532,7 @@
       "baseWeight": 0.2,
       "pressureModifiers": [
         {
-          "pressure": "harmony",
+          "pressure": "cultural_harmony",
           "multiplier": 0.5
         }
       ]
@@ -1569,12 +1601,12 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": -5
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": -1
         }
       ],
@@ -1593,7 +1625,7 @@
       "baseWeight": 0.15,
       "pressureModifiers": [
         {
-          "pressure": "security",
+          "pressure": "iceberg_security",
           "multiplier": -0.5
         }
       ]
@@ -1663,14 +1695,18 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": 2
         }
       ],
       "descriptionTemplate": "{actor.name} purified the corruption at {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.113,
-        "onFailure": 0.057
+        "onSuccess": 0.414,
+        "onFailure": 0.209
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.7,
+        "onFailure": 0.35
       }
     },
     "probability": {
@@ -1686,7 +1722,7 @@
     "enabled": true
   },
   {
-    "id": "seek_artifact",
+    "id": "seek_weapon",
     "name": "Seek Weapon",
     "description": "Unarmed heroes seek weapons to fight the orca threat",
     "actor": {
@@ -1751,7 +1787,7 @@
       "baseWeight": 0.7,
       "pressureModifiers": [
         {
-          "pressure": "security",
+          "pressure": "iceberg_security",
           "multiplier": -0.3
         }
       ]
@@ -1971,7 +2007,7 @@
   },
   {
     "id": "colony_elevates_resident",
-    "name": "Colony Remembers",
+    "name": "Colony Elevates Resident",
     "description": "A prospering colony's memory elevates a resident to prominence",
     "actor": {
       "selection": {
@@ -2071,13 +2107,13 @@
         {
           "type": "adjust_prominence",
           "entity": "$target",
-          "delta": 0.078
+          "delta": 0.286
         }
       ],
       "descriptionTemplate": "{actor.name} left its mark upon {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.13,
-        "onFailure": 0.065
+        "onSuccess": 0.476,
+        "onFailure": 0.238
       }
     },
     "probability": {
@@ -2088,7 +2124,7 @@
   },
   {
     "id": "instrument_blesses_listener",
-    "name": "Instrument Blesses",
+    "name": "Instrument Blesses Listener",
     "description": "An instrument's music touches a soul, blessing them with its resonance",
     "actor": {
       "selection": {
@@ -2252,7 +2288,7 @@
   },
   {
     "id": "occurrence_marks_artifact",
-    "name": "Event Marks Relic",
+    "name": "Event Marks Artifact",
     "description": "A significant event leaves its memory upon an artifact, making it historically significant",
     "actor": {
       "selection": {
@@ -2293,12 +2329,12 @@
       ],
       "descriptionTemplate": "{actor.name} left its memory upon {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.079,
-        "onFailure": 0.04
+        "onSuccess": 0.289,
+        "onFailure": 0.146
       },
       "targetProminenceDelta": {
-        "onSuccess": 0.048,
-        "onFailure": 0.024
+        "onSuccess": 0.176,
+        "onFailure": 0.088
       }
     },
     "probability": {
@@ -2309,7 +2345,7 @@
   },
   {
     "id": "artifact_enshrines_tradition",
-    "name": "Relic Enshrines Tradition",
+    "name": "Artifact Enshrines Tradition",
     "description": "A historically significant artifact becomes central to a cultural tradition",
     "actor": {
       "selection": {
@@ -2360,12 +2396,12 @@
       ],
       "descriptionTemplate": "{actor.name} became central to the practice of {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.031,
-        "onFailure": 0.016
+        "onSuccess": 0.113,
+        "onFailure": 0.059
       },
       "targetProminenceDelta": {
-        "onSuccess": 0.019,
-        "onFailure": 0.009
+        "onSuccess": 0.07,
+        "onFailure": 0.033
       }
     },
     "probability": {
@@ -2425,12 +2461,12 @@
       ],
       "descriptionTemplate": "The tradition of {actor.name} now commemorates {target.name}",
       "actorProminenceDelta": {
-        "onSuccess": 0.037,
-        "onFailure": 0.019
+        "onSuccess": 0.095,
+        "onFailure": 0.049
       },
       "targetProminenceDelta": {
-        "onSuccess": 0.022,
-        "onFailure": 0.011
+        "onSuccess": 0.057,
+        "onFailure": 0.028
       }
     },
     "probability": {
@@ -2569,7 +2605,7 @@
       "baseWeight": 0.5,
       "pressureModifiers": [
         {
-          "pressure": "harmony",
+          "pressure": "cultural_harmony",
           "multiplier": 0.4
         }
       ]
@@ -2578,7 +2614,7 @@
   },
   {
     "id": "artifact_attracts_restorer",
-    "name": "The Relic Calls",
+    "name": "Artifact Attracts Restorer",
     "description": "A damaged artifact's fading essence draws someone capable of preservation",
     "actor": {
       "selection": {
@@ -2638,7 +2674,7 @@
   },
   {
     "id": "tome_reveals_resources",
-    "name": "The Map Reveals Riches",
+    "name": "Tome Reveals Resources",
     "description": "A tome of places reveals hidden resources in its resting place",
     "actor": {
       "selection": {
@@ -2705,7 +2741,7 @@
   },
   {
     "id": "tome_dispels_danger",
-    "name": "Knowledge Dispels Fear",
+    "name": "Tome Dispels Danger",
     "description": "A tome's secrets reveal safe passage through dangerous lands",
     "actor": {
       "selection": {
@@ -2754,7 +2790,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": 3
         }
       ],
@@ -2762,6 +2798,10 @@
       "actorProminenceDelta": {
         "onSuccess": 0.197,
         "onFailure": 0.098
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.75,
+        "onFailure": 0.375
       }
     },
     "probability": {
@@ -2772,7 +2812,7 @@
   },
   {
     "id": "tome_cleanses_corruption",
-    "name": "Forbidden Knowledge Purifies",
+    "name": "Tome Cleanses Corruption",
     "description": "A mystical tome's secrets cleanse corruption from the land",
     "actor": {
       "selection": {
@@ -2827,6 +2867,10 @@
       "actorProminenceDelta": {
         "onSuccess": 0.309,
         "onFailure": 0.154
+      },
+      "targetProminenceDelta": {
+        "onSuccess": 0.05,
+        "onFailure": 0.025
       }
     },
     "probability": {

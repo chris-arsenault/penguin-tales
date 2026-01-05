@@ -3,9 +3,8 @@
     "systemType": "eraSpawner",
     "config": {
       "id": "era_spawner",
-      "name": "Era Initialization",
-      "description": "Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras.",
-      "ticksPerEra": 25
+      "name": "Era Spawner",
+      "description": "Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras."
     },
     "enabled": true
   },
@@ -13,8 +12,8 @@
     "systemType": "eraTransition",
     "config": {
       "id": "era_transition",
-      "name": "Era Progression",
-      "description": "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future → current → historical.",
+      "name": "Era Transition",
+      "description": "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future \u2192 current \u2192 historical.",
       "prominenceSnapshot": {
         "enabled": false,
         "minProminence": "renowned"
@@ -26,7 +25,7 @@
     "systemType": "universalCatalyst",
     "config": {
       "id": "universal_catalyst",
-      "name": "Agent Actions",
+      "name": "Universal Catalyst",
       "description": "Enables agents (NPCs, factions) to perform domain-defined actions. Manages action selection and success/failure.",
       "actionAttemptRate": 0.18,
       "pressureMultiplier": 1.1,
@@ -48,57 +47,6 @@
       "maxStrength": 1
     },
     "enabled": true
-  },
-  {
-    "systemType": "graphContagion",
-    "config": {
-      "id": "conflict_contagion",
-      "name": "Conflict Spread",
-      "description": "Spreads conflicts through alliance networks - allies of enemies become enemies (but not between allies)",
-      "contagion": {
-        "type": "relationship",
-        "relationshipKind": "at_war_with"
-      },
-      "vectors": [
-        {
-          "relationshipKind": "allied_with",
-          "direction": "both",
-          "minStrength": 0.3
-        },
-        {
-          "relationshipKind": "splinter_of",
-          "direction": "both",
-          "minStrength": 0.3
-        }
-      ],
-      "transmission": {
-        "baseRate": 0.25,
-        "contactMultiplier": 0.1,
-        "maxProbability": 0.7
-      },
-      "infectionAction": {
-        "type": "create_relationship",
-        "kind": "at_war_with",
-        "src": "$self",
-        "dst": "$source",
-        "strength": 0.4,
-        "bidirectional": true
-      },
-      "excludeRelationships": [
-        "allied_with"
-      ],
-      "throttleChance": 0.1,
-      "cooldown": 4,
-      "pressureChanges": {
-        "harmony": -3
-      },
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction"
-      }
-    },
-    "enabled": false,
-    "_disabled_reason": "at_war_with eliminated. War participation determined by participant_in to war occurrence."
   },
   {
     "systemType": "connectionEvolution",
@@ -141,117 +89,11 @@
       },
       "throttleChance": 0.15,
       "pressureChanges": {
-        "harmony": 10
+        "cultural_harmony": 10
       },
       "selection": {
         "strategy": "by_kind",
         "kind": "faction"
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "connectionEvolution",
-    "config": {
-      "id": "enmity_from_ideology",
-      "name": "Ideological Divergence",
-      "description": "Factions with no shared ideological practice develop enmity (worldview incompatibility)",
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "filters": [
-          {
-            "type": "lacks_tag",
-            "tag": "post_war_cooldown"
-          }
-        ]
-      },
-      "metric": {
-        "type": "shared_relationship",
-        "sharedRelationshipKind": "practitioner_of",
-        "sharedDirection": "src"
-      },
-      "rules": [
-        {
-          "condition": {
-            "operator": "==",
-            "threshold": 0
-          },
-          "probability": 0.08,
-          "action": {
-            "type": "create_relationship",
-            "kind": "enemy_of",
-            "strength": 0.5,
-            "src": "$self",
-            "dst": "$partner",
-            "bidirectional": true
-          },
-          "betweenMatching": true
-        }
-      ],
-      "pairExcludeRelationships": [
-        "enemy_of",
-        "allied_with"
-      ],
-      "throttleChance": 0.1,
-      "pressureChanges": {
-        "harmony": -2
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "connectionEvolution",
-    "config": {
-      "id": "trade_alliance_formation",
-      "name": "Trade Alliance Formation",
-      "description": "Factions with trade connections can form alliances early in the simulation",
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction"
-      },
-      "metric": {
-        "type": "shared_relationship",
-        "sharedRelationshipKind": "trades_with",
-        "sharedDirection": "src",
-        "via": {
-          "relationshipKind": "controls",
-          "direction": "src",
-          "intermediateKind": "location"
-        }
-      },
-      "rules": [
-        {
-          "condition": {
-            "operator": ">=",
-            "threshold": 1
-          },
-          "probability": 0.25,
-          "action": {
-            "type": "create_relationship",
-            "kind": "allied_with",
-            "strength": 0.4,
-            "src": "$self",
-            "dst": "$partner",
-            "bidirectional": true
-          },
-          "betweenMatching": true
-        }
-      ],
-      "pairExcludeRelationships": [
-        "enemy_of",
-        "betrayed_by",
-        "allied_with"
-      ],
-      "pairComponentSizeLimit": {
-        "relationshipKinds": [
-          "allied_with"
-        ],
-        "max": 6
-      },
-      "throttleChance": 0.15,
-      "pressureChanges": {
-        "harmony": 3
       }
     },
     "enabled": true
@@ -318,10 +160,10 @@
             "operator": ">=",
             "threshold": 3
           },
-          "probability": 0.4,
+          "probability": 0.3,
           "action": {
             "type": "adjust_prominence",
-            "delta": 0.08,
+            "delta": 0.06,
             "entity": "$self"
           }
         },
@@ -473,65 +315,41 @@
     "config": {
       "id": "heroic_sacrifice",
       "name": "Heroic Sacrifice",
-      "description": "Heroes caught in wars occasionally fall, their weapons becoming legendary",
+      "description": "A hero witnessing war's devastation sacrifices themselves to bring peace, their death shocking both sides into realizing the futility of conflict",
       "conditions": [
         {
-          "type": "or",
-          "conditions": [
-            {
-              "type": "graph_path",
-              "assert": {
-                "check": "exists",
-                "path": [
-                  {
-                    "via": "member_of",
-                    "direction": "out",
-                    "targetKind": "faction",
-                    "targetSubtype": "any"
-                  },
-                  {
-                    "via": "participant_in",
-                    "direction": "out",
-                    "targetKind": "occurrence",
-                    "targetSubtype": "war",
-                    "targetStatus": "active"
-                  }
-                ]
-              }
-            },
-            {
-              "type": "graph_path",
-              "assert": {
-                "check": "exists",
-                "path": [
-                  {
-                    "via": "leader_of",
-                    "direction": "out",
-                    "targetKind": "faction",
-                    "targetSubtype": "any"
-                  },
-                  {
-                    "via": "participant_in",
-                    "direction": "out",
-                    "targetKind": "occurrence",
-                    "targetSubtype": "war",
-                    "targetStatus": "active"
-                  }
-                ]
-              }
-            }
-          ]
-        },
-        {
           "type": "random_chance",
-          "chance": 0.04
+          "chance": 0.06
         }
       ],
+      "variables": {
+        "$war": {
+          "select": {
+            "from": "graph",
+            "kind": "occurrence",
+            "subtype": "war",
+            "status": "active",
+            "pickStrategy": "random"
+          },
+          "required": true
+        }
+      },
       "actions": [
         {
           "type": "change_status",
           "entity": "$self",
           "newStatus": "historical"
+        },
+        {
+          "type": "change_status",
+          "entity": "$war",
+          "newStatus": "historical"
+        },
+        {
+          "type": "set_tag",
+          "entity": "$war",
+          "tag": "ended_by_sacrifice",
+          "value": true
         },
         {
           "type": "for_each_related",
@@ -548,19 +366,24 @@
             {
               "type": "set_tag",
               "entity": "$related",
-              "tag": "hero_relic",
+              "tag": "peace_relic",
               "value": true
             },
             {
               "type": "adjust_prominence",
-              "delta": 0.4,
+              "delta": 0.5,
               "entity": "$related"
             }
           ]
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "cultural_harmony",
+          "delta": 15
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.3,
+      "throttleChance": 0.2,
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
@@ -664,7 +487,7 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "war_fatigue_detector",
-      "name": "War Fatigue",
+      "name": "War Fatigue Detector",
       "description": "Long-running wars become weary and ready to resolve",
       "conditions": [
         {
@@ -723,7 +546,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.6,
       "pressureChanges": {
-        "harmony": 2
+        "cultural_harmony": 2
       },
       "selection": {
         "strategy": "by_kind",
@@ -789,8 +612,8 @@
       "clusterMode": "individual",
       "throttleChance": 0.5,
       "pressureChanges": {
-        "harmony": 3,
-        "security": 2
+        "cultural_harmony": 3,
+        "iceberg_security": 2
       },
       "selection": {
         "strategy": "by_kind",
@@ -812,68 +635,8 @@
   {
     "systemType": "thresholdTrigger",
     "config": {
-      "id": "war_tie_cleanup",
-      "name": "War Tie Cleanup",
-      "description": "Archives stale war ties when no active war occurrence remains and cleans up war-related state",
-      "conditions": [
-        {
-          "type": "relationship_count",
-          "relationshipKind": "at_war_with",
-          "direction": "both",
-          "min": 1
-        },
-        {
-          "type": "graph_path",
-          "assert": {
-            "check": "not_exists",
-            "path": [
-              {
-                "via": "participant_in",
-                "direction": "out",
-                "targetKind": "occurrence",
-                "targetSubtype": "war",
-                "targetStatus": "active"
-              }
-            ]
-          }
-        }
-      ],
-      "actions": [
-        {
-          "type": "archive_all_relationships",
-          "entity": "$self",
-          "relationshipKind": "at_war_with",
-          "direction": "both"
-        },
-        {
-          "type": "remove_tag",
-          "entity": "$self",
-          "tag": "conflict"
-        },
-        {
-          "type": "remove_tag",
-          "entity": "$self",
-          "tag": "honor_bound"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.4,
-      "pressureChanges": {
-        "harmony": 4
-      },
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction"
-      }
-    },
-    "enabled": false,
-    "_disabled_reason": "at_war_with eliminated. No orphaned relationships to clean up."
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
       "id": "power_vacuum_detector",
-      "name": "Leadership Crisis",
+      "name": "Power Vacuum Detector",
       "description": "Detects factions with historical (deceased) leaders and marks them in crisis",
       "conditions": [
         {
@@ -918,8 +681,8 @@
       "clusterMode": "individual",
       "throttleChance": 0.35,
       "pressureChanges": {
-        "security": -8,
-        "harmony": -1
+        "iceberg_security": -8,
+        "cultural_harmony": -1
       },
       "selection": {
         "strategy": "by_kind",
@@ -1000,7 +763,7 @@
       ],
       "postProcess": {
         "pressureChanges": {
-          "security": 2
+          "iceberg_security": 2
         }
       },
       "selection": {
@@ -1027,7 +790,7 @@
       "description": "Clusters combat abilities into unified fighting styles. Only top practitioners by prominence become 'masters' with direct links to the meta-ability.",
       "runAtEpochEnd": true,
       "clustering": {
-        "minSize": 5,
+        "minSize": 3,
         "maxSize": 8,
         "criteria": [
           {
@@ -1087,7 +850,7 @@
       ],
       "postProcess": {
         "pressureChanges": {
-          "security": 2
+          "iceberg_security": 2
         }
       },
       "selection": {
@@ -1114,19 +877,14 @@
       "description": "Clusters rules into unified legal codes with governance factions",
       "runAtEpochEnd": true,
       "clustering": {
-        "minSize": 5,
+        "minSize": 4,
         "criteria": [
           {
             "type": "same_culture",
             "weight": 5
-          },
-          {
-            "type": "temporal_proximity",
-            "weight": 2,
-            "threshold": 40
           }
         ],
-        "minimumScore": 5
+        "minimumScore": 4
       },
       "metaEntity": {
         "kind": "rule",
@@ -1146,7 +904,7 @@
         "governanceFactionSubtype": "political",
         "governanceRelationship": "related_to",
         "pressureChanges": {
-          "security": 5
+          "iceberg_security": 5
         }
       },
       "selection": {
@@ -1163,7 +921,7 @@
     "systemType": "graphContagion",
     "config": {
       "id": "belief_contagion",
-      "name": "Ideological Spread",
+      "name": "Belief Contagion",
       "description": "Models ideological spread through social networks using SIR epidemic model",
       "contagion": {
         "type": "relationship",
@@ -1272,7 +1030,7 @@
     "systemType": "tagDiffusion",
     "config": {
       "id": "cultural_drift",
-      "name": "Cultural Evolution",
+      "name": "Cultural Drift",
       "description": "Connected colonies become more similar (trade, friendly), isolated colonies diverge (secretive, hidden)",
       "connectionKind": "adjacent_to",
       "connectionDirection": "both",
@@ -1300,7 +1058,7 @@
       },
       "maxTags": 10,
       "divergencePressure": {
-        "pressureName": "harmony",
+        "pressureName": "cultural_harmony",
         "minDivergent": 2,
         "delta": -10
       },
@@ -1357,7 +1115,7 @@
     "systemType": "planeDiffusion",
     "config": {
       "id": "resource_diffusion",
-      "name": "Resource & Trade Flow",
+      "name": "Resource Diffusion",
       "description": "Prosperity spreads from resource-rich and trade locations",
       "sources": {
         "tagFilter": "resource",
@@ -1398,7 +1156,7 @@
     "systemType": "connectionEvolution",
     "config": {
       "id": "merchant_prosperity",
-      "name": "Trade Network Growth",
+      "name": "Merchant Prosperity",
       "description": "Trade-connected factions controlling thriving colonies gain influence",
       "metric": {
         "type": "connection_count",
@@ -1447,61 +1205,17 @@
   {
     "systemType": "thresholdTrigger",
     "config": {
-      "id": "ability_fade",
-      "name": "Ability Fade",
-      "description": "Abilities without practitioners gradually lose prominence",
-      "conditions": [
-        {
-          "type": "relationship_count",
-          "relationshipKind": "practitioner_of",
-          "direction": "dst",
-          "max": 0
-        },
-        {
-          "type": "time_elapsed",
-          "minTicks": 25,
-          "since": "created"
-        },
-        {
-          "type": "random_chance",
-          "chance": 0.35
-        }
-      ],
-      "actions": [
-        {
-          "type": "adjust_prominence",
-          "delta": -0.15,
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.2,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "ability",
-        "statuses": [
-          "active",
-          "discovered",
-          "emergent"
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
       "id": "artifact_degradation",
       "name": "Artifact Degradation",
       "description": "Over time, artifacts may become damaged",
       "conditions": [
         {
           "type": "time_elapsed",
-          "minTicks": 40
+          "minTicks": 20
         },
         {
           "type": "random_chance",
-          "chance": 0.1
+          "chance": 0.3
         }
       ],
       "actions": [
@@ -1555,53 +1269,10 @@
     "enabled": true
   },
   {
-    "systemType": "graphContagion",
-    "config": {
-      "id": "artifact_corruption_spread",
-      "name": "Artifact Corruption",
-      "description": "Cursed or corrupted artifacts affect their owners",
-      "contagion": {
-        "type": "tag",
-        "tag": "corrupted"
-      },
-      "vectors": [
-        {
-          "relationshipKind": "owned_by",
-          "direction": "src",
-          "minStrength": 0.3
-        }
-      ],
-      "transmission": {
-        "baseRate": 0.15,
-        "contactMultiplier": 0.1,
-        "maxProbability": 0.5
-      },
-      "infectionAction": {
-        "type": "set_tag",
-        "tag": "corrupted",
-        "value": true,
-        "entity": "$target"
-      },
-      "throttleChance": 0.5,
-      "cooldown": 10,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "artifact",
-        "filters": [
-          {
-            "type": "has_tag",
-            "tag": "corrupted"
-          }
-        ]
-      }
-    },
-    "enabled": true
-  },
-  {
     "systemType": "thresholdTrigger",
     "config": {
       "id": "armed_hero_detector",
-      "name": "Armed Hero Detection",
+      "name": "Armed Hero Detector",
       "description": "Heroes who own weapons are tagged as armed, enabling them to hunt orcas",
       "conditions": [
         {
@@ -1655,7 +1326,7 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "devout_believer_detector",
-      "name": "Devout Believer Detection",
+      "name": "Devout Believer Detector",
       "description": "Factions with strong belief relationships are marked as devout",
       "conditions": [
         {
@@ -1695,89 +1366,6 @@
   {
     "systemType": "thresholdTrigger",
     "config": {
-      "id": "heresy_war_trigger",
-      "name": "Heresy War",
-      "description": "Devout factions are more likely to declare war on factions with apostate or different beliefs",
-      "conditions": [
-        {
-          "type": "tag_exists",
-          "tag": "devout"
-        },
-        {
-          "type": "relationship_count",
-          "relationshipKind": "enemy_of",
-          "direction": "both",
-          "max": 0
-        },
-        {
-          "type": "random_chance",
-          "chance": 0.12
-        }
-      ],
-      "variables": {
-        "$heretic": {
-          "select": {
-            "from": "graph",
-            "kind": "faction",
-            "filters": [
-              {
-                "type": "has_tag",
-                "tag": "apostate"
-              },
-              {
-                "type": "lacks_relationship",
-                "kind": "enemy_of",
-                "with": "$self"
-              },
-              {
-                "type": "lacks_relationship",
-                "kind": "allied_with",
-                "with": "$self"
-              }
-            ],
-            "pickStrategy": "random"
-          },
-          "required": true
-        }
-      },
-      "actions": [
-        {
-          "type": "create_relationship",
-          "kind": "enemy_of",
-          "src": "$self",
-          "dst": "$heretic",
-          "strength": 0.7,
-          "bidirectional": true
-        },
-        {
-          "type": "set_tag",
-          "tag": "conflict",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "religious_war",
-          "value": true,
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.5,
-      "pressureChanges": {
-        "harmony": -1
-      },
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "status": "active"
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
       "id": "control_collapse",
       "name": "Control Collapse",
       "description": "When a faction's control over a location weakens below threshold, they lose control entirely",
@@ -1790,7 +1378,7 @@
         },
         {
           "type": "random_chance",
-          "chance": 0.25
+          "chance": 0.03
         }
       ],
       "variables": {
@@ -1835,7 +1423,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.5,
       "pressureChanges": {
-        "security": -3
+        "iceberg_security": -3
       },
       "selection": {
         "strategy": "by_kind",
@@ -1974,221 +1562,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.4,
       "pressureChanges": {
-        "harmony": -3
-      },
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "status": "active"
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "oath_breaker_detector",
-      "name": "Oath Breaker Detection",
-      "description": "Allied factions that don't join wars are marked as oath breakers and lose reputation",
-      "conditions": [
-        {
-          "type": "relationship_exists",
-          "relationshipKind": "allied_with",
-          "direction": "both"
-        },
-        {
-          "type": "lacks_tag",
-          "tag": "honor_bound"
-        },
-        {
-          "type": "lacks_tag",
-          "tag": "oath_breaker"
-        },
-        {
-          "type": "graph_path",
-          "assert": {
-            "check": "exists",
-            "path": [
-              {
-                "via": "allied_with",
-                "direction": "any",
-                "targetKind": "faction",
-                "targetSubtype": "any"
-              },
-              {
-                "via": "participant_in",
-                "direction": "out",
-                "targetKind": "occurrence",
-                "targetSubtype": "war",
-                "targetStatus": "active"
-              }
-            ]
-          }
-        },
-        {
-          "type": "time_elapsed",
-          "minTicks": 10
-        },
-        {
-          "type": "random_chance",
-          "chance": 0.15
-        }
-      ],
-      "actions": [
-        {
-          "type": "set_tag",
-          "tag": "oath_breaker",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "adjust_prominence",
-          "delta": -0.25,
-          "entity": "$self"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.5,
-      "pressureChanges": {
-        "harmony": -2
-      },
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "status": "active"
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "oath_breaker_consequences",
-      "name": "Oath Breaker Consequences",
-      "description": "Oath breakers suffer ongoing reputation damage and weakened alliances",
-      "conditions": [
-        {
-          "type": "tag_exists",
-          "tag": "oath_breaker"
-        },
-        {
-          "type": "time_elapsed",
-          "minTicks": 5
-        },
-        {
-          "type": "random_chance",
-          "chance": 0.2
-        }
-      ],
-      "actions": [
-        {
-          "type": "adjust_prominence",
-          "delta": -0.15,
-          "entity": "$self"
-        },
-        {
-          "type": "for_each_related",
-          "relationship": "allied_with",
-          "direction": "both",
-          "targetKind": "faction",
-          "actions": [
-            {
-              "type": "adjust_relationship_strength",
-              "kind": "allied_with",
-              "src": "$self",
-              "dst": "$related",
-              "delta": -0.15
-            }
-          ]
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.4,
-      "selection": {
-        "strategy": "by_kind",
-        "kind": "faction",
-        "status": "active"
-      }
-    },
-    "enabled": true
-  },
-  {
-    "systemType": "thresholdTrigger",
-    "config": {
-      "id": "alliance_dissolution",
-      "name": "Alliance Dissolution",
-      "description": "Oath breakers eventually lose their alliances as trust erodes completely",
-      "conditions": [
-        {
-          "type": "tag_exists",
-          "tag": "oath_breaker"
-        },
-        {
-          "type": "relationship_exists",
-          "relationshipKind": "allied_with",
-          "direction": "both"
-        },
-        {
-          "type": "time_elapsed",
-          "minTicks": 3,
-          "since": "created"
-        },
-        {
-          "type": "random_chance",
-          "chance": 0.4
-        }
-      ],
-      "variables": {
-        "$former_ally": {
-          "select": {
-            "from": {
-              "relatedTo": "$self",
-              "relationshipKind": "allied_with",
-              "direction": "both"
-            },
-            "kind": "faction",
-            "pickStrategy": "random"
-          },
-          "required": true
-        }
-      },
-      "actions": [
-        {
-          "type": "archive_relationship",
-          "entity": "$self",
-          "relationshipKind": "allied_with",
-          "with": "$former_ally"
-        },
-        {
-          "type": "create_relationship",
-          "kind": "enemy_of",
-          "src": "$self",
-          "dst": "$former_ally",
-          "strength": 0.6,
-          "bidirectional": true
-        },
-        {
-          "type": "set_tag",
-          "entity": "$self",
-          "tag": "former_ally",
-          "value": true
-        },
-        {
-          "type": "set_tag",
-          "entity": "$former_ally",
-          "tag": "former_ally",
-          "value": true
-        },
-        {
-          "type": "remove_tag",
-          "entity": "$self",
-          "tag": "honor_bound"
-        }
-      ],
-      "clusterMode": "individual",
-      "throttleChance": 0.4,
-      "pressureChanges": {
-        "harmony": -5
+        "cultural_harmony": -3
       },
       "selection": {
         "strategy": "by_kind",
@@ -2307,7 +1681,7 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "unarmed_hero_detector",
-      "name": "Unarmed Hero Detection",
+      "name": "Unarmed Hero Detector",
       "description": "Heroes who lose their weapons are no longer armed",
       "conditions": [
         {
@@ -2388,7 +1762,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": -10
         },
         {
@@ -2420,7 +1794,7 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "cleansed_isolation_decay",
-      "name": "Sacred Ground Fades",
+      "name": "Cleansed Isolation Decay",
       "description": "Cleansed locations without nearby sanctified neighbors lose their protection as the wards weaken",
       "selection": {
         "strategy": "by_kind",
@@ -2476,7 +1850,7 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "ice_memory_witness",
-      "name": "The Ice Remembers",
+      "name": "Ice Memory Witness",
       "description": "The ice witnesses deeds at significant locations, annotating those present with echoes",
       "selection": {
         "strategy": "by_kind",
@@ -2531,7 +1905,7 @@
     "systemType": "connectionEvolution",
     "config": {
       "id": "anomaly_mystical_gain",
-      "name": "Anomaly Stirs",
+      "name": "Anomaly Mystical Gain",
       "description": "Anomalous locations gain mystical qualities over time. NPCs residing nearby dampen this effect through their stabilizing presence.",
       "metric": {
         "type": "neighbor_kind_count",
@@ -2598,7 +1972,7 @@
     "systemType": "connectionEvolution",
     "config": {
       "id": "mystical_decay",
-      "name": "Mystical Fades",
+      "name": "Mystical Decay",
       "description": "Mystical qualities fade from locations over time. NPCs residing nearby dampen this effect, stabilizing the mystical energy.",
       "metric": {
         "type": "neighbor_kind_count",
@@ -2656,7 +2030,7 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "anomaly_activation",
-      "name": "Anomaly Surges",
+      "name": "Anomaly Activation",
       "description": "When multiple adjacent anomalies resonate without NPC interference, one surges to an active state capable of crystallizing power.",
       "conditions": [
         {
@@ -2761,17 +2135,12 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "depleted_recovery",
-      "name": "Anomaly Recovers",
+      "name": "Depleted Recovery",
       "description": "Depleted anomalies slowly recover their potential over time.",
       "conditions": [
         {
-          "type": "time_elapsed",
-          "minTicks": 8,
-          "since": "updated"
-        },
-        {
           "type": "random_chance",
-          "chance": 0.25
+          "chance": 0.15
         }
       ],
       "actions": [

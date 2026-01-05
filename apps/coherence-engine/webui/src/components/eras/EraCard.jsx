@@ -61,7 +61,7 @@ export function EraCard({
 
   // Exit condition handlers
   const handleAddExitCondition = useCallback(() => {
-    const newRule = createNewRule('time_elapsed', pressures);
+    const newRule = createNewRule('growth_phases_complete', pressures);
     onChange({
       ...era,
       exitConditions: [...(era.exitConditions || []), newRule],
@@ -227,6 +227,7 @@ export function EraCard({
             availablePressuresForExit={availablePressuresForExit}
             pressures={pressures}
             schema={schema}
+            eras={allEras}
           />
 
           {/* Delete button */}

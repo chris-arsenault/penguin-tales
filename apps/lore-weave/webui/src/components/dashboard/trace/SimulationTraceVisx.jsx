@@ -256,6 +256,17 @@ function transformEventData(templateApplications, actionApplications, systemActi
  * Extract era boundaries from actual era transitions (systemActions)
  * Falls back to epoch-based boundaries if no transition data available
  */
+function formatEpochEraLabel(era, fallback) {
+  if (!era) return fallback;
+  const startName = era.start?.name;
+  const endName = era.end?.name || startName;
+  if (!startName) return fallback;
+  if (!era.transitions || era.transitions.length === 0 || startName === endName) {
+    return endName;
+  }
+  return `${startName} → ${endName}`;
+}
+
 function extractEraBoundaries(pressureUpdates, epochStats, systemActions) {
   if (!pressureUpdates?.length) return [];
 
@@ -311,7 +322,7 @@ function extractEraBoundaries(pressureUpdates, epochStats, systemActions) {
       }
       currentEpoch = update.epoch;
       const epochStat = epochStats?.find(e => e.epoch === currentEpoch);
-      currentEra = epochStat?.era || `Epoch ${currentEpoch}`;
+      currentEra = formatEpochEraLabel(epochStat?.era, `Epoch ${currentEpoch}`);
       startTick = update.tick;
     }
   }

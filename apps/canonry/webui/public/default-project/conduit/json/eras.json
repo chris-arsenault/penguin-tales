@@ -91,9 +91,8 @@
     "entryConditions": [],
     "exitConditions": [
       {
-        "type": "time_elapsed",
-        "minTicks": 25,
-        "since": "created"
+        "type": "growth_phases_complete",
+        "minPhases": 2
       },
       {
         "type": "entity_count",
@@ -220,9 +219,8 @@
     "entryConditions": [],
     "exitConditions": [
       {
-        "type": "time_elapsed",
-        "minTicks": 25,
-        "since": "created"
+        "type": "growth_phases_complete",
+        "minPhases": 2
       },
       {
         "type": "pressure",
@@ -358,9 +356,8 @@
     "entryConditions": [],
     "exitConditions": [
       {
-        "type": "time_elapsed",
-        "minTicks": 30,
-        "since": "created"
+        "type": "growth_phases_complete",
+        "minPhases": 2
       }
     ],
     "id": "the-frozen-peace",
@@ -457,9 +454,8 @@
     },
     "exitConditions": [
       {
-        "type": "time_elapsed",
-        "minTicks": 25,
-        "since": "created"
+        "type": "growth_phases_complete",
+        "minPhases": 2
       },
       {
         "type": "entity_count",
@@ -585,9 +581,8 @@
     "entryConditions": [],
     "exitConditions": [
       {
-        "type": "time_elapsed",
-        "minTicks": 25,
-        "since": "created"
+        "type": "growth_phases_complete",
+        "minPhases": 2
       },
       {
         "type": "pressure",

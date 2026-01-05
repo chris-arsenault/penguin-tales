@@ -5,7 +5,7 @@
     "summary": "The great ice sheets retreat, revealing new waters rich with krill and ancient secrets frozen beneath. Bold explorers from the Aurora Stack and Abyssal Trench venture forth to claim territory, founding colonies that will shape penguin civilization for generations. Guild halls rise in every settlement, their charters written on sheets of pressed ice. It is an age of optimism, where even the most marginal rookery dreams of becoming a great berg.",
     "templateWeights": {
       "colony_founding": 1,
-      "krill_bloom_migration": 1.4,
+      "krill_bloom_discovery": 1.4,
       "hero_emergence": 1,
       "guild_establishment": 0.5,
       "faction_splinter": 0.15,
@@ -14,7 +14,7 @@
       "ideology_emergence": 0.6,
       "magic_discovery": 1.2,
       "tech_breakthrough": 1.1,
-      "wild_magic_discover": 0.4,
+      "wild_magical_discovery": 0.4,
       "ice_memory_thaw": 0.4,
       "economic_colony_decline": 0.3,
       "economic_colony_recovery": 0.4,
@@ -22,14 +22,12 @@
       "thermal_colony_recovery": 0.4,
       "thermal_migration": 0.3,
       "legend_crystallization": 0.3,
-      "succession": 0.4,
+      "leadership_succession": 0.4,
       "war_outbreak": 0.2,
-      "war_declaration": 0.25,
-      "alliance_betrayal": 0.15,
       "location_discovery": 0.9,
       "cult_formation": 0.4,
       "thermal_vent_discovery": 0.8,
-      "war_apocalypse_resolution": 1,
+      "apocalyptic_war_resolution": 1,
       "artifact_crafting": 0.8,
       "artifact_discovery": 1.2,
       "crystallized_power": 0.4,
@@ -45,11 +43,9 @@
       "mystical_decay": 1,
       "anomaly_activation": 1,
       "depleted_recovery": 1,
-      "conflict_contagion": 0.3,
       "cultural_drift": 0.5,
       "artifact_degradation": 0.5,
       "artifact_destruction": 0.3,
-      "artifact_corruption_spread": 0.3,
       "belief_contagion": 0.8,
       "thermal_diffusion": 1,
       "resource_diffusion": 1.5,
@@ -66,23 +62,15 @@
       "war_fatigue_detector": 1,
       "occurrence_resolution": 1,
       "post_war_recovery": 1,
-      "war_tie_cleanup": 1,
-      "ability_fade": 1,
       "alliance_formation": 0.5,
-      "trade_alliance_formation": 1.2,
-      "enmity_from_ideology": 0.3,
       "reflected_glory": 1,
       "magic_school_formation": 0.8,
       "combat_technique_formation": 0.5,
       "legal_code_formation": 0.6,
       "armed_hero_detector": 1,
       "devout_believer_detector": 1,
-      "heresy_war_trigger": 0.3,
       "control_collapse": 0.3,
       "alliance_defense_call": 0.5,
-      "oath_breaker_detector": 1,
-      "oath_breaker_consequences": 1,
-      "alliance_dissolution": 0.5,
       "corruption_harm": 1,
       "unarmed_hero_detector": 1,
       "corruption_crisis": 0.5,
@@ -100,9 +88,8 @@
     },
     "exitConditions": [
       {
-        "type": "time_elapsed",
-        "minTicks": 30,
-        "since": "created"
+        "type": "growth_phases_complete",
+        "minPhases": 2
       },
       {
         "type": "entity_count",
@@ -119,7 +106,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": -15
         }
       ]
@@ -131,7 +118,7 @@
     "summary": "The bounty of the Thaw dwindles as colonies multiply beyond what the waters can sustain. Trade routes become battle lines; old alliances fracture along cultural fault lines between the pragmatic Abyssal Trench and the mystical Aurora Stack. Factions emerge within colonies, each claiming the true path to survival. Heroes rise not from exploration but from war, their names etched in the ice memorials that dot every berg.",
     "templateWeights": {
       "colony_founding": 0.2,
-      "krill_bloom_migration": 0,
+      "krill_bloom_discovery": 0.3,
       "hero_emergence": 1.2,
       "orca_raider_arrival": 0,
       "faction_splinter": 1.3,
@@ -140,11 +127,9 @@
       "ideology_emergence": 1.8,
       "tech_breakthrough": 0.8,
       "war_outbreak": 3,
-      "war_declaration": 1.5,
-      "alliance_betrayal": 1.5,
       "succession_crisis": 0.9,
       "legend_crystallization": 1.2,
-      "wild_magic_discover": 0.8,
+      "wild_magical_discovery": 0.8,
       "thermal_colony_decline": 0.6,
       "thermal_colony_recovery": 0.8,
       "thermal_migration": 0.5,
@@ -154,8 +139,8 @@
       "location_discovery": 1,
       "cult_formation": 0.6,
       "thermal_vent_discovery": 0.6,
-      "succession": 0.8,
-      "war_apocalypse_resolution": 1,
+      "leadership_succession": 0.8,
+      "apocalyptic_war_resolution": 1,
       "artifact_crafting": 1.4,
       "artifact_discovery": 0.6,
       "crystallized_power": 0.5,
@@ -171,13 +156,9 @@
       "mystical_decay": 1.2,
       "anomaly_activation": 0.6,
       "depleted_recovery": 1,
-      "conflict_contagion": 2,
       "alliance_formation": 2,
-      "trade_alliance_formation": 1,
-      "enmity_from_ideology": 1.5,
       "artifact_degradation": 1.5,
       "artifact_destruction": 1.2,
-      "artifact_corruption_spread": 1,
       "belief_contagion": 2,
       "cultural_drift": 1.5,
       "thermal_diffusion": 1.2,
@@ -195,20 +176,14 @@
       "war_fatigue_detector": 1,
       "occurrence_resolution": 1,
       "post_war_recovery": 1,
-      "war_tie_cleanup": 1,
-      "ability_fade": 1,
       "reflected_glory": 1.5,
       "magic_school_formation": 0.5,
       "combat_technique_formation": 1.5,
       "legal_code_formation": 0.8,
       "armed_hero_detector": 1,
       "devout_believer_detector": 1,
-      "heresy_war_trigger": 1.2,
       "control_collapse": 1,
       "alliance_defense_call": 1.5,
-      "oath_breaker_detector": 1,
-      "oath_breaker_consequences": 1.5,
-      "alliance_dissolution": 1.5,
       "corruption_harm": 1,
       "unarmed_hero_detector": 1,
       "corruption_crisis": 1,
@@ -220,25 +195,24 @@
       "mutations": [
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": -50
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": -10
         }
       ]
     },
     "exitConditions": [
       {
-        "type": "time_elapsed",
-        "minTicks": 46,
-        "since": "created"
+        "type": "growth_phases_complete",
+        "minPhases": 2
       },
       {
         "type": "pressure",
-        "pressureId": "harmony",
+        "pressureId": "cultural_harmony",
         "min": -10
       },
       {
@@ -251,12 +225,12 @@
       "mutations": [
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": -20
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": 20
         }
       ]
@@ -267,7 +241,7 @@
     "name": "The Clever Ice Age",
     "summary": "War-weary but unbowed, penguin-kind turns inward to solve problems through cleverness rather than conflict. The great guilds establish schools of magic and workshops of invention, competing to unlock the secrets of fire-core crystals and spectralum lenses. Aurora Stack mystics codify the old ice-memory rituals while Abyssal Trench engineers devise machines to harvest krill at unprecedented scales. It is an age of wonders, though some whisper that not all discoveries should be made.",
     "templateWeights": {
-      "krill_bloom_migration": 0.8,
+      "krill_bloom_discovery": 0.8,
       "orca_raider_arrival": 0,
       "guild_establishment": 1.6,
       "cult_formation": 0.8,
@@ -275,9 +249,9 @@
       "great_festival": 0.6,
       "ideology_emergence": 1,
       "magic_discovery": 0.9,
-      "tech_breakthrough": 2,
+      "tech_breakthrough": 4,
       "legend_crystallization": 0.8,
-      "wild_magic_discover": 0.6,
+      "wild_magical_discovery": 0.6,
       "thermal_colony_decline": 0.8,
       "thermal_colony_recovery": 0.8,
       "thermal_migration": 0.6,
@@ -287,10 +261,8 @@
       "location_discovery": 0.8,
       "colony_founding": 0.8,
       "hero_emergence": 0.6,
-      "succession": 0.6,
-      "war_declaration": 0.2,
-      "alliance_betrayal": 0.15,
-      "war_apocalypse_resolution": 1,
+      "leadership_succession": 0.6,
+      "apocalyptic_war_resolution": 1,
       "artifact_crafting": 1.6,
       "artifact_discovery": 0.8,
       "crystallized_power": 0.6,
@@ -313,7 +285,6 @@
       "thermal_diffusion": 1.5,
       "artifact_degradation": 0.8,
       "artifact_destruction": 0.5,
-      "artifact_corruption_spread": 0.5,
       "resource_diffusion": 1.2,
       "magic_school_formation": 2,
       "combat_technique_formation": 1.5,
@@ -331,21 +302,12 @@
       "war_fatigue_detector": 1,
       "occurrence_resolution": 1,
       "post_war_recovery": 1,
-      "war_tie_cleanup": 1,
-      "ability_fade": 1,
-      "conflict_contagion": 0.3,
       "alliance_formation": 0.8,
-      "trade_alliance_formation": 1.5,
-      "enmity_from_ideology": 0.8,
       "reflected_glory": 1,
       "armed_hero_detector": 1,
       "devout_believer_detector": 1,
-      "heresy_war_trigger": 0.5,
       "control_collapse": 0.5,
       "alliance_defense_call": 0.8,
-      "oath_breaker_detector": 1,
-      "oath_breaker_consequences": 1,
-      "alliance_dissolution": 0.8,
       "corruption_harm": 1,
       "unarmed_hero_detector": 1,
       "corruption_crisis": 0.8,
@@ -364,14 +326,13 @@
     },
     "exitConditions": [
       {
-        "type": "time_elapsed",
-        "minTicks": 30,
-        "since": "created"
+        "type": "growth_phases_complete",
+        "minPhases": 2
       },
       {
         "type": "entity_count",
         "kind": "ability",
-        "min": 5,
+        "min": 4,
         "subtype": "technology"
       }
     ],
@@ -384,7 +345,7 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": -15
         }
       ]
@@ -395,7 +356,7 @@
     "name": "The Orca Incursion",
     "summary": "The orcas come not as raiders but as conquerors, their war-pods striking with coordination that speaks of dark intelligence. Old feuds between Aurora Stack and Abyssal Trench fade as colonies band together against extinction. The innovations of the previous age become weapons; the heroes of this era are defenders who hold the line at impossible odds. Every culture contributes what it knows best: Trench tactical discipline, Stack mystical barriers, and the desperate courage of those with nowhere left to retreat.",
     "templateWeights": {
-      "krill_bloom_migration": 0.4,
+      "krill_bloom_discovery": 0.4,
       "hero_emergence": 1.8,
       "orca_raider_arrival": 1,
       "orca_war_ritual": 1.5,
@@ -404,11 +365,9 @@
       "ideology_emergence": 0.8,
       "tech_breakthrough": 1.2,
       "war_outbreak": 1.6,
-      "war_declaration": 0.4,
-      "alliance_betrayal": 0.25,
       "legend_crystallization": 1.6,
       "crisis_legislation": 2,
-      "wild_magic_discover": 0.6,
+      "wild_magical_discovery": 0.6,
       "thermal_colony_decline": 0.8,
       "thermal_colony_recovery": 0.6,
       "thermal_migration": 0.6,
@@ -419,8 +378,8 @@
       "location_discovery": 0.6,
       "cult_formation": 0.6,
       "thermal_vent_discovery": 0.4,
-      "succession": 0.8,
-      "war_apocalypse_resolution": 1,
+      "leadership_succession": 0.8,
+      "apocalyptic_war_resolution": 1,
       "artifact_crafting": 1.8,
       "artifact_discovery": 0.4,
       "crystallized_power": 0.8,
@@ -436,13 +395,9 @@
       "mystical_decay": 1,
       "anomaly_activation": 1.5,
       "depleted_recovery": 0.8,
-      "conflict_contagion": 0.3,
       "alliance_formation": 2.5,
-      "trade_alliance_formation": 0.5,
-      "enmity_from_ideology": 0.3,
       "artifact_degradation": 1.2,
       "artifact_destruction": 1,
-      "artifact_corruption_spread": 0.8,
       "thermal_diffusion": 1.8,
       "belief_contagion": 1.2,
       "resource_diffusion": 0.8,
@@ -460,20 +415,14 @@
       "war_fatigue_detector": 1,
       "occurrence_resolution": 1,
       "post_war_recovery": 1,
-      "war_tie_cleanup": 1,
-      "ability_fade": 1,
       "reflected_glory": 1.5,
       "magic_school_formation": 0.5,
       "legal_code_formation": 1,
       "cultural_drift": 0.5,
       "armed_hero_detector": 1,
       "devout_believer_detector": 1,
-      "heresy_war_trigger": 0.8,
       "control_collapse": 1.2,
       "alliance_defense_call": 2,
-      "oath_breaker_detector": 1,
-      "oath_breaker_consequences": 1,
-      "alliance_dissolution": 0.5,
       "corruption_harm": 1.2,
       "unarmed_hero_detector": 1,
       "corruption_crisis": 1.2,
@@ -485,7 +434,7 @@
       "mutations": [
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": -40
         },
         {
@@ -495,20 +444,19 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": 15
         }
       ]
     },
     "exitConditions": [
       {
-        "type": "time_elapsed",
-        "minTicks": 45,
-        "since": "created"
+        "type": "growth_phases_complete",
+        "minPhases": 2
       },
       {
         "type": "pressure",
-        "pressureId": "security",
+        "pressureId": "iceberg_security",
         "min": 0
       }
     ],
@@ -516,12 +464,12 @@
       "mutations": [
         {
           "type": "modify_pressure",
-          "pressureId": "security",
+          "pressureId": "iceberg_security",
           "delta": 10
         },
         {
           "type": "modify_pressure",
-          "pressureId": "harmony",
+          "pressureId": "cultural_harmony",
           "delta": 10
         },
         {
@@ -542,15 +490,15 @@
     "name": "The Frozen Peace",
     "summary": "The orca threat recedes, leaving scars that will take generations to heal. Survivors rebuild not just colonies but the bonds between cultures, forging new traditions that blend Aurora Stack mysticism with Abyssal Trench pragmatism. The great festivals return, now tinged with remembrance for the fallen. Guilds that once competed now cooperate, their combined knowledge preserving what was nearly lost. It is an age of quiet determination, where every new chick represents a victory against oblivion.",
     "templateWeights": {
-      "krill_bloom_migration": 1.4,
-      "succession": 0.8,
+      "krill_bloom_discovery": 1.4,
+      "leadership_succession": 0.8,
       "orca_raider_arrival": 0,
       "great_festival": 0.4,
       "ideology_emergence": 0.4,
       "tech_breakthrough": 1.4,
       "legend_crystallization": 1.8,
       "guild_establishment": 1.6,
-      "wild_magic_discover": 0.5,
+      "wild_magical_discovery": 0.5,
       "thermal_colony_decline": 0.6,
       "thermal_colony_recovery": 0.8,
       "thermal_migration": 0.6,
@@ -561,9 +509,7 @@
       "colony_founding": 1.2,
       "hero_emergence": 0.6,
       "crisis_legislation": 0.6,
-      "war_declaration": 0.1,
-      "alliance_betrayal": 0.05,
-      "war_apocalypse_resolution": 1,
+      "apocalyptic_war_resolution": 1,
       "artifact_crafting": 0.6,
       "artifact_discovery": 1,
       "crystallized_power": 0.3,
@@ -588,11 +534,8 @@
       "thermal_diffusion": 0.8,
       "artifact_degradation": 0.6,
       "artifact_destruction": 0.4,
-      "artifact_corruption_spread": 0.4,
       "resource_diffusion": 2,
       "alliance_formation": 1.5,
-      "trade_alliance_formation": 1.5,
-      "enmity_from_ideology": 0.3,
       "legal_code_formation": 2,
       "era_spawner": 1,
       "era_transition": 1,
@@ -607,20 +550,13 @@
       "war_fatigue_detector": 1,
       "occurrence_resolution": 1,
       "post_war_recovery": 1,
-      "war_tie_cleanup": 1,
-      "ability_fade": 1,
-      "conflict_contagion": 0.2,
       "reflected_glory": 1,
       "magic_school_formation": 1,
       "combat_technique_formation": 0.5,
       "armed_hero_detector": 1,
       "devout_believer_detector": 1,
-      "heresy_war_trigger": 0.3,
       "control_collapse": 0.3,
       "alliance_defense_call": 1,
-      "oath_breaker_detector": 1,
-      "oath_breaker_consequences": 1,
-      "alliance_dissolution": 0.5,
       "corruption_harm": 0.8,
       "unarmed_hero_detector": 1,
       "corruption_crisis": 0.5,
@@ -630,9 +566,8 @@
     "entryConditions": [],
     "exitConditions": [
       {
-        "type": "time_elapsed",
-        "minTicks": 30,
-        "since": "created"
+        "type": "growth_phases_complete",
+        "minPhases": 2
       }
     ]
   }

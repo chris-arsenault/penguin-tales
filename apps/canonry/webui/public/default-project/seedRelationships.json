@@ -130,5 +130,47 @@
     "src": "loc_forgotten_shore",
     "dst": "loc_still_pools",
     "strength": 0.8
+  },
+  {
+    "kind": "adjacent_to",
+    "src": "loc_glow_fissure",
+    "dst": "loc_aurora_stack",
+    "strength": 0.5
+  },
+  {
+    "kind": "controls",
+    "src": "faction_midnight_claws",
+    "dst": "loc_glow_fissure",
+    "strength": 0.8
+  },
+  {
+    "kind": "leader_of",
+    "src": "npc_keeper_hollows",
+    "dst": "loc_drowned_ledge",
+    "strength": 1
+  },
+  {
+    "kind": "resident_of",
+    "src": "npc_grandmother_deep",
+    "dst": "loc_corpse_current",
+    "strength": 1
+  },
+  {
+    "kind": "adjacent_to",
+    "src": "loc_veil_vents",
+    "dst": "loc_still_pools",
+    "strength": 0.7
+  },
+  {
+    "kind": "adjacent_to",
+    "src": "loc_veil_vents",
+    "dst": "loc_forgotten_shore",
+    "strength": 0.7
+  },
+  {
+    "kind": "contained_by",
+    "src": "loc_forgotten_shore",
+    "dst": "loc_still_pools",
+    "strength": 1
   }
 ]

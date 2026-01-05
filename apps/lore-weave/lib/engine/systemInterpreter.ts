@@ -105,8 +105,6 @@ export interface FrameworkSystemConfig {
  * Creates era entities at simulation start with lineage relationships.
  */
 export interface EraSpawnerConfig extends FrameworkSystemConfig {
-  /** Expected ticks per era (for lineage distance calculation). Default: 30 */
-  ticksPerEra?: number;
 }
 
 /**

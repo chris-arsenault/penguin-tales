@@ -1376,7 +1376,6 @@
     "systemType": "eraSpawner",
     "config": {
       "description": "Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras.",
-      "ticksPerEra": 25,
       "id": "era_spawner",
       "name": "Era Initialization"
     },
@@ -1385,7 +1384,7 @@
   {
     "systemType": "eraTransition",
     "config": {
-      "description": "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future → current → historical.",
+      "description": "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future \u2192 current \u2192 historical.",
       "prominenceSnapshot": {
         "enabled": false,
         "minProminence": "renowned"

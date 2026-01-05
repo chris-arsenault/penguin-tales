@@ -4,6 +4,16 @@
 
 import React, { useState } from 'react';
 
+function formatEpochEra(era) {
+  if (!era) return 'Unknown era';
+  const startName = era.start?.name || 'Unknown era';
+  const endName = era.end?.name || startName;
+  if (!era.transitions || era.transitions.length === 0 || startName === endName) {
+    return endName;
+  }
+  return `${startName} → ${endName}`;
+}
+
 /**
  * PressureTooltip - Shows detailed breakdown of a pressure's sources
  * Now displays cumulative data across the entire epoch
@@ -236,7 +246,7 @@ export default function EpochTimeline({ epochStats, currentEpoch, pressures, pre
                     {epoch.epoch}
                   </div>
                   <div className="lw-timeline-content">
-                    <div className="lw-timeline-title">{epoch.era}</div>
+                    <div className="lw-timeline-title">{formatEpochEra(epoch.era)}</div>
                     <div className="lw-timeline-subtitle">
                       +{epoch.entitiesCreated} entities • +{epoch.relationshipsCreated} relations
                     </div>

@@ -32,6 +32,7 @@ export const APPLICABILITY_TYPES = {
   status: { label: 'Status Match', icon: '📌', color: '#0891b2', desc: 'Entity status check' },
   prominence: { label: 'Prominence', icon: '⭐', color: '#eab308', desc: 'Prominence range check' },
   time_elapsed: { label: 'Time Elapsed', icon: '⏱️', color: '#06b6d4', desc: 'Time since creation/update' },
+  growth_phases_complete: { label: 'Growth Phases Complete', icon: '🌱', color: '#22c55e', desc: 'N growth phases completed in era' },
   era_match: { label: 'Era Match', icon: '🕰️', color: '#10b981', desc: 'Only runs in specific eras' },
   random_chance: { label: 'Random Chance', icon: '🎲', color: '#a855f7', desc: 'Runs with a probability' },
   cooldown_elapsed: { label: 'Cooldown', icon: '⏱️', color: '#0ea5e9', desc: 'Wait N ticks since last run' },

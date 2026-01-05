@@ -6,7 +6,7 @@
  */
 
 import { HardState, Relationship } from '../core/worldTypes';
-import { Era } from '../engine/types';
+import type { EpochEraSummary } from '../engine/types';
 import type { WorldOutput } from '@canonry/world-schema';
 
 // =============================================================================
@@ -48,7 +48,7 @@ export interface EpochStartPayload {
 
 export interface EpochStatsPayload {
   epoch: number;
-  era: string;
+  era: EpochEraSummary;
   entitiesByKind: Record<string, number>;
   relationshipCount: number;
   pressures: Record<string, number>;

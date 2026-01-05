@@ -39,6 +39,7 @@ import type {
   TimeElapsedCondition,
   CooldownElapsedCondition,
   CreationsPerEpochCondition,
+  GrowthPhasesCompleteCondition,
   EraMatchCondition,
   RandomChanceCondition,
   GraphPathCondition,
@@ -131,6 +132,9 @@ export function evaluateCondition(
 
     case 'creations_per_epoch':
       return evaluateCreationsPerEpoch(condition, ctx);
+
+    case 'growth_phases_complete':
+      return evaluateGrowthPhasesComplete(condition, ctx);
 
     // =========================================================================
     // ERA CONDITIONS
@@ -616,6 +620,22 @@ function evaluateCreationsPerEpoch(
     passed,
     diagnostic: `creations this epoch=${count} (max ${condition.maxPerEpoch})`,
     details: { creationsThisEpoch: count, maxPerEpoch: condition.maxPerEpoch },
+  };
+}
+
+function evaluateGrowthPhasesComplete(
+  condition: GrowthPhasesCompleteCondition,
+  ctx: RuleContext
+): ConditionResult {
+  const eraId = condition.eraId ?? ctx.graph.currentEra?.id ?? '';
+  const history = ctx.graph.growthPhaseHistory ?? [];
+  const count = history.filter(entry => entry.eraId === eraId).length;
+  const passed = count >= condition.minPhases;
+
+  return {
+    passed,
+    diagnostic: `growth phases complete in era ${eraId}=${count} (need ${condition.minPhases})`,
+    details: { eraId, count, minPhases: condition.minPhases },
   };
 }
 

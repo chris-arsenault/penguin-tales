@@ -50,7 +50,7 @@ export default function ParameterForm({ params, onParamChange }) {
           min={1}
           max={50}
           value={params.ticksPerEpoch}
-          onChange={(v) => onParamChange('ticksPerEpoch', v ?? 15)}
+          onChange={(v) => onParamChange('ticksPerEpoch', v ?? 20)}
           className="lw-input"
           integer
           title="Number of simulation ticks to run per epoch"
@@ -62,7 +62,7 @@ export default function ParameterForm({ params, onParamChange }) {
           min={1}
           max={100}
           value={params.maxEpochs}
-          onChange={(v) => onParamChange('maxEpochs', v ?? 10)}
+          onChange={(v) => onParamChange('maxEpochs', v ?? 14)}
           className="lw-input"
           integer
           title="Maximum epochs to run (hard limit on simulation length)"

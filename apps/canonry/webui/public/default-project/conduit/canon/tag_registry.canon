@@ -44,6 +44,18 @@ tag chaotic do
   axis
 end
 
+tag cleansed do
+  category trait
+  rarity rare
+  description "New tag description"
+  kinds location npc artifact
+  related none
+  conflicts corrupted
+  templates none
+  usage 1 50
+  count 0
+end
+
 tag colony do
   category location
   rarity common
@@ -74,6 +86,18 @@ tag conflict do
   kinds npc faction occurrence rule
   related hostile crisis
   conflicts peaceful
+end
+
+tag corrupted do
+  category trait
+  rarity common
+  description "Corrupted by anti-penguin forces"
+  kinds npc location artifact
+  related none
+  conflicts cleansed
+  templates none
+  usage 1 50
+  count 0
 end
 
 tag crisis do

@@ -45,7 +45,7 @@
       "positiveFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 3,
+          "coefficient": 1,
           "kind": "ability",
           "subtype": "magic"
         },
@@ -59,7 +59,7 @@
       "negativeFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 0.4,
+          "coefficient": 0.7,
           "kind": "faction",
           "subtype": "criminal"
         },
@@ -77,7 +77,7 @@
     "description": "How stable the 'bergs native magic is. Positive values mean less wild magic is appearing, negative values mean anomalies happen frequently. Cults harness wild magic to stabilize it for their purposes. Criminal syndicates destabilize through artifact smuggling and black market magic trade."
   },
   {
-    "id": "security",
+    "id": "iceberg_security",
     "name": "Iceberg Security",
     "initialValue": 0,
     "homeostasis": 0.25,
@@ -121,7 +121,7 @@
     "description": "How well defended the 'berg is. Positive values mean no external threat / enough defenses, negative values mean a looming external threat (probably orcas)"
   },
   {
-    "id": "harmony",
+    "id": "cultural_harmony",
     "name": "Cultural Harmony",
     "initialValue": 0,
     "homeostasis": 0.25,

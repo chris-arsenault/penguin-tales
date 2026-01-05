@@ -1,5 +1,5 @@
 import { mean, standardDeviation } from 'simple-statistics';
-import { Graph, EngineConfig } from '../engine/types';
+import { Graph, EngineConfig, EpochEraSummary } from '../engine/types';
 import { HardState } from '../core/worldTypes';
 import {
   SimulationStatistics,
@@ -33,7 +33,6 @@ export class StatisticsCollector {
   private budgetHitCount: number = 0;
   private relationshipGrowthHistory: number[] = [];
   private erasVisited: Set<string> = new Set();
-  private ticksPerEra: Map<string, number> = new Map();
   private startTime: number = Date.now();
 
   constructor() {}
@@ -46,7 +45,8 @@ export class StatisticsCollector {
     epoch: number,
     entitiesCreated: number,
     relationshipsCreated: number,
-    growthTarget: number
+    growthTarget: number,
+    eraSummary: EpochEraSummary
   ): void {
     // Count entities by kind and subtype
     const entitiesByKind: Record<string, number> = {};
@@ -78,16 +78,17 @@ export class StatisticsCollector {
     this.relationshipGrowthHistory.push(relationshipGrowthRate);
 
     // Track era
-    this.erasVisited.add(graph.currentEra.id);
-    this.ticksPerEra.set(
-      graph.currentEra.id,
-      (this.ticksPerEra.get(graph.currentEra.id) || 0) + 1
-    );
+    this.erasVisited.add(eraSummary.start.id);
+    this.erasVisited.add(eraSummary.end.id);
+    for (const transition of eraSummary.transitions) {
+      this.erasVisited.add(transition.from.id);
+      this.erasVisited.add(transition.to.id);
+    }
 
     const epochStat: EpochStats = {
       epoch,
       tick: graph.tick,
-      era: graph.currentEra.name,
+      era: eraSummary,
       totalEntities: graph.getEntityCount(),
       entitiesByKind,
       entitiesBySubtype,
@@ -341,7 +342,6 @@ export class StatisticsCollector {
       totalEpochs: this.epochStats.length,
       ticksPerEpoch: config.ticksPerEpoch,
       erasVisited: Array.from(this.erasVisited),
-      ticksPerEra: Object.fromEntries(this.ticksPerEra),
       entitiesPerTick: graph.getEntityCount() / graph.tick,
       relationshipsPerTick: graph.getRelationshipCount() / graph.tick,
       entitiesPerEpoch: graph.getEntityCount() / this.epochStats.length,

@@ -246,7 +246,7 @@ The reward creates new needs, or enables others' needs. The merchant who gains w
 **Resolution (3 paths):**
 - `sue_for_peace` - War-weary faction negotiates withdrawal, archiving their `participant_in`
 - `claim_victory` - Dominant faction forces opponent's surrender, archiving their `participant_in`
-- `war_apocalypse_resolution` - Catastrophic end where an entity becomes the sole survivor
+- `apocalyptic_war_resolution` - Catastrophic end where an entity becomes the sole survivor
 
 All resolutions add `post_war_cooldown` tag to prevent immediate re-escalation. `post_war_recovery` removes cooldown and conflict tags after factions exit war.
 
@@ -286,9 +286,9 @@ Both are capped by `pairComponentSizeLimit: 6` - no alliance bloc can exceed 6 m
 **Pressure Connection:** Tied to the `resource_availibility` pressure and *The Great Thaw* era. The era begins with resources at +15, enabling rapid expansion. As colonies and guilds form, resources deplete. When resources drop below -20, expansion halts until recovery.
 
 **Sources (resource generation):**
-- `krill_bloom_migration` (+5) - New krill blooms discovered near colonies
+- `krill_bloom_discovery` (+5) - New krill blooms discovered near colonies
 - `location_discovery` (+5) - Explorers find resource-rich sites
-- `establish_trade` action (+2) - Trade routes generate wealth
+- `establish_trade_route` action (+2) - Trade routes generate wealth
 - `economic_colony_recovery` (+5) - Waning colonies recover economically
 
 **Sinks (resource consumption):**
@@ -346,7 +346,7 @@ Both are capped by `pairComponentSizeLimit: 6` - no alliance bloc can exceed 6 m
 
 **Progression:** Intact tomes with `stored_at` relationships can act upon the world:
 
-1. `tome_reveals_resources` - The tome reveals hidden value at its storage location. Adds `resource` tag, which feeds into `resource_diffusion` (spreads `thriving`) and enables `establish_trade` actions.
+1. `tome_reveals_resources` - The tome reveals hidden value at its storage location. Adds `resource` tag, which feeds into `resource_diffusion` (spreads `thriving`) and enables `establish_trade_route` actions.
 
 2. `tome_dispels_danger` - The tome's knowledge reveals safe passage. Removes `dangerous` tag, adds `safe` tag, countering the spread from `thermal_diffusion`.
 

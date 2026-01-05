@@ -29,22 +29,6 @@ export function FrameworkSystemTab({ system, onChange }) {
       <div className="section">
         <div className="section-title">Configuration</div>
 
-        {system.systemType === 'eraSpawner' && (
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="label">Ticks Per Era</label>
-              <NumberInput
-                value={config.ticksPerEra}
-                onChange={(v) => updateConfig('ticksPerEra', v)}
-                className="input"
-                min={1}
-                allowEmpty
-                integer
-              />
-            </div>
-          </div>
-        )}
-
         {system.systemType === 'eraTransition' && (
           <div className="form-grid">
             <p className="label" style={{ gridColumn: '1 / -1', color: '#666' }}>

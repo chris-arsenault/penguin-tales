@@ -49,6 +49,7 @@
         { "$ref": "#/$defs/RandomChanceRule" },
         { "$ref": "#/$defs/CooldownElapsedRule" },
         { "$ref": "#/$defs/CreationsPerEpochRule" },
+        { "$ref": "#/$defs/GrowthPhasesCompleteRule" },
         { "$ref": "#/$defs/GraphPathCondition" },
         { "$ref": "#/$defs/EntityExistsCondition" },
         { "$ref": "#/$defs/EntityHasRelationshipCondition" },
@@ -171,6 +172,17 @@
       "properties": {
         "type": { "const": "creations_per_epoch" },
         "maxPerEpoch": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "GrowthPhasesCompleteRule": {
+      "type": "object",
+      "required": ["type", "minPhases"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "growth_phases_complete" },
+        "minPhases": { "type": "integer", "minimum": 0 },
+        "eraId": { "$ref": "#/$defs/NonEmptyString" }
       }
     },
 

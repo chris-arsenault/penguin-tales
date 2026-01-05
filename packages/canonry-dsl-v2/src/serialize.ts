@@ -1918,10 +1918,6 @@ function formatEraSpawnerSystem(config: Record<string, unknown>, indentLevel: nu
     pushInlinePairLine(lines, 'description', remaining.description, indentLevel);
     delete remaining.description;
   }
-  if (remaining.ticksPerEra !== undefined) {
-    pushInlinePairLine(lines, 'ticks_per_era', remaining.ticksPerEra, indentLevel);
-    delete remaining.ticksPerEra;
-  }
 
   const extraLines = formatAttributeLines(remaining, indentLevel);
   if (extraLines.length > 0) lines.push(...extraLines);
