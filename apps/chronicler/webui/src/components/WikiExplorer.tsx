@@ -50,6 +50,32 @@ function buildPageHash(pageId: string | null): string {
   return `#/page/${encodeURIComponent(pageId)}`;
 }
 
+function normalizeChronicles(records?: ChronicleRecord[]): ChronicleRecord[] {
+  if (!records) return [];
+  return records
+    .filter((record) => record && record.chronicleId && record.title)
+    .map((record) => ({
+      ...record,
+      roleAssignments: record.roleAssignments ?? [],
+      selectedEntityIds: record.selectedEntityIds ?? [],
+      selectedEventIds: record.selectedEventIds ?? [],
+      selectedRelationshipIds: record.selectedRelationshipIds ?? [],
+    }))
+    .sort((a, b) => (b.acceptedAt || b.updatedAt || 0) - (a.acceptedAt || a.updatedAt || 0));
+}
+
+function normalizeStaticPages(pages?: StaticPage[]): StaticPage[] {
+  if (!pages) return [];
+  return pages
+    .filter((page) => page && page.pageId && page.title && page.slug)
+    .map((page) => ({
+      ...page,
+      status: page.status || 'published',
+    }))
+    .filter((page) => page.status === 'published')
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
 // Theme colors matching canonry arctic theme
 const colors = {
   bgPrimary: '#0a1929',
@@ -111,21 +137,37 @@ interface WikiExplorerProps {
   imageData: ImageMetadata | null;
   /** Lazy image loader - loads images on-demand from IndexedDB */
   imageLoader?: ImageLoader;
+  chronicles?: ChronicleRecord[];
+  staticPages?: StaticPage[];
 }
 
-export default function WikiExplorer({ projectId, worldData, loreData, imageData, imageLoader }: WikiExplorerProps) {
+export default function WikiExplorer({
+  projectId,
+  worldData,
+  loreData,
+  imageData,
+  imageLoader,
+  chronicles: chroniclesOverride,
+  staticPages: staticPagesOverride,
+}: WikiExplorerProps) {
   // Initialize from hash on mount
   const [currentPageId, setCurrentPageId] = useState<string | null>(() => parseHashPageId());
   const [searchQuery, setSearchQuery] = useState('');
 
   // Chronicles and static pages loaded from IndexedDB
-  const [chronicles, setChronicles] = useState<ChronicleRecord[]>([]);
-  const [staticPages, setStaticPages] = useState<StaticPage[]>([]);
+  const [chronicles, setChronicles] = useState<ChronicleRecord[]>(() => normalizeChronicles(chroniclesOverride));
+  const [staticPages, setStaticPages] = useState<StaticPage[]>(() => normalizeStaticPages(staticPagesOverride));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const simulationRunId = (worldData as { metadata?: { simulationRunId?: string } }).metadata?.simulationRunId;
+  const hasChroniclesOverride = chroniclesOverride !== undefined;
+  const hasStaticPagesOverride = staticPagesOverride !== undefined;
 
   // Load chronicles from IndexedDB when simulationRunId changes
   useEffect(() => {
+    if (hasChroniclesOverride) {
+      setChronicles(normalizeChronicles(chroniclesOverride));
+      return;
+    }
     if (!simulationRunId) {
       setChronicles([]);
       return;
@@ -152,10 +194,14 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
     return () => {
       cancelled = true;
     };
-  }, [simulationRunId]);
+  }, [chroniclesOverride, hasChroniclesOverride, simulationRunId]);
 
   // Load static pages from IndexedDB when projectId changes
   useEffect(() => {
+    if (hasStaticPagesOverride) {
+      setStaticPages(normalizeStaticPages(staticPagesOverride));
+      return;
+    }
     if (!projectId) {
       setStaticPages([]);
       return;
@@ -182,7 +228,7 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, staticPagesOverride, hasStaticPagesOverride]);
 
   // Sync hash changes to state (for back/forward buttons)
   useEffect(() => {
@@ -388,12 +434,21 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
 
     setIsRefreshing(true);
     try {
-      const [loadedChronicles, loadedStaticPages] = await Promise.all([
-        simulationRunId ? getCompletedChroniclesForSimulation(simulationRunId) : Promise.resolve([]),
-        projectId ? getPublishedStaticPagesForProject(projectId) : Promise.resolve([]),
-      ]);
-      setChronicles(loadedChronicles);
-      setStaticPages(loadedStaticPages);
+      if (hasChroniclesOverride || hasStaticPagesOverride) {
+        if (hasChroniclesOverride) {
+          setChronicles(normalizeChronicles(chroniclesOverride));
+        }
+        if (hasStaticPagesOverride) {
+          setStaticPages(normalizeStaticPages(staticPagesOverride));
+        }
+      } else {
+        const [loadedChronicles, loadedStaticPages] = await Promise.all([
+          simulationRunId ? getCompletedChroniclesForSimulation(simulationRunId) : Promise.resolve([]),
+          projectId ? getPublishedStaticPagesForProject(projectId) : Promise.resolve([]),
+        ]);
+        setChronicles(loadedChronicles);
+        setStaticPages(loadedStaticPages);
+      }
       // Clear page cache so pages are rebuilt with new data
       pageCacheRef.current.clear();
     } catch (err) {
@@ -401,7 +456,15 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
     } finally {
       setIsRefreshing(false);
     }
-  }, [simulationRunId, projectId, isRefreshing]);
+  }, [
+    chroniclesOverride,
+    hasChroniclesOverride,
+    hasStaticPagesOverride,
+    projectId,
+    simulationRunId,
+    staticPagesOverride,
+    isRefreshing,
+  ]);
 
   // Show data error UI
   if (dataError) {

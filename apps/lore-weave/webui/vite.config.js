@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
-import { resolve } from 'path';
+import { copyFileSync, mkdirSync, readdirSync } from 'fs';
+import { join, resolve } from 'path';
 
 // Lore Weave is an MFE remote for The Canonry shell.
 // To use Lore Weave, run The Canonry (apps/canonry/webui).
@@ -27,6 +28,19 @@ export default defineConfig({
         'react-dom': { singleton: true, requiredVersion: '^19.0.0' },
       },
     }),
+    {
+      name: 'copy-lore-weave-schemas',
+      apply: 'build',
+      closeBundle() {
+        const sourceDir = resolve(__dirname, '../lib/schemas');
+        const targetDir = resolve(__dirname, 'dist/schemas');
+        mkdirSync(targetDir, { recursive: true });
+        for (const file of readdirSync(sourceDir)) {
+          if (!file.endsWith('.schema.json')) continue;
+          copyFileSync(join(sourceDir, file), join(targetDir, file));
+        }
+      },
+    },
   ],
   // Base path - use /lore-weave/ in dev (via proxy) and production
   base: '/lore-weave/',

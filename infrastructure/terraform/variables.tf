@@ -1,4 +1,4 @@
-# variables.tf - Input variables for penguin-tales infrastructure
+# variables.tf - Input variables for canonry full suite infrastructure
 
 variable "aws_region" {
   description = "AWS region to deploy resources"

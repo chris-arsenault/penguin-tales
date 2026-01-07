@@ -1,6 +1,8 @@
-# Lore Weave Infrastructure
+# Canonry Infrastructure
 
-Terraform + AWS CLI configuration for deploying lore-weave static sites to AWS S3 + CloudFront.
+Terraform + AWS CLI configuration for deploying the Canonry full suite to AWS S3 + CloudFront.
+
+Viewer-only deployment lives in `infrastructure/terraform-viewer`.
 
 ## Architecture
 
@@ -13,7 +15,9 @@ User Request ──────▶│  │ /            ──▶ canonry    │
                     │  │ /cosmographer/* ─▶ S3       │    │
                     │  │ /coherence-engine/* ─▶ S3   │    │
                     │  │ /lore-weave/* ───▶ S3       │    │
+                    │  │ /illuminator/* ─▶ S3        │    │
                     │  │ /archivist/* ────▶ S3       │    │
+                    │  │ /chronicler/* ──▶ S3        │    │
                     │  └─────────────────────────────┘    │
                     └─────────────────────────────────────┘
                                     │
@@ -26,7 +30,9 @@ User Request ──────▶│  │ /            ──▶ canonry    │
                     │  │ /cosmographer/                │  │
                     │  │ /coherence-engine/            │  │
                     │  │ /lore-weave/                  │  │
+                    │  │ /illuminator/                 │  │
                     │  │ /archivist/                   │  │
+                    │  │ /chronicler/                  │  │
                     │  └───────────────────────────────┘  │
                     └─────────────────────────────────────┘
 ```
@@ -63,7 +69,7 @@ The `deploy.sh` script performs the following steps:
 ### 1. Build Phase
 - Cleans all existing `dist/` directories to remove stale artifacts
 - Runs `npm install && npm run build` for each app:
-  - name-forge, cosmographer, coherence-engine, lore-weave, archivist (MFE remotes)
+  - name-forge, cosmographer, coherence-engine, lore-weave, illuminator, archivist, chronicler (MFE remotes)
   - canonry (shell application)
 
 ### 2. Terraform Apply
@@ -83,8 +89,8 @@ The `deploy.sh` script performs the following steps:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `aws_region` | AWS region | `us-east-1` |
-| `prefix` | Project prefix for namespacing resources | `lw` |
-| `domain_name` | Domain name | `lore-weave.dev` |
+| `prefix` | Project prefix for namespacing resources | `canonry` |
+| `domain_name` | Domain name | `the-canonry.com` |
 
 Resource names are derived from the prefix:
 - S3 bucket: `{prefix}-static-{account_id}`

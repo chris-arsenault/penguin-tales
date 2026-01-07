@@ -1,4 +1,4 @@
-# main.tf - S3 bucket and CloudFront distribution for penguin-tales static sites
+# main.tf - S3 bucket and CloudFront distribution for canonry full suite
 
 data "aws_caller_identity" "current" {}
 
@@ -28,9 +28,17 @@ locals {
       path = "lore-weave"
       dist = "${path.module}/../../apps/lore-weave/webui/dist"
     }
+    illuminator = {
+      path = "illuminator"
+      dist = "${path.module}/../../apps/illuminator/webui/dist"
+    }
     archivist = {
       path = "archivist"
       dist = "${path.module}/../../apps/archivist/webui/dist"
+    }
+    chronicler = {
+      path = "chronicler"
+      dist = "${path.module}/../../apps/chronicler/webui/dist"
     }
   }
 
@@ -372,6 +380,46 @@ resource "aws_cloudfront_distribution" "static_site" {
     compress               = true
   }
 
+  ordered_cache_behavior {
+    path_pattern     = "/illuminator/*"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = local.s3_origin_id
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 86400
+    max_ttl                = 31536000
+    compress               = true
+  }
+
+  ordered_cache_behavior {
+    path_pattern     = "/chronicler/*"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = local.s3_origin_id
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 86400
+    max_ttl                = 31536000
+    compress               = true
+  }
+
   # Custom error responses for SPA routing
   custom_error_response {
     error_code            = 403
@@ -440,4 +488,3 @@ action "aws_cloudfront_create_invalidation" "invalidate_all" {
     paths           = ["/*"]
   }
 }
-

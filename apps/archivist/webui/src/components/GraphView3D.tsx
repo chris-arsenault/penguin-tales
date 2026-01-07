@@ -45,6 +45,17 @@ export default function GraphView3D({
   const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  // Delay render by one frame to let any stale animation callbacks clear
+  const [isReady, setIsReady] = useState(false);
+  // Unique ID per mount to ensure ForceGraph gets a fresh instance
+  const [mountId] = useState(() => Date.now());
+
+  useEffect(() => {
+    const frameId = requestAnimationFrame(() => {
+      setIsReady(true);
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, []);
 
   // Get container dimensions
   useEffect(() => {
@@ -67,20 +78,8 @@ export default function GraphView3D({
   }, []);
 
   // Transform data to force-graph format
-  const graphData = useRef({ nodes: [] as GraphNode[], links: [] as GraphLink[] });
-
-  const legendItems = useMemo(() => {
-    return data.schema.entityKinds.map(kind => {
-      const label = kind.style?.displayName || kind.description || kind.kind;
-      return {
-        kind: kind.kind,
-        label,
-        color: getKindColor(kind.kind, data.schema),
-      };
-    });
-  }, [data.schema]);
-
-  useEffect(() => {
+  // We need both useMemo (for sync computation) and imperative update (library mutates data)
+  const graphData = useMemo(() => {
     const nodes: GraphNode[] = data.hardState.map(entity => ({
       id: entity.id,
       name: entity.name,
@@ -102,8 +101,25 @@ export default function GraphView3D({
       };
     });
 
-    graphData.current = { nodes, links };
+    return { nodes, links };
   }, [data, showCatalyzedBy, prominenceScale]);
+
+  // Generate a stable key - includes mountId for fresh instance on remount,
+  // and entity count for clean reset when filters change
+  const graphKey = useMemo(() => {
+    return `graph-${mountId}-${data.hardState.length}`;
+  }, [mountId, data.hardState.length]);
+
+  const legendItems = useMemo(() => {
+    return data.schema.entityKinds.map(kind => {
+      const label = kind.style?.displayName || kind.description || kind.kind;
+      return {
+        kind: kind.kind,
+        label,
+        color: getKindColor(kind.kind, data.schema),
+      };
+    });
+  }, [data.schema]);
 
   // Calculate link distance based on selected metric
   const linkDistance = useCallback((link: any) => {
@@ -204,12 +220,22 @@ export default function GraphView3D({
     return link.strength * 2; // 0-2px width based on strength
   }, []);
 
-  // Set initial camera position (once)
+  // Set initial camera position and cleanup on unmount
   useEffect(() => {
     if (fgRef.current) {
       const camera = fgRef.current.camera();
       camera.position.set(0, 0, 500);
     }
+
+    // Cleanup: pause animation when component unmounts to prevent stale tick errors
+    return () => {
+      if (fgRef.current) {
+        fgRef.current.pauseAnimation?.();
+        // Also stop the d3 simulation
+        const simulation = fgRef.current.d3Force?.('simulation');
+        simulation?.stop?.();
+      }
+    };
   }, []);
 
   // Configure d3 forces when metric changes
@@ -242,9 +268,11 @@ export default function GraphView3D({
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
-      <ForceGraph3D
-        ref={fgRef}
-        graphData={graphData.current}
+      {isReady && (
+        <ForceGraph3D
+          key={graphKey}
+          ref={fgRef}
+          graphData={graphData}
         width={dimensions.width}
         height={dimensions.height}
         nodeId="id"
@@ -273,7 +301,8 @@ export default function GraphView3D({
         warmupTicks={200}
         cooldownTicks={Infinity}
         cooldownTime={20000}
-      />
+        />
+      )}
 
       {/* Legend */}
       <div className="absolute bottom-6 left-6 rounded-xl text-white text-sm shadow-2xl border border-blue-500/30 overflow-hidden"

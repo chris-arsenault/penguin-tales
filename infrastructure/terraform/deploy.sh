@@ -5,6 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+mkdir -p "$STATE_DIR"
+
 build_app() {
   local app_path="$1"
   echo "==> Building ${app_path}"
@@ -26,7 +28,9 @@ build_app "apps/name-forge/webui"
 build_app "apps/cosmographer/webui"
 build_app "apps/coherence-engine/webui"
 build_app "apps/lore-weave/webui"
+build_app "apps/illuminator/webui"
 build_app "apps/archivist/webui"
+build_app "apps/chronicler/webui"
 build_app "apps/canonry/webui"
 
 # Deploy with Terraform

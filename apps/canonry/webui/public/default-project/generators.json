@@ -1371,7 +1371,7 @@
           "maxCount": 2
         },
         {
-          "relationshipKind": "trade_route_to",
+          "relationshipKind": "trades_with",
           "fromKind": "location",
           "fromSubtype": "resource_node",
           "maxCount": 1

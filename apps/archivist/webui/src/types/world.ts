@@ -2,7 +2,7 @@ import type {
   CanonrySchemaSlice,
   CultureDefinition,
   EntityKindDefinition,
-  Prominence as CanonryProminence,
+  ProminenceLabel as CanonryProminenceLabel,
   SemanticCoordinates,
   SemanticRegion,
   Validation,
@@ -16,7 +16,7 @@ export type WorldState = CanonryWorldOutput;
 export type HardState = CanonryWorldEntity;
 export type Relationship = CanonryWorldRelationship;
 export type WorldMetadata = CanonryWorldMetadata;
-export type Prominence = CanonryProminence;
+export type Prominence = CanonryProminenceLabel;
 export type EntityKind = EntityKindDefinition['kind'];
 export type Point = SemanticCoordinates;
 export type Region = SemanticRegion;

@@ -813,5 +813,44 @@
       "inverseFormed": "blessed",
       "inverseEnded": "withdrew blessing from"
     }
+  },
+  {
+    "kind": "desecrated",
+    "description": "Desecrated",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "none",
+    "polarity": "negative",
+    "verbs": {
+      "formed": "desecrated",
+      "ended": "cleansed",
+      "inverseFormed": "was desecrated by",
+      "inverseEnded": "was cleansed of"
+    }
+  },
+  {
+    "kind": "guardian_of",
+    "description": "Guardian Of",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "location",
+      "artifact"
+    ],
+    "cullable": true,
+    "decayRate": "slow",
+    "polarity": "positive",
+    "verbs": {
+      "formed": "became guardian of",
+      "ended": "abandoned guardianship of",
+      "inverseFormed": "gained a guardian in",
+      "inverseEnded": "lost its guardian"
+    }
   }
 ]

@@ -52,7 +52,12 @@ import LoreWeaveHost from './remotes/LoreWeaveHost';
 import IlluminatorHost from './remotes/IlluminatorHost';
 import ArchivistHost from './remotes/ArchivistHost';
 import ChroniclerHost from './remotes/ChroniclerHost';
-import { getImagesByProject, loadImage } from './storage/imageStore';
+import { getImagesByProject, getImageBlob, getImageMetadata, loadImage } from './storage/imageStore';
+import { getStaticPagesForProject } from './storage/staticPageStorage';
+import {
+  getCompletedChroniclesForSimulation,
+  getCompletedChroniclesForProject,
+} from './storage/chronicleStorage';
 import { colors, typography, spacing } from './theme';
 
 /**
@@ -193,6 +198,141 @@ async function loadImageDataForProject(projectId, worldData) {
   }
 }
 
+const IMAGE_EXTENSION_BY_TYPE = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/svg+xml': 'svg',
+};
+
+function mimeTypeToExtension(mimeType) {
+  if (!mimeType) return 'bin';
+  const normalized = mimeType.toLowerCase();
+  return IMAGE_EXTENSION_BY_TYPE[normalized] || 'bin';
+}
+
+function sanitizeFileName(value, fallback) {
+  if (typeof value !== 'string') return fallback;
+  const sanitized = value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  return sanitized || fallback;
+}
+
+function collectReferencedImageIds(worldData, chronicles, staticPages) {
+  const ids = new Set();
+  const entityById = new Map();
+  if (worldData?.hardState) {
+    for (const entity of worldData.hardState) {
+      if (entity?.id) {
+        entityById.set(entity.id, entity);
+      }
+      const imageId = entity?.enrichment?.image?.imageId;
+      if (imageId) ids.add(imageId);
+    }
+  }
+  if (Array.isArray(chronicles)) {
+    for (const chronicle of chronicles) {
+      const refs = chronicle?.imageRefs?.refs || [];
+      for (const ref of refs) {
+        const imageId = ref?.generatedImageId;
+        if (imageId) ids.add(imageId);
+        if (ref?.type === 'entity_ref' && ref?.entityId) {
+          const entity = entityById.get(ref.entityId);
+          const entityImageId = entity?.enrichment?.image?.imageId;
+          if (entityImageId) ids.add(entityImageId);
+        }
+      }
+    }
+  }
+  if (Array.isArray(staticPages)) {
+    for (const page of staticPages) {
+      const content = page?.content;
+      if (typeof content !== 'string') continue;
+      const matcher = /image:([A-Za-z0-9_-]+)/g;
+      let match = matcher.exec(content);
+      while (match) {
+        if (match[1]) ids.add(match[1]);
+        match = matcher.exec(content);
+      }
+    }
+  }
+  return ids;
+}
+
+async function buildBundleImageAssets({ projectId, worldData, chronicles, staticPages }) {
+  const imageIds = collectReferencedImageIds(worldData, chronicles, staticPages);
+  if (imageIds.size === 0) {
+    return { imageData: null, images: null, imageFiles: [] };
+  }
+
+  const imageRecords = projectId ? await getImagesByProject(projectId) : [];
+  const imageById = new Map(imageRecords.map((record) => [record.imageId, record]));
+  const entityById = new Map((worldData?.hardState || []).map((entity) => [entity.id, entity]));
+  const entityByImageId = new Map();
+  for (const entity of worldData?.hardState || []) {
+    const imageId = entity?.enrichment?.image?.imageId;
+    if (imageId) entityByImageId.set(imageId, entity);
+  }
+  const imageResults = [];
+  const imageFiles = [];
+  const images = {};
+  const usedNames = new Map();
+
+  for (const imageId of imageIds) {
+    let record = imageById.get(imageId);
+    if (!record) {
+      record = await getImageMetadata(imageId);
+    }
+    const blob = await getImageBlob(imageId);
+    if (!blob) continue;
+
+    const ext = mimeTypeToExtension(record?.mimeType || blob.type);
+    const baseName = sanitizeFileName(imageId, `image-${imageResults.length + 1}`);
+    const currentCount = (usedNames.get(baseName) || 0) + 1;
+    usedNames.set(baseName, currentCount);
+    const suffix = currentCount > 1 ? `-${currentCount}` : '';
+    const filename = `${baseName}${suffix}.${ext}`;
+    const path = `images/${filename}`;
+
+    images[imageId] = path;
+    imageFiles.push({ path, blob });
+
+    const entity = entityByImageId.get(imageId) || (record?.entityId ? entityById.get(record.entityId) : null);
+    const prompt = record?.originalPrompt || record?.finalPrompt || record?.revisedPrompt || '';
+    const imageEntry = {
+      entityId: entity?.id || record?.entityId || 'chronicle',
+      entityName: entity?.name || record?.entityName || 'Unknown',
+      entityKind: entity?.kind || record?.entityKind || 'unknown',
+      prompt,
+      localPath: path,
+      imageId,
+    };
+
+    if (record?.imageType === 'chronicle') {
+      imageEntry.imageType = 'chronicle';
+      imageEntry.chronicleId = record.chronicleId;
+      imageEntry.imageRefId = record.imageRefId;
+    }
+
+    imageResults.push(imageEntry);
+  }
+
+  if (imageResults.length === 0) {
+    return { imageData: null, images: null, imageFiles: [] };
+  }
+
+  return {
+    imageData: {
+      generatedAt: new Date().toISOString(),
+      totalImages: imageResults.length,
+      results: imageResults,
+    },
+    images,
+    imageFiles,
+  };
+}
+
 const styles = {
   app: {
     display: 'flex',
@@ -253,6 +393,15 @@ function isWorldOutput(candidate) {
   );
 }
 
+function buildExportBase(value, fallback) {
+  const raw = value || fallback || 'export';
+  return raw
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
 function normalizeUiState(raw) {
   const activeTab = VALID_TABS.includes(raw?.activeTab) ? raw.activeTab : null;
   const activeSectionByTab = raw?.activeSectionByTab && typeof raw.activeSectionByTab === 'object'
@@ -288,6 +437,8 @@ export default function App() {
   const [simulationState, setSimulationState] = useState(null);
   const [slots, setSlots] = useState({});
   const [activeSlotIndex, setActiveSlotIndex] = useState(0);
+  const [exportModalSlotIndex, setExportModalSlotIndex] = useState(null);
+  const exportModalMouseDown = useRef(false);
   const simulationOwnerRef = useRef(null);
   // Track whether we're loading from a saved slot (to skip auto-save to scratch)
   const isLoadingSlotRef = useRef(false);
@@ -322,6 +473,24 @@ export default function App() {
     setActiveTab(tabId);
     setShowHome(false);
   }, []);
+
+  const openExportModal = useCallback((slotIndex) => {
+    setExportModalSlotIndex(slotIndex);
+  }, []);
+
+  const closeExportModal = useCallback(() => {
+    setExportModalSlotIndex(null);
+  }, []);
+
+  const handleExportModalMouseDown = useCallback((e) => {
+    exportModalMouseDown.current = e.target === e.currentTarget;
+  }, []);
+
+  const handleExportModalClick = useCallback((e) => {
+    if (exportModalMouseDown.current && e.target === e.currentTarget) {
+      closeExportModal();
+    }
+  }, [closeExportModal]);
 
   useEffect(() => {
     saveUiState({
@@ -1015,7 +1184,7 @@ export default function App() {
     handleLoadSlot,
   ]);
 
-  const handleExportSlot = useCallback((slotIndex) => {
+  const handleExportSlotDownload = useCallback((slotIndex) => {
     const slot = slots[slotIndex];
     if (!slot) {
       alert('Slot is empty.');
@@ -1045,10 +1214,7 @@ export default function App() {
       cultureIdentities: cultureIdentities ?? null,
     };
 
-    const safeBase = (exportPayload.slot.title || `slot-${slotIndex}`)
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    const safeBase = buildExportBase(exportPayload.slot.title, `slot-${slotIndex}`);
     const filename = `${safeBase || `slot-${slotIndex}`}.canonry-slot.json`;
 
     const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
@@ -1059,6 +1225,102 @@ export default function App() {
     link.click();
     URL.revokeObjectURL(url);
   }, [slots, worldContext, entityGuidance, cultureIdentities]);
+
+  const handleExportBundle = useCallback(async (slotIndex) => {
+    if (!currentProject?.id) return;
+    const slot = slots[slotIndex];
+    if (!slot) {
+      alert('Slot is empty.');
+      return;
+    }
+    const slotWorldData = slot.worldData || slot.simulationResults;
+    const liveWorldData = slotIndex === activeSlotIndex ? archivistData?.worldData : null;
+    const liveRunId = liveWorldData?.metadata?.simulationRunId;
+    const slotRunId = slotWorldData?.metadata?.simulationRunId;
+    const worldData =
+      (isWorldOutput(liveWorldData) && (!slotWorldData || !slotRunId || slotRunId === liveRunId))
+        ? liveWorldData
+        : slotWorldData;
+    if (!isWorldOutput(worldData)) {
+      alert('Slot does not contain a valid world output.');
+      return;
+    }
+
+    try {
+      const simulationRunId = worldData?.metadata?.simulationRunId;
+      const [loreData, staticPagesRaw, chroniclesRaw] = await Promise.all([
+        extractLoreDataWithCurrentImageRefs(worldData),
+        getStaticPagesForProject(currentProject.id),
+        simulationRunId
+          ? getCompletedChroniclesForSimulation(simulationRunId)
+          : getCompletedChroniclesForProject(currentProject.id),
+      ]);
+
+      const staticPages = (staticPagesRaw || []).filter((page) => page.status === 'published');
+      const chronicles = chroniclesRaw || [];
+      const { imageData, images, imageFiles } = await buildBundleImageAssets({
+        projectId: currentProject.id,
+        worldData,
+        chronicles,
+        staticPages,
+      });
+
+      const exportTitle = slot.title || (slotIndex === 0 ? 'Scratch' : `Slot ${slotIndex}`);
+      const safeBase = buildExportBase(exportTitle, `slot-${slotIndex}`);
+      const exportedAt = new Date().toISOString();
+      const bundle = {
+        format: 'canonry-viewer-bundle',
+        version: 1,
+        metadata: {
+          title: exportTitle,
+          exportedAt,
+          projectId: currentProject.id,
+          projectName: currentProject?.name || null,
+          simulationRunId: simulationRunId || null,
+        },
+        projectId: currentProject.id,
+        slot: {
+          index: slotIndex,
+          title: exportTitle,
+          createdAt: slot.createdAt || null,
+          savedAt: slot.savedAt || null,
+        },
+        worldData,
+        loreData,
+        staticPages,
+        chronicles,
+        imageData,
+        images,
+      };
+
+      const { default: JSZip } = await import('jszip');
+      const zip = new JSZip();
+      zip.file('bundle.json', JSON.stringify(bundle, null, 2));
+      for (const file of imageFiles) {
+        zip.file(file.path, file.blob);
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${safeBase || `slot-${slotIndex}`}.canonry-bundle.zip`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export bundle:', err);
+      alert(err.message || 'Failed to export bundle');
+    }
+  }, [currentProject?.id, currentProject?.name, slots, activeSlotIndex, archivistData?.worldData]);
+
+  const handleExportSlot = useCallback((slotIndex) => {
+    const slot = slots[slotIndex];
+    if (!slot) {
+      alert('Slot is empty.');
+      return;
+    }
+    openExportModal(slotIndex);
+  }, [slots, openExportModal]);
 
   const handleImportSlot = useCallback(async (slotIndex, file) => {
     if (!currentProject?.id || !file) return;
@@ -1090,6 +1352,10 @@ export default function App() {
 
   // Check if scratch has data
   const hasDataInScratch = Boolean(slots[0]?.simulationResults);
+  const exportModalSlot = exportModalSlotIndex !== null ? slots[exportModalSlotIndex] : null;
+  const exportModalTitle = exportModalSlot
+    ? exportModalSlot.title || (exportModalSlotIndex === 0 ? 'Scratch' : `Slot ${exportModalSlotIndex}`)
+    : 'Slot';
 
   // Extract naming data for Name Forge (keyed by culture ID)
   const namingData = useMemo(() => {
@@ -1506,6 +1772,49 @@ export default function App() {
           }}
         >
           Error: {error}
+        </div>
+      )}
+      {exportModalSlotIndex !== null && (
+        <div
+          className="modal-overlay"
+          onMouseDown={handleExportModalMouseDown}
+          onClick={handleExportModalClick}
+        >
+          <div className="modal modal-simple">
+            <div className="modal-header">
+              <div className="modal-title">Export {exportModalTitle}</div>
+              <button className="btn-close" onClick={closeExportModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ color: colors.textSecondary, marginBottom: spacing.md }}>
+                Choose the export format for this run slot.
+              </div>
+              <div style={{ fontSize: typography.sizeSm, color: colors.textMuted }}>
+                Viewer bundles include chronicles, static pages, and referenced images.
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-sm" onClick={closeExportModal}>Cancel</button>
+              <button
+                className="btn-sm"
+                onClick={() => {
+                  handleExportSlotDownload(exportModalSlotIndex);
+                  closeExportModal();
+                }}
+              >
+                Standard Export
+              </button>
+              <button
+                className="btn-sm btn-sm-primary"
+                onClick={() => {
+                  handleExportBundle(exportModalSlotIndex);
+                  closeExportModal();
+                }}
+              >
+                Viewer Bundle
+              </button>
+            </div>
+          </div>
         </div>
       )}
       <HelpModal
