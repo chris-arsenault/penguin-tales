@@ -10,6 +10,7 @@ import {
   applyTagPatch,
   buildTagPatch,
 } from '../rules';
+import { interpolate, createSystemRuleContext } from '../narrative/narrationTemplate';
 import type {
   SelectionRule,
   MutationResult,
@@ -99,6 +100,8 @@ export interface MultiSourceConfig {
   sourceSelection: SelectionRule;
   /** Immunity tag prefix - will be suffixed with source ID (e.g., 'immune' → 'immune:{sourceId}') */
   immunityTagPrefix?: string;
+  /** Narration template for immunity gains. Variables: {$self.name}, {$source.name} */
+  immunityNarrationTemplate?: string;
   /** Low adoption threshold - sources below this are marked forgotten */
   lowAdoptionThreshold?: number;
   /** Low adoption status - what to set when below threshold */
@@ -148,6 +151,12 @@ export interface GraphContagionConfig {
 
   /** Pressure changes when contagion spreads */
   pressureChanges?: Record<string, number>;
+
+  /**
+   * Template for in-world narration when infection occurs.
+   * Supports {$self.name}, {$source.name}, {$contagion_source.name}, etc.
+   */
+  narrationTemplate?: string;
 
   /**
    * Exclude infections where the entity and source have these relationship kinds.
@@ -350,6 +359,7 @@ function applySingleSourceContagion(
   const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
   const newInfections: string[] = []; // Track newly infected entities for visualization
   const pressureChanges: Record<string, number> = {};
+  const narrationsByGroup: Record<string, string> = {};
   const baseCtx = createSystemContext(graphView);
   const contagionSource =
     config.contagion.type === 'relationship' && config.contagion.targetEntityId
@@ -450,6 +460,17 @@ function applySingleSourceContagion(
 
       if (result.applied) {
         newInfections.push(entity.id);
+        // Generate narration if template provided, keyed by entity.id
+        if (config.narrationTemplate) {
+          const narrationCtx = createSystemRuleContext({
+            self: entity,
+            variables: { source, contagion_source: contagionSource },
+          });
+          const narrationResult = interpolate(config.narrationTemplate, narrationCtx);
+          if (narrationResult.complete) {
+            narrationsByGroup[entity.id] = narrationResult.text;
+          }
+        }
       }
     }
   }
@@ -580,6 +601,7 @@ function applySingleSourceContagion(
     details: {
       contagionSnapshot: visualizationSnapshot,
     },
+    narrationsByGroup: Object.keys(narrationsByGroup).length > 0 ? narrationsByGroup : undefined,
   };
 }
 
@@ -598,6 +620,7 @@ function applyMultiSourceContagion(
   const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
   const modifiedTags = new Map<string, Record<string, boolean | string>>();
   const pressureChanges: Record<string, number> = {};
+  const narrationsByGroup: Record<string, string> = {};
   const baseCtx = createSystemContext(graphView);
 
   // Tracking for visualization
@@ -705,6 +728,17 @@ function applyMultiSourceContagion(
             infectedBySource.set(source.id, new Set());
           }
           infectedBySource.get(source.id)!.add(entity.id);
+          // Generate narration if template provided, keyed by entity.id
+          if (config.narrationTemplate) {
+            const narrationCtx = createSystemRuleContext({
+              self: entity,
+              variables: { source, contagion_source: source },
+            });
+            const narrationResult = interpolate(config.narrationTemplate, narrationCtx);
+            if (narrationResult.complete) {
+              narrationsByGroup[entity.id] = narrationResult.text;
+            }
+          }
         }
       }
     }
@@ -728,6 +762,18 @@ function applyMultiSourceContagion(
             const currentTags = modifiedTags.get(entity.id) || { ...entity.tags };
             currentTags[`${multiSource.immunityTagPrefix}:${source.id}`] = true;
             modifiedTags.set(entity.id, currentTags);
+
+            // Generate immunity narration if template provided
+            if (multiSource.immunityNarrationTemplate) {
+              const narrationCtx = createSystemRuleContext({
+                self: entity,
+                variables: { source },
+              });
+              const narrationResult = interpolate(multiSource.immunityNarrationTemplate, narrationCtx);
+              if (narrationResult.complete) {
+                narrationsByGroup[`${entity.id}:immunity:${source.id}`] = narrationResult.text;
+              }
+            }
           }
         }
       }
@@ -871,5 +917,6 @@ function applyMultiSourceContagion(
     details: {
       contagionSnapshot: visualizationSnapshot,
     },
+    narrationsByGroup: Object.keys(narrationsByGroup).length > 0 ? narrationsByGroup : undefined,
   };
 }

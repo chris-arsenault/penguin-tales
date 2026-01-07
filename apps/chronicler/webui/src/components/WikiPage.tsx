@@ -15,20 +15,7 @@ import { SeedModal, type ChronicleSeedData } from './ChronicleSeedViewer.tsx';
 import { applyWikiLinks } from '../lib/wikiBuilder.ts';
 import EntityTimeline from './EntityTimeline.tsx';
 import ProminenceTimeline from './ProminenceTimeline.tsx';
-
-// Convert numeric prominence (0-5) to display label
-function prominenceLabel(value: number): string {
-  if (typeof value !== 'number') {
-    throw new Error(
-      `prominenceLabel: expected number (0-5), got ${typeof value}: ${JSON.stringify(value)}`
-    );
-  }
-  if (value < 1) return 'forgotten';
-  if (value < 2) return 'marginal';
-  if (value < 3) return 'recognized';
-  if (value < 4) return 'renowned';
-  return 'mythic';
-}
+import { prominenceLabelFromScale, type ProminenceScale } from '@canonry/world-schema';
 
 const colors = {
   bgPrimary: '#0a1929',
@@ -688,9 +675,16 @@ interface EntityPreviewCardProps {
   summary?: string;
   position: { x: number; y: number };
   imageUrl?: string | null;
+  prominenceScale: ProminenceScale;
 }
 
-function EntityPreviewCard({ entity, summary, position, imageUrl }: EntityPreviewCardProps) {
+function EntityPreviewCard({
+  entity,
+  summary,
+  position,
+  imageUrl,
+  prominenceScale,
+}: EntityPreviewCardProps) {
   // Position the card to the right of cursor, adjusting if it would go off-screen
   const cardWidth = 260;
   const cardHeight = 180;
@@ -737,7 +731,9 @@ function EntityPreviewCard({ entity, summary, position, imageUrl }: EntityPrevie
           <span style={{ ...styles.previewBadge, ...styles.previewBadgeStatus }}>
             {entity.status}
           </span>
-          <span style={styles.previewBadge}>{prominenceLabel(entity.prominence)}</span>
+          <span style={styles.previewBadge}>
+            {prominenceLabelFromScale(entity.prominence, prominenceScale)}
+          </span>
           {entity.culture && (
             <span style={styles.previewBadge}>{entity.culture}</span>
           )}
@@ -937,6 +933,7 @@ interface WikiPageViewProps {
   disambiguation?: DisambiguationEntry[];
   onNavigate: (pageId: string) => void;
   onNavigateToEntity: (entityId: string) => void;
+  prominenceScale: ProminenceScale;
 }
 
 export default function WikiPageView({
@@ -948,6 +945,7 @@ export default function WikiPageView({
   disambiguation,
   onNavigate,
   onNavigateToEntity,
+  prominenceScale,
 }: WikiPageViewProps) {
   const [showSeedModal, setShowSeedModal] = useState(false);
   const [hoveredBacklink, setHoveredBacklink] = useState<{
@@ -1261,6 +1259,7 @@ export default function WikiPageView({
                   <ProminenceTimeline
                     events={page.timelineEvents}
                     entityId={page.id}
+                    prominenceScale={prominenceScale}
                   />
                   {/* Entity Timeline table - shows discrete events (excluding prominence-only) */}
                   <EntityTimeline
@@ -1268,6 +1267,8 @@ export default function WikiPageView({
                     entityId={page.id}
                     entityIndex={entityIndex}
                     onNavigate={handleEntityClick}
+                    onHoverEnter={handleEntityHoverEnter}
+                    onHoverLeave={handleEntityHoverLeave}
                   />
                 </>
               ) : (
@@ -1408,6 +1409,7 @@ export default function WikiPageView({
           summary={hoveredSummary}
           position={hoveredBacklink.position}
           imageUrl={hoveredImageUrl}
+          prominenceScale={prominenceScale}
         />
       )}
     </div>

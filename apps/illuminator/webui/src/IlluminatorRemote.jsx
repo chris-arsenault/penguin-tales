@@ -44,6 +44,14 @@ import { exportImagePrompts, downloadImagePromptExport } from './lib/workerStora
 import { getEnrichmentResults } from './lib/enrichmentStorage';
 import { applyEnrichmentResult } from './lib/enrichmentTypes';
 import { getResolvedLLMCallSettings } from './lib/llmModelSettings';
+import {
+  buildProminenceScale,
+  DEFAULT_PROMINENCE_DISTRIBUTION,
+  prominenceThresholdFromScale,
+  prominenceLabelFromScale,
+  getEntityEvents,
+  getEntityEffects,
+} from '@canonry/world-schema';
 
 // Expose diagnostic functions on window for console access (for Module Federation)
 if (typeof window !== 'undefined') {
@@ -90,6 +98,8 @@ const DEFAULT_CONFIG = {
   requireDescription: false,
   useClaudeForImagePrompt: false,
   claudeImagePromptTemplate: DEFAULT_IMAGE_PROMPT_TEMPLATE,
+  // Description generation options
+  minEventSignificance: 0.25, // Include events above 'low' threshold
 };
 
 const normalizeEnrichmentConfig = (config) => {
@@ -559,6 +569,16 @@ export default function IlluminatorRemote({
   }, [worldData]);
 
   const entityById = useMemo(() => buildEntityIndex(entities), [entities]);
+  const prominenceScale = useMemo(() => {
+    const values = entities
+      .map((entity) => entity.prominence)
+      .filter((value) => typeof value === 'number' && Number.isFinite(value));
+    return buildProminenceScale(values, { distribution: DEFAULT_PROMINENCE_DISTRIBUTION });
+  }, [entities]);
+  const renownedThreshold = useMemo(
+    () => prominenceThresholdFromScale('renowned', prominenceScale),
+    [prominenceScale]
+  );
   const relationshipsByEntity = useMemo(
     () => buildRelationshipIndex(worldData?.relationships || []),
     [worldData?.relationships]
@@ -625,8 +645,8 @@ export default function IlluminatorRemote({
     const map = new Map();
     for (const entity of entities) {
       if (!entity.culture) continue;
-      // Prominence >= 3.0 = renowned or mythic
-      if (entity.prominence < 3.0) continue;
+      // Prominence at or above renowned
+      if (typeof entity.prominence !== 'number' || entity.prominence < renownedThreshold) continue;
       const existing = map.get(entity.culture);
       if (existing) {
         existing.push(entity);
@@ -635,7 +655,7 @@ export default function IlluminatorRemote({
       }
     }
     return map;
-  }, [entities]);
+  }, [entities, renownedThreshold]);
 
   // Handle assigning an existing image from the library to an entity
   const handleAssignImage = useCallback((entityId, imageId, imageMetadata) => {
@@ -876,7 +896,7 @@ export default function IlluminatorRemote({
           name: entity.name,
           kind: entity.kind,
           subtype: entity.subtype,
-          prominence: entity.prominence,
+          prominence: prominenceLabelFromScale(entity.prominence, prominenceScale),
           culture: entity.culture || '',
           status: entity.status || 'active',
           summary: entity.summary || '',
@@ -898,6 +918,32 @@ export default function IlluminatorRemote({
       };
 
       if (type === 'description') {
+        // Get entity events from narrative history (filtered by significance)
+        const entityEvents = getEntityEvents(
+          worldData?.narrativeHistory || [],
+          {
+            entityId: entity.id,
+            minSignificance: config.minEventSignificance ?? 0.25,
+            excludeProminenceOnly: true,
+            limit: 10, // Cap at 10 events to avoid prompt bloat
+          }
+        );
+
+        // Add events to entity context (use era name instead of tick)
+        entityContext.events = entityEvents.map((e) => {
+          // Get era name from entity index (era field is an ID)
+          const eraEntity = entityById.get(e.era);
+          const eraName = eraEntity?.name || e.era;
+          return {
+            era: eraName,
+            description: e.description,
+            significance: e.significance,
+            effects: getEntityEffects(e, entity.id).map((eff) => ({
+              type: eff.type,
+              description: eff.description,
+            })),
+          };
+        });
         return buildDescriptionPromptFromGuidance(
           entityGuidance,
           cultureIdentities,
@@ -941,10 +987,13 @@ export default function IlluminatorRemote({
       entityById,
       currentEra,
       worldData?.metadata?.era,
+      worldData?.narrativeHistory,
       prominentByCulture,
       styleSelection,
       worldSchema?.cultures,
       styleLibrary,
+      config.minEventSignificance,
+      prominenceScale,
     ]
   );
 
@@ -1192,6 +1241,7 @@ export default function IlluminatorRemote({
               styleLibrary={styleLibrary}
               styleSelection={styleSelection}
               onStyleSelectionChange={setStyleSelection}
+              prominenceScale={prominenceScale}
             />
           </div>
         )}
@@ -1243,6 +1293,7 @@ export default function IlluminatorRemote({
               worldData={worldData}
               worldSchema={worldSchema}
               simulationMetadata={simulationMetadata}
+              prominenceScale={prominenceScale}
             />
           </div>
         )}

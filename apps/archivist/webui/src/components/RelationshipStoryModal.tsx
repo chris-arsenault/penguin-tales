@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { RelationshipBackstoryLore, WorldState } from '../types/world.ts';
 import { getEntityById } from '../utils/dataTransform.ts';
 import './RelationshipStoryModal.css';
@@ -9,6 +10,17 @@ interface RelationshipStoryModalProps {
 }
 
 export default function RelationshipStoryModal({ lore, worldData, onClose }: RelationshipStoryModalProps) {
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e: React.MouseEvent) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
   const srcEntity = getEntityById(worldData, lore.relationship.src);
   const dstEntity = getEntityById(worldData, lore.relationship.dst);
 
@@ -19,8 +31,8 @@ export default function RelationshipStoryModal({ lore, worldData, onClose }: Rel
   const perception = parts[2]?.replace(/^Perception:\s*/i, '') || '';
 
   return (
-    <div className="relationship-story-overlay" onClick={onClose}>
-      <div className="relationship-story-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="relationship-story-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+      <div className="relationship-story-modal">
         {/* Header */}
         <div className="relationship-story-header">
           <div className="relationship-story-entities">

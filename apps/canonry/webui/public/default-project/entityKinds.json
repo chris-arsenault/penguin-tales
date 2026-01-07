@@ -360,13 +360,6 @@
         "transitionVerb": "passed away"
       },
       {
-        "id": "fictional",
-        "name": "Fictional",
-        "isTerminal": false,
-        "polarity": "neutral",
-        "transitionVerb": "was revealed to be fictional"
-      },
-      {
         "id": "missing",
         "name": "Missing",
         "isTerminal": false,

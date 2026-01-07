@@ -35,6 +35,16 @@ import type {
 import type { ChronicleRecord } from './chronicleStorage.ts';
 import { getChronicleContent } from './chronicleStorage.ts';
 import type { StaticPage } from './staticPageStorage.ts';
+import { applyWikiLinks } from './entityLinking.ts';
+import {
+  buildProminenceScale,
+  DEFAULT_PROMINENCE_DISTRIBUTION,
+  prominenceLabelFromScale,
+  type ProminenceScale,
+} from '@canonry/world-schema';
+
+// Re-export for backwards compatibility
+export { applyWikiLinks };
 
 /**
  * Chronicle image ref types (matching illuminator/chronicleTypes.ts)
@@ -68,16 +78,18 @@ export function buildWikiPages(
   worldData: WorldState,
   loreData: LoreData | null,
   imageData: ImageMetadata | null,
-  chronicles: ChronicleRecord[] = []
+  chronicles: ChronicleRecord[] = [],
+  prominenceScale?: ProminenceScale
 ): WikiPage[] {
   const pages: WikiPage[] = [];
+  const resolvedProminenceScale = resolveProminenceScale(worldData, prominenceScale);
   const loreIndex = buildLoreIndex(loreData);
   const aliasIndex = buildAliasIndex(worldData);
   const imageIndex = buildImageIndex(worldData, imageData);
 
   // Build entity pages
   for (const entity of worldData.hardState) {
-    const page = buildEntityPage(entity, worldData, loreIndex, imageIndex, aliasIndex);
+    const page = buildEntityPage(entity, worldData, loreIndex, imageIndex, aliasIndex, resolvedProminenceScale);
     pages.push(page);
   }
 
@@ -94,20 +106,15 @@ export function buildWikiPages(
   return pages;
 }
 
-/**
- * Convert numeric prominence (0-5) to display label.
- */
-function prominenceLabel(value: number): string {
-  if (typeof value !== 'number') {
-    throw new Error(
-      `prominenceLabel: expected number (0-5), got ${typeof value}: ${JSON.stringify(value)}`
-    );
-  }
-  if (value < 1) return 'forgotten';
-  if (value < 2) return 'marginal';
-  if (value < 3) return 'recognized';
-  if (value < 4) return 'renowned';
-  return 'mythic';
+function resolveProminenceScale(
+  worldData: WorldState,
+  prominenceScale?: ProminenceScale
+): ProminenceScale {
+  if (prominenceScale) return prominenceScale;
+  const values = worldData.hardState
+    .map((entity) => entity.prominence)
+    .filter((value) => typeof value === 'number' && Number.isFinite(value));
+  return buildProminenceScale(values, { distribution: DEFAULT_PROMINENCE_DISTRIBUTION });
 }
 
 /**
@@ -142,6 +149,41 @@ function getAllRegionsFlat(worldData: WorldState): Array<{ region: Region; entit
 }
 
 /**
+ * Build list of names to auto-link for backlink extraction.
+ */
+function buildLinkableNamesForBacklinks(
+  worldData: WorldState,
+  pageNameIndex?: Map<string, string>
+): Array<{ name: string; id: string }> {
+  const names: Array<{ name: string; id: string }> = [];
+  const seen = new Set<string>();
+
+  const addName = (name: string, id: string) => {
+    const normalized = name.toLowerCase().trim();
+    if (!normalized) return;
+    if (seen.has(normalized)) return;
+    seen.add(normalized);
+    names.push({ name, id });
+  };
+
+  for (const entity of worldData.hardState) {
+    addName(entity.name, entity.id);
+  }
+
+  if (pageNameIndex) {
+    for (const [name, id] of pageNameIndex) {
+      addName(name, id);
+    }
+  }
+
+  for (const { region } of getAllRegionsFlat(worldData)) {
+    addName(region.label, `region:${region.id}`);
+  }
+
+  return names;
+}
+
+/**
  * Look up a region by ID across all entity kinds
  */
 function findRegionById(worldData: WorldState, regionId: string): { region: Region; entityKind: string } | null {
@@ -168,8 +210,10 @@ export function buildPageIndex(
   worldData: WorldState,
   _loreData: LoreData | null, // Not used here - kept for API compatibility
   chronicles: ChronicleRecord[] = [],
-  staticPages: StaticPage[] = []
+  staticPages: StaticPage[] = [],
+  prominenceScale?: ProminenceScale
 ): WikiPageIndex {
+  const resolvedProminenceScale = resolveProminenceScale(worldData, prominenceScale);
   const entries: PageIndexEntry[] = [];
   const byId = new Map<string, PageIndexEntry>();
   const byName = new Map<string, string>();
@@ -200,7 +244,7 @@ export function buildPageIndex(
       slug: slugify(entity.name),
       summary: summary || undefined,
       aliases: aliases.length > 0 ? aliases : undefined,
-      categories: buildEntityCategories(entity, worldData),
+      categories: buildEntityCategories(entity, worldData, resolvedProminenceScale),
       entityKind: entity.kind,
       entitySubtype: entity.subtype,
       prominence: entity.prominence,
@@ -281,6 +325,34 @@ export function buildPageIndex(
   // Add region labels as linkable names
   for (const { region } of getAllRegionsFlat(worldData)) {
     linkableNames.push({ name: region.label, id: `region:${region.id}` });
+  }
+
+  // Backlink extraction for chronicle index entries (match auto-linking behavior)
+  if (chronicles.length > 0) {
+    const chronicleById = new Map(chronicles.map(chronicle => [chronicle.chronicleId, chronicle]));
+    for (const entry of entries) {
+      if (entry.type !== 'chronicle') continue;
+      const chronicle = chronicleById.get(entry.id);
+      if (!chronicle) continue;
+      const linked = new Set(entry.linkedEntities);
+      if (chronicle.entrypointId) {
+        linked.add(chronicle.entrypointId);
+      }
+
+      const content = getChronicleContent(chronicle);
+      if (content) {
+        const linkedContent = applyWikiLinks(content, linkableNames);
+        const extracted = extractLinkedEntities(
+          [{ id: 'temp', heading: '', level: 2, content: linkedContent }],
+          worldData,
+          byAlias,
+          byName
+        );
+        extracted.forEach(id => linked.add(id));
+      }
+
+      entry.linkedEntities = Array.from(linked);
+    }
   }
 
   // Pass 2: Build entries with resolved linked IDs
@@ -492,8 +564,10 @@ export function buildPageById(
   imageData: ImageMetadata | null,
   pageIndex: WikiPageIndex,
   chronicles: ChronicleRecord[] = [],
-  staticPages: StaticPage[] = []
+  staticPages: StaticPage[] = [],
+  prominenceScale?: ProminenceScale
 ): WikiPage | null {
+  const resolvedProminenceScale = resolveProminenceScale(worldData, prominenceScale);
   const indexEntry = pageIndex.byId.get(pageId);
   if (!indexEntry) return null;
 
@@ -507,14 +581,14 @@ export function buildPageById(
   if (indexEntry.type === 'entity' || indexEntry.type === 'era') {
     const entity = worldData.hardState.find(e => e.id === pageId);
     if (!entity) return null;
-    return buildEntityPage(entity, worldData, loreIndex, imageIndex, aliasIndex);
+    return buildEntityPage(entity, worldData, loreIndex, imageIndex, aliasIndex, resolvedProminenceScale);
   }
 
   // Chronicle page - look up in ChronicleRecords
   if (indexEntry.type === 'chronicle') {
     const chronicle = chronicles.find(c => c.chronicleId === pageId);
     if (!chronicle) return null;
-    return buildChroniclePageFromChronicle(chronicle, worldData, aliasIndex);
+    return buildChroniclePageFromChronicle(chronicle, worldData, aliasIndex, pageIndex.byName);
   }
 
   // Category page
@@ -578,7 +652,8 @@ export function buildPageById(
 function buildChroniclePageFromChronicle(
   chronicle: ChronicleRecord,
   worldData: WorldState,
-  aliasIndex: Map<string, string>
+  aliasIndex: Map<string, string>,
+  pageNameIndex?: Map<string, string>
 ): WikiPage {
   const content = getChronicleContent(chronicle);
   const title = chronicle.title;
@@ -589,9 +664,15 @@ function buildChroniclePageFromChronicle(
   const { sections } = buildChronicleSections(content, imageRefs, worldData);
   const summary = chronicle.summary || '';
 
+  const linkableNames = buildLinkableNamesForBacklinks(worldData, pageNameIndex);
+  const linkedSections = sections.map(section => ({
+    ...section,
+    content: applyWikiLinks(section.content, linkableNames),
+  }));
+
   const linkedEntities = Array.from(new Set([
     ...chronicle.selectedEntityIds,
-    ...extractLinkedEntities(sections, worldData, aliasIndex),
+    ...extractLinkedEntities(linkedSections, worldData, aliasIndex, pageNameIndex),
     ...(chronicle.entrypointId ? [chronicle.entrypointId] : []),
   ]));
 
@@ -1020,7 +1101,8 @@ function buildEntityPage(
   worldData: WorldState,
   loreIndex: Map<string, LoreRecord[]>,
   imageIndex: Map<string, string>,
-  aliasIndex: Map<string, string>
+  aliasIndex: Map<string, string>,
+  prominenceScale: ProminenceScale
 ): WikiPage {
   const entityLore = loreIndex.get(entity.id) || [];
   // Summary and description are now directly on entity
@@ -1138,13 +1220,13 @@ function buildEntityPage(
   }
 
   // Build infobox
-  const infobox = buildEntityInfobox(entity, worldData, imageIndex);
+  const infobox = buildEntityInfobox(entity, worldData, imageIndex, prominenceScale);
 
   // Extract linked entities from content
   const linkedEntities = extractLinkedEntities(sections, worldData, aliasIndex);
 
   // Build categories for this entity
-  const categories = buildEntityCategories(entity, worldData);
+  const categories = buildEntityCategories(entity, worldData, prominenceScale);
 
   return {
     id: entity.id,
@@ -1293,7 +1375,8 @@ function formatRelationships(
 function buildEntityInfobox(
   entity: HardState,
   worldData: WorldState,
-  imageIndex: Map<string, string>
+  imageIndex: Map<string, string>,
+  prominenceScale: ProminenceScale
 ): WikiInfobox {
   const fields: WikiInfobox['fields'] = [];
 
@@ -1302,7 +1385,7 @@ function buildEntityInfobox(
     fields.push({ label: 'Subtype', value: entity.subtype });
   }
   fields.push({ label: 'Status', value: entity.status });
-  fields.push({ label: 'Prominence', value: prominenceLabel(entity.prominence) });
+  fields.push({ label: 'Prominence', value: prominenceLabelFromScale(entity.prominence, prominenceScale) });
   if (entity.culture) {
     fields.push({ label: 'Culture', value: entity.culture });
   }
@@ -1359,7 +1442,11 @@ function buildEntityInfobox(
 /**
  * Build categories for an entity
  */
-function buildEntityCategories(entity: HardState, worldData: WorldState): string[] {
+function buildEntityCategories(
+  entity: HardState,
+  worldData: WorldState,
+  prominenceScale: ProminenceScale
+): string[] {
   const categories: string[] = [];
 
   // By kind
@@ -1376,7 +1463,7 @@ function buildEntityCategories(entity: HardState, worldData: WorldState): string
   }
 
   // By prominence
-  categories.push(`prominence-${prominenceLabel(entity.prominence)}`);
+  categories.push(`prominence-${prominenceLabelFromScale(entity.prominence, prominenceScale)}`);
 
   // By status
   categories.push(`status-${entity.status}`);
@@ -1679,102 +1766,6 @@ function slugify(text: string): string {
  */
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-/**
- * Check if a position in the string is inside a [[wikilink]].
- */
-function isInsideWikilink(text: string, position: number): boolean {
-  let depth = 0;
-  for (let i = 0; i < position; i++) {
-    if (text[i] === '[' && text[i + 1] === '[') {
-      depth++;
-      i++; // Skip next char
-    } else if (text[i] === ']' && text[i + 1] === ']') {
-      depth = Math.max(0, depth - 1);
-      i++; // Skip next char
-    }
-  }
-  return depth > 0;
-}
-
-/**
- * Escape special regex characters in a string
- */
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Apply wikilinks to a single section - wraps entity/page name mentions with [[...]] syntax.
- * Only links the first occurrence of each name per section (Wikipedia style).
- */
-function applyWikiLinksToSection(
-  section: string,
-  combinedPattern: RegExp
-): string {
-  // Track which names have been linked in this section (lowercase for case-insensitive matching)
-  const linkedInSection = new Set<string>();
-
-  return section.replace(combinedPattern, (match, _group, offset) => {
-    // Check if this position is already inside a wikilink
-    if (isInsideWikilink(section, offset)) {
-      return match;
-    }
-
-    // Check if we've already linked this name in this section
-    const matchLower = match.toLowerCase();
-    if (linkedInSection.has(matchLower)) {
-      return match; // Don't link again
-    }
-
-    // Mark as linked and wrap with [[...]]
-    linkedInSection.add(matchLower);
-    return `[[${match}]]`;
-  });
-}
-
-/**
- * Apply wikilinks to content - wraps entity/page name mentions with [[...]] syntax.
- * Only links first occurrence of each name per section (Wikipedia MOS:LINK style).
- * Used at render time to make entity names clickable.
- *
- * @param content - Raw text content
- * @param names - Array of { name, id } for entities and static pages to link
- */
-export function applyWikiLinks(
-  content: string,
-  names: Array<{ name: string; id: string }>
-): string {
-  // Filter names >= 3 chars and sort by length descending (match longer names first)
-  const validNames = names
-    .filter((n) => n.name.length >= 3)
-    .sort((a, b) => b.name.length - a.name.length);
-
-  if (validNames.length === 0) return content;
-
-  // Build a single regex that matches any name (word boundaries, case-insensitive)
-  const patterns = validNames.map((n) => `\\b${escapeRegex(n.name)}\\b`);
-  const combinedPattern = new RegExp(`(${patterns.join('|')})`, 'gi');
-
-  // Split by section headings (## or #), keeping the delimiter
-  // This regex captures the heading line so we can preserve it
-  const sectionSplitRegex = /^(#{1,3}\s+.*)$/gm;
-  const parts = content.split(sectionSplitRegex);
-
-  // Process each part - headings pass through, content gets wiki-linked
-  const result: string[] = [];
-  for (const part of parts) {
-    if (part.match(/^#{1,3}\s+/)) {
-      // This is a heading - pass through unchanged
-      result.push(part);
-    } else {
-      // This is content - apply wiki links (first occurrence per section)
-      result.push(applyWikiLinksToSection(part, combinedPattern));
-    }
-  }
-
-  return result.join('');
 }
 
 // ============================================================================

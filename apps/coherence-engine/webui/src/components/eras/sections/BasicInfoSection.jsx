@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { SectionHeader } from '../../shared';
+import { SectionHeader, LocalTextArea } from '../../shared';
 
 /**
  * @param {Object} props
@@ -36,10 +36,9 @@ export function BasicInfoSection({ era, onFieldChange }) {
       </div>
       <div className="form-group" style={{ marginTop: '16px' }}>
         <label className="label">Summary</label>
-        <textarea
+        <LocalTextArea
           value={era.summary}
-          onChange={(e) => onFieldChange('summary', e.target.value)}
-          className="textarea"
+          onChange={(value) => onFieldChange('summary', value)}
         />
       </div>
     </div>

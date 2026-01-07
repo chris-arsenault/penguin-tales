@@ -652,7 +652,7 @@
     "name": "Draw In Faction"
   },
   {
-    "description": "An ability resonates with a major event and becomes legend",
+    "description": "Historians discover an ability contributed to the scale of a major event",
     "actor": {
       "selection": {
         "kind": "ability",
@@ -694,7 +694,7 @@
       "filters": [
         {
           "type": "lacks_relationship",
-          "kind": "derived_from",
+          "kind": "catalyst_of",
           "with": "$actor"
         }
       ],
@@ -704,7 +704,7 @@
       "mutations": [
         {
           "type": "create_relationship",
-          "kind": "derived_from",
+          "kind": "catalyst_of",
           "src": "$actor",
           "dst": "$target",
           "strength": 0.8
@@ -715,7 +715,8 @@
           "delta": 0.25
         }
       ],
-      "descriptionTemplate": "echoed through the event of {target.name}",
+      "descriptionTemplate": "was linked to the outbreak of {target.name}",
+      "narrationTemplate": "Historians discovered that {actor.name} contributed to the scale of {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.2,
         "onFailure": 0.07

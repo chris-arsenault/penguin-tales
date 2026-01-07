@@ -7,31 +7,49 @@ import React from 'react';
 function ValidityBadge({ runValidity }) {
   if (!runValidity) return null;
 
-  const { isValid, allTemplatesRun, allActionsSucceeded, reachedFinalEra } = runValidity;
+  const { score, maxScore, scoreBreakdown } = runValidity;
 
-  if (isValid) {
-    return (
-      <span
-        className="lw-validity-badge lw-validity-valid"
-        title="All templates run, all actions succeeded, reached final era"
-      >
-        ✓ Valid
-      </span>
-    );
+  const detailParts = [];
+  if (scoreBreakdown?.templates) {
+    detailParts.push(`Templates ${scoreBreakdown.templates.used}/${scoreBreakdown.templates.total}`);
+  }
+  if (scoreBreakdown?.actions) {
+    detailParts.push(`Actions ${scoreBreakdown.actions.used}/${scoreBreakdown.actions.total}`);
+  }
+  if (scoreBreakdown?.systems) {
+    detailParts.push(`Systems ${scoreBreakdown.systems.used}/${scoreBreakdown.systems.total}`);
   }
 
-  // Build tooltip with reasons for invalidity
-  const reasons = [];
-  if (!allTemplatesRun) reasons.push('Some templates never ran');
-  if (!allActionsSucceeded) reasons.push('Some actions never succeeded');
-  if (!reachedFinalEra) reasons.push('Did not reach final era');
+  const title = detailParts.length > 0
+    ? `Score ${score}/${maxScore} • ${detailParts.join(', ')}`
+    : `Score ${score}/${maxScore}`;
+
+  const scoreRatio = maxScore > 0 ? score / maxScore : 1;
+  const style = scoreRatio >= 0.9
+    ? {
+        backgroundColor: 'rgba(34, 197, 94, 0.15)',
+        color: '#22c55e',
+        border: '1px solid rgba(34, 197, 94, 0.3)'
+      }
+    : scoreRatio >= 0.6
+      ? {
+          backgroundColor: 'rgba(245, 158, 11, 0.15)',
+          color: '#f59e0b',
+          border: '1px solid rgba(245, 158, 11, 0.3)'
+        }
+      : {
+          backgroundColor: 'rgba(239, 68, 68, 0.15)',
+          color: '#ef4444',
+          border: '1px solid rgba(239, 68, 68, 0.3)'
+        };
 
   return (
     <span
-      className="lw-validity-badge lw-validity-invalid"
-      title={reasons.join(', ')}
+      className="lw-validity-badge"
+      style={style}
+      title={title}
     >
-      ✗ Invalid
+      Score {score}/{maxScore}
     </span>
   );
 }
@@ -64,7 +82,7 @@ export default function RunControls({
       <>
         <div className="lw-step-indicator">
           <span>Attempt {validityAttempts} / {maxValidityAttempts}</span>
-          <span style={{ color: 'var(--lw-accent)' }}>SEARCHING FOR VALID RUN</span>
+          <span style={{ color: 'var(--lw-accent)' }}>SEARCHING FOR BEST RUN</span>
         </div>
         <button className="lw-btn lw-btn-danger" onClick={onCancelRunUntilValid}>
           ◼ Cancel
@@ -128,7 +146,7 @@ export default function RunControls({
             color: '#8b5cf6',
             border: '1px solid rgba(139, 92, 246, 0.3)'
           }}
-          title={`${validityReport.summary.foundValid ? 'Found valid on attempt ' + validityReport.summary.validAttempt : 'No valid run found'}`}
+          title={`Best score ${validityReport.summary.bestScore}${validityReport.summary.bestScoreMax ? `/${validityReport.summary.bestScoreMax}` : ''} on attempt ${validityReport.summary.bestAttempt}`}
         >
           {validityReport.summary.totalAttempts} runs
         </span>
@@ -145,9 +163,9 @@ export default function RunControls({
           className={`lw-btn lw-btn-secondary ${!validation.isValid ? 'disabled' : ''}`}
           onClick={onRunUntilValid}
           disabled={!validation.isValid}
-          title={`Run up to ${maxValidityAttempts} simulations until a valid one is found`}
+          title={`Run up to ${maxValidityAttempts} simulations and keep the highest score`}
         >
-          ⟳ Until Valid
+          ⟳ Search
         </button>
         <button
           className={`lw-btn lw-btn-step ${!validation.isValid ? 'disabled' : ''}`}

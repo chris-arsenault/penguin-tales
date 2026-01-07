@@ -3,7 +3,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { EnableToggle, useLocalInputState } from '../../shared';
+import { EnableToggle, useLocalInputState, LocalTextArea } from '../../shared';
 
 /**
  * @param {Object} props
@@ -70,6 +70,19 @@ export function OverviewTab({ generator, onChange, onDelete, onDuplicate }) {
             enabled={generator.enabled !== false}
             onChange={(enabled) => updateField('enabled', enabled)}
             label={generator.enabled !== false ? 'Generator is active' : 'Generator is disabled'}
+          />
+        </div>
+
+        <div style={{ marginTop: '16px' }}>
+          <label className="label">Narration Template</label>
+          <div className="section-desc" style={{ marginBottom: '8px' }}>
+            Syntax: {'{$target.field}'}, {'{$var.field}'}, {'{count:kind}'}, {'{list:created}'}, {'{field|fallback}'}.
+          </div>
+          <LocalTextArea
+            value={generator.narrationTemplate || ''}
+            onChange={(value) => updateField('narrationTemplate', value || undefined)}
+            placeholder="e.g., From {$target.name}, {count:npc} new souls emerged to shape the realm."
+            rows={2}
           />
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { previewGrammarNames } from '../../../lib/browser-generator';
 
 /**
@@ -160,6 +160,17 @@ export function CopyGrammarModal({ cultureId, cultureConfig, allCultures, existi
   const [substitutedGrammar, setSubstitutedGrammar] = useState(null);
   const [dependencies, setDependencies] = useState({ missing: [], existing: [] });
   const [selectedDeps, setSelectedDeps] = useState(new Set());
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
   const otherCultures = Object.entries(allCultures || {})
     .filter(([id]) => id !== cultureId)
@@ -276,8 +287,8 @@ export function CopyGrammarModal({ cultureId, cultureConfig, allCultures, existi
     : [];
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content copy-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+      <div className="modal-content copy-modal">
         <div className="tab-header mb-md">
           <h3 className="mt-0">Copy Grammar from Another Culture</h3>
           <button className="secondary" onClick={onClose}>×</button>

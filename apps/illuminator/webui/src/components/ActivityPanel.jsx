@@ -7,7 +7,7 @@
  * - Recent completed/errored tasks
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useCallback } from 'react';
 
 function formatDuration(ms) {
   if (ms < 1000) return `${ms}ms`;
@@ -121,6 +121,18 @@ export default function ActivityPanel({
   enrichmentTriggers,
 }) {
   const [debugItem, setDebugItem] = useState(null);
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = useCallback((e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  }, []);
+
+  const handleOverlayClick = useCallback((e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      setDebugItem(null);
+    }
+  }, []);
+
   const triggerSummary = useMemo(() => {
     if (!enrichmentTriggers || typeof enrichmentTriggers !== 'object') return null;
     const total = typeof enrichmentTriggers.total === 'number' ? enrichmentTriggers.total : null;
@@ -366,11 +378,10 @@ export default function ActivityPanel({
       )}
 
       {debugItem && (
-        <div className="illuminator-modal-overlay" onClick={() => setDebugItem(null)}>
+        <div className="illuminator-modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
           <div
             className="illuminator-modal"
             style={{ maxWidth: '900px', width: '90%', maxHeight: '85vh' }}
-            onClick={(event) => event.stopPropagation()}
           >
             <div className="illuminator-modal-header">
               <h3>Network Debug</h3>

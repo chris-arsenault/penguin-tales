@@ -6,7 +6,7 @@
  * Displays metadata in a collapsible sidebar with expandable prompt sections.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useImageUrl } from '../hooks/useImageUrl';
 
 /**
@@ -250,6 +250,17 @@ function MetadataSidebar({ metadata, isOpen, onToggle }) {
 export default function ImageModal({ isOpen, imageId, title, onClose }) {
   const { url: imageUrl, loading, error, metadata } = useImageUrl(isOpen ? imageId : null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
   // Close on escape key
   const handleKeyDown = useCallback(
@@ -291,7 +302,8 @@ export default function ImageModal({ isOpen, imageId, title, onClose }) {
         justifyContent: 'center',
         zIndex: 9999,
       }}
-      onClick={onClose}
+      onMouseDown={handleOverlayMouseDown}
+      onClick={handleOverlayClick}
     >
       {/* Header with title and close button */}
       <div

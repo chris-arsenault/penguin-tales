@@ -19,20 +19,12 @@ import ConfluxesIndex from './ConfluxesIndex.tsx';
 import HuddlesIndex from './HuddlesIndex.tsx';
 import WikiPageView from './WikiPage.tsx';
 import WikiSearch from './WikiSearch.tsx';
-
-// Convert numeric prominence (0-5) to display label
-function prominenceLabel(value: number): string {
-  if (typeof value !== 'number') {
-    throw new Error(
-      `prominenceLabel: expected number (0-5), got ${typeof value}: ${JSON.stringify(value)}`
-    );
-  }
-  if (value < 1) return 'forgotten';
-  if (value < 2) return 'marginal';
-  if (value < 3) return 'recognized';
-  if (value < 4) return 'renowned';
-  return 'mythic';
-}
+import {
+  buildProminenceScale,
+  DEFAULT_PROMINENCE_DISTRIBUTION,
+  prominenceLabelFromScale,
+  type ProminenceScale,
+} from '@canonry/world-schema';
 
 /**
  * Parse page ID from URL hash
@@ -220,6 +212,16 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
     return null;
   }, [worldData]);
 
+  const prominenceScale = useMemo(() => {
+    if (dataError) {
+      return buildProminenceScale([], { distribution: DEFAULT_PROMINENCE_DISTRIBUTION });
+    }
+    const values = worldData.hardState
+      .map((entity) => entity.prominence)
+      .filter((value) => typeof value === 'number' && Number.isFinite(value));
+    return buildProminenceScale(values, { distribution: DEFAULT_PROMINENCE_DISTRIBUTION });
+  }, [worldData, dataError]);
+
   // Build lightweight page index (fast) - only if data is valid
   const { pageIndex, entityIndex } = useMemo(() => {
     if (dataError) {
@@ -229,13 +231,13 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
         entityIndex: new Map<string, HardState>(),
       };
     }
-    const pageIndex = buildPageIndex(worldData, loreData, chronicles, staticPages);
+    const pageIndex = buildPageIndex(worldData, loreData, chronicles, staticPages, prominenceScale);
     const entityIndex = new Map<string, HardState>();
     for (const entity of worldData.hardState) {
       entityIndex.set(entity.id, entity);
     }
     return { pageIndex, entityIndex };
-  }, [worldData, loreData, chronicles, staticPages, dataError]);
+  }, [worldData, loreData, chronicles, staticPages, dataError, prominenceScale]);
 
   // Page cache - stores fully built pages by ID
   const pageCacheRef = useRef<Map<string, WikiPage>>(new Map());
@@ -252,12 +254,21 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
       return cache.get(pageId)!;
     }
 
-    const page = buildPageById(pageId, worldData, loreData, imageData, pageIndex, chronicles, staticPages);
+    const page = buildPageById(
+      pageId,
+      worldData,
+      loreData,
+      imageData,
+      pageIndex,
+      chronicles,
+      staticPages,
+      prominenceScale
+    );
     if (page) {
       cache.set(pageId, page);
     }
     return page;
-  }, [worldData, loreData, imageData, pageIndex, chronicles, staticPages]);
+  }, [worldData, loreData, imageData, pageIndex, chronicles, staticPages, prominenceScale]);
 
   // Convert index entries to minimal WikiPage objects for navigation components
   const indexAsPages = useMemo(() => {
@@ -504,6 +515,7 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
               disambiguation={currentDisambiguation}
               onNavigate={handleNavigate}
               onNavigateToEntity={handleNavigateToEntity}
+              prominenceScale={prominenceScale}
             />
           ) : (
             <HomePage
@@ -515,6 +527,7 @@ export default function WikiExplorer({ projectId, worldData, loreData, imageData
               imageData={imageData}
               imageLoader={imageLoader}
               onNavigate={handleNavigate}
+              prominenceScale={prominenceScale}
             />
           )}
         </div>
@@ -533,6 +546,7 @@ interface HomePageProps {
   imageData: ImageMetadata | null;
   imageLoader?: ImageLoader;
   onNavigate: (pageId: string) => void;
+  prominenceScale: ProminenceScale;
 }
 
 /**
@@ -540,7 +554,8 @@ interface HomePageProps {
  */
 function weightedRandomSelect<T extends { prominence?: number }>(
   items: T[],
-  count: number
+  count: number,
+  prominenceScale: ProminenceScale
 ): T[] {
   if (items.length <= count) return items;
 
@@ -555,7 +570,9 @@ function weightedRandomSelect<T extends { prominence?: number }>(
 
   const weighted = items.map(item => ({
     item,
-    weight: item.prominence != null ? weights[prominenceLabel(item.prominence)] || 1 : 1,
+    weight: item.prominence != null
+      ? weights[prominenceLabelFromScale(item.prominence, prominenceScale)] || 1
+      : 1,
   }));
 
   const selected: T[] = [];
@@ -578,7 +595,14 @@ function weightedRandomSelect<T extends { prominence?: number }>(
   return selected;
 }
 
-function HomePage({ worldData, chronicles, staticPages, imageLoader, onNavigate }: HomePageProps) {
+function HomePage({
+  worldData,
+  chronicles,
+  staticPages,
+  imageLoader,
+  onNavigate,
+  prominenceScale
+}: HomePageProps) {
   // Find System:About This Project page
   const aboutPage = useMemo(() => {
     return staticPages.find(p =>
@@ -639,9 +663,9 @@ function HomePage({ worldData, chronicles, staticPages, imageLoader, onNavigate 
       // Fallback to any entity with a summary
       const withSummary = worldData.hardState.filter(e => e.kind !== 'era' && e.summary);
       if (withSummary.length === 0) return null;
-      return weightedRandomSelect(withSummary, 1)[0];
+      return weightedRandomSelect(withSummary, 1, prominenceScale)[0];
     }
-    return weightedRandomSelect(candidates, 1)[0];
+    return weightedRandomSelect(candidates, 1, prominenceScale)[0];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

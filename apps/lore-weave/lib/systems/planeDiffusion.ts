@@ -28,6 +28,7 @@ import { hasTag, getTagValue } from '../utils';
 import { buildTagPatch, createSystemContext, evaluateMetric, selectEntities } from '../rules';
 import type { Metric, SelectionRule } from '../rules';
 import { FRAMEWORK_TAG_VALUES } from '@canonry/world-schema';
+import { interpolate, createSystemRuleContext } from '../narrative/narrationTemplate';
 
 // =============================================================================
 // CONSTANTS
@@ -98,6 +99,20 @@ export interface DiffusionOutputTag {
   minValue?: number;
   /** Maximum field value to set this tag (exclusive) */
   maxValue?: number;
+  /**
+   * Narration template for narrative-quality text when this tag is gained.
+   * Uses the template syntax:
+   * - {$self.name} - The entity gaining the tag
+   * Example: "{$self.name} became dangerously hot."
+   */
+  narrationTemplate?: string;
+  /**
+   * Narration template for narrative-quality text when this tag is lost.
+   * Uses the template syntax:
+   * - {$self.name} - The entity losing the tag
+   * Example: "{$self.name} cooled down and became safe again."
+   */
+  lostNarrationTemplate?: string;
 }
 
 /**
@@ -315,7 +330,8 @@ export function createPlaneDiffusionSystem(
         }
       }
 
-      const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
+      const modifications: Array<{ id: string; changes: Partial<HardState>; narrativeGroupId?: string }> = [];
+      const narrationsByGroup: Record<string, string> = {};
       const metricCtx = createSystemContext(graphView);
 
       const getFalloff = (distance: number, strength: number): number => {
@@ -524,17 +540,32 @@ export function createPlaneDiffusionSystem(
         // Add appropriate output tag based on thresholds (using clamped value)
         // Track if any NEW output tag was added (not previously present)
         let newOutputTagAdded = false;
+        let gainedOutputTag: DiffusionOutputTag | undefined;
+        const newOutputTags = new Set<string>();
         for (const outputTag of config.outputTags) {
           const minOk = outputTag.minValue === undefined || fieldValue >= outputTag.minValue;
           const maxOk = outputTag.maxValue === undefined || fieldValue < outputTag.maxValue;
 
           if (minOk && maxOk) {
             newTags[outputTag.tag] = true;
+            newOutputTags.add(outputTag.tag);
             tagsChanged = true;
             // This is a significant change if entity didn't have this tag before
             if (!previousOutputTags.has(outputTag.tag)) {
               newOutputTagAdded = true;
+              gainedOutputTag = outputTag;
             }
+          }
+        }
+
+        // Track lost tags (had before but don't have now)
+        let outputTagLost = false;
+        let lostOutputTag: DiffusionOutputTag | undefined;
+        for (const outputTag of config.outputTags) {
+          if (previousOutputTags.has(outputTag.tag) && !newOutputTags.has(outputTag.tag)) {
+            outputTagLost = true;
+            lostOutputTag = outputTag;
+            break;
           }
         }
 
@@ -543,6 +574,9 @@ export function createPlaneDiffusionSystem(
           newTags[config.valueTag] = fieldValue.toFixed(1);
           tagsChanged = true;
         }
+
+        // Determine if this is a significant change (gained or lost an output tag)
+        const significantChange = newOutputTagAdded || outputTagLost;
 
         if (tagsChanged) {
           // Enforce max tags limit, but preserve framework tags if possible
@@ -560,15 +594,31 @@ export function createPlaneDiffusionSystem(
             }
           }
 
+          // Generate narration: prefer gained template, fall back to lost template
+          if (newOutputTagAdded && gainedOutputTag?.narrationTemplate) {
+            const narrationCtx = createSystemRuleContext({ self: entity });
+            const narrationResult = interpolate(gainedOutputTag.narrationTemplate, narrationCtx);
+            if (narrationResult.complete) {
+              narrationsByGroup[entity.id] = narrationResult.text;
+            }
+          } else if (outputTagLost && lostOutputTag?.lostNarrationTemplate) {
+            const narrationCtx = createSystemRuleContext({ self: entity });
+            const narrationResult = interpolate(lostOutputTag.lostNarrationTemplate, narrationCtx);
+            if (narrationResult.complete) {
+              narrationsByGroup[entity.id] = narrationResult.text;
+            }
+          }
+
           // Type assertion: buildTagPatch returns TagPatch (with undefined for deletions)
           // but SystemResult expects Partial<HardState> - compatible at runtime
           modifications.push({
             id: entity.id,
-            changes: { tags: buildTagPatch(entity.tags, newTags as Record<string, string | boolean>) }
+            changes: { tags: buildTagPatch(entity.tags, newTags as Record<string, string | boolean>) },
+            narrativeGroupId: significantChange ? entity.id : undefined,
           } as typeof modifications[number]);
 
-          // Only count as significant if a new output tag was added
-          if (newOutputTagAdded) {
+          // Only count as significant if a new output tag was added or lost
+          if (significantChange) {
             significantModificationCount++;
           }
         }
@@ -648,6 +698,7 @@ export function createPlaneDiffusionSystem(
         entitiesModified: modifications,
         pressureChanges,
         description: `${config.name}: ${sources.length} sources, ${sinks.length} sinks, ${significantModificationCount} entities gained output tags`,
+        narrationsByGroup: Object.keys(narrationsByGroup).length > 0 ? narrationsByGroup : undefined,
         details: {
           diffusionSnapshot: visualizationSnapshot,
           // Significant modifications = entities that gained a NEW output tag

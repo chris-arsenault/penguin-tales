@@ -5,7 +5,7 @@
  * Shows all images in the library with filtering by entity kind and culture.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   searchImages,
   getImageFilterOptions,
@@ -35,6 +35,17 @@ export default function ImagePickerModal({
   currentImageId,
 }) {
   const [images, setImages] = useState([]);
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      handleClose();
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [thumbnailUrls, setThumbnailUrls] = useState({});
   const [selectedImageId, setSelectedImageId] = useState(null);
@@ -172,11 +183,10 @@ export default function ImagePickerModal({
   if (!isOpen) return null;
 
   return (
-    <div className="illuminator-modal-overlay" onClick={handleClose}>
+    <div className="illuminator-modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
       <div
         className="illuminator-modal"
         style={{ maxWidth: '900px', maxHeight: '85vh' }}
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="illuminator-modal-header">
           <h3>Select Image from Library</h3>

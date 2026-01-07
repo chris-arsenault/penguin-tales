@@ -112,8 +112,18 @@ export function validateWorldData(worldData: WorldState): string[] {
       addIssue(`Entity "${entity.id}" references unknown culture "${entity.culture}".`);
     }
 
-    if (prominenceLevels && !prominenceLevels.includes(entity.prominence)) {
-      addIssue(`Entity "${entity.id}" uses prominence "${entity.prominence}" not in schema.uiConfig.prominenceLevels.`);
+    if (prominenceLevels) {
+      if (typeof entity.prominence === 'string') {
+        if (!prominenceLevels.includes(entity.prominence)) {
+          addIssue(`Entity "${entity.id}" uses prominence "${entity.prominence}" not in schema.uiConfig.prominenceLevels.`);
+        }
+      } else if (typeof entity.prominence === 'number') {
+        if (!Number.isFinite(entity.prominence) || entity.prominence < 0 || entity.prominence > 5) {
+          addIssue(`Entity "${entity.id}" has invalid numeric prominence "${entity.prominence}".`);
+        }
+      } else {
+        addIssue(`Entity "${entity.id}" has invalid prominence "${entity.prominence}".`);
+      }
     }
 
     const coords = entity.coordinates;

@@ -21,6 +21,16 @@ const INFRASTRUCTURE_SYSTEMS = new Set([
   'relationship_maintenance', // Cleanup system
 ]);
 
+const RUN_SCORE_WEIGHTS = {
+  templates: 3,
+  actions: 2,
+  systems: 1,
+};
+
+function countEnabled(items) {
+  return (items || []).filter(item => item.enabled !== false).length;
+}
+
 function loadStoredBoolean(key) {
   if (!key || typeof localStorage === 'undefined') return false;
   try {
@@ -97,6 +107,7 @@ export default function SimulationRunner({
   setIsRunning,
   onComplete,
   onViewResults,
+  onSearchRunScored,
   externalSimulationState,
   onSimulationStateChange,
   simulationWorker,
@@ -177,18 +188,34 @@ export default function SimulationRunner({
     }
   }, [simState.status, simState.result, onComplete]);
 
-  // Validity tracking: all templates run, all actions succeeded, all systems fired, reached final era
+  // Run scoring: templates fired (high), actions completed (med), systems executed (low)
   const runValidity = useMemo(() => {
     if (simState.status !== 'complete') {
-      return { isValid: false, allTemplatesRun: false, allActionsSucceeded: false, allSystemsFired: false, reachedFinalEra: false, unusedSystems: [] };
+      return {
+        score: 0,
+        maxScore: 0,
+        scoreBreakdown: null,
+        reachedFinalEra: false,
+        unusedSystems: []
+      };
     }
 
-    const allTemplatesRun = simState.templateUsage?.unusedTemplates?.length === 0;
-    const allActionsSucceeded = simState.catalystStats?.unusedActions?.length === 0;
+    const totalTemplates = simState.templateUsage?.totalTemplates ?? countEnabled(generators);
+    const unusedTemplates = simState.templateUsage?.unusedTemplates || [];
+    const templatesUsed = Math.max(totalTemplates - unusedTemplates.length, 0);
+
+    const totalActions = countEnabled(actions);
+    const unusedActions = simState.catalystStats?.unusedActions || [];
+    const actionsUsed = Math.max(totalActions - unusedActions.length, 0);
 
     // Check systems fired (derived from narrativeHistory)
     const unusedSystems = getUnusedSystems(simState.result?.narrativeHistory, systems);
-    const allSystemsFired = unusedSystems.length === 0;
+    const totalSystems = (systems || [])
+      .filter(s => s.enabled !== false)
+      .map(s => s.config?.id || s.systemType)
+      .filter(id => id && !INFRASTRUCTURE_SYSTEMS.has(id))
+      .length;
+    const systemsUsed = Math.max(totalSystems - unusedSystems.length, 0);
 
     // Check if we reached the final era
     // The final era is the last one in the eras array
@@ -196,15 +223,37 @@ export default function SimulationRunner({
     const currentEraId = simState.currentEpoch?.era?.id;
     const reachedFinalEra = finalEraId && currentEraId === finalEraId;
 
+    const score = (templatesUsed * RUN_SCORE_WEIGHTS.templates)
+      + (actionsUsed * RUN_SCORE_WEIGHTS.actions)
+      + (systemsUsed * RUN_SCORE_WEIGHTS.systems);
+    const maxScore = (totalTemplates * RUN_SCORE_WEIGHTS.templates)
+      + (totalActions * RUN_SCORE_WEIGHTS.actions)
+      + (totalSystems * RUN_SCORE_WEIGHTS.systems);
+
     return {
-      isValid: allTemplatesRun && allActionsSucceeded && allSystemsFired && reachedFinalEra,
-      allTemplatesRun,
-      allActionsSucceeded,
-      allSystemsFired,
+      score,
+      maxScore,
+      scoreBreakdown: {
+        templates: {
+          used: templatesUsed,
+          total: totalTemplates,
+          weight: RUN_SCORE_WEIGHTS.templates,
+        },
+        actions: {
+          used: actionsUsed,
+          total: totalActions,
+          weight: RUN_SCORE_WEIGHTS.actions,
+        },
+        systems: {
+          used: systemsUsed,
+          total: totalSystems,
+          weight: RUN_SCORE_WEIGHTS.systems,
+        },
+      },
       unusedSystems,
       reachedFinalEra
     };
-  }, [simState.status, simState.templateUsage, simState.catalystStats, simState.result, simState.currentEpoch, eras, systems]);
+  }, [simState.status, simState.templateUsage, simState.catalystStats, simState.result, simState.currentEpoch, eras, systems, generators, actions]);
 
   // Run Until Valid state
   const [validityAttempts, setValidityAttempts] = useState(0);
@@ -289,7 +338,9 @@ export default function SimulationRunner({
     // Store this run's data for analysis - match canonry-slot export format
     const runData = {
       attempt: validityAttempts,
-      isValid: runValidity.isValid,
+      runScore: runValidity.score,
+      runScoreMax: runValidity.maxScore,
+      runScoreDetails: runValidity.scoreBreakdown,
       finalEra: simState.currentEpoch?.era?.id || 'unknown',
       finalEraName: simState.currentEpoch?.era?.name || 'Unknown',
       reachedFinalEra: runValidity.reachedFinalEra,
@@ -304,10 +355,20 @@ export default function SimulationRunner({
     };
 
     setValidityRunData(prev => [...prev, runData]);
+    if (onSearchRunScored) {
+      onSearchRunScored({
+        attempt: runData.attempt,
+        runScore: runData.runScore,
+        runScoreMax: runData.runScoreMax,
+        runScoreDetails: runData.runScoreDetails,
+        simulationResults: runData.simulationResults,
+        simulationState: runData.simulationState,
+      });
+    }
 
     // Check if we should continue
-    if (runValidity.isValid) {
-      // Found a valid run!
+    if (runValidity.score >= runValidity.maxScore) {
+      // Found a max-score run
       runUntilValidRef.current = false;
       setIsRunningUntilValid(false);
       setValiditySearchComplete(true);
@@ -332,24 +393,29 @@ export default function SimulationRunner({
     }, 100); // Small delay to allow UI to update
 
     return () => clearTimeout(timeoutId);
-  }, [simState.status, simState.result, simState.currentEpoch, simState.templateUsage, simState.catalystStats, runValidity, validityAttempts, params.maxValidityAttempts, engineConfig, seedEntities, startWorker]);
+  }, [simState.status, simState.result, simState.currentEpoch, simState.templateUsage, simState.catalystStats, runValidity, validityAttempts, params.maxValidityAttempts, engineConfig, seedEntities, startWorker, onSearchRunScored]);
 
   // Generate failure analysis report
   const validityReport = useMemo(() => {
     if (!validitySearchComplete || validityRunData.length === 0) return null;
 
-    const finalEraId = eras?.length > 0 ? eras[eras.length - 1].id : null;
-    const validRun = validityRunData.find(r => r.isValid);
+    const bestRun = validityRunData.reduce((best, run) => {
+      if (!best || run.runScore > best.runScore) return run;
+      return best;
+    }, null);
 
     return {
       summary: {
         totalAttempts: validityRunData.length,
-        foundValid: !!validRun,
-        validAttempt: validRun?.attempt || null,
+        bestScore: bestRun?.runScore ?? 0,
+        bestScoreMax: bestRun?.runScoreMax ?? null,
+        bestAttempt: bestRun?.attempt || null,
       },
       runs: validityRunData.map(run => ({
         attempt: run.attempt,
-        isValid: run.isValid,
+        runScore: run.runScore,
+        runScoreMax: run.runScoreMax,
+        runScoreDetails: run.runScoreDetails,
         finalEra: run.finalEraName,
         reachedFinalEra: run.reachedFinalEra,
         unusedTemplateCount: run.unusedTemplates.length,

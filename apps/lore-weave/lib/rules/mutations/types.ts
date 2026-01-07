@@ -274,6 +274,9 @@ export interface MutationResult {
   /** Relationships to adjust */
   relationshipsAdjusted: RelationshipStrengthChange[];
 
+  /** Relationships to archive (mark as historical) */
+  relationshipsToArchive: RelationshipToArchive[];
+
   /** Pressure changes to apply */
   pressureChanges: Record<string, number>;
 
@@ -315,4 +318,13 @@ export interface RelationshipStrengthChange {
   src: string;
   dst: string;
   delta: number;
+}
+
+/**
+ * A relationship to archive (mark as historical).
+ */
+export interface RelationshipToArchive {
+  kind: string;
+  src: string;
+  dst: string;
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, lazy, Suspense } from 'react';
+import { useState, useRef, lazy, Suspense, useMemo } from 'react';
 import type { WorldState, Filters, EntityKind, LoreData, ImageMetadata } from '../types/world.ts';
 import { applyFilters, applyTemporalFilter, getProminenceLevels } from '../utils/dataTransform.ts';
 import CoordinateMapView from './CoordinateMapView.tsx';
@@ -7,6 +7,7 @@ import EntityDetail from './EntityDetail.tsx';
 import TimelineControl from './TimelineControl.tsx';
 import StatsPanel from './StatsPanel.tsx';
 import './WorldExplorer.css';
+import { buildProminenceScale, DEFAULT_PROMINENCE_DISTRIBUTION, type ProminenceScale } from '@canonry/world-schema';
 
 interface WorldExplorerProps {
   worldData: WorldState;
@@ -32,6 +33,12 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
   // Get UI configuration from schema
   const entityKinds = worldData.schema.entityKinds.map(ek => ek.kind);
   const defaultMinProminence = getProminenceLevels(worldData.schema)[0];
+  const prominenceScale = useMemo<ProminenceScale>(() => {
+    const values = worldData.hardState
+      .map((entity) => entity.prominence)
+      .filter((value) => typeof value === 'number' && Number.isFinite(value));
+    return buildProminenceScale(values, { distribution: DEFAULT_PROMINENCE_DISTRIBUTION });
+  }, [worldData]);
 
   const [filters, setFilters] = useState<Filters>({
     kinds: entityKinds as EntityKind[],
@@ -47,7 +54,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
 
   // Apply temporal filter first, then regular filters
   const temporalData = applyTemporalFilter(worldData, currentTick);
-  const filteredData = applyFilters(temporalData, filters);
+  const filteredData = applyFilters(temporalData, filters, prominenceScale);
 
   return (
     <div className="world-explorer">
@@ -77,6 +84,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
                 onNodeSelect={setSelectedEntityId}
                 showCatalyzedBy={filters.showCatalyzedBy}
                 edgeMetric={edgeMetric}
+                prominenceScale={prominenceScale}
               />
             )}
             {viewMode === 'graph2d' && (
@@ -87,6 +95,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
                 onNodeSelect={setSelectedEntityId}
                 showCatalyzedBy={filters.showCatalyzedBy}
                 onRecalculateLayoutRef={(handler) => { recalculateLayoutRef.current = handler; }}
+                prominenceScale={prominenceScale}
               />
             )}
             {viewMode === 'timeline' && (
@@ -97,6 +106,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
                 onNodeSelect={setSelectedEntityId}
                 showCatalyzedBy={filters.showCatalyzedBy}
                 edgeMetric={edgeMetric}
+                prominenceScale={prominenceScale}
               />
             )}
           </Suspense>
@@ -117,6 +127,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
           loreData={loreData}
           imageData={imageData}
           onRelatedClick={setSelectedEntityId}
+          prominenceScale={prominenceScale}
         />
       </div>
 

@@ -27,6 +27,7 @@ import { selectEntities, createSystemContext } from '../rules';
 import type { SelectionRule } from '../rules';
 import type { SelectionFilter } from '../rules/filters/types';
 import type { Mutation } from '../rules/mutations/types';
+import { interpolate, createSystemRuleContext } from '../narrative/narrationTemplate';
 
 // =============================================================================
 // CONFIGURATION TYPES
@@ -166,6 +167,16 @@ export interface ClusterFormationConfig {
    * Example: [{ type: 'change_status', entity: '$member', newStatus: 'subsumed' }]
    */
   memberUpdates?: Mutation[];
+
+  /**
+   * Narration template for cluster formation events.
+   * Available variables:
+   * - {$self.name} - The created meta-entity
+   * - {count} - Number of entities clustered
+   * - {names} - Names of clustered entities
+   * Example: "{$self.name} emerged, unifying {count} traditions."
+   */
+  narrationTemplate?: string;
 }
 
 // =============================================================================
@@ -514,20 +525,51 @@ export function createClusterFormationSystem(
       // Detect clusters
       const clusters = detectClusters(entities, clusterConfig, graphView);
 
-      const relationshipsAdded: Relationship[] = [];
-      const entitiesModified: Array<{ id: string; changes: Partial<HardState> }> = [];
+      const relationshipsAdded: Array<Relationship & { narrativeGroupId?: string }> = [];
+      const entitiesModified: Array<{ id: string; changes: Partial<HardState>; narrativeGroupId?: string }> = [];
       const metaEntitiesCreated: string[] = [];
       const factionsCreated: string[] = [];
+      const narrationsByGroup: Record<string, string> = {};
 
       // Form meta-entities from valid clusters
       for (const cluster of clusters) {
         if (cluster.score < clusterConfig.minimumScore) continue;
 
-        // Create the meta-entity
+        // Create the meta-entity partial
         const metaEntityPartial = await createMetaEntity(cluster.entities, config.metaEntity, graphView);
+
+        // Enter narration context BEFORE creating the entity (narration added after we have the name)
+        const tracker = graphView.mutationTracker;
+        const contextId = `${config.id}:${metaEntitiesCreated.length}`;
+        if (config.narrationTemplate && tracker) {
+          tracker.enterContext('system', contextId);
+        }
+
+        // Now create the entity (will be recorded under the narration context)
         const metaEntityId = await graphView.addEntity(metaEntityPartial);
         const metaEntity = graphView.getEntity(metaEntityId)!;
         metaEntitiesCreated.push(metaEntityId);
+
+        // Generate narration now that we have the full entity with name
+        // and SET IT ON THE CURRENT CONTEXT so the event builder finds it
+        let generatedNarration: string | undefined;
+        if (config.narrationTemplate && tracker) {
+          const entityNames = cluster.entities.map(e => e.name).join(', ');
+          const templateWithReplacements = config.narrationTemplate
+            .replace('{count}', String(cluster.entities.length))
+            .replace('{names}', entityNames);
+          const narrationCtx = createSystemRuleContext({ self: metaEntity });
+          const narrationResult = interpolate(templateWithReplacements, narrationCtx);
+          if (narrationResult.complete) {
+            generatedNarration = narrationResult.text;
+            narrationsByGroup[metaEntityId] = generatedNarration;
+            // Update the context's narration directly
+            const currentContext = tracker.getCurrentContext();
+            if (currentContext) {
+              currentContext.narration = generatedNarration;
+            }
+          }
+        }
 
         // Get cluster entity IDs
         const clusterIds = cluster.entities.map(e => e.id);
@@ -557,7 +599,8 @@ export function createClusterFormationSystem(
               kind: 'practitioner_of',
               src: master.id,
               dst: metaEntityId,
-              strength: 1.0
+              strength: 1.0,
+              narrativeGroupId: metaEntityId
             });
             // Archive the old practitioner_of relationships for this master
             for (const memberId of clusterIds) {
@@ -583,7 +626,8 @@ export function createClusterFormationSystem(
                 kind: 'originated_in',
                 src: metaEntityId,
                 dst: originLocationId,
-                strength: 1.0
+                strength: 1.0,
+                narrativeGroupId: metaEntityId
               });
             }
           }
@@ -603,13 +647,15 @@ export function createClusterFormationSystem(
 
         // Create subsumes relationships (meta-entity subsumes member)
         // This makes it explicit that the meta-entity absorbs the cluster members
-        clusterIds.forEach(id => {
+        clusterIds.forEach((id, index) => {
           graphView.createRelationship('subsumes', metaEntityId, id);
           relationshipsAdded.push({
             kind: 'subsumes',
             src: metaEntityId,
             dst: id,
-            strength: 1.0
+            strength: 1.0,
+            // Link first relationship to narration for this cluster
+            narrativeGroupId: index === 0 ? metaEntityId : undefined
           });
         });
 
@@ -685,6 +731,11 @@ export function createClusterFormationSystem(
             });
           });
         }
+
+        // Exit narration context if we entered one
+        if (config.narrationTemplate && tracker) {
+          tracker.exitContext();
+        }
       }
 
       // Pressure changes
@@ -697,7 +748,8 @@ export function createClusterFormationSystem(
         entitiesModified,
         pressureChanges,
         description: `${config.name}: ${metaEntitiesCreated.length} meta-entities formed` +
-          (factionsCreated.length > 0 ? `, ${factionsCreated.length} factions` : '')
+          (factionsCreated.length > 0 ? `, ${factionsCreated.length} factions` : ''),
+        narrationsByGroup: Object.keys(narrationsByGroup).length > 0 ? narrationsByGroup : undefined
       };
     }
   };

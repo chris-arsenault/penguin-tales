@@ -14,6 +14,7 @@ export {
   STRENGTH_LEVELS,
   PROMINENCE_LEVELS,
   NumberInput,
+  LocalTextArea,
 
   // UI components
   EnableToggle,

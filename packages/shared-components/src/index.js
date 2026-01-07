@@ -32,6 +32,7 @@ export { ChipSelect } from './components/ChipSelect';
 export { SearchableDropdown } from './components/SearchableDropdown';
 export { LevelSelector, STRENGTH_LEVELS, PROMINENCE_LEVELS } from './components/LevelSelector';
 export { NumberInput } from './components/NumberInput';
+export { LocalTextArea } from './components/LocalTextArea';
 
 // Matrix components
 export { CoverageMatrix } from './components/CoverageMatrix';

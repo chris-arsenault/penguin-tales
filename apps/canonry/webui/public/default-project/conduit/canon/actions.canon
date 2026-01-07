@@ -249,7 +249,7 @@ action draw_in_faction "Draw In Faction" do
 end
 
 action echo_occurrence "Echo Occurrence" do
-  description "An ability resonates with a major event and becomes legend"
+  description "Historians discover an ability contributed to the scale of a major event"
   actor choose ability do
     subtype in magic combat technology
     status in active discovered emergent
@@ -262,17 +262,18 @@ action echo_occurrence "Echo Occurrence" do
     pick random
     subtype in war disaster celebration succession_crisis
     where do
-      relationship lacks derived_from with actor
+      relationship lacks catalyst_of with actor
     end
     status active
   end
   on success do
     mutate do
-      relationship create derived_from actor target strength 0.8
+      relationship create catalyst_of actor target strength 0.8
       prominence adjust actor 0.064
     end
   end
-  narrative "echoed through the event of {target.name}"
+  narrative "was linked to the outbreak of {target.name}"
+  narration "Historians discovered that {actor.name} contributed to the scale of {target.name}."
   prominence actor success 0.106 failure 0.053
   success_chance 0.35
   weight 0.25

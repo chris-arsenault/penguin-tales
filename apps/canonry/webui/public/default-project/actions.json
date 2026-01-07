@@ -70,10 +70,16 @@
         {
           "type": "modify_pressure",
           "pressureId": "iceberg_security",
-          "delta": -2
+          "delta": 3
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "resource_availibility",
+          "delta": 2
         }
       ],
       "descriptionTemplate": "{actor.name} seized control of {target.name}",
+      "narrationTemplate": "{actor.name} seized control of {target.name} from {$previousOwner.name|the previous rulers}.",
       "actorProminenceDelta": {
         "onSuccess": 0.021,
         "onFailure": 0.01
@@ -144,6 +150,7 @@
         }
       ],
       "descriptionTemplate": "forged alliance with {target.name}",
+      "narrationTemplate": "{actor.name} and {target.name} formed an alliance.",
       "actorProminenceDelta": {
         "onSuccess": 0.6,
         "onFailure": 0.3
@@ -272,6 +279,7 @@
         }
       ],
       "descriptionTemplate": "surrendered to {target.name}",
+      "narrationTemplate": "{actor.name} sued for peace with {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.333,
         "onFailure": 0.167
@@ -424,6 +432,7 @@
         }
       ],
       "descriptionTemplate": "achieved victory over {target.name}",
+      "narrationTemplate": "{actor.name} claimed victory over {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.6,
         "onFailure": 0.3
@@ -514,6 +523,7 @@
         }
       ],
       "descriptionTemplate": "raided {target.name}'s territory",
+      "narrationTemplate": "{actor.name} raided {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.201,
         "onFailure": 0.103
@@ -581,6 +591,7 @@
         }
       ],
       "descriptionTemplate": "established trade route between {target.name} and {target2.name}",
+      "narrationTemplate": "Trade route established between {target.name} and {target2.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.161,
         "onFailure": 0.081
@@ -669,6 +680,7 @@
         }
       ],
       "descriptionTemplate": "corrupted {target.name}",
+      "narrationTemplate": "Corruption spread to {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.112,
         "onFailure": 0.056
@@ -737,6 +749,7 @@
         }
       ],
       "descriptionTemplate": "manifested at {target.name}",
+      "narrationTemplate": "Magic manifested at {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.087,
         "onFailure": 0.043
@@ -830,6 +843,7 @@
         }
       ],
       "descriptionTemplate": "spread to {target.name}",
+      "narrationTemplate": "{actor.name} spread to {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.097,
         "onFailure": 0.049
@@ -895,6 +909,7 @@
         }
       ],
       "descriptionTemplate": "drew {target.name} into the war",
+      "narrationTemplate": "{actor.name} drew {target.name} into the conflict.",
       "actorProminenceDelta": {
         "onSuccess": 0.6,
         "onFailure": 0.3
@@ -957,6 +972,7 @@
         }
       ],
       "descriptionTemplate": "escalated in intensity",
+      "narrationTemplate": "{actor.name} escalated.",
       "actorProminenceDelta": {
         "onSuccess": 0.543,
         "onFailure": 0.272
@@ -1039,6 +1055,7 @@
         }
       ],
       "descriptionTemplate": "spread corruption to {target.name}",
+      "narrationTemplate": "Corruption spread from {actor.name} to {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.073,
         "onFailure": 0.037
@@ -1106,6 +1123,7 @@
     },
     "outcome": {
       "descriptionTemplate": "wounded {target.name}",
+      "narrationTemplate": "{actor.name} wounded {target.name}.",
       "mutations": [
         {
           "type": "set_tag",
@@ -1181,6 +1199,7 @@
     },
     "outcome": {
       "descriptionTemplate": "maimed {target.name}",
+      "narrationTemplate": "{actor.name} maimed {target.name}.",
       "mutations": [
         {
           "type": "remove_tag",
@@ -1257,6 +1276,7 @@
     },
     "outcome": {
       "descriptionTemplate": "killed {target.name}",
+      "narrationTemplate": "{actor.name} killed {target.name}.",
       "mutations": [
         {
           "type": "change_status",
@@ -1349,6 +1369,7 @@
         }
       ],
       "descriptionTemplate": "mastered the art of {target.name}",
+      "narrationTemplate": "{actor.name} mastered {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.077,
         "onFailure": 0.04
@@ -1373,7 +1394,7 @@
   {
     "id": "echo_occurrence",
     "name": "Echo Occurrence",
-    "description": "An ability resonates with a major event and becomes legend",
+    "description": "Historians discover an ability contributed to the scale of a major event",
     "actor": {
       "selection": {
         "strategy": "by_kind",
@@ -1415,7 +1436,7 @@
       "filters": [
         {
           "type": "lacks_relationship",
-          "kind": "derived_from",
+          "kind": "catalyst_of",
           "with": "$actor"
         }
       ],
@@ -1425,7 +1446,7 @@
       "mutations": [
         {
           "type": "create_relationship",
-          "kind": "derived_from",
+          "kind": "catalyst_of",
           "src": "$actor",
           "dst": "$target",
           "strength": 0.8
@@ -1436,7 +1457,8 @@
           "entity": "$actor"
         }
       ],
-      "descriptionTemplate": "echoed through the event of {target.name}",
+      "descriptionTemplate": "was linked to the outbreak of {target.name}",
+      "narrationTemplate": "Historians discovered that {actor.name} contributed to the scale of {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.272,
         "onFailure": 0.136
@@ -1525,7 +1547,8 @@
           "delta": 3
         }
       ],
-      "descriptionTemplate": "{instigator.name} gifted {actor.name} to {target.name}"
+      "descriptionTemplate": "{instigator.name|An unknown benefactor} gifted {actor.name} to {target.name}",
+      "narrationTemplate": "{instigator.name|An unknown benefactor} gifted {actor.name} to {target.name}."
     },
     "probability": {
       "baseSuccessChance": 0.25,
@@ -1611,6 +1634,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} stole the artifact {target.name}",
+      "narrationTemplate": "{actor.name} stole {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.062,
         "onFailure": 0.031
@@ -1700,6 +1724,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} purified the corruption at {target.name}",
+      "narrationTemplate": "{actor.name} cleansed the corruption at {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.414,
         "onFailure": 0.209
@@ -1773,6 +1798,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} claimed the weapon {target.name}",
+      "narrationTemplate": "{actor.name} found {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.431,
         "onFailure": 0.216
@@ -1853,6 +1879,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} was purified by the music of {target.name}",
+      "narrationTemplate": "{target.name} cleansed {actor.name} of corruption.",
       "actorProminenceDelta": {
         "onSuccess": 0.6,
         "onFailure": 0.3
@@ -1994,10 +2021,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} chose {target.name} as its wielder",
-      "actorProminenceDelta": {
-        "onSuccess": 0.6,
-        "onFailure": 0.3
-      }
+      "narrationTemplate": "{actor.name} chose {target.name} as wielder."
     },
     "probability": {
       "baseSuccessChance": 0.7,
@@ -2053,6 +2077,7 @@
         }
       ],
       "descriptionTemplate": "The ice of {actor.name} remembered {target.name}",
+      "narrationTemplate": "{actor.name} elevated {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.156,
         "onFailure": 0.078
@@ -2111,6 +2136,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} left its mark upon {target.name}",
+      "narrationTemplate": "{actor.name} marked {target.name} as a survivor.",
       "actorProminenceDelta": {
         "onSuccess": 0.476,
         "onFailure": 0.238
@@ -2175,6 +2201,7 @@
         }
       ],
       "descriptionTemplate": "The music of {actor.name} blessed {target.name}",
+      "narrationTemplate": "{actor.name} blessed {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.169,
         "onFailure": 0.084
@@ -2274,6 +2301,7 @@
         }
       ],
       "descriptionTemplate": "stole the secret of {target.name}, forfeiting leadership",
+      "narrationTemplate": "{actor.name} stole the technique of {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.481,
         "onFailure": 0.24
@@ -2328,6 +2356,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} left its memory upon {target.name}",
+      "narrationTemplate": "{actor.name} marked {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.289,
         "onFailure": 0.146
@@ -2395,6 +2424,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} became central to the practice of {target.name}",
+      "narrationTemplate": "{actor.name} became enshrined in {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.113,
         "onFailure": 0.059
@@ -2460,6 +2490,7 @@
         }
       ],
       "descriptionTemplate": "The tradition of {actor.name} now commemorates {target.name}",
+      "narrationTemplate": "{actor.name} now commemorates {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.095,
         "onFailure": 0.049
@@ -2526,6 +2557,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} chose {target.name} as its guardian",
+      "narrationTemplate": "{actor.name} selected {target.name} as custodian.",
       "actorProminenceDelta": {
         "onSuccess": 0.197,
         "onFailure": 0.098
@@ -2591,6 +2623,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} claimed {target.name} among its believers",
+      "narrationTemplate": "{actor.name} spread to {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.045,
         "onFailure": 0.023
@@ -2622,7 +2655,13 @@
         "kind": "artifact",
         "status": "damaged",
         "minProminence": "marginal"
-      }
+      },
+      "conditions": [
+        {
+          "type": "time_elapsed",
+          "minTicks": 12
+        }
+      ]
     },
     "targeting": {
       "strategy": "by_kind",
@@ -2633,12 +2672,6 @@
         "hero"
       ],
       "status": "alive",
-      "filters": [
-        {
-          "type": "matches_culture",
-          "with": "$actor"
-        }
-      ],
       "pickStrategy": "weighted"
     },
     "outcome": {
@@ -2657,6 +2690,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} called to {target.name}, who restored it",
+      "narrationTemplate": "{target.name} restored {actor.name} to its former glory.",
       "actorProminenceDelta": {
         "onSuccess": 0.6,
         "onFailure": 0.3
@@ -2667,8 +2701,8 @@
       }
     },
     "probability": {
-      "baseSuccessChance": 0.35,
-      "baseWeight": 0.5
+      "baseSuccessChance": 0.15,
+      "baseWeight": 0.3
     },
     "enabled": true
   },
@@ -2724,6 +2758,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} revealed hidden riches at {target.name}",
+      "narrationTemplate": "{actor.name} revealed resources at {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.6,
         "onFailure": 0.3
@@ -2795,6 +2830,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} revealed safe passage through {target.name}",
+      "narrationTemplate": "{actor.name} revealed safe passage through {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.197,
         "onFailure": 0.098
@@ -2864,6 +2900,7 @@
         }
       ],
       "descriptionTemplate": "{actor.name} purified the corruption at {target.name}",
+      "narrationTemplate": "{actor.name} cleansed the corruption at {target.name}.",
       "actorProminenceDelta": {
         "onSuccess": 0.309,
         "onFailure": 0.154

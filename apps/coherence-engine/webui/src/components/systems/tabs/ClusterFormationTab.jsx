@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { CLUSTERING_CRITERIA_TYPES } from '../constants';
-import { ReferenceDropdown, NumberInput } from '../../shared';
+import { ReferenceDropdown, NumberInput, LocalTextArea } from '../../shared';
 
 /**
  * @param {Object} props
@@ -162,14 +162,26 @@ export function ClusterFormationTab({ system, onChange, schema }) {
         <div style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label className="label">Description Template</label>
-            <textarea
+            <LocalTextArea
               value={config.metaEntity?.descriptionTemplate || ''}
-              onChange={(e) => updateMetaEntity('descriptionTemplate', e.target.value)}
-              className="textarea"
+              onChange={(value) => updateMetaEntity('descriptionTemplate', value)}
               placeholder="Use {names}, {count} placeholders"
             />
           </div>
         </div>
+      </div>
+
+      <div className="section">
+        <div className="section-title">Narration Template</div>
+        <div className="section-desc" style={{ marginBottom: '8px', fontSize: '11px' }}>
+          Syntax: {'{list:members}'}, {'{count}'}, {'{field|fallback}'}.
+        </div>
+        <LocalTextArea
+          value={config.narrationTemplate || ''}
+          onChange={(value) => updateConfig('narrationTemplate', value || undefined)}
+          placeholder="e.g., {list:members} united to form a new alliance."
+          rows={2}
+        />
       </div>
     </div>
   );

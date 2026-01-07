@@ -1,4 +1,10 @@
 import type { HardState, Prominence, WorldState, Filters, Schema } from '../types/world.ts';
+import {
+  buildProminenceScale,
+  DEFAULT_PROMINENCE_DISTRIBUTION,
+  prominenceLabelFromScale,
+  type ProminenceScale,
+} from '@canonry/world-schema';
 
 const VALID_PROMINENCE_LEVELS: ReadonlySet<Prominence> = new Set([
   'forgotten',
@@ -7,6 +13,14 @@ const VALID_PROMINENCE_LEVELS: ReadonlySet<Prominence> = new Set([
   'renowned',
   'mythic',
 ]);
+
+const FALLBACK_PROMINENCE_SCALE = buildProminenceScale([], {
+  distribution: DEFAULT_PROMINENCE_DISTRIBUTION
+});
+
+function resolveProminenceScale(prominenceScale?: ProminenceScale): ProminenceScale {
+  return prominenceScale ?? FALLBACK_PROMINENCE_SCALE;
+}
 
 // Helper to get tags as array (canonical KVP format)
 export function getTagsArray(tags: Record<string, string | boolean>): string[] {
@@ -38,11 +52,22 @@ export function getProminenceColor(prominence: Prominence, schema?: Schema): str
   return color;
 }
 
-export function prominenceToNumber(prominence: Prominence, schema?: Schema): number {
+export function prominenceToNumber(
+  prominence: Prominence | number,
+  schema?: Schema,
+  prominenceScale?: ProminenceScale
+): number {
+  if (typeof prominence === 'number' && Number.isFinite(prominence)) {
+    const scale = resolveProminenceScale(prominenceScale);
+    const label = prominenceLabelFromScale(prominence, scale);
+    const index = scale.labels.indexOf(label);
+    return index >= 0 ? index : 0;
+  }
+
   const levels = getProminenceLevels(schema);
-  const index = levels.indexOf(prominence);
+  const index = levels.indexOf(prominence as Prominence);
   if (index < 0) {
-    throw new Error(`Archivist: prominence "${prominence}" not found in schema.uiConfig.prominenceLevels.`);
+    throw new Error(`Archivist: prominence "${String(prominence)}" not found in schema.uiConfig.prominenceLevels.`);
   }
   return index;
 }
@@ -58,15 +83,22 @@ export function getKindColor(kind: string, schema?: Schema): string {
   return entityKind.style.color;
 }
 
-export function transformWorldData(worldState: WorldState, showCatalyzedBy: boolean = false) {
+export function transformWorldData(
+  worldState: WorldState,
+  showCatalyzedBy: boolean = false,
+  prominenceScale?: ProminenceScale
+) {
+  const resolvedScale = resolveProminenceScale(prominenceScale);
   const nodes = worldState.hardState.map(entity => ({
     data: {
       id: entity.id,
       name: entity.name,
       kind: entity.kind,
       subtype: entity.subtype,
-      prominence: prominenceToNumber(entity.prominence, worldState.schema),
-      prominenceLabel: entity.prominence,
+      prominence: prominenceToNumber(entity.prominence, worldState.schema, resolvedScale),
+      prominenceLabel: typeof entity.prominence === 'number'
+        ? prominenceLabelFromScale(entity.prominence, resolvedScale)
+        : entity.prominence,
       status: entity.status,
       tags: entity.tags,
       description: entity.description,
@@ -103,16 +135,24 @@ export function transformWorldData(worldState: WorldState, showCatalyzedBy: bool
   return [...nodes, ...edges];
 }
 
-export function applyFilters(worldState: WorldState, filters: Filters): WorldState {
+export function applyFilters(
+  worldState: WorldState,
+  filters: Filters,
+  prominenceScale?: ProminenceScale
+): WorldState {
   const prominenceOrder = getProminenceLevels(worldState.schema);
   const minProminenceIndex = prominenceOrder.indexOf(filters.minProminence);
+  const resolvedScale = resolveProminenceScale(prominenceScale);
 
   let filtered = worldState.hardState.filter(entity => {
     // Filter by kind
     if (!filters.kinds.includes(entity.kind)) return false;
 
     // Filter by prominence
-    const entityProminenceIndex = prominenceOrder.indexOf(entity.prominence);
+    const entityProminenceLabel = typeof entity.prominence === 'number'
+      ? prominenceLabelFromScale(entity.prominence, resolvedScale)
+      : entity.prominence;
+    const entityProminenceIndex = prominenceOrder.indexOf(entityProminenceLabel);
     if (entityProminenceIndex < minProminenceIndex) return false;
 
     // Filter by time range

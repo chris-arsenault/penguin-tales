@@ -12,6 +12,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { LocalTextArea } from '@penguin-tales/shared-components';
 
 function EditableList({ items, onChange, placeholder }) {
   const [newItem, setNewItem] = useState('');
@@ -137,9 +138,9 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange 
 
         <div className="illuminator-form-group">
           <label className="illuminator-label">World Description</label>
-          <textarea
+          <LocalTextArea
             value={worldContext.description || ''}
-            onChange={(e) => updateField('description', e.target.value)}
+            onChange={(value) => updateField('description', value)}
             placeholder="Brief description of your world's setting, themes, and what makes it unique..."
             className="illuminator-input"
             style={{ minHeight: '100px', resize: 'vertical' }}
@@ -172,9 +173,9 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange 
           Optional guidance for the overall tone and style of generated descriptions.
         </p>
         <div className="illuminator-form-group">
-          <textarea
+          <LocalTextArea
             value={worldContext.tone || ''}
-            onChange={(e) => updateField('tone', e.target.value)}
+            onChange={(value) => updateField('tone', value)}
             placeholder="e.g., Evocative and mythic, with hints of mystery. Focus on sensory details and emotional weight rather than dry facts..."
             className="illuminator-input"
             style={{ minHeight: '80px', resize: 'vertical' }}

@@ -1,4 +1,4 @@
-# The Languages of The Berg
+yes, but make the updates to rites and succession you p# The Languages of The Berg
 
 Aurora Berg's three cultures don't just speak differently - they *think* about identity differently. This shapes how they name everything: people, places, factions, and artifacts. For cultural context, see Aurora Stack, Nightshelf, and Orca.
 

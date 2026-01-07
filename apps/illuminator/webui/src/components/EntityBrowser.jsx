@@ -18,6 +18,12 @@ import {
   formatCost,
   formatEstimatedCost,
 } from '../lib/costEstimation';
+import {
+  buildProminenceScale,
+  DEFAULT_PROMINENCE_DISTRIBUTION,
+  prominenceLabelFromScale,
+  prominenceThresholdFromScale,
+} from '@canonry/world-schema';
 
 // Thumbnail component that loads image from local storage
 function ImageThumbnail({ imageId, alt, onClick }) {
@@ -90,34 +96,16 @@ const PROMINENCE_OPTIONS = [
   { value: 'forgotten', label: 'Forgotten' },
 ];
 
-// Convert numeric prominence to display label
-function prominenceLabel(value) {
-  if (typeof value !== 'number') {
-    throw new Error(`prominenceLabel: expected number, got ${typeof value}: ${JSON.stringify(value)}`);
+function prominenceAtLeast(prominence, minProminence, scale) {
+  if (typeof prominence === 'number' && Number.isFinite(prominence)) {
+    return prominence >= prominenceThresholdFromScale(minProminence, scale);
   }
-  if (value < 1) return 'forgotten';
-  if (value < 2) return 'marginal';
-  if (value < 3) return 'recognized';
-  if (value < 4) return 'renowned';
-  return 'mythic';
-}
-
-// Convert prominence label to numeric threshold
-function prominenceThreshold(label) {
-  switch (label) {
-    case 'forgotten': return 0;
-    case 'marginal': return 1;
-    case 'recognized': return 2;
-    case 'renowned': return 3;
-    case 'mythic': return 4;
-    default: return 0;
+  if (typeof prominence === 'string') {
+    const prominenceIndex = scale.labels.indexOf(prominence);
+    const minIndex = scale.labels.indexOf(minProminence);
+    return prominenceIndex >= 0 && minIndex >= 0 && prominenceIndex >= minIndex;
   }
-}
-
-// Check if numeric prominence meets minimum label threshold
-function prominenceAtLeast(prominence, minProminence) {
-  const minThreshold = prominenceThreshold(minProminence);
-  return prominence >= minThreshold;
+  return false;
 }
 
 function EnrichmentStatusBadge({ status, label, cost }) {
@@ -178,6 +166,7 @@ function EntityRow({
   onEntityClick,
   descCost,
   imgCost,
+  prominenceScale,
 }) {
   const enrichment = entity.enrichment || {};
 
@@ -217,7 +206,7 @@ function EntityRow({
           {entity.name}
         </div>
         <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-          {entity.kind}/{entity.subtype} · {prominenceLabel(entity.prominence)}
+          {entity.kind}/{entity.subtype} · {prominenceLabelFromScale(entity.prominence, prominenceScale)}
           {entity.culture && ` · ${entity.culture}`}
         </div>
 
@@ -422,6 +411,7 @@ export default function EntityBrowser({
   styleLibrary,
   styleSelection,
   onStyleSelectionChange,
+  prominenceScale,
 }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [filters, setFilters] = useState({
@@ -430,6 +420,13 @@ export default function EntityBrowser({
     status: 'all',
     culture: 'all',
   });
+  const effectiveProminenceScale = useMemo(() => {
+    if (prominenceScale) return prominenceScale;
+    const values = entities
+      .map((entity) => entity.prominence)
+      .filter((value) => typeof value === 'number' && Number.isFinite(value));
+    return buildProminenceScale(values, { distribution: DEFAULT_PROMINENCE_DISTRIBUTION });
+  }, [prominenceScale, entities]);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [imageModal, setImageModal] = useState({ open: false, imageId: '', title: '' });
   const [entityModal, setEntityModal] = useState({ open: false, entity: null });
@@ -475,7 +472,12 @@ export default function EntityBrowser({
   const filteredEntities = useMemo(() => {
     return entities.filter((entity) => {
       if (filters.kind !== 'all' && entity.kind !== filters.kind) return false;
-      if (filters.prominence !== 'all' && prominenceLabel(entity.prominence) !== filters.prominence) return false;
+      if (
+        filters.prominence !== 'all' &&
+        prominenceLabelFromScale(entity.prominence, effectiveProminenceScale) !== filters.prominence
+      ) {
+        return false;
+      }
       if (filters.culture !== 'all' && entity.culture !== filters.culture) return false;
 
       const descStatus = getStatus(entity, 'description');
@@ -506,7 +508,7 @@ export default function EntityBrowser({
 
       return true;
     });
-  }, [entities, filters, hideCompleted, getStatus]);
+  }, [entities, filters, hideCompleted, getStatus, effectiveProminenceScale]);
 
   // Toggle selection
   const toggleSelect = useCallback((entityId) => {
@@ -577,7 +579,7 @@ export default function EntityBrowser({
       const entity = entities.find((e) => e.id === entityId);
       if (
         entity &&
-        prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
+        prominenceAtLeast(entity.prominence, config.minProminenceForImage, effectiveProminenceScale) &&
         getStatus(entity, 'image') === 'missing' &&
         (!config.requireDescription || (entity.summary && entity.description))
       ) {
@@ -587,7 +589,16 @@ export default function EntityBrowser({
     if (items.length > 0) {
       onEnqueue(items);
     }
-  }, [selectedIds, entities, getStatus, onEnqueue, buildPrompt, config.minProminenceForImage, config.requireDescription]);
+  }, [
+    selectedIds,
+    entities,
+    getStatus,
+    onEnqueue,
+    buildPrompt,
+    config.minProminenceForImage,
+    config.requireDescription,
+    effectiveProminenceScale,
+  ]);
 
   // Regenerate all descriptions for selected (those with existing descriptions)
   const regenSelectedDescriptions = useCallback(() => {
@@ -611,7 +622,7 @@ export default function EntityBrowser({
       const entity = entities.find((e) => e.id === entityId);
       if (
         entity &&
-        prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
+        prominenceAtLeast(entity.prominence, config.minProminenceForImage, effectiveProminenceScale) &&
         getStatus(entity, 'image') === 'complete'
       ) {
         items.push({ entity, type: 'image', prompt: buildPrompt(entity, 'image') });
@@ -620,7 +631,15 @@ export default function EntityBrowser({
     if (items.length > 0) {
       onEnqueue(items);
     }
-  }, [selectedIds, entities, getStatus, onEnqueue, buildPrompt, config.minProminenceForImage]);
+  }, [
+    selectedIds,
+    entities,
+    getStatus,
+    onEnqueue,
+    buildPrompt,
+    config.minProminenceForImage,
+    effectiveProminenceScale,
+  ]);
 
   // Quick action: queue all missing descriptions
   const queueAllMissingDescriptions = useCallback(() => {
@@ -641,7 +660,7 @@ export default function EntityBrowser({
     const items = [];
     for (const entity of filteredEntities) {
       if (
-        prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
+        prominenceAtLeast(entity.prominence, config.minProminenceForImage, effectiveProminenceScale) &&
         getStatus(entity, 'image') === 'missing'
       ) {
         // If requireDescription is enabled and entity lacks description, queue that first
@@ -659,7 +678,16 @@ export default function EntityBrowser({
     if (items.length > 0) {
       onEnqueue(items);
     }
-  }, [filteredEntities, getStatus, onEnqueue, buildPrompt, getVisualConfig, config.minProminenceForImage, config.requireDescription]);
+  }, [
+    filteredEntities,
+    getStatus,
+    onEnqueue,
+    buildPrompt,
+    getVisualConfig,
+    config.minProminenceForImage,
+    config.requireDescription,
+    effectiveProminenceScale,
+  ]);
 
   // Count missing and calculate aggregate costs
   const { missingDescCount, missingDescCost } = useMemo(() => {
@@ -683,7 +711,7 @@ export default function EntityBrowser({
     const imgCostPerUnit = estimateImageCost(config.imageModel, config.imageSize, config.imageQuality);
     for (const entity of filteredEntities) {
       if (
-        prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
+        prominenceAtLeast(entity.prominence, config.minProminenceForImage, effectiveProminenceScale) &&
         getStatus(entity, 'image') === 'missing'
       ) {
         imgCount++;
@@ -702,7 +730,18 @@ export default function EntityBrowser({
       }
     }
     return { missingImgCount: imgCount, missingImgCost: totalCost, dependentDescCount: descCount };
-  }, [filteredEntities, getStatus, config.minProminenceForImage, config.imageModel, config.imageSize, config.imageQuality, config.requireDescription, config.textModel, buildPrompt]);
+  }, [
+    filteredEntities,
+    getStatus,
+    config.minProminenceForImage,
+    config.imageModel,
+    config.imageSize,
+    config.imageQuality,
+    config.requireDescription,
+    config.textModel,
+    buildPrompt,
+    effectiveProminenceScale,
+  ]);
 
   // Open image modal
   const openImageModal = useCallback((imageId, title) => {
@@ -956,6 +995,41 @@ export default function EntityBrowser({
           </div>
         )}
 
+        {/* Min Event Significance for Descriptions */}
+        <div style={{ marginBottom: '12px' }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '4px',
+              fontSize: '12px',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            Min Event Importance (for descriptions)
+          </label>
+          <select
+            value={config.minEventSignificance ?? 0.25}
+            onChange={(e) => onConfigChange({ minEventSignificance: parseFloat(e.target.value) })}
+            style={{
+              width: '100%',
+              padding: '6px 8px',
+              borderRadius: '4px',
+              border: '1px solid var(--border-color)',
+              background: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              fontSize: '13px',
+            }}
+          >
+            <option value={0}>All (&gt;0%)</option>
+            <option value={0.25}>Low (&gt;25%)</option>
+            <option value={0.5}>Medium (&gt;50%)</option>
+            <option value={0.75}>High (&gt;75%)</option>
+          </select>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+            Include events above this significance in description prompts
+          </span>
+        </div>
+
         {/* Quick actions */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
@@ -1106,12 +1180,12 @@ export default function EntityBrowser({
                   onCancelImg={() => cancelItem(entity, 'image')}
                   onAssignImage={() => openImagePicker(entity)}
                   canQueueImage={
-                    prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
+                    prominenceAtLeast(entity.prominence, config.minProminenceForImage, effectiveProminenceScale) &&
                     (!config.requireDescription ||
                       (entity.summary && entity.description))
                   }
                   needsDescription={
-                    prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
+                    prominenceAtLeast(entity.prominence, config.minProminenceForImage, effectiveProminenceScale) &&
                     config.requireDescription &&
                     !(entity.summary && entity.description)
                   }
@@ -1119,6 +1193,7 @@ export default function EntityBrowser({
                   onEntityClick={() => openEntityModal(entity)}
                   descCost={getEntityCostDisplay(entity, 'description', descStatus, config, enrichment, buildPrompt)}
                   imgCost={getEntityCostDisplay(entity, 'image', imgStatus, config, enrichment, buildPrompt)}
+                  prominenceScale={effectiveProminenceScale}
                 />
               );
             })
@@ -1150,6 +1225,7 @@ export default function EntityBrowser({
         entity={entityModal.entity}
         queue={queue}
         onClose={() => setEntityModal({ open: false, entity: null })}
+        prominenceScale={effectiveProminenceScale}
       />
     </div>
   );

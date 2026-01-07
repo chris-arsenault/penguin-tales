@@ -89,6 +89,8 @@ interface PendingCreationBatch {
   entityIds: string[];
   relationships: RelationshipSummary[];
   description?: string;
+  /** Domain-controlled narration from narrationTemplate */
+  narration?: string;
 }
 
 /**
@@ -131,6 +133,10 @@ export class StateChangeTracker {
 
   // Creation batch tracking
   private pendingCreationBatches: PendingCreationBatch[] = [];
+
+  // Narration tracking per execution context
+  // Key is context key (e.g., "action:seize_control:42"), value is narration text
+  private pendingNarrations: Map<string, string> = new Map();
 
   /**
    * Mutation tracker for lineage information (see LINEAGE.md).
@@ -266,6 +272,7 @@ export class StateChangeTracker {
     this.pendingChanges.clear();
     this.pendingTagChanges.clear();
     this.pendingCreationBatches = [];
+    this.pendingNarrations.clear();
 
     // Snapshot active relationships at tick start (for dissolution detection)
     this.relationshipSnapshotAtTickStart.clear();
@@ -328,10 +335,10 @@ export class StateChangeTracker {
       },
       getRelationshipPolarity: (kind: string) => this.getRelationshipPolarity(kind),
       getStatusPolarity: (entityKind: string, status: string) => this.getStatusPolarity(entityKind, status),
-      getRelationshipVerb: (kind: string, action: 'formed' | 'ended') => {
+      getRelationshipVerb: (kind: string, action: 'formed' | 'ended' | 'inverseFormed' | 'inverseEnded') => {
         // Look up verb from schema if available
         const relDef = this.schema?.relationshipKinds.find(r => r.kind === kind);
-        return relDef?.verbs?.[action];
+        return relDef?.verbs?.[action as keyof typeof relDef.verbs];
       },
     };
 
@@ -484,13 +491,15 @@ export class StateChangeTracker {
    * @param entityIds - IDs of all entities created by this template
    * @param relationships - Summary of relationship kinds created
    * @param description - Optional description from the template's first creation item
+   * @param narration - Optional domain-controlled narration from narrationTemplate
    */
   recordCreationBatch(
     templateId: string,
     templateName: string,
     entityIds: string[],
     relationships: RelationshipSummary[],
-    description?: string
+    description?: string,
+    narration?: string
   ): void {
     if (!this.config.enabled) return;
 
@@ -500,7 +509,62 @@ export class StateChangeTracker {
       entityIds,
       relationships,
       description,
+      narration,
     });
+  }
+
+  /**
+   * Record a domain-controlled narration for an execution context.
+   * The narration will be used as the event description when generating
+   * the narrative event for this context.
+   *
+   * @param source - The source type ('action', 'system', etc.)
+   * @param sourceId - The source identifier (action ID, system ID)
+   * @param narration - The domain-controlled narration text
+   */
+  recordNarration(source: string, sourceId: string, narration: string): void {
+    if (!this.config.enabled) return;
+
+    const key = `${source}:${sourceId}:${this.currentTick}`;
+    this.pendingNarrations.set(key, narration);
+  }
+
+  /**
+   * Record narrations from a system result.
+   * Each narration is recorded with the system context.
+   *
+   * @param systemId - The system identifier
+   * @param narrations - Array of narration texts from the system
+   * @deprecated Use recordNarrationsByGroup for proper per-entity attribution
+   */
+  recordSystemNarrations(systemId: string, narrations: string[]): void {
+    if (!this.config.enabled || narrations.length === 0) return;
+
+    // Join multiple narrations into one (or use the first one)
+    const combinedNarration = narrations.join(' ');
+    this.recordNarration('system', systemId, combinedNarration);
+  }
+
+  /**
+   * Record narrations keyed by narrative group ID.
+   * This ensures proper attribution when a system/action affects multiple entities.
+   *
+   * @param source - 'system' or 'action'
+   * @param baseSourceId - The base system/action ID (e.g., 'corruption_harm' or 'universal_catalyst')
+   * @param narrationsByGroup - Map of narrativeGroupId to narration text
+   */
+  recordNarrationsByGroup(
+    source: 'system' | 'action',
+    baseSourceId: string,
+    narrationsByGroup: Record<string, string>
+  ): void {
+    if (!this.config.enabled) return;
+
+    for (const [groupId, narration] of Object.entries(narrationsByGroup)) {
+      // Key format: "system:corruption_harm:entity-123:tick" or "action:master_ability:entity-456:tick"
+      const sourceId = `${baseSourceId}:${groupId}`;
+      this.recordNarration(source, sourceId, narration);
+    }
   }
 
   /**
@@ -523,6 +587,7 @@ export class StateChangeTracker {
       this.pendingChanges.clear();
       this.pendingTagChanges.clear();
       this.pendingCreationBatches = [];
+      this.pendingNarrations.clear();
       return [];
     }
 
@@ -539,6 +604,7 @@ export class StateChangeTracker {
     this.pendingChanges.clear();
     this.pendingTagChanges.clear();
     this.pendingCreationBatches = [];
+    this.pendingNarrations.clear();
     return enrichedEvents;
   }
 
@@ -643,8 +709,24 @@ export class StateChangeTracker {
 
     if (!primaryEntity) return null;
 
-    // Build description summarizing what happened
-    const description = this.buildTemplateDescription(
+    // Check for domain-controlled narration from the pending creation batch
+    const creationBatch = this.pendingCreationBatches.find(b => b.templateId === context.sourceId);
+    const narration = creationBatch?.narration;
+
+    // Debug: log narration lookup
+    if (!narration) {
+      const matchingBatch = this.pendingCreationBatches.find(b => b.templateId === context.sourceId);
+      if (!matchingBatch && this.pendingCreationBatches.length > 0) {
+        console.warn(`[StateChangeTracker] No batch found for template "${context.sourceId}". Available: [${this.pendingCreationBatches.map(b => b.templateId).join(', ')}]`);
+      } else if (matchingBatch && !matchingBatch.narration) {
+        console.debug(`[StateChangeTracker] Batch "${context.sourceId}" has no narration (template lacks narrationTemplate)`);
+      }
+    } else {
+      console.debug(`[StateChangeTracker] Using narration for "${context.sourceId}": ${narration.slice(0, 60)}...`);
+    }
+
+    // Use narration if available, otherwise build description summarizing what happened
+    const description = narration || this.buildTemplateDescription(
       entitiesCreated,
       relationshipsCreated,
       participantEffects,
@@ -767,8 +849,13 @@ export class StateChangeTracker {
     // Primary entity is the first participant
     const primaryEntity = participantEffects[0].entity;
 
-    // Build description summarizing what happened
-    const description = this.buildSystemDescription(
+    // Use context-attached narration first, then fall back to key lookup for legacy support
+    const narration = context.narration || this.pendingNarrations.get(
+      `${context.source}:${context.sourceId}:${context.tick}`
+    );
+
+    // Use narration if available, otherwise build description
+    const description = narration || this.buildSystemDescription(
       entitiesCreated,
       relationshipsCreated,
       relationshipsArchived,
@@ -845,8 +932,13 @@ export class StateChangeTracker {
     // Primary entity is the first participant
     const primaryEntity = participantEffects[0].entity;
 
-    // Build description summarizing what happened
-    const description = this.buildActionDescription(
+    // Use context-attached narration first, then fall back to key lookup for legacy support
+    const narration = context.narration || this.pendingNarrations.get(
+      `${context.source}:${context.sourceId}:${context.tick}`
+    );
+
+    // Use narration if available, otherwise build description
+    const description = narration || this.buildActionDescription(
       entitiesCreated,
       relationshipsCreated,
       relationshipsArchived,
@@ -1133,7 +1225,7 @@ export class StateChangeTracker {
       }
 
       if (endedCount > 0) {
-        parts.push(`${endedCount} ended`);
+        parts.push(`${endedCount} passed into history`);
       }
     }
 
@@ -1146,13 +1238,21 @@ export class StateChangeTracker {
 
     // Build final description
     const sourceName = this.getSystemDisplayName(sourceId);
-    const prefix = sourceType === 'framework' ? 'Framework' : sourceName;
 
     if (parts.length === 0) {
-      return `${prefix} affected ${whoSummary}.`;
+      // Framework events with no specific effects - use generic description
+      if (sourceType === 'framework') {
+        return `${whoSummary} changed.`;
+      }
+      return `${sourceName} affected ${whoSummary}.`;
     }
 
-    return `${whoSummary}: ${parts.join(', ')}, due to ${prefix}.`;
+    // Framework events don't need "due to Framework" - it's mechanical
+    if (sourceType === 'framework') {
+      return `${whoSummary}: ${parts.join(', ')}.`;
+    }
+
+    return `${whoSummary}: ${parts.join(', ')}, due to ${sourceName}.`;
   }
 
   /**

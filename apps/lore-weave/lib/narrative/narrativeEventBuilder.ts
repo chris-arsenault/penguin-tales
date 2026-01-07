@@ -59,7 +59,7 @@ export interface NarrativeContext {
   /** Get polarity for a status from schema */
   getStatusPolarity?: (entityKind: string, status: string) => Polarity | undefined;
   /** Get configured verb for relationship formation (from schema or default) */
-  getRelationshipVerb?: (kind: string, action: 'formed' | 'ended') => string | undefined;
+  getRelationshipVerb?: (kind: string, action: 'formed' | 'ended' | 'inverseFormed' | 'inverseEnded') => string | undefined;
 }
 
 /**
@@ -128,8 +128,12 @@ export class NarrativeEventBuilder {
 
     // Process relationship formations
     for (const rel of relationshipsCreated) {
+      const srcEntity = this.context.getEntity(rel.srcId);
       const dstEntity = this.context.getEntity(rel.dstId);
-      const dstRef: NarrativeEntityRef | undefined = dstEntity
+      const srcRef: NarrativeEntityRef = srcEntity
+        ? this.buildEntityRef(srcEntity)
+        : { id: rel.srcId, name: rel.srcId, kind: 'unknown', subtype: 'unknown' };
+      const dstRef: NarrativeEntityRef = dstEntity
         ? this.buildEntityRef(dstEntity)
         : { id: rel.dstId, name: rel.dstId, kind: 'unknown', subtype: 'unknown' };
 
@@ -143,6 +147,7 @@ export class NarrativeEventBuilder {
         ? `${schemaVerb} ${dstRef.name}`
         : this.getRelationshipFormedVerb(rel.kind, dstRef.name);
 
+      // Add effect for source entity
       addEffect(rel.srcId, {
         type: 'relationship_formed',
         relationshipKind: rel.kind,
@@ -150,12 +155,30 @@ export class NarrativeEventBuilder {
         semanticKind,
         description,
       });
+
+      // Add effect for destination entity (inverse perspective)
+      const inverseSchemaVerb = this.context.getRelationshipVerb?.(rel.kind, 'inverseFormed');
+      const inverseDescription = inverseSchemaVerb
+        ? `${inverseSchemaVerb} ${srcRef.name}`
+        : this.getRelationshipFormedInverseVerb(rel.kind, srcRef.name);
+
+      addEffect(rel.dstId, {
+        type: 'relationship_formed',
+        relationshipKind: rel.kind,
+        relatedEntity: srcRef,
+        semanticKind,
+        description: inverseDescription,
+      });
     }
 
     // Process relationship dissolutions
     for (const rel of relationshipsArchived) {
+      const srcEntity = this.context.getEntity(rel.srcId);
       const dstEntity = this.context.getEntity(rel.dstId);
-      const dstRef: NarrativeEntityRef | undefined = dstEntity
+      const srcRef: NarrativeEntityRef = srcEntity
+        ? this.buildEntityRef(srcEntity)
+        : { id: rel.srcId, name: rel.srcId, kind: 'unknown', subtype: 'unknown' };
+      const dstRef: NarrativeEntityRef = dstEntity
         ? this.buildEntityRef(dstEntity)
         : { id: rel.dstId, name: rel.dstId, kind: 'unknown', subtype: 'unknown' };
 
@@ -169,12 +192,27 @@ export class NarrativeEventBuilder {
         ? `${schemaVerb} ${dstRef.name}`
         : this.getRelationshipEndedVerb(rel.kind, dstRef.name);
 
+      // Add effect for source entity
       addEffect(rel.srcId, {
         type: 'relationship_ended',
         relationshipKind: rel.kind,
         relatedEntity: dstRef,
         semanticKind,
         description,
+      });
+
+      // Add effect for destination entity (inverse perspective)
+      const inverseSchemaVerb = this.context.getRelationshipVerb?.(rel.kind, 'inverseEnded');
+      const inverseDescription = inverseSchemaVerb
+        ? `${inverseSchemaVerb} ${srcRef.name}`
+        : this.getRelationshipEndedInverseVerb(rel.kind, srcRef.name);
+
+      addEffect(rel.dstId, {
+        type: 'relationship_ended',
+        relationshipKind: rel.kind,
+        relatedEntity: srcRef,
+        semanticKind,
+        description: inverseDescription,
       });
     }
 
@@ -205,7 +243,7 @@ export class NarrativeEventBuilder {
           field: field.field,
           previousValue: field.oldValue,
           newValue: field.newValue,
-          description: field.newValue === 'historical' ? 'ended' : 'dissolved',
+          description: field.newValue === 'historical' ? 'passed into history' : 'dissolved',
         });
       } else if (field.field === 'status') {
         // For other status changes, derive semantic kind from polarity
@@ -415,6 +453,108 @@ export class NarrativeEventBuilder {
       'bound_to': `was freed from ${targetName}`,
     };
     return verbs[kind] || `ended ${kind} with ${targetName}`;
+  }
+
+  /**
+   * Get inverse verb for relationship formation (from destination's perspective).
+   * Used when the source forms a relationship with the destination.
+   * TODO: Domain-specific verbs should be in domain config.
+   */
+  private getRelationshipFormedInverseVerb(kind: string, sourceName: string): string {
+    const verbs: Record<string, string> = {
+      // Framework relationships - destination perspective
+      'allied_with': `allied with ${sourceName}`,
+      'ally_of': `gained ${sourceName} as ally`,
+      'at_war_with': `was attacked by ${sourceName}`,
+      'enemy_of': `became enemies with ${sourceName}`,
+      'friend_of': `befriended ${sourceName}`,
+      'member_of': `gained ${sourceName} as member`,
+      'serves': `gained ${sourceName} as servant`,
+      'rules': `came under rule of ${sourceName}`,
+      'trades_with': `began trading with ${sourceName}`,
+      'part_of': `incorporated ${sourceName}`,
+      'located_at': `received ${sourceName}`,
+      'resident_of': `gained ${sourceName} as resident`,
+      'owns': `was acquired by ${sourceName}`,
+      'possesses': `was obtained by ${sourceName}`,
+      'rivals': `became rivals with ${sourceName}`,
+      'mentors': `became mentored by ${sourceName}`,
+      'active_during': `saw ${sourceName} become active`,
+      'supersedes': `was superseded by ${sourceName}`,
+      'created_during': `witnessed creation of ${sourceName}`,
+      'originated_in': `gave rise to ${sourceName}`,
+      'controls': `came under control of ${sourceName}`,
+      'adjacent_to': `became adjacent to ${sourceName}`,
+      'related_to': `became related to ${sourceName}`,
+      'stored_at': `began storing ${sourceName}`,
+      'central_to': `gained ${sourceName} as central element`,
+      // Domain-specific (TODO: extract to domain config)
+      'corrupted_by': `corrupted ${sourceName}`,
+      'manifests_at': `became site of ${sourceName}'s manifestation`,
+      'worships': `gained ${sourceName} as worshipper`,
+      'practitioner_of': `gained ${sourceName} as practitioner`,
+      'believer_of': `gained ${sourceName} as believer`,
+      'patron_of': `gained ${sourceName} as patron`,
+      'blessed_by': `blessed ${sourceName}`,
+      'cursed_by': `cursed ${sourceName}`,
+      'trained_by': `began training ${sourceName}`,
+      'apprentice_of': `gained ${sourceName} as apprentice`,
+      'disciple_of': `gained ${sourceName} as disciple`,
+      'bound_to': `bound ${sourceName}`,
+      'inhabits': `became inhabited by ${sourceName}`,
+      'haunts': `became haunted by ${sourceName}`,
+      'guards': `became guarded by ${sourceName}`,
+      'protects': `became protected by ${sourceName}`,
+      'leader_of': `gained ${sourceName} as leader`,
+      'owned_by': `acquired ${sourceName}`,
+      'derived_from': `inspired ${sourceName}`,
+      'participant_in': `gained ${sourceName} as participant`,
+      'epicenter_of': `gained ${sourceName} as epicenter`,
+      'triggered_by': `triggered ${sourceName}`,
+      'commemorates': `was commemorated by ${sourceName}`,
+    };
+    return verbs[kind] || `gained ${sourceName} via ${kind}`;
+  }
+
+  /**
+   * Get inverse verb for relationship dissolution (from destination's perspective).
+   * Used when the source ends a relationship with the destination.
+   * TODO: Domain-specific verbs should be in domain config.
+   */
+  private getRelationshipEndedInverseVerb(kind: string, sourceName: string): string {
+    const verbs: Record<string, string> = {
+      'allied_with': `lost ${sourceName} as ally`,
+      'ally_of': `lost ${sourceName} as ally`,
+      'at_war_with': `made peace with ${sourceName}`,
+      'enemy_of': `reconciled with ${sourceName}`,
+      'friend_of': `ended friendship with ${sourceName}`,
+      'member_of': `lost ${sourceName} as member`,
+      'serves': `lost ${sourceName} as servant`,
+      'rules': `was freed from rule of ${sourceName}`,
+      'trades_with': `stopped trading with ${sourceName}`,
+      'part_of': `released ${sourceName}`,
+      'located_at': `lost ${sourceName}`,
+      'resident_of': `lost ${sourceName} as resident`,
+      'owns': `was released by ${sourceName}`,
+      'possesses': `was released by ${sourceName}`,
+      'rivals': `ended rivalry with ${sourceName}`,
+      'mentors': `was no longer mentored by ${sourceName}`,
+      // Domain-specific (TODO: extract to domain config)
+      'corrupted_by': `stopped corrupting ${sourceName}`,
+      'manifests_at': `lost ${sourceName}'s manifestation`,
+      'worships': `lost ${sourceName} as worshipper`,
+      'practitioner_of': `lost ${sourceName} as practitioner`,
+      'believer_of': `lost ${sourceName} as believer`,
+      'patron_of': `lost ${sourceName} as patron`,
+      'blessed_by': `withdrew blessing from ${sourceName}`,
+      'cursed_by': `lifted curse from ${sourceName}`,
+      'bound_to': `released ${sourceName}`,
+      'leader_of': `lost ${sourceName} as leader`,
+      'owned_by': `released ${sourceName}`,
+      'derived_from': `no longer inspires ${sourceName}`,
+      'participant_in': `lost ${sourceName} as participant`,
+    };
+    return verbs[kind] || `lost ${sourceName} via ${kind}`;
   }
 
   /**

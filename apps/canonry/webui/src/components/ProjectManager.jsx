@@ -2,7 +2,7 @@
  * ProjectManager - Header bar with project and slot dropdowns
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ValidationPopover from './ValidationPopover';
 import TracePopover from './TracePopover';
 import SlotSelector from './SlotSelector';
@@ -42,6 +42,17 @@ export default function ProjectManager({
   const [hoveredProject, setHoveredProject] = useState(null);
   const dropdownRef = useRef(null);
   const fileInputRef = useRef(null);
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = useCallback((e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  }, []);
+
+  const handleOverlayClick = useCallback((e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      setShowNewModal(false);
+    }
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -261,8 +272,8 @@ export default function ProjectManager({
       </div>
 
       {showNewModal && (
-        <div className="modal-overlay" onClick={() => setShowNewModal(false)}>
-          <div className="modal modal-simple" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+          <div className="modal modal-simple">
             <div className="modal-header">
               <div className="modal-title">Create New Project</div>
               <button className="btn-close" onClick={() => setShowNewModal(false)}>×</button>

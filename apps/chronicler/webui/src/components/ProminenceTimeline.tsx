@@ -9,7 +9,7 @@
  */
 
 import React, { useMemo, useState, useCallback } from 'react';
-import type { NarrativeEvent } from '@canonry/world-schema';
+import { prominenceLabelFromScale, type ProminenceScale, type NarrativeEvent } from '@canonry/world-schema';
 
 const colors = {
   bgPrimary: '#0a1929',
@@ -34,30 +34,13 @@ const colors = {
   levelLine: 'rgba(255, 255, 255, 0.1)',
 };
 
-// Prominence level labels and thresholds
-const PROMINENCE_LEVELS = [
-  { threshold: 0, label: 'forgotten', color: colors.forgotten },
-  { threshold: 1, label: 'marginal', color: colors.marginal },
-  { threshold: 2, label: 'recognized', color: colors.recognized },
-  { threshold: 3, label: 'renowned', color: colors.renowned },
-  { threshold: 4, label: 'mythic', color: colors.mythic },
-];
-
-function getProminenceLabel(value: number): string {
-  if (value < 1) return 'forgotten';
-  if (value < 2) return 'marginal';
-  if (value < 3) return 'recognized';
-  if (value < 4) return 'renowned';
-  return 'mythic';
-}
-
-function getProminenceColor(value: number): string {
-  if (value < 1) return colors.forgotten;
-  if (value < 2) return colors.marginal;
-  if (value < 3) return colors.recognized;
-  if (value < 4) return colors.renowned;
-  return colors.mythic;
-}
+const PROMINENCE_COLORS = {
+  forgotten: colors.forgotten,
+  marginal: colors.marginal,
+  recognized: colors.recognized,
+  renowned: colors.renowned,
+  mythic: colors.mythic,
+};
 
 interface ProminenceDataPoint {
   tick: number;
@@ -73,6 +56,7 @@ interface ProminenceTimelineProps {
   events: NarrativeEvent[];
   entityId: string;
   initialProminence?: number;
+  prominenceScale: ProminenceScale;
 }
 
 /**
@@ -81,9 +65,11 @@ interface ProminenceTimelineProps {
 function extractProminenceData(
   events: NarrativeEvent[],
   entityId: string,
-  _initialProminence: number
+  _initialProminence: number,
+  prominenceScale: ProminenceScale
 ): ProminenceDataPoint[] {
   const dataPoints: ProminenceDataPoint[] = [];
+  const thresholds = prominenceScale.thresholds;
 
   // Sort events by tick
   const sortedEvents = [...events].sort((a, b) => a.tick - b.tick);
@@ -99,7 +85,7 @@ function extractProminenceData(
 
         // Check if this change crosses a threshold (1, 2, 3, or 4)
         let crossesThreshold: number | null = null;
-        for (const threshold of [1, 2, 3, 4]) {
+        for (const threshold of thresholds) {
           const crossedUp = previousValue < threshold && newValue >= threshold;
           const crossedDown = previousValue >= threshold && newValue < threshold;
           if (crossedUp || crossedDown) {
@@ -183,6 +169,7 @@ export default function ProminenceTimeline({
   events,
   entityId,
   initialProminence = 2.5,
+  prominenceScale,
 }: ProminenceTimelineProps) {
   const [hoveredPoint, setHoveredPoint] = useState<{
     point: ProminenceDataPoint;
@@ -192,9 +179,16 @@ export default function ProminenceTimeline({
 
   // Extract prominence data from events
   const dataPoints = useMemo(
-    () => extractProminenceData(events, entityId, initialProminence),
-    [events, entityId, initialProminence]
+    () => extractProminenceData(events, entityId, initialProminence, prominenceScale),
+    [events, entityId, initialProminence, prominenceScale]
   );
+  const prominenceLevels = useMemo(() => {
+    return prominenceScale.labels.map((label, index) => ({
+      threshold: index === 0 ? prominenceScale.min : prominenceScale.thresholds[index - 1],
+      label,
+      color: PROMINENCE_COLORS[label as keyof typeof PROMINENCE_COLORS],
+    }));
+  }, [prominenceScale]);
 
   // Calculate graph dimensions and scales
   const graphMetrics = useMemo(() => {
@@ -278,6 +272,12 @@ export default function ProminenceTimeline({
     }
   }, []);
 
+  const resolveLabel = (value: number) => prominenceLabelFromScale(value, prominenceScale);
+  const resolveColor = (value: number) => {
+    const label = resolveLabel(value);
+    return PROMINENCE_COLORS[label as keyof typeof PROMINENCE_COLORS];
+  };
+
   if (dataPoints.length === 0) {
     return null; // Don't render anything if no prominence changes
   }
@@ -291,8 +291,8 @@ export default function ProminenceTimeline({
           {graphMetrics && (
             <>
               {/* Background level bands */}
-              {PROMINENCE_LEVELS.map((level, i) => {
-                const nextThreshold = PROMINENCE_LEVELS[i + 1]?.threshold ?? 5;
+              {prominenceLevels.map((level, i) => {
+                const nextThreshold = prominenceLevels[i + 1]?.threshold ?? prominenceScale.max;
                 return (
                   <rect
                     key={level.label}
@@ -307,7 +307,7 @@ export default function ProminenceTimeline({
               })}
 
               {/* Horizontal grid lines for each level threshold */}
-              {[1, 2, 3, 4].map(threshold => (
+              {prominenceScale.thresholds.map((threshold) => (
                 <line
                   key={`grid-${threshold}`}
                   x1={0}
@@ -370,12 +370,12 @@ export default function ProminenceTimeline({
             }}
           >
             <div style={styles.tooltipValue}>
-              <span style={{ color: getProminenceColor(hoveredPoint.point.previousValue) }}>
-                {getProminenceLabel(hoveredPoint.point.previousValue)}
+              <span style={{ color: resolveColor(hoveredPoint.point.previousValue) }}>
+                {resolveLabel(hoveredPoint.point.previousValue)}
               </span>
               <span style={{ color: colors.textMuted }}>→</span>
-              <span style={{ color: getProminenceColor(hoveredPoint.point.newValue) }}>
-                {getProminenceLabel(hoveredPoint.point.newValue)}
+              <span style={{ color: resolveColor(hoveredPoint.point.newValue) }}>
+                {resolveLabel(hoveredPoint.point.newValue)}
               </span>
             </div>
             <div style={styles.tooltipDescription}>

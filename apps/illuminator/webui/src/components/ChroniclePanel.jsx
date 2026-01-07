@@ -621,7 +621,8 @@ export default function ChroniclePanel({
       era: e.era,
       eventKind: e.eventKind,
       significance: e.significance,
-      headline: e.headline,
+      // NarrativeEvent.description is the natural language summary (used as headline)
+      headline: e.description,
       description: e.description,
       subjectId: e.subject?.id,
       subjectName: e.subject?.name,

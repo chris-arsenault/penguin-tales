@@ -49,6 +49,8 @@ export interface ExecutionContext {
   sourceId: string;
   /** For actions: whether the action succeeded (false = failed attempt) */
   success?: boolean;
+  /** In-world narrative description of what happened */
+  narration?: string;
 }
 
 /**

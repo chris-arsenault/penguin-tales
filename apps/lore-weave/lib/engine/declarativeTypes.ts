@@ -177,6 +177,19 @@ export interface DeclarativeTemplate {
 
   // Step 6: Conditional variants that modify the template based on world state
   variants?: TemplateVariants;
+
+  /**
+   * Narration template for narrative-quality text when this template executes.
+   * Uses the full template syntax:
+   * - {target.field} or {$target.field} - The selected target entity
+   * - {$variable.field} - Access resolved variables
+   * - {field|fallback} - Use fallback if field is null/undefined
+   * - {count:kind} - Count of entities by kind
+   * - {list:created} - Comma-separated list of created entity names
+   *
+   * Example: "From the {$target.subtype} {$target.name}, a new {list:created} emerged."
+   */
+  narrationTemplate?: string;
 }
 
 // =============================================================================

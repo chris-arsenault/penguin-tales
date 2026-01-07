@@ -2,7 +2,7 @@
  * HelpModal - Context-aware help modal showing detailed workflow for current screen
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 
 // Accent colors for each screen (kept for dynamic theming)
 const SCREEN_COLORS = {
@@ -178,18 +178,24 @@ const HELP_CONTENT = {
 };
 
 export default function HelpModal({ isOpen, onClose, activeTab }) {
-  if (!isOpen) return null;
+  const mouseDownOnOverlay = useRef(false);
 
-  const content = HELP_CONTENT[activeTab] || HELP_CONTENT.enumerist;
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
 
   const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
       onClose();
     }
   };
 
+  if (!isOpen) return null;
+
+  const content = HELP_CONTENT[activeTab] || HELP_CONTENT.enumerist;
+
   return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
+    <div className="modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
       <div className="modal help-modal">
         <div className="modal-header">
           <div className="modal-title" style={{ color: content.color }}>

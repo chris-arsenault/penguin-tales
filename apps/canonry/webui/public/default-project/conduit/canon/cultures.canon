@@ -677,7 +677,6 @@ grammar nightshelf_instrument do
   rule name "☽'^domain:nightshelf_domain~lower^'" "slot:nightshelf_instrument_nouns~cap"
   rule name "context:selected~poss" "slot:nightshelf_instrument_nouns^~"
   rule name The "slot:nightshelf_shadow_gen^ed^~" slot:nightshelf_instrument_nouns
-  rule name "slot:nightshelf_instrument_nouns^☽" of slot:nightshelf_shadow_titles
 end
 
 grammar nightshelf_location do

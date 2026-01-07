@@ -367,6 +367,17 @@ export interface TemplateResult {
   placementStrategies?: string[];  // Optional - for debugging, parallel to entities array
   derivedTagsList?: Record<string, string | boolean>[];  // Tags derived from placement per entity
   placementDebugList?: PlacementDebug[];  // Detailed placement debug info per entity
+  /**
+   * Resolved context variables from template execution.
+   * These are passed to growthSystem for narration generation AFTER entities have names.
+   * Keys include $target, $enemy, etc. - the variables resolved during template expansion.
+   */
+  resolvedVariables?: Record<string, HardState | HardState[] | undefined>;
+  /**
+   * Maps entityRef (like $spell) to index in entities array.
+   * Needed because createChance can skip entities, misaligning indices.
+   */
+  entityRefToIndex?: Record<string, number>;
 }
 
 // Simulation system interface
@@ -422,6 +433,16 @@ export interface SystemResult {
     /** Narrative group ID for per-target event splitting */
     narrativeGroupId?: string;
   }>;
+  /** Relationships to archive (deferred until worldEngine applies with proper context) */
+  relationshipsToArchive?: Array<{
+    kind: string;
+    src: string;
+    dst: string;
+    /** Action context for narrative attribution */
+    actionContext?: ActionContext;
+    /** Narrative group ID for per-target event splitting */
+    narrativeGroupId?: string;
+  }>;
   entitiesModified: Array<{
     id: string;
     changes: Partial<HardState>;
@@ -434,6 +455,18 @@ export interface SystemResult {
   description: string;
   /** Optional structured details for system-specific information (e.g., era transitions) */
   details?: Record<string, unknown>;
+  /**
+   * Domain-controlled narration texts generated from rule narrationTemplates.
+   * Each entry represents a narration for a specific rule application.
+   * @deprecated Use narrationsByGroup for proper per-entity attribution
+   */
+  narrations?: string[];
+  /**
+   * Domain-controlled narrations keyed by narrative group ID.
+   * Key is the narrativeGroupId (usually entity ID), value is the narration text.
+   * This ensures proper attribution when a system affects multiple entities.
+   */
+  narrationsByGroup?: Record<string, string>;
 }
 
 // Component Purpose Taxonomy

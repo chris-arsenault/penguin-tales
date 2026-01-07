@@ -21,6 +21,17 @@ export default function ImageRefPicker({ projectId, onSelect, onClose }) {
   const [hasMore, setHasMore] = useState(false);
   const [total, setTotal] = useState(0);
   const searchTimeoutRef = useRef(null);
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
   // Debounce search input
   useEffect(() => {
@@ -119,8 +130,8 @@ export default function ImageRefPicker({ projectId, onSelect, onClose }) {
   };
 
   return (
-    <div className="static-page-modal-overlay" onClick={onClose}>
-      <div className="static-page-modal image-picker-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="static-page-modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+      <div className="static-page-modal image-picker-modal">
         <div className="static-page-modal-header">
           <h3>Insert Image</h3>
           <span className="image-picker-count">

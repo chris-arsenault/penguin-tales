@@ -12,7 +12,7 @@ relationship_kind betrayed_by "Betrayed By" negative none fixed src faction dst 
 
 relationship_kind blessed_by "Blessed By" positive slow cullable src npc dst artifact verbs "was blessed by" "lost the blessing of"
 
-relationship_kind catalyst_of "Catalyst Of" neutral none fixed src artifact dst occurrence verbs "catalyzed" "was absolved of catalyzing"
+relationship_kind catalyst_of "Catalyst Of" neutral none fixed src artifact ability dst occurrence verbs "catalyzed" "was absolved of catalyzing"
 
 relationship_kind celebrated_by "Celebrated By" positive medium cullable src rule occurrence dst faction npc location verbs "began to be celebrated by" "was no longer celebrated by"
 

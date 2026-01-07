@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import type { WorldState } from '../types/world.ts';
+import type { ProminenceScale } from '@canonry/world-schema';
 import { getKindColor, prominenceToNumber } from '../utils/dataTransform.ts';
 import * as THREE from 'three';
 
@@ -12,6 +13,7 @@ interface GraphView3DProps {
   onNodeSelect: (nodeId: string | undefined) => void;
   showCatalyzedBy?: boolean;
   edgeMetric?: EdgeMetric;
+  prominenceScale: ProminenceScale;
 }
 
 interface GraphNode {
@@ -32,7 +34,14 @@ interface GraphLink {
   catalyzed?: boolean;
 }
 
-export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCatalyzedBy = false, edgeMetric = 'strength' }: GraphView3DProps) {
+export default function GraphView3D({
+  data,
+  selectedNodeId,
+  onNodeSelect,
+  showCatalyzedBy = false,
+  edgeMetric = 'strength',
+  prominenceScale,
+}: GraphView3DProps) {
   const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -76,9 +85,9 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
       id: entity.id,
       name: entity.name,
       kind: entity.kind,
-      prominence: prominenceToNumber(entity.prominence, data.schema),
+      prominence: prominenceToNumber(entity.prominence, data.schema, prominenceScale),
       color: getKindColor(entity.kind, data.schema),
-      val: prominenceToNumber(entity.prominence, data.schema) + 1 // Size multiplier (1-5)
+      val: prominenceToNumber(entity.prominence, data.schema, prominenceScale) + 1 // Size multiplier (1-5)
     }));
 
     const links: GraphLink[] = data.relationships.map(rel => {
@@ -94,7 +103,7 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
     });
 
     graphData.current = { nodes, links };
-  }, [data, showCatalyzedBy]);
+  }, [data, showCatalyzedBy, prominenceScale]);
 
   // Calculate link distance based on selected metric
   const linkDistance = useCallback((link: any) => {

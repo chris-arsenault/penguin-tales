@@ -132,6 +132,7 @@ export type {
   CanonryDistributionTargets,
   CanonrySimulationResults,
   CanonrySimulationState,
+  LoreWeaveRunScorePayload,
   MfeNavProps,
   NameForgeRemoteProps,
   CosmographerRemoteProps,
@@ -177,3 +178,23 @@ export type {
   FrameworkCultureId,
   FrameworkTag,
 } from './frameworkPrimitives.js';
+
+export type { ProminenceScale } from './prominenceScale.js';
+
+export {
+  PROMINENCE_LABELS,
+  DEFAULT_PROMINENCE_DISTRIBUTION,
+  buildProminenceScale,
+  prominenceLabelFromScale,
+  prominenceThresholdFromScale,
+  prominenceIndexFromScale,
+} from './prominenceScale.js';
+
+// Event filtering utilities
+export type { EventFilterOptions } from './eventFiltering.js';
+export {
+  isProminenceOnlyEvent,
+  getEntityEffects,
+  getEntityEvents,
+  formatEventForPrompt,
+} from './eventFiltering.js';

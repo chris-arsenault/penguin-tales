@@ -6,7 +6,7 @@
  * - Tabbed mode: Renders a sidebar with tabs when `tabs` prop is provided
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 
 /**
  * @param {Object} props
@@ -36,9 +36,20 @@ export function ModalShell({
   className = '',
 }) {
   const hasTabs = tabs && tabs.length > 0;
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
       <div className={`modal ${className}`.trim()} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">

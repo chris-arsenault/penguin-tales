@@ -9,6 +9,7 @@
  */
 
 import LLMCallConfigPanel from './LLMCallConfigPanel';
+import { LocalTextArea } from '@penguin-tales/shared-components';
 
 const IMAGE_MODELS = [
   { value: 'gpt-image-1.5', label: 'GPT Image 1.5' },
@@ -190,9 +191,9 @@ export default function ConfigPanel({ config, onConfigChange }) {
         {config.useClaudeForImagePrompt && (
           <div className="illuminator-form-group" style={{ marginLeft: '24px' }}>
             <label className="illuminator-label">Claude formatting prompt</label>
-            <textarea
+            <LocalTextArea
               value={config.claudeImagePromptTemplate || DEFAULT_IMAGE_PROMPT_TEMPLATE}
-              onChange={(e) => onConfigChange({ claudeImagePromptTemplate: e.target.value })}
+              onChange={(value) => onConfigChange({ claudeImagePromptTemplate: value })}
               className="illuminator-template-textarea"
               placeholder={DEFAULT_IMAGE_PROMPT_TEMPLATE}
             />

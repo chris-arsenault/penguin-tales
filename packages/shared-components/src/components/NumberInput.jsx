@@ -5,10 +5,11 @@
  * onChange handler immediately parses and rejects "-" as invalid.
  *
  * Uses internal string state during editing, only parsing to number on blur
- * or when the full value is valid.
+ * or when the full value is valid. Tracks focus state to prevent parent
+ * re-renders from disrupting user input.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
  * @param {Object} props
@@ -38,10 +39,14 @@ export function NumberInput({
 }) {
   // Internal string state for editing
   const [localValue, setLocalValue] = useState(() => formatValue(value));
+  // Track whether user is actively editing to prevent external value sync
+  const isFocusedRef = useRef(false);
 
-  // Sync from parent when value changes externally
+  // Sync from parent when value changes externally, but NOT while user is editing
   useEffect(() => {
-    setLocalValue(formatValue(value));
+    if (!isFocusedRef.current) {
+      setLocalValue(formatValue(value));
+    }
   }, [value]);
 
   function formatValue(val) {
@@ -57,6 +62,10 @@ export function NumberInput({
     if (isNaN(parsed)) return null;
     return parsed;
   }
+
+  const handleFocus = useCallback(() => {
+    isFocusedRef.current = true;
+  }, []);
 
   const handleChange = useCallback((e) => {
     const newValue = e.target.value;
@@ -87,6 +96,8 @@ export function NumberInput({
   }, [onChange, min, max, allowEmpty, integer]);
 
   const handleBlur = useCallback(() => {
+    isFocusedRef.current = false;
+
     // On blur, ensure the display value matches the actual value
     const parsed = parseValue(localValue);
     if (parsed !== null) {
@@ -110,6 +121,7 @@ export function NumberInput({
       inputMode="numeric"
       value={localValue}
       onChange={handleChange}
+      onFocus={handleFocus}
       onBlur={handleBlur}
       className={className}
       placeholder={placeholder}

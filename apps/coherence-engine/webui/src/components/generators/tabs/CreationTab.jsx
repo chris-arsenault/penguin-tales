@@ -4,7 +4,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import TagSelector from '@penguin-tales/shared-components/TagSelector';
-import { ReferenceDropdown, LevelSelector, PROMINENCE_LEVELS, ChipSelect, NumberInput } from '../../shared';
+import { ReferenceDropdown, LevelSelector, PROMINENCE_LEVELS, ChipSelect, NumberInput, LocalTextArea } from '../../shared';
 
 /**
  * Safely display a value that should be a string.
@@ -771,10 +771,9 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, culture
             <div className="form-help-text">
               A description for the created entity. Leave empty to auto-generate.
             </div>
-            <textarea
-              className="textarea"
+            <LocalTextArea
               value={typeof item.description === 'string' ? item.description : ''}
-              onChange={(e) => updateField('description', e.target.value || undefined)}
+              onChange={(value) => updateField('description', value || undefined)}
               placeholder="Optional entity description..."
               rows={2}
             />

@@ -20,6 +20,7 @@ import {
   resolveVariablesForEntity,
   createSystemContext,
 } from '../rules';
+import { interpolate, createNarrationContext } from '../narrative/narrationTemplate';
 
 // =============================================================================
 // DECLARATIVE ACTION TYPES
@@ -53,6 +54,16 @@ export interface ActionOutcomeConfig {
   mutations?: Mutation[];
   /** Description template (supports {actor.name}, {target.name}, etc.). */
   descriptionTemplate: string;
+  /**
+   * Narration template for narrative-quality text.
+   * Uses the full template syntax:
+   * - {entity.field} - Access entity fields (name, kind, subtype, culture)
+   * - {$variable.field} - Access resolved variables
+   * - {field|fallback} - Use fallback if field is null/undefined
+   *
+   * Example: "The {actor.subtype} {actor.name} seized {target.name}, wresting it from {$previousOwner.name|the realm's grasp}."
+   */
+  narrationTemplate?: string;
   /**
    * Delta to apply to actor prominence on success/failure.
    * Example: { onSuccess: 1.0, onFailure: -0.5 }
@@ -159,9 +170,13 @@ export interface ActionResult {
   success: boolean;
   relationships: Relationship[];
   relationshipsAdjusted?: Array<{ kind: string; src: string; dst: string; delta: number }>;
+  /** Relationships to archive (deferred until worldEngine applies with proper context) */
+  relationshipsToArchive?: Array<{ kind: string; src: string; dst: string }>;
   entitiesModified?: Array<{ id: string; changes: Partial<HardState> }>;
   pressureChanges?: Record<string, number>;
   description: string;
+  /** Domain-controlled narrative text (from narrationTemplate). */
+  narration?: string;
   entitiesCreated?: string[];
   instigatorId?: string;
   targetId?: string;
@@ -229,6 +244,31 @@ function formatDescription(
   return template.replace(/\{([^}]+)\}/g, (match, key) => {
     return tokenMap[key] ?? '';
   });
+}
+
+/**
+ * Format narration using the full template system with variable support.
+ */
+function formatNarration(
+  template: string,
+  bindings: {
+    actor: HardState;
+    instigator?: HardState | null;
+    target?: HardState;
+    target2?: HardState;
+    variables?: Record<string, HardState | undefined>;
+  }
+): string {
+  const context = createNarrationContext({
+    actor: bindings.actor,
+    target: bindings.target,
+    target2: bindings.target2,
+    instigator: bindings.instigator,
+    variables: bindings.variables,
+  });
+
+  const result = interpolate(template, context);
+  return result.text;
 }
 
 function evaluateActorConditions(
@@ -354,6 +394,7 @@ function createActionHandler(action: DeclarativeAction): ExecutableAction['handl
 
     const relationships: Relationship[] = [];
     const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
+    const relationshipsToArchive: Array<{ kind: string; src: string; dst: string }> = [];
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
     const pressureChanges: Record<string, number> = {};
 
@@ -381,6 +422,10 @@ function createActionHandler(action: DeclarativeAction): ExecutableAction['handl
         relationshipsAdjusted.push(...result.relationshipsAdjusted);
       }
 
+      if (result.relationshipsToArchive.length > 0) {
+        relationshipsToArchive.push(...result.relationshipsToArchive);
+      }
+
       for (const [pressureId, delta] of Object.entries(result.pressureChanges)) {
         pressureChanges[pressureId] = (pressureChanges[pressureId] || 0) + delta;
       }
@@ -393,13 +438,35 @@ function createActionHandler(action: DeclarativeAction): ExecutableAction['handl
       target2,
     });
 
+    // Generate narration from template if provided
+    let narration: string | undefined;
+    if (action.outcome.narrationTemplate) {
+      // Convert bindings to variables format for narration context
+      const variables: Record<string, HardState | undefined> = {};
+      for (const [key, entity] of Object.entries(bindings)) {
+        if (entity && key !== 'actor' && key !== 'target' && key !== 'target2' && key !== 'instigator') {
+          variables[key] = entity;
+        }
+      }
+
+      narration = formatNarration(action.outcome.narrationTemplate, {
+        actor,
+        instigator,
+        target,
+        target2,
+        variables,
+      });
+    }
+
     return {
       success: true,
       relationships,
       relationshipsAdjusted,
+      relationshipsToArchive,
       entitiesModified: modifications,
       pressureChanges,
       description,
+      narration,
       instigatorId: instigator?.id,
       targetId: target?.id,
       target2Id: target2?.id,

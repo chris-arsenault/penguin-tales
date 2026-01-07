@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { DiscoveryEventLore } from '../types/world.ts';
 import './DiscoveryStory.css';
 
@@ -11,6 +11,17 @@ interface DiscoveryStoryProps {
 
 export default function DiscoveryStory({ lore, onExplorerClick, onClose, isModal = false }: DiscoveryStoryProps) {
   const [expandedSection, setExpandedSection] = useState<'discovery' | 'significance' | null>('discovery');
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e: React.MouseEvent) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onClose?.();
+    }
+  };
 
   const toggleSection = (section: 'discovery' | 'significance') => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -96,8 +107,8 @@ export default function DiscoveryStory({ lore, onExplorerClick, onClose, isModal
   // Wrap in modal overlay if in modal mode
   if (isModal && onClose) {
     return (
-      <div className="discovery-story-overlay" onClick={onClose}>
-        <div onClick={(e) => e.stopPropagation()}>
+      <div className="discovery-story-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+        <div>
           {content}
         </div>
       </div>

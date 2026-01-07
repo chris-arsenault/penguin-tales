@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { CLUSTER_MODES } from '../constants';
-import { ReferenceDropdown, NumberInput } from '../../shared';
+import { ReferenceDropdown, NumberInput, LocalTextArea } from '../../shared';
 import VariableSelectionEditor from '../../shared/VariableSelectionEditor';
 import { ApplicabilityRuleCard } from '../../generators/applicability/ApplicabilityRuleCard';
 import { AddRuleButton } from '../../generators/applicability/AddRuleButton';
@@ -382,6 +382,19 @@ export function ThresholdTriggerTab({ system, onChange, schema, pressures }) {
             </>
           )}
         </div>
+      </div>
+
+      <div className="section">
+        <div className="section-title">Narration Template</div>
+        <div className="section-desc" style={{ marginBottom: '8px', fontSize: '11px' }}>
+          Syntax: {'{$self.field}'}, {'{$varName.field}'}, {'{field|fallback}'}.
+        </div>
+        <LocalTextArea
+          value={config.narrationTemplate || ''}
+          onChange={(value) => updateConfig('narrationTemplate', value || undefined)}
+          placeholder="e.g., {$self.name} reached a critical threshold and transformed."
+          rows={2}
+        />
       </div>
     </div>
   );

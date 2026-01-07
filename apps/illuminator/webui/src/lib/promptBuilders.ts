@@ -107,6 +107,17 @@ export interface EntityContext {
   culturalPeers?: string[];     // Other notable entities of same culture
   factionMembers?: string[];    // If entity belongs to a faction
   locationEntities?: string[];  // Entities at same location (if applicable)
+
+  // Narrative events involving this entity
+  events?: Array<{
+    era: string;
+    description: string;
+    significance: number;
+    effects?: Array<{
+      type: string;
+      description: string;
+    }>;
+  }>;
 }
 
 /**
@@ -406,6 +417,11 @@ export function buildDescriptionPromptFromGuidance(
     '',
     entityContext.culturalPeers?.length ? `CULTURAL PEERS: ${entityContext.culturalPeers.join(', ')}` : '',
     entityContext.factionMembers?.length ? `FACTION MEMBERS: ${entityContext.factionMembers.join(', ')}` : '',
+    '',
+    // Add events section if entity has narrative history
+    entityContext.events?.length ? `HISTORY FRAGMENTS (mine for flavor, don't enumerate):\n${entityContext.events.map(ev =>
+      `- [${ev.era}] ${ev.description}`
+    ).join('\n')}` : '',
     '',
     `ERA: ${entityContext.era.name}${entityContext.era.description ? ` - ${entityContext.era.description}` : ''}`,
     '',

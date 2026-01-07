@@ -137,6 +137,7 @@
                 "infectionAction": {
                   "$ref": "#/$defs/ContagionAction"
                 },
+                "narrationTemplate": { "type": "string", "description": "Template for in-world narration. Variables: {$self.field}, {$source.field}, {$contagion_source.field}" },
                 "recovery": {
                   "type": "object",
                   "required": ["baseRate"],
@@ -238,7 +239,8 @@
                 "throttleChance": { "type": "number", "minimum": 0, "maximum": 1 },
                 "cooldownTag": { "type": "string" },
                 "cooldownTicks": { "type": "number", "minimum": 0 },
-                "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
+                "pressureChanges": { "$ref": "#/$defs/PressureChanges" },
+                "narrationTemplate": { "type": "string", "description": "Template for in-world narration. Variables: {$self.field}, {$varName.field}" }
               }
             }
           ]
@@ -301,7 +303,8 @@
                       }
                     },
                     "additionalTags": { "type": "array", "items": { "type": "string" } },
-                    "descriptionTemplate": { "type": "string", "description": "Use {count} for cluster size, {names} for entity names" }
+                    "descriptionTemplate": { "type": "string", "description": "Use {count} for cluster size, {names} for entity names" },
+                    "narrationTemplate": { "type": "string", "description": "Template for in-world narration. Variables: {count}, {list:members}" }
                   }
                 },
                 "postProcess": {
@@ -632,7 +635,8 @@
         },
         "probability": { "type": "number", "minimum": 0, "maximum": 1 },
         "action": { "$ref": "#/$defs/Mutation" },
-        "betweenMatching": { "type": "boolean", "description": "For create_relationship: pair entities that both pass condition" }
+        "betweenMatching": { "type": "boolean", "description": "For create_relationship: pair entities that both pass condition" },
+        "narrationTemplate": { "type": "string", "description": "Template for in-world narration. Variables: {$self.field}, {$member.field}, {$member2.field}" }
       }
     },
 

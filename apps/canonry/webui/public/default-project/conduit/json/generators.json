@@ -3596,7 +3596,13 @@
       "subtypes": [
         "hero"
       ],
-      "status": "historical"
+      "status": "historical",
+      "filters": [
+        {
+          "type": "lacks_tag",
+          "tag": "legendary"
+        }
+      ]
     },
     "variables": {
       "$location": {
@@ -3723,11 +3729,6 @@
         "entity": "$target",
         "tag": "legendary",
         "value": true
-      },
-      {
-        "type": "change_status",
-        "entity": "$target",
-        "newStatus": "fictional"
       }
     ],
     "variants": {

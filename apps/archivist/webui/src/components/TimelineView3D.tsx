@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import type { WorldState } from '../types/world.ts';
+import type { ProminenceScale } from '@canonry/world-schema';
 import { getKindColor, prominenceToNumber } from '../utils/dataTransform.ts';
 import * as THREE from 'three';
 
@@ -12,6 +13,7 @@ interface TimelineView3DProps {
   onNodeSelect: (nodeId: string | undefined) => void;
   showCatalyzedBy?: boolean;
   edgeMetric?: EdgeMetric;
+  prominenceScale: ProminenceScale;
 }
 
 interface GraphNode {
@@ -48,7 +50,8 @@ export default function TimelineView3D({
   selectedNodeId,
   onNodeSelect,
   showCatalyzedBy = false,
-  edgeMetric = 'strength'
+  edgeMetric = 'strength',
+  prominenceScale
 }: TimelineView3DProps) {
   const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -110,9 +113,9 @@ export default function TimelineView3D({
         id: entity.id,
         name: entity.name,
         kind: entity.kind,
-        prominence: prominenceToNumber(entity.prominence, data.schema),
+        prominence: prominenceToNumber(entity.prominence, data.schema, prominenceScale),
         color: isEra ? '#FFD700' : getKindColor(entity.kind, data.schema), // Gold for eras
-        val: isEra ? 6 : prominenceToNumber(entity.prominence, data.schema) + 1, // Eras are larger
+        val: isEra ? 6 : prominenceToNumber(entity.prominence, data.schema, prominenceScale) + 1, // Eras are larger
         createdAt: entity.createdAt,
         // Fix era positions along X-axis
         fx: isEra ? eraX : undefined,
@@ -137,7 +140,7 @@ export default function TimelineView3D({
     });
 
     return { nodes, links };
-  }, [data, showCatalyzedBy, eraPositions]);
+  }, [data, showCatalyzedBy, eraPositions, prominenceScale]);
 
   // Calculate link distance based on selected metric and relationship type
   const linkDistance = useCallback((link: any) => {

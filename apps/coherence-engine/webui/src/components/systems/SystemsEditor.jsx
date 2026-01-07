@@ -2,7 +2,7 @@
  * SystemsEditor - Main component for editing simulation systems
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { SYSTEM_TYPES, SYSTEM_CATEGORIES, getSystemCategory } from './constants';
 import { CategorySection } from '../shared';
 import { SystemListCard } from './cards/SystemListCard';
@@ -31,6 +31,17 @@ export default function SystemsEditor({ projectId, systems = [], onChange, schem
       return acc;
     }, {});
   });
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = useCallback((e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  }, []);
+
+  const handleOverlayClick = useCallback((e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      setShowTypePicker(false);
+    }
+  }, []);
 
   // Group systems by category (framework systems grouped together)
   const groupedSystems = useMemo(() => {
@@ -218,8 +229,8 @@ export default function SystemsEditor({ projectId, systems = [], onChange, schem
       </div>
 
       {showTypePicker && (
-        <div className="modal-overlay" onClick={() => setShowTypePicker(false)}>
-          <div className="modal" style={{ maxWidth: '600px', height: 'auto', maxHeight: '80vh' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+          <div className="modal" style={{ maxWidth: '600px', height: 'auto', maxHeight: '80vh' }}>
             <div className="modal-header">
               <div className="modal-title">Choose System Type</div>
               <button className="close-btn" onClick={() => setShowTypePicker(false)}>×</button>

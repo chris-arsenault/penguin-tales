@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 /**
  * Generate a unique ID with culture prefix, avoiding conflicts
@@ -20,6 +20,17 @@ function generateUniqueId(cultureId, sourceId, existingIds) {
 export function CopyLexemeModal({ cultureId, allCultures, existingListIds, onCopy, onClose }) {
   const [selectedCulture, setSelectedCulture] = useState(null);
   const [selectedLists, setSelectedLists] = useState(new Set());
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
   const otherCultures = Object.entries(allCultures || {})
     .filter(([id]) => id !== cultureId)
@@ -78,8 +89,8 @@ export function CopyLexemeModal({ cultureId, allCultures, existingListIds, onCop
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content copy-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+      <div className="modal-content copy-modal">
         <div className="tab-header mb-md">
           <h3 className="mt-0">Copy Lexeme Lists from Another Culture</h3>
           <button className="secondary" onClick={onClose}>×</button>

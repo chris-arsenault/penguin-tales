@@ -9,7 +9,7 @@
  * 5. Pipeline selection and generation
  */
 
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import type { NarrativeStyle, EntityKindDefinition } from '@canonry/world-schema';
 import type { EntityContext, RelationshipContext, NarrativeEventContext, EraTemporalInfo, ChronicleTemporalContext } from '../../lib/chronicleTypes';
 import { WizardProvider, useWizard, WizardStep, ChronicleSeed } from './WizardContext';
@@ -99,6 +99,17 @@ function InnerWizard({
   initialSeed,
 }: InnerWizardProps) {
   const { state, nextStep, prevStep, reset, goToStep, initFromSeed, temporalContext, autoFillEventsAndRelationships } = useWizard();
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e: React.MouseEvent) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      handleClose();
+    }
+  };
 
   // Initialize from seed when opening with one
   useEffect(() => {
@@ -219,11 +230,10 @@ function InnerWizard({
   };
 
   return (
-    <div className="illuminator-modal-overlay" onClick={handleClose}>
+    <div className="illuminator-modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
       <div
         className="illuminator-modal"
         style={{ maxWidth: '800px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="illuminator-modal-header">

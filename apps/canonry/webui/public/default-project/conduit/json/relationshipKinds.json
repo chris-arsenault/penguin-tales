@@ -124,7 +124,8 @@
   {
     "description": "Catalyst Of",
     "srcKinds": [
-      "artifact"
+      "artifact",
+      "ability"
     ],
     "dstKinds": [
       "occurrence"

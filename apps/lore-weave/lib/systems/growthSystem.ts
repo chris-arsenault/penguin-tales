@@ -12,6 +12,7 @@ import type { DiscretePressureModification, ISimulationEmitter, PressureModifica
 import type { StateChangeTracker, RelationshipSummary } from '../narrative/stateChangeTracker';
 import type { MutationTracker } from '../narrative/mutationTracker';
 import { prominenceLabel } from '../rules/types';
+import { interpolate, createGeneratorContext } from '../narrative/narrationTemplate';
 
 export interface GrowthSystemConfig {
   id: string;
@@ -252,12 +253,51 @@ export function createGrowthSystem(
         // DescriptionSpec can be string or { template, replacements } - extract string if possible
         const primaryDescription = typeof rawDescription === 'string' ? rawDescription : undefined;
 
+        // Generate narration ONCE here, now that entities have names
+        // result.resolvedVariables contains $target, $enemy, etc. from template expansion
+        let narration: string | undefined;
+        if (declTemplate?.narrationTemplate) {
+          // Start with the resolved variables from template expansion (like $target, $enemy)
+          const variables: Record<string, HardState | HardState[] | undefined> = {
+            ...(result.resolvedVariables || {}),
+          };
+
+          // Add created entities by their entityRef (like $war, $ideology)
+          // Use entityRefToIndex mapping since createChance can skip entities
+          if (result.entityRefToIndex) {
+            for (const [entityRef, idx] of Object.entries(result.entityRefToIndex)) {
+              const index = idx as number;
+              if (createdEntities[index]) {
+                // Ensure $ prefix for the key
+                const key = entityRef.startsWith('$') ? entityRef : `$${entityRef}`;
+                variables[key] = createdEntities[index];
+              }
+            }
+          }
+
+          const narrationCtx = createGeneratorContext({
+            target,
+            variables,
+          });
+          const narrationResult = interpolate(declTemplate.narrationTemplate, narrationCtx);
+          // Use narration even if not complete - partial narration better than mechanical
+          narration = narrationResult.text;
+          if (!narrationResult.complete) {
+            // Debug: log unresolved tokens (use debug level since partial is expected sometimes)
+            console.debug(`[GrowthSystem] Template ${template.id} narration partial:`, {
+              unresolvedTokens: narrationResult.unresolvedTokens,
+              variableKeys: Object.keys(variables),
+            });
+          }
+        }
+
         deps.stateChangeTracker.recordCreationBatch(
           template.id,
           template.name || template.id,
           newIds,
           relationshipSummary,
-          primaryDescription || result.description
+          primaryDescription || result.description,
+          narration
         );
       }
 

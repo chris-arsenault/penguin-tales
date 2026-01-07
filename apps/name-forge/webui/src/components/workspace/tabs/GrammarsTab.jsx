@@ -628,9 +628,21 @@ function ModifiersSection({ onInsert }) {
 }
 
 function GrammarHelpModal({ onClose }) {
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content help-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+      <div className="modal-content help-modal">
         <div className="tab-header mb-md">
           <h3 className="mt-0">Context-Free Grammars</h3>
           <button className="secondary" onClick={onClose}>Close</button>

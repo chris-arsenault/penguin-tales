@@ -20,6 +20,7 @@ import type {
   MutationResult,
   EntityModification,
   RelationshipToCreate,
+  RelationshipToArchive,
   SetTagMutation,
   RemoveTagMutation,
   CreateRelationshipMutation,
@@ -132,6 +133,7 @@ export function prepareMutation(
     entityModifications: [],
     relationshipsCreated: [],
     relationshipsAdjusted: [],
+    relationshipsToArchive: [],
     pressureChanges: {},
     rateLimitUpdated: false,
   };
@@ -255,6 +257,11 @@ export function applyMutationResult(result: MutationResult, ctx: RuleContext): v
     ctx.graph.modifyRelationshipStrength(rel.src, rel.dst, rel.kind, rel.delta);
   }
 
+  // Archive relationships
+  for (const rel of result.relationshipsToArchive) {
+    ctx.graph.archiveRelationship(rel.src, rel.dst, rel.kind);
+  }
+
   // Apply pressure changes
   for (const [pressureId, delta] of Object.entries(result.pressureChanges)) {
     ctx.graph.modifyPressure(pressureId, delta);
@@ -299,6 +306,11 @@ function prepareSetTag(
   }
   const entity = resolveEntityRef(mutation.entity, ctx);
   if (!entity) {
+    // If it's a variable reference that didn't resolve, treat as no-op
+    if (mutation.entity.startsWith('$')) {
+      result.diagnostic = `skipped set_tag: ${mutation.entity} not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `entity ${mutation.entity} not found`;
     return result;
@@ -340,6 +352,11 @@ function prepareRemoveTag(
 ): MutationResult {
   const entity = resolveEntityRef(mutation.entity, ctx);
   if (!entity) {
+    // If it's a variable reference that didn't resolve, treat as no-op
+    if (mutation.entity.startsWith('$')) {
+      result.diagnostic = `skipped remove_tag: ${mutation.entity} not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `entity ${mutation.entity} not found`;
     return result;
@@ -367,12 +384,22 @@ function prepareCreateRelationship(
   const dst = resolveEntityRef(mutation.dst, ctx);
 
   if (!src) {
+    // If it's a variable reference that didn't resolve, treat as no-op
+    if (mutation.src.startsWith('$')) {
+      result.diagnostic = `skipped create_relationship: ${mutation.src} not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `source entity ${mutation.src} not found`;
     return result;
   }
 
   if (!dst) {
+    // If it's a variable reference that didn't resolve, treat as no-op
+    if (mutation.dst.startsWith('$')) {
+      result.diagnostic = `skipped create_relationship: ${mutation.dst} not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `destination entity ${mutation.dst} not found`;
     return result;
@@ -409,6 +436,11 @@ function prepareArchiveRelationship(
 ): MutationResult {
   const entity = resolveEntityRef(mutation.entity, ctx);
   if (!entity) {
+    // If it's a variable reference that didn't resolve, treat as no-op
+    if (mutation.entity.startsWith('$')) {
+      result.diagnostic = `skipped archive_relationship: ${mutation.entity} not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `entity ${mutation.entity} not found`;
     return result;
@@ -419,16 +451,21 @@ function prepareArchiveRelationship(
   const direction = normalizeDirection(mutation.direction);
 
   if (withRef && withRef !== 'any' && !withEntity) {
+    // If it's a variable reference that didn't resolve, treat as no-op
+    if (withRef.startsWith('$')) {
+      result.diagnostic = `skipped archive_relationship: ${withRef} not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `entity ${withRef} not found for archive_relationship`;
     return result;
   }
 
-  let archived = 0;
+  // Collect relationships to archive (deferred execution)
+  const rels = ctx.graph.getAllRelationships();
 
   if (withEntity) {
     // Archive only relationships between entity and withEntity
-    const rels = ctx.graph.getAllRelationships();
     for (const rel of rels) {
       if (rel.kind !== mutation.relationshipKind || rel.status === 'historical') continue;
 
@@ -445,19 +482,36 @@ function prepareArchiveRelationship(
 
       if (!matchesDirection) continue;
 
-      ctx.graph.archiveRelationship(rel.src, rel.dst, rel.kind);
-      archived++;
+      result.relationshipsToArchive.push({
+        kind: rel.kind,
+        src: rel.src,
+        dst: rel.dst,
+      });
     }
   } else {
     // Archive all relationships of this kind involving entity
-    archived = ctx.graph.archiveRelationshipsByKind(
-      entity.id,
-      mutation.relationshipKind,
-      direction === 'both' ? 'any' : direction
-    );
+    for (const rel of rels) {
+      if (rel.kind !== mutation.relationshipKind || rel.status === 'historical') continue;
+
+      const matchesDirection =
+        direction === 'both' ||
+        (direction === 'src' && rel.src === entity.id) ||
+        (direction === 'dst' && rel.dst === entity.id);
+
+      if (!matchesDirection) continue;
+
+      // Check if entity is involved
+      if (rel.src !== entity.id && rel.dst !== entity.id) continue;
+
+      result.relationshipsToArchive.push({
+        kind: rel.kind,
+        src: rel.src,
+        dst: rel.dst,
+      });
+    }
   }
 
-  result.diagnostic = `archived ${archived} ${mutation.relationshipKind} relationships`;
+  result.diagnostic = `archived ${result.relationshipsToArchive.length} ${mutation.relationshipKind} relationships`;
   return result;
 }
 
@@ -470,6 +524,11 @@ function prepareAdjustRelationshipStrength(
   const dst = resolveEntityRef(mutation.dst, ctx);
 
   if (!src || !dst) {
+    // If either is a variable reference that didn't resolve, treat as no-op
+    if ((!src && mutation.src.startsWith('$')) || (!dst && mutation.dst.startsWith('$'))) {
+      result.diagnostic = `skipped adjust_relationship_strength: endpoint not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `relationship endpoints not found (${mutation.src} -> ${mutation.dst})`;
     return result;
@@ -504,6 +563,11 @@ function prepareChangeStatus(
 ): MutationResult {
   const entity = resolveEntityRef(mutation.entity, ctx);
   if (!entity) {
+    // If it's a variable reference that didn't resolve, treat as no-op
+    if (mutation.entity.startsWith('$')) {
+      result.diagnostic = `skipped change_status: ${mutation.entity} not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `entity ${mutation.entity} not found`;
     return result;
@@ -525,6 +589,11 @@ function prepareAdjustProminence(
 ): MutationResult {
   const entity = resolveEntityRef(mutation.entity, ctx);
   if (!entity) {
+    // If it's a variable reference that didn't resolve, treat as no-op
+    if (mutation.entity.startsWith('$')) {
+      result.diagnostic = `skipped adjust_prominence: ${mutation.entity} not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `entity ${mutation.entity} not found`;
     return result;
@@ -583,18 +652,33 @@ function prepareTransferRelationship(
   const to = resolveEntityRef(mutation.to, ctx);
 
   if (!entity) {
+    // If it's a variable reference that didn't resolve, treat as no-op
+    if (mutation.entity.startsWith('$')) {
+      result.diagnostic = `skipped transfer_relationship: ${mutation.entity} not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `entity ${mutation.entity} not found`;
     return result;
   }
 
   if (!from) {
+    // If it's a variable reference that didn't resolve, treat as no-op
+    if (mutation.from.startsWith('$')) {
+      result.diagnostic = `skipped transfer_relationship: ${mutation.from} not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `from entity ${mutation.from} not found`;
     return result;
   }
 
   if (!to) {
+    // If it's a variable reference that didn't resolve, treat as no-op
+    if (mutation.to.startsWith('$')) {
+      result.diagnostic = `skipped transfer_relationship: ${mutation.to} not resolved`;
+      return result;
+    }
     result.applied = false;
     result.diagnostic = `to entity ${mutation.to} not found`;
     return result;
@@ -609,7 +693,7 @@ function prepareTransferRelationship(
     }
   }
 
-  // Archive the old relationship
+  // Archive the old relationship (deferred)
   const rels = ctx.graph.getAllRelationships();
   let foundOld = false;
   for (const rel of rels) {
@@ -619,7 +703,11 @@ function prepareTransferRelationship(
       ((rel.src === entity.id && rel.dst === from.id) ||
         (rel.src === from.id && rel.dst === entity.id))
     ) {
-      ctx.graph.archiveRelationship(rel.src, rel.dst, rel.kind);
+      result.relationshipsToArchive.push({
+        kind: rel.kind,
+        src: rel.src,
+        dst: rel.dst,
+      });
       foundOld = true;
       break;
     }
@@ -705,6 +793,7 @@ function prepareForEachRelated(
         result.entityModifications.push(...actionResult.entityModifications);
         result.relationshipsCreated.push(...actionResult.relationshipsCreated);
         result.relationshipsAdjusted.push(...actionResult.relationshipsAdjusted);
+        result.relationshipsToArchive.push(...actionResult.relationshipsToArchive);
         for (const [k, v] of Object.entries(actionResult.pressureChanges)) {
           result.pressureChanges[k] = (result.pressureChanges[k] || 0) + v;
         }
@@ -734,6 +823,7 @@ function prepareConditional(
       result.entityModifications.push(...actionResult.entityModifications);
       result.relationshipsCreated.push(...actionResult.relationshipsCreated);
       result.relationshipsAdjusted.push(...actionResult.relationshipsAdjusted);
+      result.relationshipsToArchive.push(...actionResult.relationshipsToArchive);
       for (const [k, v] of Object.entries(actionResult.pressureChanges)) {
         result.pressureChanges[k] = (result.pressureChanges[k] || 0) + v;
       }

@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { useLocalInputState } from '../../shared';
+import { useLocalInputState, LocalTextArea } from '../../shared';
 
 export function OverviewTab({ action, onChange, onDelete }) {
   const updateAction = (field, value) => {
@@ -50,10 +50,9 @@ export function OverviewTab({ action, onChange, onDelete }) {
           </div>
           <div className="form-group form-group-wide">
             <label className="label">Description</label>
-            <textarea
+            <LocalTextArea
               value={action.description || ''}
-              onChange={(e) => updateAction('description', e.target.value)}
-              className="textarea"
+              onChange={(value) => updateAction('description', value)}
               placeholder="What does this action do?"
             />
           </div>

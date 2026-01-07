@@ -5,7 +5,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { RELATIONSHIP_REFS, MUTATION_TYPE_OPTIONS } from '../constants';
 import MutationCard, { DEFAULT_MUTATION_TYPES } from '../../shared/MutationCard';
-import { NumberInput } from '../../shared';
+import { NumberInput, LocalTextArea } from '../../shared';
 
 const ACTION_MUTATION_TYPES = DEFAULT_MUTATION_TYPES;
 
@@ -247,11 +247,23 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
         <div className="section-desc">
           Template for generating occurrence descriptions. Use {'{actor.name}'}, {'{instigator.name}'}, {'{target.name}'}, etc.
         </div>
-        <textarea
+        <LocalTextArea
           value={outcome.descriptionTemplate || ''}
-          onChange={(e) => updateOutcome('descriptionTemplate', e.target.value || undefined)}
-          className="textarea"
+          onChange={(value) => updateOutcome('descriptionTemplate', value || undefined)}
           placeholder="e.g., declared war on {target.name}"
+        />
+      </div>
+
+      <div className="section">
+        <div className="section-title">📖 Narration Template</div>
+        <div className="section-desc">
+          Domain-controlled narrative text. Syntax: {'{entity.field}'}, {'{$var.field}'}, {'{field|fallback}'}, {'{list:entities}'}.
+        </div>
+        <LocalTextArea
+          value={outcome.narrationTemplate || ''}
+          onChange={(value) => updateOutcome('narrationTemplate', value || undefined)}
+          placeholder="e.g., The {actor.subtype} {actor.name} declared war on {target.name}, shattering the fragile peace."
+          rows={3}
         />
       </div>
     </div>

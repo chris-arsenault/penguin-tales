@@ -9,6 +9,7 @@
   "properties": {
     "id": { "type": "string", "minLength": 1, "description": "Unique identifier for this generator" },
     "name": { "type": "string", "minLength": 1, "description": "Human-readable name" },
+    "narrationTemplate": { "type": "string", "description": "Template for in-world narration. Variables: {$target.field}, {$entityRef.field}, {field|fallback}" },
     "enabled": { "type": "boolean", "description": "Whether this generator is active (default: true)" },
     "applicability": {
       "type": "array",

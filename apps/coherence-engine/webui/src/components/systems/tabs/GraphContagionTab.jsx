@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { DIRECTIONS } from '../constants';
-import { ReferenceDropdown, NumberInput } from '../../shared';
+import { ReferenceDropdown, NumberInput, LocalTextArea } from '../../shared';
 import TagSelector from '@penguin-tales/shared-components/TagSelector';
 
 /**
@@ -286,6 +286,19 @@ export function GraphContagionTab({ system, onChange, schema }) {
               </div>
             </>
           )}
+        </div>
+
+        <div style={{ marginTop: '16px' }}>
+          <label className="label">Narration Template</label>
+          <div className="section-desc" style={{ marginBottom: '4px', fontSize: '11px' }}>
+            Syntax: {'{$self.field}'}, {'{$source.field}'}, {'{$contagion_source.field}'}, {'{field|fallback}'}.
+          </div>
+          <LocalTextArea
+            value={config.narrationTemplate || ''}
+            onChange={(value) => updateConfig('narrationTemplate', value || undefined)}
+            placeholder="e.g., {$self.name} fell under the influence of {$source.name}."
+            rows={2}
+          />
         </div>
       </div>
     </div>

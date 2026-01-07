@@ -24,6 +24,8 @@ import {
   prominenceThreshold,
 } from '../rules';
 import type { EntityResolver, SelectionTrace, Condition, Mutation, RuleContext } from '../rules';
+// Narration is generated in growthSystem AFTER entities have names
+// import { interpolate, createGeneratorContext } from '../narrative/narrationTemplate';
 
 import type {
   DeclarativeTemplate,
@@ -98,6 +100,8 @@ class ExecutionContext implements IExecutionContext, EntityResolver {
   variables: Map<string, HardState | HardState[] | undefined> = new Map();
   target?: HardState;
   pathSets: Map<string, Set<string>> = new Map();
+  /** Current template being executed (for error context) */
+  templateId?: string;
 
   constructor(graphView: WorldRuntime) {
     this.graphView = graphView;
@@ -158,30 +162,47 @@ class ExecutionContext implements IExecutionContext, EntityResolver {
 
   /**
    * Resolve a string reference that might contain variable substitutions.
+   * Supports fallback syntax: "{$location.name|unknown location}" or "$location.name|unknown location"
    */
   resolveString(ref: string): string {
     if (!ref.includes('$')) {
       return ref;
     }
 
-    // Handle property access like "$target.name"
-    const match = ref.match(/\$(\w+)\.(\w+)/g);
+    let result = ref;
+
+    // Handle fallback syntax: {$var.prop|fallback} or $var.prop|fallback
+    // This regex finds patterns like {$location.name|the frozen depths} or $location.name|fallback
+    const fallbackPattern = /\{?\$(\w+)\.(\w+)\|([^}]+)\}?/g;
+    let fallbackMatch;
+    while ((fallbackMatch = fallbackPattern.exec(ref)) !== null) {
+      const [fullMatch, varPart, propPart, fallback] = fallbackMatch;
+      const entity = varPart === 'target' ? this.target : this.resolveEntity('$' + varPart);
+      if (entity && propPart in entity) {
+        result = result.replace(fullMatch, String((entity as unknown as Record<string, unknown>)[propPart]));
+      } else {
+        // Use the fallback value - no warning needed since fallback was provided
+        result = result.replace(fullMatch, fallback);
+      }
+    }
+
+    // Handle property access WITHOUT fallback like "$target.name"
+    const match = result.match(/\$(\w+)\.(\w+)/g);
     if (match) {
-      let result = ref;
       for (const m of match) {
         const [varPart, propPart] = m.slice(1).split('.');
         const entity = varPart === 'target' ? this.target : this.resolveEntity('$' + varPart);
         if (entity && propPart in entity) {
           result = result.replace(m, String((entity as unknown as Record<string, unknown>)[propPart]));
         } else {
-          // Warn about unresolved variable references
-          console.warn(`[resolveString] Unresolved variable reference: ${m}. Entity ${varPart} is ${entity ? 'missing property ' + propPart : 'undefined'}.`);
+          // Warn: unresolved variable reference without fallback
+          const templateCtx = this.templateId ? ` in template "${this.templateId}"` : '';
+          console.warn(`[Template] Unresolved variable ${m}${templateCtx}. Add fallback like {${m.slice(1)}|default} or define ${varPart} in variables.`);
         }
       }
-      return result;
     }
 
-    return ref;
+    return result;
   }
 }
 
@@ -431,13 +452,32 @@ export class TemplateInterpreter {
     target?: HardState
   ): Promise<TemplateResult> {
     const context = new ExecutionContext(graphView);
+    context.templateId = template.id;
     context.target = target;
     context.set('$target', target);
 
     // Resolve variables
+    const unresolvedVariables: Array<{
+      name: string;
+      required: boolean;
+      diagnosis: VariableDiagnosis;
+    }> = [];
     if (template.variables) {
       for (const [name, def] of Object.entries(template.variables)) {
         const resolved = this.resolveVariable(def, context);
+        if (!resolved || (Array.isArray(resolved) && resolved.length === 0)) {
+          const diagnosticContext = new ExecutionContext(graphView);
+          diagnosticContext.templateId = template.id;
+          diagnosticContext.target = context.target;
+          for (const [key, value] of context.variables.entries()) {
+            diagnosticContext.set(key, value);
+          }
+          unresolvedVariables.push({
+            name,
+            required: Boolean(def.required),
+            diagnosis: this.diagnoseVariable(name, def, diagnosticContext)
+          });
+        }
         context.set(name, resolved);
       }
     }
@@ -445,12 +485,18 @@ export class TemplateInterpreter {
     // Execute creation rules
     const entities: Partial<HardState>[] = [];
     const entityRefs: Map<string, string[]> = new Map();  // Track created entity placeholders
+    const entityRefToIndex: Record<string, number> = {};  // Map entityRef to entities array index
     const placementStrategies: string[] = [];  // For debugging
     const derivedTagsList: Record<string, string | boolean>[] = [];  // Tags from placement
     const placementDebugList: PlacementDebug[] = [];  // Detailed placement debug info
 
     for (const rule of template.creation) {
-      const created = await this.executeCreation(rule, context, entities.length, template.name);
+      const startIndex = entities.length;
+      const created = await this.executeCreation(rule, context, startIndex, template.name);
+      // Map entityRef to the index of first created entity (if any were created)
+      if (created.entities.length > 0) {
+        entityRefToIndex[rule.entityRef] = startIndex;
+      }
       entities.push(...created.entities);
       entityRefs.set(rule.entityRef, created.placeholders);
       placementStrategies.push(...created.placementStrategies);
@@ -476,13 +522,37 @@ export class TemplateInterpreter {
       this.applyVariantEffects(variant.apply, entities, entityRefs, relationships, context);
     }
 
+    // Export resolved variables for narration generation in growthSystem
+    // Narration is generated AFTER entities have names assigned
+    const resolvedVariables: Record<string, HardState | HardState[] | undefined> = {};
+    for (const [key, value] of context.variables.entries()) {
+      resolvedVariables[key] = value;
+    }
+
+    if (unresolvedVariables.length > 0) {
+      const unresolvedLabel = unresolvedVariables
+        .map((variable) => `${variable.name} (${variable.required ? 'required' : 'optional'})`)
+        .join(', ');
+      context.graphView.log('debug', `${template.id} executed with unresolved variables: ${unresolvedLabel}`, {
+        category: 'templates',
+        templateId: template.id,
+        templateName: template.name,
+        targetId: target?.id,
+        targetKind: target?.kind,
+        targetSubtype: target?.subtype,
+        unresolvedVariables
+      });
+    }
+
     return {
       entities,
       relationships,
       description: `${template.name} executed`,
       placementStrategies,
       derivedTagsList,
-      placementDebugList
+      placementDebugList,
+      resolvedVariables,
+      entityRefToIndex,
     };
   }
 

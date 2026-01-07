@@ -10,6 +10,7 @@ import {
   withSelf,
   resolveVariablesForEntity,
 } from '../rules';
+import { interpolate, createSystemRuleContext } from '../narrative/narrationTemplate';
 import type {
   SelectionRule,
   Mutation,
@@ -96,6 +97,12 @@ export interface ThresholdTriggerConfig {
 
   /** Pressure changes when trigger fires */
   pressureChanges?: Record<string, number>;
+
+  /**
+   * Template for in-world narration when this system triggers.
+   * Supports {$self.name}, {$variable.field}, etc.
+   */
+  narrationTemplate?: string;
 
   /**
    * Variables to resolve before applying actions.
@@ -236,6 +243,7 @@ function mergeMutationResult(
   modifications: Array<EntityModification & { narrativeGroupId?: string }>,
   relationships: Array<Relationship & { narrativeGroupId?: string }>,
   relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number; narrativeGroupId?: string }>,
+  relationshipsToArchive: Array<{ kind: string; src: string; dst: string; narrativeGroupId?: string }>,
   pressureChanges: Record<string, number>,
   narrativeGroupId?: string
 ): void {
@@ -267,6 +275,12 @@ function mergeMutationResult(
     }
   }
 
+  if (result.relationshipsToArchive.length > 0) {
+    for (const arch of result.relationshipsToArchive) {
+      relationshipsToArchive.push(narrativeGroupId ? { ...arch, narrativeGroupId } : arch);
+    }
+  }
+
   for (const [pressureId, delta] of Object.entries(result.pressureChanges)) {
     pressureChanges[pressureId] = (pressureChanges[pressureId] || 0) + delta;
   }
@@ -280,13 +294,17 @@ function applyActions(
   modifications: Array<EntityModification & { narrativeGroupId?: string }>;
   relationships: Array<Relationship & { narrativeGroupId?: string }>;
   relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number; narrativeGroupId?: string }>;
+  relationshipsToArchive: Array<{ kind: string; src: string; dst: string; narrativeGroupId?: string }>;
   pressureChanges: Record<string, number>;
   skippedMembers: number;
+  narrationsByGroup: Record<string, string>;
 } {
   const modifications: Array<EntityModification & { narrativeGroupId?: string }> = [];
   const relationships: Array<Relationship & { narrativeGroupId?: string }> = [];
   const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number; narrativeGroupId?: string }> = [];
+  const relationshipsToArchive: Array<{ kind: string; src: string; dst: string; narrativeGroupId?: string }> = [];
   const pressureChanges: Record<string, number> = {};
+  const narrationsByGroup: Record<string, string> = {};
   const baseCtx = createSystemContext(graphView);
   let skippedMembers = 0;
 
@@ -307,7 +325,7 @@ function applyActions(
     for (const action of config.actions) {
       if (action.type === 'modify_pressure') {
         const result = prepareMutation(action, clusterCtx);
-        mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges, narrativeGroupId);
+        mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, relationshipsToArchive, pressureChanges, narrativeGroupId);
       }
 
       if (action.type === 'create_relationship' && action.betweenMatching && members.length >= 2) {
@@ -327,7 +345,7 @@ function applyActions(
 
             const mutation: Mutation = action;
             const result = prepareMutation(mutation, pairCtx);
-            mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges, narrativeGroupId);
+            mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, relationshipsToArchive, pressureChanges, narrativeGroupId);
           }
         }
       }
@@ -352,6 +370,18 @@ function applyActions(
         entities: { ...(clusterCtx.entities ?? {}), self: member, ...resolvedVars },
       };
 
+      // Generate narration if template provided, keyed by narrativeGroupId
+      if (config.narrationTemplate && narrativeGroupId) {
+        const narrationCtx = createSystemRuleContext({
+          self: member,
+          variables: resolvedVars as Record<string, HardState | undefined>,
+        });
+        const result = interpolate(config.narrationTemplate, narrationCtx);
+        if (result.complete) {
+          narrationsByGroup[narrativeGroupId] = result.text;
+        }
+      }
+
       // Apply non-cluster-level actions
       for (const action of config.actions) {
         // Skip cluster-level actions (already handled above)
@@ -360,7 +390,7 @@ function applyActions(
 
         const mutation: Mutation = action;
         const result = prepareMutation(mutation, memberCtx);
-        mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges, narrativeGroupId);
+        mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, relationshipsToArchive, pressureChanges, narrativeGroupId);
       }
     }
   }
@@ -372,7 +402,7 @@ function applyActions(
     }
   }
 
-  return { modifications, relationships, relationshipsAdjusted, pressureChanges, skippedMembers };
+  return { modifications, relationships, relationshipsAdjusted, relationshipsToArchive, pressureChanges, skippedMembers, narrationsByGroup };
 }
 
 // =============================================================================
@@ -438,16 +468,18 @@ export function createThresholdTriggerSystem(
       }
 
       // Apply actions
-      const { modifications, relationships, relationshipsAdjusted, pressureChanges, skippedMembers } =
+      const { modifications, relationships, relationshipsAdjusted, relationshipsToArchive, pressureChanges, skippedMembers, narrationsByGroup } =
         applyActions(clusters, config, graphView);
 
       const skippedInfo = skippedMembers > 0 ? `, ${skippedMembers} skipped (missing vars)` : '';
       return {
         relationshipsAdded: relationships,
         relationshipsAdjusted,
+        relationshipsToArchive,
         entitiesModified: modifications as SystemResult['entitiesModified'],
         pressureChanges,
-        description: `${config.name}: ${clusters.size} trigger(s), ${modifications.length} entities tagged${skippedInfo}`
+        description: `${config.name}: ${clusters.size} trigger(s), ${modifications.length} entities tagged${skippedInfo}`,
+        narrationsByGroup: Object.keys(narrationsByGroup).length > 0 ? narrationsByGroup : undefined,
       };
     }
   };

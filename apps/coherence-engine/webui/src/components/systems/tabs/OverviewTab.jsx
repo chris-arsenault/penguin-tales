@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { SYSTEM_TYPES } from '../constants';
-import { EnableToggle, useLocalInputState } from '../../shared';
+import { EnableToggle, useLocalInputState, LocalTextArea } from '../../shared';
 
 /**
  * @param {Object} props
@@ -59,10 +59,9 @@ export function OverviewTab({ system, onChange, onDelete }) {
         <div style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label className="label">Description</label>
-            <textarea
+            <LocalTextArea
               value={config.description || ''}
-              onChange={(e) => updateConfig('description', e.target.value)}
-              className="textarea"
+              onChange={(value) => updateConfig('description', value)}
               style={{ minHeight: '60px' }}
               placeholder="Describe what this system does..."
             />

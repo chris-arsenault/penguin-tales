@@ -46,7 +46,11 @@ interface ExtendedActionOutcome {
   success: boolean;
   relationships: Relationship[];
   relationshipsAdjusted?: Array<{ kind: string; src: string; dst: string; delta: number }>;
+  /** Relationships to archive (deferred until worldEngine applies with proper context) */
+  relationshipsToArchive?: Array<{ kind: string; src: string; dst: string }>;
   description: string;
+  /** Domain-controlled narration from narrationTemplate */
+  narration?: string;
   entitiesCreated?: string[];
   entitiesModified?: Array<{ id: string; changes: Partial<HardState> }>;
   pressureChanges?: Record<string, number>;
@@ -107,8 +111,11 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
 
       const relationshipsAdded: Array<Relationship & { actionContext?: { source: 'action'; sourceId: string; success?: boolean } }> = [];
       const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number; actionContext?: { source: 'action'; sourceId: string; success?: boolean } }> = [];
+      const relationshipsToArchive: Array<{ kind: string; src: string; dst: string; actionContext?: { source: 'action'; sourceId: string; success?: boolean } }> = [];
       const entitiesModified: Array<{ id: string; changes: Partial<HardState>; actionContext?: { source: 'action'; sourceId: string; success?: boolean } }> = [];
       const pressureChanges: Record<string, number> = {};
+      // Collect narrations per action for narrative event generation
+      const actionNarrations: Map<string, string> = new Map();
       let actionsAttempted = 0;
       let actionsSucceeded = 0;
 
@@ -160,6 +167,11 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
         if (outcome.success) {
           actionsSucceeded++;
 
+          // Collect narration for this action (keyed by action context sourceId)
+          if (outcome.narration) {
+            actionNarrations.set(actionContext.sourceId, outcome.narration);
+          }
+
           if (outcome.entitiesModified && outcome.entitiesModified.length > 0) {
             // Add action context to entity modifications for proper narrative attribution
             for (const mod of outcome.entitiesModified) {
@@ -171,6 +183,13 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             // Add action context to relationship adjustments
             for (const adj of outcome.relationshipsAdjusted) {
               relationshipsAdjusted.push({ ...adj, actionContext });
+            }
+          }
+
+          if (outcome.relationshipsToArchive && outcome.relationshipsToArchive.length > 0) {
+            // Add action context to relationship archivals
+            for (const arch of outcome.relationshipsToArchive) {
+              relationshipsToArchive.push({ ...arch, actionContext });
             }
           }
 
@@ -307,6 +326,7 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
               successChance: outcome.successChance,
               prominenceMultiplier: outcome.prominenceMultiplier,
               description: outcome.description,
+              narration: outcome.narration,
               relationshipsCreated: outcome.relationships.map(rel => ({
                 kind: rel.kind,
                 srcId: rel.src,
@@ -356,16 +376,25 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
         }
       });
 
+      // Convert action narrations to keyed object for proper per-action attribution
+      // Key format matches the action context sourceId (e.g., "action_id:agent_id")
+      const narrationsByGroup: Record<string, string> = {};
+      for (const [key, narration] of actionNarrations) {
+        narrationsByGroup[key] = narration;
+      }
+
       return {
         relationshipsAdded,
         relationshipsAdjusted,
+        relationshipsToArchive,
         entitiesModified,
         pressureChanges,
         description: actionsSucceeded > 0
           ? `Agents shape the world (${actionsSucceeded}/${actionsAttempted} actions succeeded)`
           : actionsAttempted > 0
           ? `Agents attempt to act (all ${actionsAttempted} failed)`
-          : 'Agents dormant this cycle'
+          : 'Agents dormant this cycle',
+        narrationsByGroup: Object.keys(narrationsByGroup).length > 0 ? narrationsByGroup : undefined,
       };
     }
   };
@@ -618,7 +647,9 @@ function executeActionWithContext(
       success: handlerResult.success,
       relationships: handlerResult.relationships,
       relationshipsAdjusted: handlerResult.relationshipsAdjusted,
+      relationshipsToArchive: handlerResult.relationshipsToArchive,
       description: handlerResult.description,
+      narration: handlerResult.narration,
       entitiesCreated: handlerResult.entitiesCreated,
       entitiesModified: handlerResult.entitiesModified,
       pressureChanges: handlerResult.pressureChanges,

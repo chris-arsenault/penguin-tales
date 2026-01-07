@@ -6,6 +6,7 @@ import RelationshipStoryModal from './RelationshipStoryModal.tsx';
 import ChainLinkSection from './ChainLinkSection.tsx';
 import DiscoveryStory from './DiscoveryStory.tsx';
 import './EntityDetail.css';
+import { prominenceLabelFromScale, type ProminenceScale } from '@canonry/world-schema';
 
 interface EntityDetailProps {
   entityId?: string;
@@ -13,6 +14,7 @@ interface EntityDetailProps {
   loreData: LoreData | null;
   imageData: ImageMetadata | null;
   onRelatedClick: (entityId: string) => void;
+  prominenceScale: ProminenceScale;
 }
 
 // Parse selection ID - returns { type: 'entity', id } or { type: 'region', entityKind, regionId }
@@ -110,7 +112,14 @@ function RegionDetail({ region, entityKind, worldData }: { region: Region; entit
   );
 }
 
-export default function EntityDetail({ entityId, worldData, loreData, imageData, onRelatedClick }: EntityDetailProps) {
+export default function EntityDetail({
+  entityId,
+  worldData,
+  loreData,
+  imageData,
+  onRelatedClick,
+  prominenceScale
+}: EntityDetailProps) {
   // Hooks must be called before any early returns
   const [selectedRelationshipLore, setSelectedRelationshipLore] = useState<RelationshipBackstoryLore | null>(null);
   const [expandedOutgoing, setExpandedOutgoing] = useState<Set<string>>(new Set());
@@ -151,6 +160,8 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
       </div>
     );
   }
+
+  const prominenceLabel = prominenceLabelFromScale(entity.prominence, prominenceScale);
 
   const relatedEntities = getRelatedEntities(worldData, entityId);
   const relationships = getRelationships(worldData, entityId);
@@ -244,8 +255,8 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
       <div className="entity-detail-header">
         <h2 className="entity-detail-name">{entity.name}</h2>
         <div className="entity-detail-badges">
-          <span className={`entity-badge prominence-${entity.prominence}`}>
-            {entity.prominence}
+          <span className={`entity-badge prominence-${prominenceLabel}`}>
+            {prominenceLabel}
           </span>
           <span className="entity-badge entity-badge-kind">{entity.kind}</span>
           <span className="entity-badge entity-badge-subtype">{entity.subtype}</span>

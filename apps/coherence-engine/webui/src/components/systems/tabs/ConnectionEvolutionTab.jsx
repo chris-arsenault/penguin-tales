@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { METRIC_TYPES, DIRECTIONS } from '../constants';
-import { ReferenceDropdown, NumberInput } from '../../shared';
+import { ReferenceDropdown, NumberInput, LocalTextArea } from '../../shared';
 import TagSelector from '@penguin-tales/shared-components/TagSelector';
 
 /**
@@ -241,6 +241,20 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
               </label>
             </div>
           )}
+
+          <div style={{ marginTop: '16px' }}>
+            <label className="label">Narration Template</label>
+            <div className="section-desc" style={{ marginBottom: '4px', fontSize: '11px' }}>
+              Syntax: {'{$self.field}'}, {'{$member.field}'}, {'{$member2.field}'}, {'{field|fallback}'}.
+            </div>
+            <LocalTextArea
+              value={rule.narrationTemplate || ''}
+              onChange={(value) => onChange({ ...rule, narrationTemplate: value || undefined })}
+              placeholder="e.g., {$member.name} and {$member2.name} forged an alliance."
+              rows={2}
+              style={{ fontSize: '12px' }}
+            />
+          </div>
         </div>
       )}
     </div>

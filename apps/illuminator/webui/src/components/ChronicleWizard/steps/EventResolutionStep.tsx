@@ -13,6 +13,7 @@ import { useWizard } from '../WizardContext';
 import {
   getRelevantRelationships,
   getRelevantEvents,
+  filterChronicleEvents,
   collapseBidirectionalRelationships,
   makeRelationshipId,
   MAX_CHRONICLE_EVENTS,
@@ -47,6 +48,7 @@ export default function EventResolutionStep() {
 
   const [eventMetrics, setEventMetrics] = useState<Map<string, EventSelectionMetrics>>(new Map());
   const [brushSelection, setBrushSelection] = useState<[number, number] | null>(null);
+  const [minEventSignificance, setMinEventSignificance] = useState<number>(0);
 
   // Compute event metrics when data changes
   useEffect(() => {
@@ -59,14 +61,23 @@ export default function EventResolutionStep() {
     return getRelevantRelationships(state.roleAssignments, state.candidateRelationships);
   }, [state.roleAssignments, state.candidateRelationships]);
 
-  // Get relevant events (involving assigned entities)
-  const relevantEvents = useMemo(() => {
+  // Get ALL relevant events (involving assigned entities) - before filtering
+  const allRelevantEvents = useMemo(() => {
     return getRelevantEvents(
       state.roleAssignments,
       state.candidateEvents,
       state.narrativeStyle?.eventRules
     );
   }, [state.roleAssignments, state.candidateEvents, state.narrativeStyle]);
+
+  // Filter events by significance and exclude prominence-only events
+  const relevantEvents = useMemo(() => {
+    const entityIds = new Set(state.roleAssignments.map(a => a.entityId));
+    return filterChronicleEvents(allRelevantEvents, entityIds, {
+      minSignificance: minEventSignificance,
+      excludeProminenceOnly: true,
+    });
+  }, [allRelevantEvents, state.roleAssignments, minEventSignificance]);
 
   // Get era ranges directly from era definitions
   const eraRanges = useMemo(() => {
@@ -111,6 +122,12 @@ export default function EventResolutionStep() {
     relevantEvents.map(e => e.id),
     [relevantEvents]
   );
+
+  // Count how many selected events are visible (pass the current filter)
+  const visibleSelectedCount = useMemo(() => {
+    const relevantIdSet = new Set(relevantEventIds);
+    return Array.from(state.selectedEventIds).filter(id => relevantIdSet.has(id)).length;
+  }, [relevantEventIds, state.selectedEventIds]);
 
   // Auto-select all on first mount if accepting defaults
   useEffect(() => {
@@ -162,49 +179,70 @@ export default function EventResolutionStep() {
           </button>
         </div>
 
-        {/* Temporal Context - Compact */}
-        {temporalContext && (
-          <div style={{
-            padding: '8px 12px',
-            background: 'var(--bg-tertiary)',
-            borderRadius: '6px',
-            fontSize: '11px',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '12px',
-            alignItems: 'center',
-          }}>
-            <span style={{ fontWeight: 500 }}>Focal Era:</span>
-            <select
-              value={state.focalEraOverride || temporalContext.focalEra.id}
-              onChange={(e) => {
-                const selectedId = e.target.value;
-                if (detectedFocalEra && selectedId === detectedFocalEra.id) {
-                  setFocalEraOverride(null);
-                } else {
-                  setFocalEraOverride(selectedId);
-                }
-              }}
-              className="illuminator-select"
-              style={{ padding: '2px 8px', fontSize: '10px', minWidth: '120px' }}
-            >
-              {eras.map(era => (
-                <option key={era.id} value={era.id}>
-                  {era.name}{detectedFocalEra?.id === era.id ? ' (detected)' : ''}
-                </option>
-              ))}
-            </select>
-            {state.focalEraOverride && (
-              <button
-                onClick={() => setFocalEraOverride(null)}
-                className="illuminator-btn"
-                style={{ padding: '2px 6px', fontSize: '9px' }}
+        {/* Filters */}
+        <div style={{
+          padding: '10px 12px',
+          background: 'var(--bg-tertiary)',
+          borderRadius: '6px',
+          fontSize: '11px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}>
+          {/* Row 1: Focal Era selector */}
+          {temporalContext && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontWeight: 500, minWidth: '100px' }}>Focal Era:</span>
+              <select
+                value={state.focalEraOverride || temporalContext.focalEra.id}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  if (detectedFocalEra && selectedId === detectedFocalEra.id) {
+                    setFocalEraOverride(null);
+                  } else {
+                    setFocalEraOverride(selectedId);
+                  }
+                }}
+                className="illuminator-select"
+                style={{ padding: '4px 8px', fontSize: '11px', flex: 1, maxWidth: '200px' }}
               >
-                Reset
-              </button>
-            )}
+                {eras.map(era => (
+                  <option key={era.id} value={era.id}>
+                    {era.name}{detectedFocalEra?.id === era.id ? ' (detected)' : ''}
+                  </option>
+                ))}
+              </select>
+              {state.focalEraOverride && (
+                <button
+                  onClick={() => setFocalEraOverride(null)}
+                  className="illuminator-btn"
+                  style={{ padding: '3px 8px', fontSize: '10px' }}
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Row 2: Min Significance selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontWeight: 500, minWidth: '100px' }}>Min Significance:</span>
+            <select
+              value={minEventSignificance}
+              onChange={(e) => setMinEventSignificance(parseFloat(e.target.value))}
+              className="illuminator-select"
+              style={{ padding: '4px 8px', fontSize: '11px', flex: 1, maxWidth: '200px' }}
+            >
+              <option value={0}>All (&gt;0%)</option>
+              <option value={0.25}>Low (&gt;25%)</option>
+              <option value={0.5}>Medium (&gt;50%)</option>
+              <option value={0.75}>High (&gt;75%)</option>
+            </select>
+            <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>
+              {relevantEvents.length} events match filter
+            </span>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Timeline Visualization */}
@@ -271,7 +309,12 @@ export default function EventResolutionStep() {
             fontSize: '12px',
             color: state.selectedEventIds.size > MAX_CHRONICLE_EVENTS ? 'var(--error)' : 'var(--text-muted)',
           }}>
-            {state.selectedEventIds.size} of {relevantEvents.length} events selected
+            {visibleSelectedCount} of {relevantEvents.length} visible selected
+            {state.selectedEventIds.size !== visibleSelectedCount && (
+              <span style={{ color: 'var(--text-muted)', marginLeft: '4px' }}>
+                ({state.selectedEventIds.size} total)
+              </span>
+            )}
             {state.selectedEventIds.size > MAX_CHRONICLE_EVENTS && ` (max ${MAX_CHRONICLE_EVENTS})`}
           </span>
         </div>

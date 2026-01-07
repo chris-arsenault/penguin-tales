@@ -13,6 +13,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
+import { LocalTextArea } from '@penguin-tales/shared-components';
 import {
   buildDescriptionPromptFromGuidance,
   buildImagePromptFromGuidance,
@@ -20,6 +21,12 @@ import {
   createDefaultCultureIdentities,
 } from '../lib/promptBuilders';
 import { buildEntityIndex, buildRelationshipIndex } from '../lib/worldData';
+import {
+  buildProminenceScale,
+  DEFAULT_PROMINENCE_DISTRIBUTION,
+  prominenceLabelFromScale,
+  prominenceThresholdFromScale,
+} from '@canonry/world-schema';
 
 const TASK_TYPES = [
   { id: 'description', label: 'Description', icon: '📝' },
@@ -63,18 +70,6 @@ const VISUAL_STEP_SECTIONS = [
   { key: 'visualTraits.focus', label: 'Visual Traits Focus', description: 'What to focus on for traits', rows: 2 },
   { key: 'visualTraits.framing', label: 'Visual Traits Framing', description: 'Context prepended to traits prompt', rows: 2 },
 ];
-
-// Notable prominence threshold: recognized (2.0) or higher
-const NOTABLE_PROMINENCE_THRESHOLD = 2.0;
-
-// Convert numeric prominence to display label
-function prominenceLabel(value) {
-  if (value < 1) return 'forgotten';
-  if (value < 2) return 'marginal';
-  if (value < 3) return 'recognized';
-  if (value < 4) return 'renowned';
-  return 'mythic';
-}
 
 function calculateEntityAge(entity, simulationMetadata) {
   const currentTick = simulationMetadata?.currentTick || 100;
@@ -120,15 +115,14 @@ function findCulturalPeers(entity, prominentByCulture) {
     .map((peer) => peer.name);
 }
 
-function findFactionMembers(entity, entityById, relationshipsByEntity) {
+function findFactionMembers(entity, entityById, relationshipsByEntity, renownedThreshold) {
   if (entity?.kind !== 'faction') return [];
   const members = [];
   const links = relationshipsByEntity.get(entity.id) || [];
   for (const link of links) {
     if (link.kind !== 'member_of' || link.dst !== entity.id) continue;
     const member = entityById.get(link.src);
-    // Prominence >= 3.0 = renowned or mythic
-    if (member && member.prominence >= 3.0) {
+    if (member && member.prominence >= renownedThreshold) {
       members.push(member.name);
     }
   }
@@ -140,11 +134,12 @@ function buildEntityContext(
   prominentByCulture,
   entityById,
   relationshipsByEntity,
-  simulationMetadata
+  simulationMetadata,
+  renownedThreshold
 ) {
   const relationships = resolveRelationships(entity, entityById, relationshipsByEntity);
   const culturalPeers = findCulturalPeers(entity, prominentByCulture);
-  const factionMembers = findFactionMembers(entity, entityById, relationshipsByEntity);
+  const factionMembers = findFactionMembers(entity, entityById, relationshipsByEntity, renownedThreshold);
 
   return {
     entity: {
@@ -206,10 +201,10 @@ function TemplateSection({ section, value, onChange, disabled }) {
         <label className="illuminator-label">{section.label}</label>
         <span className="illuminator-template-section-hint">{section.description}</span>
       </div>
-      <textarea
+      <LocalTextArea
         className="illuminator-template-textarea"
         value={value || ''}
-        onChange={(e) => onChange(section.key, e.target.value)}
+        onChange={(v) => onChange(section.key, v)}
         disabled={disabled}
         rows={section.rows || 3}
       />
@@ -262,6 +257,7 @@ export default function EntityGuidanceEditor({
   worldData,
   worldSchema,
   simulationMetadata,
+  prominenceScale,
 }) {
   const [selectedType, setSelectedType] = useState('description');
   const [selectedKind, setSelectedKind] = useState('npc');
@@ -290,6 +286,21 @@ export default function EntityGuidanceEditor({
   }, [selectedKind, entityKinds]);
 
   const entities = useMemo(() => worldData?.hardState || [], [worldData]);
+  const effectiveProminenceScale = useMemo(() => {
+    if (prominenceScale) return prominenceScale;
+    const values = entities
+      .map((entity) => entity.prominence)
+      .filter((value) => typeof value === 'number' && Number.isFinite(value));
+    return buildProminenceScale(values, { distribution: DEFAULT_PROMINENCE_DISTRIBUTION });
+  }, [prominenceScale, entities]);
+  const notableThreshold = useMemo(
+    () => prominenceThresholdFromScale('recognized', effectiveProminenceScale),
+    [effectiveProminenceScale]
+  );
+  const renownedThreshold = useMemo(
+    () => prominenceThresholdFromScale('renowned', effectiveProminenceScale),
+    [effectiveProminenceScale]
+  );
   const entityById = useMemo(() => buildEntityIndex(entities), [entities]);
   const relationshipsByEntity = useMemo(
     () => buildRelationshipIndex(worldData?.relationships || []),
@@ -299,7 +310,7 @@ export default function EntityGuidanceEditor({
     const map = new Map();
     for (const entity of entities) {
       if (!entity.culture) continue;
-      if (entity.prominence < NOTABLE_PROMINENCE_THRESHOLD) continue;
+      if (entity.prominence < notableThreshold) continue;
       const entry = { id: entity.id, name: entity.name };
       const existing = map.get(entity.culture);
       if (existing) {
@@ -309,7 +320,7 @@ export default function EntityGuidanceEditor({
       }
     }
     return map;
-  }, [entities]);
+  }, [entities, notableThreshold]);
 
   // Get example entities for preview, filtered by selected kind
   const exampleEntities = useMemo(() => {
@@ -348,7 +359,8 @@ export default function EntityGuidanceEditor({
       prominentByCulture,
       entityById,
       relationshipsByEntity,
-      simulationMetadata
+      simulationMetadata,
+      renownedThreshold
     );
 
     if (selectedType === 'description') {
@@ -378,6 +390,7 @@ export default function EntityGuidanceEditor({
     entityById,
     relationshipsByEntity,
     simulationMetadata,
+    renownedThreshold,
   ]);
 
   // Handle guidance changes
@@ -551,7 +564,9 @@ export default function EntityGuidanceEditor({
           <>
             <div className="illuminator-preview-entity-info">
               <span className="illuminator-preview-entity-badge">{selectedEntity.kind}/{selectedEntity.subtype}</span>
-              <span className="illuminator-preview-entity-badge">{prominenceLabel(selectedEntity.prominence)}</span>
+              <span className="illuminator-preview-entity-badge">
+                {prominenceLabelFromScale(selectedEntity.prominence, effectiveProminenceScale)}
+              </span>
               <span className="illuminator-preview-entity-badge">{selectedEntity.culture || 'no culture'}</span>
               <span className="illuminator-preview-entity-badge">{calculateEntityAge(selectedEntity, simulationMetadata)}</span>
             </div>

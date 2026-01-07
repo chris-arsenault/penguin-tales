@@ -16,6 +16,7 @@ import {
   findEntities,
   hasTag
 } from '../utils';
+import { archiveRelationship } from '../graph/relationshipMutation';
 import { initializeCatalystSmart } from '../systems/catalystHelpers';
 import { selectEra, getTemplateWeight, getSystemModifier } from '../engine/eraUtils';
 import { StatisticsCollector } from '../statistics/statisticsCollector';
@@ -2061,13 +2062,17 @@ export class WorldEngine {
           // Enter action-specific context if provided (for narrative attribution)
           const hasActionContext = rel.actionContext && rel.actionContext.source === 'action';
           if (hasActionContext) {
-            this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId, rel.actionContext!.success);
+            // Get narration from narrationsByGroup if available
+            const narration = result.narrationsByGroup?.[rel.narrativeGroupId || ''];
+            this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId, rel.actionContext!.success, narration);
           }
 
           // Enter narrative group sub-context if provided (for per-target event splitting)
           const hasNarrativeGroup = rel.narrativeGroupId && !hasActionContext;
           if (hasNarrativeGroup) {
-            this.mutationTracker.enterContext('system', `${system.id}:${rel.narrativeGroupId}`);
+            // Get narration from narrationsByGroup if available
+            const narration = result.narrationsByGroup?.[rel.narrativeGroupId || ''];
+            this.mutationTracker.enterContext('system', `${system.id}:${rel.narrativeGroupId}`, undefined, narration);
           }
 
           const before = this.graph.getRelationshipCount();
@@ -2098,16 +2103,53 @@ export class WorldEngine {
             // Enter action-specific context if provided (for narrative attribution)
             const hasActionContext = rel.actionContext && rel.actionContext.source === 'action';
             if (hasActionContext) {
-              this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId, rel.actionContext!.success);
+              // Get narration from narrationsByGroup if available
+              const narration = result.narrationsByGroup?.[rel.narrativeGroupId || ''];
+              this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId, rel.actionContext!.success, narration);
             }
 
             // Enter narrative group sub-context if provided (for per-target event splitting)
             const hasNarrativeGroup = rel.narrativeGroupId && !hasActionContext;
             if (hasNarrativeGroup) {
-              this.mutationTracker.enterContext('system', `${system.id}:${rel.narrativeGroupId}`);
+              // Get narration from narrationsByGroup if available
+              const narration = result.narrationsByGroup?.[rel.narrativeGroupId || ''];
+              this.mutationTracker.enterContext('system', `${system.id}:${rel.narrativeGroupId}`, undefined, narration);
             }
 
             modifyRelationshipStrength(this.graph, rel.src, rel.dst, rel.kind, rel.delta);
+
+            // Exit narrative group context if we entered one
+            if (hasNarrativeGroup) {
+              this.mutationTracker.exitContext();
+            }
+
+            // Exit action context if we entered one
+            if (hasActionContext) {
+              this.mutationTracker.exitContext();
+            }
+          }
+        }
+
+        // Apply deferred archivals (with proper context for narrative attribution)
+        if (result.relationshipsToArchive && result.relationshipsToArchive.length > 0) {
+          for (const rel of result.relationshipsToArchive) {
+            // Enter action-specific context if provided (for narrative attribution)
+            const hasActionContext = rel.actionContext && rel.actionContext.source === 'action';
+            if (hasActionContext) {
+              // Get narration from narrationsByGroup if available
+              const narration = result.narrationsByGroup?.[rel.narrativeGroupId || ''];
+              this.mutationTracker.enterContext(rel.actionContext!.source, rel.actionContext!.sourceId, rel.actionContext!.success, narration);
+            }
+
+            // Enter narrative group sub-context if provided (for per-target event splitting)
+            const hasNarrativeGroup = rel.narrativeGroupId && !hasActionContext;
+            if (hasNarrativeGroup) {
+              // Get narration from narrationsByGroup if available
+              const narration = result.narrationsByGroup?.[rel.narrativeGroupId || ''];
+              this.mutationTracker.enterContext('system', `${system.id}:${rel.narrativeGroupId}`, undefined, narration);
+            }
+
+            archiveRelationship(this.graph, rel.src, rel.dst, rel.kind);
 
             // Exit narrative group context if we entered one
             if (hasNarrativeGroup) {
@@ -2137,14 +2179,25 @@ export class WorldEngine {
           // Enter action-specific context if provided (for narrative attribution)
           const hasActionContext = mod.actionContext && mod.actionContext.source === 'action';
           if (hasActionContext) {
-            this.mutationTracker.enterContext(mod.actionContext!.source, mod.actionContext!.sourceId, mod.actionContext!.success);
+            // Get narration from narrationsByGroup if available
+            const narration = result.narrationsByGroup?.[mod.narrativeGroupId || ''];
+            this.mutationTracker.enterContext(mod.actionContext!.source, mod.actionContext!.sourceId, mod.actionContext!.success, narration);
           }
 
           // Enter narrative group sub-context if provided (for per-target event splitting)
           // This creates events like "system:power_vacuum_detector:knot-of-nightfall-shelf"
           const hasNarrativeGroup = mod.narrativeGroupId && !hasActionContext;
+          // Fall back to basic system context if no specific context provided
+          // This prevents modifications from ending up as unattributed "framework" events
+          const needsFallbackContext = !hasActionContext && !hasNarrativeGroup;
           if (hasNarrativeGroup) {
-            this.mutationTracker.enterContext('system', `${system.id}:${mod.narrativeGroupId}`);
+            // Get narration from narrationsByGroup if available
+            const narration = result.narrationsByGroup?.[mod.narrativeGroupId || ''];
+            this.mutationTracker.enterContext('system', `${system.id}:${mod.narrativeGroupId}`, undefined, narration);
+          } else if (needsFallbackContext) {
+            // No specific context - enter per-entity system context for proper attribution
+            // Using mod.id ensures each entity gets its own narrative event
+            this.mutationTracker.enterContext('system', `${system.id}:${mod.id}`, undefined, undefined);
           }
 
           // Track state changes for narrative events
@@ -2207,8 +2260,8 @@ export class WorldEngine {
           updateEntity(this.graph, mod.id, changes);
           modifiedEntityIds.push(mod.id);
 
-          // Exit narrative group context if we entered one
-          if (hasNarrativeGroup) {
+          // Exit context if we entered one (in reverse order of entry)
+          if (hasNarrativeGroup || needsFallbackContext) {
             this.mutationTracker.exitContext();
           }
 
@@ -2247,6 +2300,25 @@ export class WorldEngine {
               .find(e => e.kind === 'era' && e.name === eraTransition.toEra)?.id || ''
           );
           if (oldEra && newEra) {
+            // Find most prominent entities from the ending era to mention
+            const prominentFromEra = this.graph.getEntities({ includeHistorical: false })
+              .filter(e => e.kind !== 'era' && e.prominence >= 3.0) // renowned or higher
+              .sort((a, b) => b.prominence - a.prominence)
+              .slice(0, 2);
+
+            // Build atmospheric description
+            let description = `As ${oldEra.name} fades and ${newEra.name} takes hold, the Ice remembers`;
+            if (prominentFromEra.length > 0) {
+              const names = prominentFromEra.map(e => e.name);
+              if (names.length === 1) {
+                description += ` the deeds of ${names[0]}.`;
+              } else {
+                description += ` the deeds of ${names[0]} and ${names[1]}.`;
+              }
+            } else {
+              description += ` all who endured.`;
+            }
+
             // Build era transition event inline (no legacy builder needed)
             const eraEvent: NarrativeEvent = {
               id: `era-${this.graph.tick}-${Math.random().toString(36).substr(2, 9)}`,
@@ -2266,7 +2338,7 @@ export class WorldEngine {
                   effects: [{ type: 'created', description: 'era began' }],
                 },
               ],
-              description: `${oldEra.name} has run its course. The world enters a new era: ${newEra.name}.`,
+              description,
               narrativeTags: ['era', 'transition', 'historical', 'temporal'],
             };
             this.graph.narrativeHistory.push(eraEvent);
@@ -2302,6 +2374,25 @@ export class WorldEngine {
         }
 
         totalModifications += result.entitiesModified.length;
+
+        // Record narrations from system result for narrative event generation
+        // Prefer narrationsByGroup for proper per-entity attribution
+        if (result.narrationsByGroup && Object.keys(result.narrationsByGroup).length > 0) {
+          // universalCatalyst returns action narrations keyed by "action_id:agent_id"
+          // These need to be recorded under 'action' source to match the mutation context
+          const isActionSystem = system.id === 'universal_catalyst';
+          if (isActionSystem) {
+            // For universalCatalyst, keys are "action_id:agent_id" and need 'action' source
+            for (const [groupId, narration] of Object.entries(result.narrationsByGroup)) {
+              this.stateChangeTracker.recordNarration('action', groupId, narration);
+            }
+          } else {
+            this.stateChangeTracker.recordNarrationsByGroup('system', system.id, result.narrationsByGroup);
+          }
+        } else if (result.narrations && result.narrations.length > 0) {
+          // Fallback for systems still using the flat narrations array
+          this.stateChangeTracker.recordSystemNarrations(system.id, result.narrations);
+        }
 
         // Exit context AFTER all mutations are applied (see LINEAGE.md)
         // This ensures all relationships added and entities modified get proper lineage

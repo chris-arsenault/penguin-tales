@@ -17,6 +17,7 @@ import type {
   MutationResult,
   EntityModification,
 } from '../rules';
+import { interpolate, createSystemRuleContext } from '../narrative/narrationTemplate';
 
 /**
  * Connection Evolution System Factory
@@ -69,6 +70,28 @@ export interface EvolutionRule {
    * If false/undefined, action applies to entity directly.
    */
   betweenMatching?: boolean;
+  /**
+   * Narration template for narrative-quality text when this rule triggers.
+   * Uses the full template syntax:
+   * - {self.field} or {$self.field} - The entity being evaluated
+   * - {member.field} or {$member.field} - First entity in pair (for betweenMatching)
+   * - {member2.field} or {$member2.field} - Second entity in pair (for betweenMatching)
+   * - {field|fallback} - Use fallback if field is null/undefined
+   *
+   * Example: "{$member.name} and {$member2.name}, united by shared interests, forged an alliance."
+   */
+  narrationTemplate?: string;
+  /**
+   * Narration template for multi-party relationships (3+ entities forming a clique).
+   * Used when betweenMatching creates relationships among 3+ entities that all connect.
+   * Uses:
+   * - {names} - Comma-separated list of all party names
+   * - {count} - Number of parties
+   *
+   * Example: "{names} formed a mutual alliance."
+   * If not provided, falls back to generating separate pair narrations.
+   */
+  multiPartyNarrationTemplate?: string;
 }
 
 export interface SubtypeBonus {
@@ -227,6 +250,7 @@ export function createConnectionEvolutionSystem(
       const relationships: Array<Relationship & { narrativeGroupId?: string }> = [];
       const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number; narrativeGroupId?: string }> = [];
       const pressureChanges: Record<string, number> = {};
+      const narrationsByGroup: Record<string, string> = {};
 
       // Find entities to evaluate
       const ruleCtx = createSystemContext(graphView);
@@ -279,6 +303,16 @@ export function createConnectionEvolutionSystem(
             // Each entity's rise/fall is its own story
             const result = prepareMutation(rule.action as Mutation, entityCtx);
             mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges, entity.id);
+
+            // Generate narration if template provided and mutation applied
+            // Key by entity.id for proper per-entity attribution
+            if (rule.narrationTemplate && result.applied) {
+              const narrationCtx = createSystemRuleContext({ self: entity });
+              const narrationResult = interpolate(rule.narrationTemplate, narrationCtx);
+              if (narrationResult.complete) {
+                narrationsByGroup[entity.id] = narrationResult.text;
+              }
+            }
           }
         }
       }
@@ -364,7 +398,10 @@ export function createConnectionEvolutionSystem(
         const rule = config.rules[ruleIdx];
         if (rule.action.type !== 'create_relationship') continue;
 
-        // Create relationships between all pairs of matching entities
+        // Phase 1: Collect all valid pairs that pass checks
+        const validPairs: Array<{ src: HardState; dst: HardState }> = [];
+        const pairGraph = new Map<string, Set<string>>(); // For clique detection
+
         for (let i = 0; i < matchingEntities.length; i++) {
           for (let j = i + 1; j < matchingEntities.length; j++) {
             const src = matchingEntities[i];
@@ -401,12 +438,118 @@ export function createConnectionEvolutionSystem(
               adjacency.get(dst.id)!.add(src.id);
             }
 
-            const pairCtx = {
-              ...ruleCtx,
-              entities: { ...(ruleCtx.entities ?? {}), member: src, member2: dst },
-            };
-            const result = prepareMutation(rule.action as Mutation, pairCtx);
-            mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges);
+            // This pair is valid - add to list and graph
+            validPairs.push({ src, dst });
+            if (!pairGraph.has(src.id)) pairGraph.set(src.id, new Set());
+            if (!pairGraph.has(dst.id)) pairGraph.set(dst.id, new Set());
+            pairGraph.get(src.id)!.add(dst.id);
+            pairGraph.get(dst.id)!.add(src.id);
+          }
+        }
+
+        // Phase 2: Find connected components and detect cliques
+        const processedEntities = new Set<string>();
+        const cliques: HardState[][] = [];
+        const nonCliquePairs: Array<{ src: HardState; dst: HardState }> = [];
+
+        // Find connected components
+        for (const entityId of pairGraph.keys()) {
+          if (processedEntities.has(entityId)) continue;
+
+          // BFS to find component
+          const component: string[] = [];
+          const queue = [entityId];
+          while (queue.length > 0) {
+            const current = queue.shift()!;
+            if (processedEntities.has(current)) continue;
+            processedEntities.add(current);
+            component.push(current);
+            const neighbors = pairGraph.get(current);
+            if (neighbors) {
+              for (const neighbor of neighbors) {
+                if (!processedEntities.has(neighbor)) {
+                  queue.push(neighbor);
+                }
+              }
+            }
+          }
+
+          // Check if component is a clique (all pairs connected)
+          const n = component.length;
+          const expectedEdges = (n * (n - 1)) / 2;
+          let actualEdges = 0;
+          for (let i = 0; i < component.length; i++) {
+            for (let j = i + 1; j < component.length; j++) {
+              if (pairGraph.get(component[i])?.has(component[j])) {
+                actualEdges++;
+              }
+            }
+          }
+
+          if (n >= 3 && actualEdges === expectedEdges) {
+            // It's a clique of 3+ entities
+            const cliqueEntities = component.map(id =>
+              matchingEntities.find(e => e.id === id)!
+            );
+            cliques.push(cliqueEntities);
+          } else {
+            // Not a clique - add pairs individually
+            for (const pair of validPairs) {
+              if (component.includes(pair.src.id) && component.includes(pair.dst.id)) {
+                nonCliquePairs.push(pair);
+              }
+            }
+          }
+        }
+
+        // Phase 3: Process cliques with unified narration
+        for (const clique of cliques) {
+          const cliqueId = clique.map(e => e.id).sort().join(':');
+
+          // Create all relationships within the clique
+          for (let i = 0; i < clique.length; i++) {
+            for (let j = i + 1; j < clique.length; j++) {
+              const src = clique[i];
+              const dst = clique[j];
+              const pairCtx = {
+                ...ruleCtx,
+                entities: { ...(ruleCtx.entities ?? {}), member: src, member2: dst },
+              };
+              const result = prepareMutation(rule.action as Mutation, pairCtx);
+              mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges, cliqueId);
+            }
+          }
+
+          // Generate unified narration for the clique
+          if (rule.multiPartyNarrationTemplate) {
+            const names = clique.map(e => e.name).join(', ');
+            const narrationText = rule.multiPartyNarrationTemplate
+              .replace('{names}', names)
+              .replace('{count}', String(clique.length));
+            narrationsByGroup[cliqueId] = narrationText;
+          } else if (rule.narrationTemplate) {
+            // Fallback: generate a reasonable multi-party narration from pair template
+            const names = clique.map(e => e.name).join(', ');
+            narrationsByGroup[cliqueId] = `${names} formed mutual relationships.`;
+          }
+        }
+
+        // Phase 4: Process remaining non-clique pairs individually
+        for (const { src, dst } of nonCliquePairs) {
+          const pairCtx = {
+            ...ruleCtx,
+            entities: { ...(ruleCtx.entities ?? {}), member: src, member2: dst },
+          };
+          const result = prepareMutation(rule.action as Mutation, pairCtx);
+          mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges, src.id);
+
+          // Generate pair narration
+          if (rule.narrationTemplate && result.applied) {
+            const narrationCtx = createSystemRuleContext({ member: src, member2: dst });
+            const narrationResult = interpolate(rule.narrationTemplate, narrationCtx);
+            if (narrationResult.complete) {
+              narrationsByGroup[src.id] = narrationResult.text;
+            }
           }
         }
       }
@@ -422,7 +565,8 @@ export function createConnectionEvolutionSystem(
         relationshipsAdjusted,
         entitiesModified: modifications as SystemResult['entitiesModified'],
         pressureChanges,
-        description: `${config.name}: ${modifications.length} modified, ${relationships.length} relationships`
+        description: `${config.name}: ${modifications.length} modified, ${relationships.length} relationships`,
+        narrationsByGroup: Object.keys(narrationsByGroup).length > 0 ? narrationsByGroup : undefined,
       };
     }
   };

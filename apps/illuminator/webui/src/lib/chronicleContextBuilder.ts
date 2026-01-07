@@ -7,6 +7,11 @@
  * See CHRONICLE_DESIGN.md for architecture documentation.
  */
 
+import {
+  buildProminenceScale,
+  DEFAULT_PROMINENCE_DISTRIBUTION,
+  prominenceThresholdFromScale,
+} from '@canonry/world-schema';
 import type { NarrativeStyle } from '@canonry/world-schema';
 import type {
   ChronicleGenerationContext,
@@ -376,8 +381,16 @@ export function summarizeContext(context: ChronicleGenerationContext): {
   prominentEntities: string[];
   highSignificanceEvents: string[];
 } {
+  const prominenceScale = buildProminenceScale(
+    context.entities
+      .map((entity) => Number(entity.prominence))
+      .filter((value) => Number.isFinite(value)),
+    { distribution: DEFAULT_PROMINENCE_DISTRIBUTION }
+  );
+  const prominentThreshold = prominenceThresholdFromScale('renowned', prominenceScale);
+
   const prominentEntities = context.entities
-    .filter((e) => e.prominence >= 3.0)  // renowned (3.0-3.99) and mythic (4.0-5.0)
+    .filter((e) => Number(e.prominence) >= prominentThreshold)
     .map((e) => e.name)
     .slice(0, 10);
 

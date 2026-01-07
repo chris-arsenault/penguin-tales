@@ -17,6 +17,7 @@ import { WorldRuntime } from '../runtime/worldRuntime';
 import { rollProbability, pickRandom, hasTag } from '../utils';
 import { createSystemContext, selectEntities } from '../rules';
 import type { SelectionRule } from '../rules';
+import { interpolate, createSystemRuleContext } from '../narrative/narrationTemplate';
 
 // =============================================================================
 // CONFIGURATION TYPES
@@ -34,6 +35,13 @@ export interface ConvergenceConfig {
   probability: number;
   /** Maximum shared tags before stopping convergence */
   maxSharedTags?: number;
+  /**
+   * Narration template for convergence events.
+   * - {$self.name} - The entity gaining the tag
+   * - {$tag} - The tag being added
+   * Example: "{$self.name} adopted new cultural practices."
+   */
+  narrationTemplate?: string;
 }
 
 /**
@@ -46,6 +54,13 @@ export interface DivergenceConfig {
   maxConnections: number;
   /** Probability of adding a divergence tag per tick (0-1) */
   probability: number;
+  /**
+   * Narration template for divergence events.
+   * - {$self.name} - The entity gaining the tag
+   * - {$tag} - The tag being added
+   * Example: "{$self.name} developed unique traditions in isolation."
+   */
+  narrationTemplate?: string;
 }
 
 /**
@@ -194,8 +209,10 @@ export function createTagDiffusionSystem(
         }
       }
 
-      const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
+      const modifications: Array<{ id: string; changes: Partial<HardState>; narrativeGroupId?: string }> = [];
       const modifiedTags = new Map<string, Record<string, boolean | string>>();
+      const narrationsByGroup: Record<string, string> = {};
+      const entityNarrations = new Map<string, { tag: string; type: 'convergence' | 'divergence' }>();
 
       // Find entities to evaluate
       const selectionCtx = createSystemContext(graphView);
@@ -248,6 +265,10 @@ export function createTagDiffusionSystem(
                     if (Object.keys(currentTags).length < maxTags) {
                       currentTags[newTag] = true;
                       modifiedTags.set(entity.id, currentTags);
+                      // Track for narration
+                      if (!entityNarrations.has(entity.id)) {
+                        entityNarrations.set(entity.id, { tag: newTag, type: 'convergence' });
+                      }
                     }
                   }
                 }
@@ -277,6 +298,10 @@ export function createTagDiffusionSystem(
                 if (Object.keys(currentTags).length < maxTags) {
                   currentTags[newTag] = true;
                   modifiedTags.set(entity.id, currentTags);
+                  // Track for narration
+                  if (!entityNarrations.has(entity.id)) {
+                    entityNarrations.set(entity.id, { tag: newTag, type: 'divergence' });
+                  }
                 }
               }
             }
@@ -289,11 +314,30 @@ export function createTagDiffusionSystem(
         }
       }
 
-      // Convert tag modifications to entity modifications
+      // Convert tag modifications to entity modifications and generate narrations
       for (const [entityId, tags] of modifiedTags) {
+        const entity = graphView.getEntity(entityId);
+        const narrationInfo = entityNarrations.get(entityId);
+
+        // Generate narration if template is available
+        if (entity && narrationInfo) {
+          const template = narrationInfo.type === 'convergence'
+            ? config.convergence?.narrationTemplate
+            : config.divergence?.narrationTemplate;
+
+          if (template) {
+            const narrationCtx = createSystemRuleContext({ self: entity });
+            const narrationResult = interpolate(template, narrationCtx);
+            if (narrationResult.complete) {
+              narrationsByGroup[entityId] = narrationResult.text;
+            }
+          }
+        }
+
         modifications.push({
           id: entityId,
-          changes: { tags: tags as Record<string, boolean> }
+          changes: { tags: tags as Record<string, boolean> },
+          narrativeGroupId: narrationInfo ? entityId : undefined
         });
       }
 
@@ -315,7 +359,8 @@ export function createTagDiffusionSystem(
         relationshipsAdded: [],
         entitiesModified: modifications,
         pressureChanges,
-        description: `${config.name}: ${modifications.length} entities affected`
+        description: `${config.name}: ${modifications.length} entities affected`,
+        narrationsByGroup: Object.keys(narrationsByGroup).length > 0 ? narrationsByGroup : undefined
       };
     }
   };

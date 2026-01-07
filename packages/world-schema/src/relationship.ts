@@ -53,11 +53,21 @@ export interface RelationshipKindDefinition {
    * Example for "member_of":
    *   verbs: { formed: "joined", ended: "left" }
    *   → "Alice joined The Guild" / "Alice left The Guild"
+   *
+   * Example for "practitioner_of" with inverse verbs:
+   *   verbs: { formed: "learned to practice", ended: "abandoned practice of",
+   *            inverseFormed: "gained as practitioner", inverseEnded: "lost as practitioner" }
+   *   → Source: "Alice learned to practice Fire Magic"
+   *   → Destination: "Fire Magic gained Alice as practitioner"
    */
   verbs?: {
     /** Verb for when this relationship is formed (e.g., "joined", "allied with") */
     formed: string;
     /** Verb for when this relationship ends (e.g., "left", "broke alliance with") */
     ended: string;
+    /** Verb for destination entity when relationship is formed (e.g., "gained as member") */
+    inverseFormed?: string;
+    /** Verb for destination entity when relationship ends (e.g., "lost as member") */
+    inverseEnded?: string;
   };
 }

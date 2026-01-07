@@ -863,6 +863,7 @@
       "properties": {
         "mutations": { "type": "array", "items": { "$ref": "#/$defs/Mutation" } },
         "descriptionTemplate": { "$ref": "#/$defs/NonEmptyString" },
+        "narrationTemplate": { "type": "string", "description": "Template for in-world narration. Variables: {actor.field}, {target.field}, {instigator.field}, {$varName.field}, {field|fallback}" },
         "actorProminenceDelta": {
           "type": "object",
           "additionalProperties": false,

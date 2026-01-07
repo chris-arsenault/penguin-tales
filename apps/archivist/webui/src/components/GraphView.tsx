@@ -4,7 +4,7 @@ import type { Core, NodeSingular, StylesheetJsonBlock } from 'cytoscape';
 // @ts-ignore
 import coseBilkent from 'cytoscape-cose-bilkent';
 import type { WorldState } from '../types/world.ts';
-import type { EntityKindDefinition } from '@canonry/world-schema';
+import type { EntityKindDefinition, ProminenceScale } from '@canonry/world-schema';
 import { transformWorldData } from '../utils/dataTransform.ts';
 
 cytoscape.use(coseBilkent);
@@ -78,9 +78,17 @@ interface GraphViewProps {
   onNodeSelect: (nodeId: string | undefined) => void;
   showCatalyzedBy?: boolean;
   onRecalculateLayoutRef?: (handler: () => void) => void;
+  prominenceScale: ProminenceScale;
 }
 
-export default function GraphView({ data, selectedNodeId, onNodeSelect, showCatalyzedBy = false, onRecalculateLayoutRef }: GraphViewProps) {
+export default function GraphView({
+  data,
+  selectedNodeId,
+  onNodeSelect,
+  showCatalyzedBy = false,
+  onRecalculateLayoutRef,
+  prominenceScale
+}: GraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const isInitializedRef = useRef(false);
@@ -319,7 +327,7 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
     if (!cyRef.current) return;
 
     const cy = cyRef.current;
-    const newElements = transformWorldData(data, showCatalyzedBy);
+    const newElements = transformWorldData(data, showCatalyzedBy, prominenceScale);
 
     // Get current element IDs
     const currentNodeIds = new Set(cy.nodes().map(n => n.id()));
@@ -382,7 +390,7 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
 
       layout.run();
     }
-  }, [data, showCatalyzedBy]);
+  }, [data, showCatalyzedBy, prominenceScale]);
 
   // Handle selection changes from outside
   useEffect(() => {

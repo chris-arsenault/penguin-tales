@@ -13,7 +13,7 @@
     "config": {
       "id": "era_transition",
       "name": "Era Transition",
-      "description": "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future \u2192 current \u2192 historical.",
+      "description": "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future → current → historical.",
       "prominenceSnapshot": {
         "enabled": false,
         "minProminence": "renowned"
@@ -74,7 +74,9 @@
             "strength": 0.5,
             "bidirectional": true
           },
-          "betweenMatching": true
+          "betweenMatching": true,
+          "narrationTemplate": "{$member.name} and {$member2.name} formed an alliance.",
+          "multiPartyNarrationTemplate": "{names} formed a {count}-way alliance."
         }
       ],
       "pairExcludeRelationships": [
@@ -298,6 +300,7 @@
       },
       "clusterMode": "individual",
       "throttleChance": 0.5,
+      "narrationTemplate": "{$self.name} died in {$war.name}.",
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
@@ -384,6 +387,7 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.2,
+      "narrationTemplate": "{$self.name} made a heroic sacrifice in {$war.name}.",
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
@@ -475,6 +479,7 @@
       },
       "clusterMode": "individual",
       "throttleChance": 0.25,
+      "narrationTemplate": "{$self.name} died of old age.",
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
@@ -506,6 +511,7 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.5,
+      "narrationTemplate": "{$self.name} grew war-weary.",
       "selection": {
         "strategy": "by_kind",
         "kind": "occurrence",
@@ -545,6 +551,7 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.6,
+      "narrationTemplate": "{$self.name} passed into history.",
       "pressureChanges": {
         "cultural_harmony": 2
       },
@@ -611,6 +618,7 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.5,
+      "narrationTemplate": "{$self.name} recovered from war.",
       "pressureChanges": {
         "cultural_harmony": 3,
         "iceberg_security": 2
@@ -684,6 +692,7 @@
         "iceberg_security": -8,
         "cultural_harmony": -1
       },
+      "narrationTemplate": "{$self.name} entered a power vacuum after losing leadership.",
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
@@ -766,6 +775,7 @@
           "iceberg_security": 2
         }
       },
+      "narrationTemplate": "{$self.name} emerged as a unified tradition, absorbing {count} related magical practices under one school.",
       "selection": {
         "strategy": "by_kind",
         "kind": "ability",
@@ -853,6 +863,7 @@
           "iceberg_security": 2
         }
       },
+      "narrationTemplate": "{$self.name} codified {count} combat techniques into a unified fighting style.",
       "selection": {
         "strategy": "by_kind",
         "kind": "ability",
@@ -874,14 +885,20 @@
     "config": {
       "id": "legal_code_formation",
       "name": "Legal Code Formation",
-      "description": "Clusters rules into unified legal codes with governance factions",
+      "description": "Clusters related laws into unified legal codes. Only the most prominent rules remain directly linked; others are subsumed into the codified system.",
       "runAtEpochEnd": true,
       "clustering": {
         "minSize": 4,
+        "maxSize": 8,
         "criteria": [
           {
             "type": "same_culture",
             "weight": 5
+          },
+          {
+            "type": "shared_tags",
+            "weight": 2,
+            "threshold": 0.3
           }
         ],
         "minimumScore": 4
@@ -896,9 +913,28 @@
           "renowned": 7,
           "mythic": 10
         },
-        "additionalTags": [],
+        "additionalTags": [
+          "meta-entity"
+        ],
         "descriptionTemplate": "A unified legal system encompassing {names}. Codified from {count} related rules."
       },
+      "masterSelection": {
+        "filters": [
+          {
+            "type": "matches_culture",
+            "with": "$meta"
+          }
+        ],
+        "pickStrategy": "weighted",
+        "maxResults": 2
+      },
+      "memberUpdates": [
+        {
+          "type": "change_status",
+          "entity": "$member",
+          "newStatus": "subsumed"
+        }
+      ],
       "postProcess": {
         "createGovernanceFaction": true,
         "governanceFactionSubtype": "political",
@@ -907,11 +943,18 @@
           "iceberg_security": 5
         }
       },
+      "narrationTemplate": "{$self.name} enacted, consolidating {count} laws into a formal legal code.",
       "selection": {
         "strategy": "by_kind",
         "kind": "rule",
         "subtypes": [
           "law"
+        ],
+        "filters": [
+          {
+            "type": "lacks_tag",
+            "tag": "meta-entity"
+          }
         ]
       }
     },
@@ -966,6 +1009,7 @@
         "dst": "$contagion_source",
         "strength": 0.5
       },
+      "narrationTemplate": "{$self.name} adopted the beliefs of {$contagion_source.name}.",
       "recovery": {
         "baseRate": 0.02,
         "recoveryBonusTraits": [
@@ -1011,6 +1055,7 @@
       ],
       "multiSource": {
         "immunityTagPrefix": "immune",
+        "immunityNarrationTemplate": "{$self.name} rejected the teachings of {$source.name}.",
         "lowAdoptionThreshold": 0.05,
         "lowAdoptionStatus": "contested",
         "sourceSelection": {
@@ -1045,7 +1090,8 @@
         ],
         "minConnections": 1,
         "probability": 0.3,
-        "maxSharedTags": 2
+        "maxSharedTags": 2,
+        "narrationTemplate": "{$self.name} adopted new cultural practices through its connections."
       },
       "divergence": {
         "tags": [
@@ -1054,7 +1100,8 @@
           "mystical"
         ],
         "maxConnections": 0,
-        "probability": 0.3
+        "probability": 0.3,
+        "narrationTemplate": "{$self.name} developed unique traditions in isolation."
       },
       "maxTags": 10,
       "divergencePressure": {
@@ -1096,11 +1143,15 @@
       "outputTags": [
         {
           "tag": "safe",
-          "maxValue": 0.15
+          "maxValue": 0.15,
+          "narrationTemplate": "{$self.name} cooled to safe temperatures.",
+          "lostNarrationTemplate": "{$self.name} lost its safe conditions as temperatures shifted."
         },
         {
           "tag": "dangerous",
-          "minValue": 0.25
+          "minValue": 0.25,
+          "narrationTemplate": "{$self.name} became dangerously hot from nearby thermal activity.",
+          "lostNarrationTemplate": "{$self.name} cooled down and became safe again."
         }
       ],
       "valueTag": "temperature",
@@ -1132,12 +1183,16 @@
         {
           "tag": "thriving",
           "minValue": 15,
-          "maxValue": 100
+          "maxValue": 100,
+          "narrationTemplate": "{$self.name} began thriving from nearby resource wealth.",
+          "lostNarrationTemplate": "{$self.name} lost its prosperity as resources dwindled."
         },
         {
           "tag": "stressed",
           "maxValue": 40,
-          "minValue": -100
+          "minValue": -100,
+          "narrationTemplate": "{$self.name} became economically stressed.",
+          "lostNarrationTemplate": "{$self.name} recovered from economic hardship."
         }
       ],
       "valueTag": "sys_resource_value",
@@ -1211,11 +1266,12 @@
       "conditions": [
         {
           "type": "time_elapsed",
-          "minTicks": 20
+          "since": "created",
+          "minTicks": 50
         },
         {
           "type": "random_chance",
-          "chance": 0.3
+          "chance": 0.08
         }
       ],
       "actions": [
@@ -1226,7 +1282,8 @@
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.6,
+      "throttleChance": 0.5,
+      "narrationTemplate": "{$self.name} became damaged.",
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
@@ -1244,11 +1301,11 @@
       "conditions": [
         {
           "type": "time_elapsed",
-          "minTicks": 20
+          "minTicks": 15
         },
         {
           "type": "random_chance",
-          "chance": 0.15
+          "chance": 0.25
         }
       ],
       "actions": [
@@ -1259,7 +1316,8 @@
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.7,
+      "throttleChance": 0.3,
+      "narrationTemplate": "{$self.name} was destroyed.",
       "selection": {
         "strategy": "by_kind",
         "kind": "artifact",
@@ -1305,6 +1363,7 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.1,
+      "narrationTemplate": "{$self.name} acquired a weapon.",
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
@@ -1355,6 +1414,7 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.2,
+      "narrationTemplate": "{$self.name} became devout.",
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
@@ -1422,6 +1482,7 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.5,
+      "narrationTemplate": "{$self.name} lost control of {$weak_territory.name}.",
       "pressureChanges": {
         "iceberg_security": -3
       },
@@ -1561,6 +1622,7 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.4,
+      "narrationTemplate": "{$self.name} joined {$war.name} to defend {$ally.name}.",
       "pressureChanges": {
         "cultural_harmony": -3
       },
@@ -1575,9 +1637,9 @@
   {
     "systemType": "thresholdTrigger",
     "config": {
-      "id": "corruption_harm",
-      "name": "Corruption Harm",
-      "description": "NPCs residing in corrupted locations are harmed by the corruption - first corrupted, then killed",
+      "id": "corruption_touch",
+      "name": "Corruption Touch",
+      "description": "NPCs residing in corrupted locations become corrupted",
       "conditions": [
         {
           "type": "graph_path",
@@ -1592,6 +1654,10 @@
               }
             ]
           }
+        },
+        {
+          "type": "lacks_tag",
+          "tag": "corrupted"
         },
         {
           "type": "random_chance",
@@ -1619,55 +1685,168 @@
       },
       "actions": [
         {
-          "type": "conditional",
-          "condition": {
-            "type": "tag_exists",
-            "tag": "cursed"
-          },
-          "thenActions": [
-            {
-              "type": "change_status",
-              "entity": "$self",
-              "newStatus": "historical"
-            }
-          ],
-          "elseActions": [
-            {
-              "type": "conditional",
-              "condition": {
-                "type": "tag_exists",
-                "tag": "corrupted"
-              },
-              "thenActions": [
-                {
-                  "type": "set_tag",
-                  "tag": "cursed",
-                  "value": true,
-                  "entity": "$self"
-                },
-                {
-                  "type": "archive_all_relationships",
-                  "entity": "$self",
-                  "relationshipKind": "owned_by",
-                  "direction": "dst"
-                }
-              ],
-              "elseActions": [
-                {
-                  "type": "set_tag",
-                  "tag": "corrupted",
-                  "value": true,
-                  "entity": "$self"
-                }
-              ]
-            }
-          ]
+          "type": "set_tag",
+          "tag": "corrupted",
+          "value": true,
+          "entity": "$self"
         }
       ],
       "clusterMode": "individual",
       "throttleChance": 0.5,
+      "narrationTemplate": "{$self.name} was touched by the corruption festering at {$home.name}.",
+      "pressureChanges": {
+        "magical_stability": -1
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "status": "alive"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "corruption_curse",
+      "name": "Corruption Curse",
+      "description": "Corrupted NPCs become cursed as corruption deepens",
+      "conditions": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "resident_of",
+                "direction": "out",
+                "targetKind": "location",
+                "targetSubtype": "any"
+              }
+            ]
+          }
+        },
+        {
+          "type": "tag_exists",
+          "tag": "corrupted"
+        },
+        {
+          "type": "lacks_tag",
+          "tag": "cursed"
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.08
+        }
+      ],
+      "variables": {
+        "$home": {
+          "select": {
+            "from": {
+              "relatedTo": "$self",
+              "relationshipKind": "resident_of",
+              "direction": "src"
+            },
+            "kind": "location",
+            "filters": [
+              {
+                "type": "has_tag",
+                "tag": "corrupted"
+              }
+            ]
+          },
+          "required": true
+        }
+      },
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "cursed",
+          "value": true,
+          "entity": "$self"
+        },
+        {
+          "type": "archive_all_relationships",
+          "entity": "$self",
+          "relationshipKind": "owned_by",
+          "direction": "dst"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "narrationTemplate": "The corruption at {$home.name} tightened its grip on {$self.name}.",
       "pressureChanges": {
         "magical_stability": -2
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "status": "alive"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "corruption_death",
+      "name": "Corruption Death",
+      "description": "Cursed NPCs succumb to corruption",
+      "conditions": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "resident_of",
+                "direction": "out",
+                "targetKind": "location",
+                "targetSubtype": "any"
+              }
+            ]
+          }
+        },
+        {
+          "type": "tag_exists",
+          "tag": "cursed"
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.08
+        }
+      ],
+      "variables": {
+        "$home": {
+          "select": {
+            "from": {
+              "relatedTo": "$self",
+              "relationshipKind": "resident_of",
+              "direction": "src"
+            },
+            "kind": "location",
+            "filters": [
+              {
+                "type": "has_tag",
+                "tag": "corrupted"
+              }
+            ]
+          },
+          "required": true
+        }
+      },
+      "actions": [
+        {
+          "type": "change_status",
+          "entity": "$self",
+          "newStatus": "historical"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "narrationTemplate": "{$self.name} succumbed to the corruption at {$home.name}.",
+      "pressureChanges": {
+        "magical_stability": -3
       },
       "selection": {
         "strategy": "by_kind",
@@ -1708,6 +1887,7 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.1,
+      "narrationTemplate": "{$self.name} lost their weapon.",
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
@@ -1773,6 +1953,7 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.15,
+      "narrationTemplate": "Corruption crisis at {$self.name}.",
       "selection": {
         "strategy": "by_kind",
         "kind": "location",
@@ -1842,7 +2023,8 @@
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.3
+      "throttleChance": 0.3,
+      "narrationTemplate": "Wards faded at {$self.name}."
     },
     "enabled": true
   },
@@ -1897,7 +2079,9 @@
           "delta": 0.2
         }
       ],
-      "throttleChance": 0.3
+      "throttleChance": 0.3,
+      "clusterMode": "individual",
+      "narrationTemplate": "{$self.name} was witnessed by the ice."
     },
     "enabled": true
   },
@@ -1931,7 +2115,8 @@
             "tag": "mystical",
             "value": true,
             "entity": "$self"
-          }
+          },
+          "narrationTemplate": "{$self.name} gained mystical qualities."
         },
         {
           "condition": {
@@ -1944,7 +2129,8 @@
             "tag": "mystical",
             "value": true,
             "entity": "$self"
-          }
+          },
+          "narrationTemplate": "{$self.name} gained mystical qualities."
         }
       ],
       "throttleChance": 0.3,
@@ -1997,7 +2183,8 @@
             "type": "remove_tag",
             "tag": "mystical",
             "entity": "$self"
-          }
+          },
+          "narrationTemplate": "{$self.name} lost its mystical qualities."
         },
         {
           "condition": {
@@ -2009,7 +2196,8 @@
             "type": "remove_tag",
             "tag": "mystical",
             "entity": "$self"
-          }
+          },
+          "narrationTemplate": "{$self.name} lost its mystical qualities."
         }
       ],
       "throttleChance": 0.3,
@@ -2127,7 +2315,8 @@
             "tag": "depleted"
           }
         ]
-      }
+      },
+      "narrationTemplate": "{$self.name} became active."
     },
     "enabled": true
   },
@@ -2161,7 +2350,8 @@
             "tag": "depleted"
           }
         ]
-      }
+      },
+      "narrationTemplate": "{$self.name} recovered from depletion."
     },
     "enabled": true
   }

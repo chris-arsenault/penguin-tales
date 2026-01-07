@@ -6,7 +6,7 @@
  * during simulation.
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 
 // Debug category metadata - matches types.ts DEBUG_CATEGORY_INFO
 const DEBUG_CATEGORIES = [
@@ -24,6 +24,18 @@ const DEBUG_CATEGORIES = [
 ];
 
 export default function DebugSettingsModal({ isOpen, onClose, debugConfig, onDebugConfigChange }) {
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleMasterToggle = () => {
@@ -69,8 +81,8 @@ export default function DebugSettingsModal({ isOpen, onClose, debugConfig, onDeb
   };
 
   return (
-    <div className="lw-modal-overlay" onClick={onClose}>
-      <div className="lw-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="lw-modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+      <div className="lw-modal">
         <div className="lw-modal-header">
           <h2 className="lw-modal-title">Debug Settings</h2>
           <button className="lw-modal-close" onClick={onClose}>×</button>

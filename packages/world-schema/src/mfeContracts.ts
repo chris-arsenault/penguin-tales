@@ -109,6 +109,19 @@ export interface CanonrySimulationState {
   [key: string]: unknown;
 }
 
+export interface LoreWeaveRunScorePayload {
+  attempt?: number;
+  runScore: number;
+  runScoreMax?: number;
+  runScoreDetails?: {
+    templates?: { used: number; total: number; weight: number };
+    actions?: { used: number; total: number; weight: number };
+    systems?: { used: number; total: number; weight: number };
+  };
+  simulationResults?: CanonrySimulationResults | null;
+  simulationState?: CanonrySimulationState | null;
+}
+
 // =============================================================================
 // MFE contracts (props)
 // =============================================================================
@@ -171,6 +184,7 @@ export interface LoreWeaveRemoteProps extends MfeNavProps {
   onSimulationResultsChange?: (results: CanonrySimulationResults | null) => void;
   simulationState?: CanonrySimulationState | null;
   onSimulationStateChange?: (state: CanonrySimulationState | null) => void;
+  onSearchRunScored?: (payload: LoreWeaveRunScorePayload) => void;
 }
 
 export interface ArchivistRemoteProps {

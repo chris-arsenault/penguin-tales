@@ -1180,6 +1180,58 @@
           ],
           "source": "manual"
         },
+        "aurora_war_memories": {
+          "id": "aurora_war_memories",
+          "description": "What the ice remembers about wars - parenthetical annotations for conflict names",
+          "entries": [
+            "ice-remembered",
+            "blood-marked",
+            "strife-witnessed",
+            "conflict-scarred",
+            "war-echoed",
+            "battle-frozen",
+            "fury-held"
+          ],
+          "source": "manual"
+        },
+        "aurora_disaster_memories": {
+          "id": "aurora_disaster_memories",
+          "description": "What the ice remembers about disasters - parenthetical annotations for catastrophe names",
+          "entries": [
+            "frost-scarred",
+            "ice-witnessed",
+            "berg-marked",
+            "void-touched",
+            "thaw-survivor",
+            "ruin-frozen",
+            "loss-held"
+          ],
+          "source": "manual"
+        },
+        "aurora_succession_memories": {
+          "id": "aurora_succession_memories",
+          "description": "What the ice remembers about succession crises - parenthetical annotations",
+          "entries": [
+            "ice-fractured",
+            "throne-broken",
+            "line-severed",
+            "crown-contested",
+            "heir-lost"
+          ],
+          "source": "manual"
+        },
+        "aurora_celebration_memories": {
+          "id": "aurora_celebration_memories",
+          "description": "What the ice remembers about celebrations - parenthetical annotations",
+          "entries": [
+            "joy-frozen",
+            "feast-blessed",
+            "unity-marked",
+            "hope-kindled",
+            "bonds-renewed"
+          ],
+          "source": "manual"
+        },
         "ancient_relic_epithets": {
           "id": "ancient_relic_epithets",
           "description": "Grandiose epithets for ancient alien relics",
@@ -1231,6 +1283,169 @@
             "Furnace",
             "Spire",
             "Obelisk"
+          ],
+          "source": "manual"
+        },
+        "aurora_witness_moment": {
+          "id": "aurora_witness_moment",
+          "description": "Moments when the ice witnessed laws being made - temporal markers for agreements",
+          "entries": [
+            "Dawn",
+            "Frost",
+            "Thaw",
+            "Stillness",
+            "Clear-sky",
+            "Deep-cold",
+            "First-light",
+            "Long-dark"
+          ],
+          "source": "manual"
+        },
+        "aurora_compact_type": {
+          "id": "aurora_compact_type",
+          "description": "How the ice sealed or witnessed an agreement",
+          "entries": [
+            "witnessed",
+            "sealed",
+            "spoken",
+            "held",
+            "bound",
+            "marked",
+            "kept"
+          ],
+          "source": "manual"
+        },
+        "aurora_ice_truths": {
+          "id": "aurora_ice_truths",
+          "description": "Single sacred words - truths the ice whispers to those who listen",
+          "entries": [
+            "Stillness",
+            "Patience",
+            "Endurance",
+            "Clarity",
+            "Silence",
+            "Return",
+            "Cycle",
+            "Depths"
+          ],
+          "source": "manual"
+        },
+        "aurora_hero_deed": {
+          "id": "aurora_hero_deed",
+          "description": "Deeds worth memorializing - what heroes did that must not be forgotten",
+          "entries": [
+            "Sacrifice",
+            "Valor",
+            "Vigil",
+            "Stand",
+            "Fall",
+            "Return",
+            "Defiance",
+            "Mercy"
+          ],
+          "source": "manual"
+        },
+        "aurora_permanence": {
+          "id": "aurora_permanence",
+          "description": "Forms of permanence for memorials - how memory is preserved",
+          "entries": [
+            "light",
+            "echo",
+            "flame",
+            "stone",
+            "mark",
+            "song",
+            "name"
+          ],
+          "source": "manual"
+        },
+        "aurora_warmth_source": {
+          "id": "aurora_warmth_source",
+          "description": "What brings warmth to the huddle - sources of community joy",
+          "entries": [
+            "Feast",
+            "Song",
+            "Share",
+            "Gift",
+            "Return",
+            "Light",
+            "Dance",
+            "Trade"
+          ],
+          "source": "manual"
+        },
+        "aurora_gathering_type": {
+          "id": "aurora_gathering_type",
+          "description": "Types of social gatherings - how the community comes together",
+          "entries": [
+            "huddle",
+            "circle",
+            "kindling",
+            "chorus",
+            "tide",
+            "ring",
+            "warm"
+          ],
+          "source": "manual"
+        },
+        "aurora_ice_reaction": {
+          "id": "aurora_ice_reaction",
+          "description": "How the ice REACTED emotionally to events - for occurrence echoes. Distinct from trait echoes.",
+          "entries": [
+            "ice-wept",
+            "ice-screamed",
+            "ice-shattered",
+            "ice-mourned",
+            "ice-raged",
+            "ice-trembled",
+            "ice-cracked",
+            "berg-split",
+            "frost-wailed",
+            "cold-grieved"
+          ],
+          "source": "manual"
+        },
+        "aurora_rule_mandate": {
+          "id": "aurora_rule_mandate",
+          "description": "Codification words for rules - signals this is a law/custom",
+          "entries": [
+            "Accord",
+            "Silence",
+            "Binding",
+            "Pact",
+            "Code",
+            "Edict",
+            "Covenant",
+            "Mandate",
+            "Decree",
+            "Charter"
+          ],
+          "source": "manual"
+        },
+        "aurora_memorial_suffix": {
+          "id": "aurora_memorial_suffix",
+          "description": "Suffixes for memorials - ways of remembering",
+          "entries": [
+            "Vigil",
+            "Remembrance",
+            "Watch",
+            "Flame",
+            "Light",
+            "Memory",
+            "Honor"
+          ],
+          "source": "manual"
+        },
+        "aurora_social_suffix": {
+          "id": "aurora_social_suffix",
+          "description": "Suffixes for social customs - what kind of gathering",
+          "entries": [
+            "Rite",
+            "Custom",
+            "Tradition",
+            "Way",
+            "Circle",
+            "Gathering"
           ],
           "source": "manual"
         }
@@ -1805,33 +2020,12 @@
           "rules": {
             "name": [
               [
-                "context:selected~poss",
-                "slot:aurora_war_epithets"
-              ],
-              [
-                "The",
                 "slot:aurora_war_epithets",
-                "of",
-                "context:target"
+                "(^slot:aurora_ice_reaction^)"
               ],
               [
-                "context:selected^-^context:target",
-                "slot:aurora_war_epithets"
-              ],
-              [
-                "The",
-                "slot:aurora_gen_nouns",
-                "slot:aurora_war_epithets"
-              ],
-              [
-                "The",
                 "slot:aurora_war_epithets",
-                "of",
-                "slot:aurora_nature"
-              ],
-              [
-                "slot:aurora_nature^-^slot:aurora_nature",
-                "slot:aurora_war_epithets"
+                "(^slot:aurora_war_memories^)"
               ]
             ]
           }
@@ -1843,28 +2037,110 @@
           "rules": {
             "name": [
               [
-                "The",
-                "context:target",
-                "slot:aurora_disaster_types"
-              ],
-              [
-                "context:selected~poss",
-                "slot:aurora_disaster_types"
-              ],
-              [
-                "The",
-                "slot:aurora_nature",
-                "slot:aurora_disaster_types"
-              ],
-              [
-                "The",
                 "slot:aurora_disaster_types",
-                "of",
-                "slot:aurora_nature"
+                "(^slot:aurora_ice_reaction^)"
               ],
               [
-                "domain:aurora_domain_short^'s",
-                "slot:aurora_disaster_types"
+                "slot:aurora_disaster_types",
+                "(^slot:aurora_disaster_memories^)"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_succession_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_lineage_markers",
+                "(^slot:aurora_ice_reaction^)"
+              ],
+              [
+                "slot:aurora_lineage_markers",
+                "(^slot:aurora_succession_memories^)"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_celebration_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_holiday_types",
+                "(^slot:aurora_celebration_memories^)"
+              ],
+              [
+                "slot:aurora_holiday_types",
+                "(^slot:aurora_place_echoes^)"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_law_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_witness_moment^-^slot:aurora_compact_type~cap"
+              ],
+              [
+                "slot:aurora_witness_moment",
+                "slot:aurora_rule_mandate"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_ideology_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_ice_truths^-^slot:aurora_rule_mandate"
+              ],
+              [
+                "slot:aurora_ice_truths",
+                "slot:aurora_rule_mandate"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_memorial_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_hero_deed^-^slot:aurora_memorial_suffix"
+              ],
+              [
+                "slot:aurora_hero_deed",
+                "slot:aurora_memorial_suffix"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_social_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_warmth_source^-^slot:aurora_social_suffix"
+              ],
+              [
+                "slot:aurora_gathering_type~cap",
+                "slot:aurora_social_suffix"
               ]
             ]
           }
@@ -2333,7 +2609,7 @@
           "id": "aurora_rules",
           "strategyGroups": [
             {
-              "name": "Holidays",
+              "name": "Social Gatherings",
               "priority": 60,
               "conditions": {
                 "entityKinds": [
@@ -2351,7 +2627,7 @@
                 {
                   "type": "grammar",
                   "weight": 1,
-                  "grammarId": "aurora_holidays"
+                  "grammarId": "aurora_social_name"
                 }
               ]
             },
@@ -2373,13 +2649,8 @@
               "strategies": [
                 {
                   "type": "grammar",
-                  "weight": 0.6,
-                  "grammarId": "aurora_holidays"
-                },
-                {
-                  "type": "grammar",
-                  "weight": 0.4,
-                  "grammarId": "aurora_law"
+                  "weight": 1,
+                  "grammarId": "aurora_memorial_name"
                 }
               ]
             },
@@ -2402,7 +2673,7 @@
                 {
                   "type": "grammar",
                   "weight": 1,
-                  "grammarId": "aurora_law"
+                  "grammarId": "aurora_ideology_name"
                 }
               ]
             },
@@ -2424,13 +2695,8 @@
               "strategies": [
                 {
                   "type": "grammar",
-                  "weight": 0.85,
-                  "grammarId": "aurora_law"
-                },
-                {
-                  "type": "grammar",
-                  "weight": 0.15,
-                  "grammarId": "aurora_rules_regional"
+                  "weight": 1,
+                  "grammarId": "aurora_law_name"
                 }
               ]
             },
@@ -2744,7 +3010,7 @@
                 {
                   "type": "grammar",
                   "weight": 1,
-                  "grammarId": "aurora_holidays"
+                  "grammarId": "aurora_celebration_name"
                 }
               ]
             },
@@ -2766,13 +3032,8 @@
               "strategies": [
                 {
                   "type": "grammar",
-                  "weight": 0.6,
-                  "grammarId": "aurora_war_name"
-                },
-                {
-                  "type": "grammar",
-                  "weight": 0.4,
-                  "grammarId": "aurora_law"
+                  "weight": 1,
+                  "grammarId": "aurora_succession_name"
                 }
               ]
             }
@@ -3259,6 +3520,161 @@
             "Ruina",
             "Hiatus",
             "Vorago"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_conflict_prefix": {
+          "id": "nightshelf_conflict_prefix",
+          "description": "Shadow/darkness Latin prefixes for war names",
+          "entries": [
+            "Umbra",
+            "Nox",
+            "Tenebra",
+            "Obscura",
+            "Velum",
+            "Caenum",
+            "Furvum"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_depth_prefix": {
+          "id": "nightshelf_depth_prefix",
+          "description": "Depth/rupture Latin prefixes for disaster names",
+          "entries": [
+            "Profundis",
+            "Abyssus",
+            "Rupta",
+            "Fracta",
+            "Vorax",
+            "Cavum",
+            "Imum"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_succession_prefix": {
+          "id": "nightshelf_succession_prefix",
+          "description": "Political/void Latin prefixes for succession crises",
+          "entries": [
+            "Vacuum",
+            "Thronus",
+            "Regnum",
+            "Potestas",
+            "Heredis"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_rite_suffix": {
+          "id": "nightshelf_rite_suffix",
+          "description": "Ecclesiastical Latin suffixes for celebrations",
+          "entries": [
+            "Consecrat",
+            "Liturg",
+            "Canticle",
+            "Vigil",
+            "Sanctum",
+            "Officium"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_law_core": {
+          "id": "nightshelf_law_core",
+          "description": "Core Latin words for laws - symmetric double-moon pattern \u263dword\u263d",
+          "entries": [
+            "Silentium",
+            "Vinculum",
+            "Pactum",
+            "Jugum",
+            "Nexum",
+            "Mandatum",
+            "Decretum",
+            "Edictum"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_forbidden_truth": {
+          "id": "nightshelf_forbidden_truth",
+          "description": "Forbidden truths for ideology - whisper trailing pattern word~",
+          "entries": [
+            "Veritas",
+            "Nihil",
+            "Profundum",
+            "Arcanum",
+            "Secretum",
+            "Mysterium",
+            "Absconditum",
+            "Ineffabile"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_remnant": {
+          "id": "nightshelf_remnant",
+          "description": "Words for remnants/traces for memorials - double therefore \u2234word\u2234",
+          "entries": [
+            "Memoria",
+            "Nomen",
+            "Vestigium",
+            "Reliquiae",
+            "Imago",
+            "Umbra",
+            "Echo",
+            "Signum"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_darkness_source": {
+          "id": "nightshelf_darkness_source",
+          "description": "Darkness/depth words for social gatherings prefix",
+          "entries": [
+            "Nox",
+            "Umbra",
+            "Crypt",
+            "Veil",
+            "Depth",
+            "Fissure",
+            "Glow",
+            "Shadow"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_communion_type": {
+          "id": "nightshelf_communion_type",
+          "description": "Types of communion/gathering for social rules",
+          "entries": [
+            "murmur",
+            "circle",
+            "rite",
+            "bond",
+            "vigil",
+            "whisper",
+            "communion",
+            "accord"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_rule_anchors": {
+          "id": "nightshelf_rule_anchors",
+          "description": "Anchor words for rules - signals this is a law/custom (Latin-esque)",
+          "entries": [
+            "Pactum",
+            "Codex",
+            "Ritus",
+            "Lex",
+            "Votum",
+            "Foedus",
+            "Mandatum",
+            "Iudicium"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_memorial_anchor": {
+          "id": "nightshelf_memorial_anchor",
+          "description": "Anchor words for memorials",
+          "entries": [
+            "Memoria",
+            "Vestigium",
+            "Umbra",
+            "Echo",
+            "Signum"
           ],
           "source": "manual"
         },
@@ -3770,7 +4186,7 @@
             "name": [
               [
                 "slot:nightshelf_gen_titles",
-                "☽'^domain:nightshelf_domain~cap^'^slot:nightshelf_nature~cap"
+                "\u263d'^domain:nightshelf_domain~cap^'^slot:nightshelf_nature~cap"
               ],
               [
                 "slot:nightshelf_gen_titles",
@@ -3787,7 +4203,7 @@
           "rules": {
             "name": [
               [
-                "☽'^slot:nightshelf_latin_roots^slot:nightshelf_whisper_ends"
+                "\u263d'^slot:nightshelf_latin_roots^slot:nightshelf_whisper_ends"
               ],
               [
                 "slot:nightshelf_latin_roots~cap^slot:nightshelf_whisper_ends^~"
@@ -3801,16 +4217,16 @@
           "rules": {
             "name": [
               [
-                "☽'^domain:nightshelf_domain~chopL"
+                "\u263d'^domain:nightshelf_domain~chopL"
               ],
               [
-                "domain:nightshelf_domain~chopR^☽"
+                "domain:nightshelf_domain~chopR^\u263d"
               ],
               [
                 "domain:nightshelf_domain^~"
               ],
               [
-                "☽'^slot:nightshelf_shadow_gen~chopL^'",
+                "\u263d'^slot:nightshelf_shadow_gen~chopL^'",
                 "slot:nightshelf_faction_groups"
               ]
             ]
@@ -3823,13 +4239,13 @@
           "rules": {
             "name": [
               [
-                "☽'^domain:nightshelf_domain",
+                "\u263d'^domain:nightshelf_domain",
                 "context:region^'born"
               ],
               [
                 "domain:nightshelf_domain^~",
                 "of",
-                "☽'^context:region"
+                "\u263d'^context:region"
               ]
             ]
           }
@@ -3841,11 +4257,11 @@
           "rules": {
             "name": [
               [
-                "☽'^context:region^'",
+                "\u263d'^context:region^'",
                 "slot:nightshelf_faction_groups"
               ],
               [
-                "slot:nightshelf_faction_groups^☽",
+                "slot:nightshelf_faction_groups^\u263d",
                 "of",
                 "context:region"
               ]
@@ -3859,13 +4275,13 @@
           "rules": {
             "name": [
               [
-                "☽'^slot:nightshelf_shadow_gen",
+                "\u263d'^slot:nightshelf_shadow_gen",
                 "Code of",
                 "context:region^~"
               ],
               [
                 "context:region^'",
-                "☽'^slot:nightshelf_shadow_gen^☽",
+                "\u263d'^slot:nightshelf_shadow_gen^\u263d",
                 "Covenant"
               ]
             ]
@@ -3878,7 +4294,7 @@
             "name": [
               [
                 "slot:nightshelf_merchant_ranks",
-                "☽'^domain:nightshelf_domain"
+                "\u263d'^domain:nightshelf_domain"
               ],
               [
                 "domain:nightshelf_domain^~",
@@ -3897,7 +4313,7 @@
           "rules": {
             "name": [
               [
-                "☽'^domain:nightshelf_domain",
+                "\u263d'^domain:nightshelf_domain",
                 "slot:nightshelf_hero_epithets"
               ],
               [
@@ -3918,11 +4334,11 @@
             "name": [
               [
                 "slot:nightshelf_latin_titles",
-                "☽'^domain:nightshelf_domain^~",
+                "\u263d'^domain:nightshelf_domain^~",
                 "slot:nightshelf_hero_epithets"
               ],
               [
-                "☽'^domain:nightshelf_domain",
+                "\u263d'^domain:nightshelf_domain",
                 "slot:nightshelf_hero_epithets^,",
                 "slot:nightshelf_latin_titles"
               ]
@@ -3935,7 +4351,7 @@
           "rules": {
             "name": [
               [
-                "☽'^domain:nightshelf_domain",
+                "\u263d'^domain:nightshelf_domain",
                 "slot:nightshelf_criminal_epithets"
               ],
               [
@@ -3943,7 +4359,7 @@
                 "domain:nightshelf_domain^~"
               ],
               [
-                "☽'^domain:nightshelf_domain^-^domain:nightshelf_domain^~"
+                "\u263d'^domain:nightshelf_domain^-^domain:nightshelf_domain^~"
               ]
             ]
           }
@@ -3955,7 +4371,7 @@
             "name": [
               [
                 "slot:nightshelf_noble_titles",
-                "☽'^domain:nightshelf_domain"
+                "\u263d'^domain:nightshelf_domain"
               ],
               [
                 "slot:nightshelf_latin_titles",
@@ -3976,29 +4392,12 @@
           "rules": {
             "name": [
               [
-                "slot:nightshelf_war_names^~",
-                "context:selected~gen"
-              ],
-              [
-                "context:selected~poss",
-                "☽'^slot:nightshelf_war_names"
-              ],
-              [
-                "slot:nightshelf_war_names^☽",
-                "context:target~gen"
+                "The",
+                "slot:nightshelf_conflict_prefix~chopR^\u2234^slot:nightshelf_war_names~chopL"
               ],
               [
                 "The",
-                "slot:nightshelf_whisper_roots^~",
-                "slot:nightshelf_war_names"
-              ],
-              [
-                "☽'^slot:nightshelf_war_names",
-                "slot:nightshelf_whisper_roots^~"
-              ],
-              [
-                "slot:nightshelf_shadow_gen^∴^slot:nightshelf_shadow_gen",
-                "slot:nightshelf_war_names"
+                "slot:nightshelf_conflict_prefix~chopL^\u2234^slot:nightshelf_war_names~chopR"
               ]
             ]
           }
@@ -4010,29 +4409,107 @@
           "rules": {
             "name": [
               [
-                "slot:nightshelf_disaster_types^~",
-                "context:target~gen"
-              ],
-              [
-                "context:selected~poss",
-                "☽'^slot:nightshelf_disaster_types"
-              ],
-              [
-                "slot:nightshelf_disaster_types^☽",
-                "context:selected~gen"
+                "The",
+                "slot:nightshelf_depth_prefix~chopR^\u2234^slot:nightshelf_disaster_types~chopL"
               ],
               [
                 "The",
-                "slot:nightshelf_shadow_gen^~",
-                "slot:nightshelf_disaster_types"
+                "slot:nightshelf_depth_prefix~chopL^\u2234^slot:nightshelf_disaster_types~chopR"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_succession_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "slot:nightshelf_succession_prefix~chopR^\u2234^slot:nightshelf_war_names~chopL"
               ],
               [
-                "☽'^slot:nightshelf_disaster_types",
-                "slot:nightshelf_whisper_roots^~"
+                "The",
+                "slot:nightshelf_succession_prefix~chopL^\u2234^slot:nightshelf_war_names~chopR"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_celebration_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "slot:nightshelf_shadow_gen~chopL^\u2234^slot:nightshelf_rite_suffix~chopR"
               ],
               [
-                "☽'^domain:nightshelf_domain~lower^'",
-                "slot:nightshelf_disaster_types~cap^~"
+                "The",
+                "slot:nightshelf_magic_part_c~chopR^\u2234^slot:nightshelf_rite_suffix~chopL"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_law_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:nightshelf_rule_anchors^\u2234^slot:nightshelf_law_core~chopL"
+              ],
+              [
+                "slot:nightshelf_rule_anchors^\u2234^slot:nightshelf_law_core~chopR"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_ideology_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:nightshelf_rule_anchors^\u2234^slot:nightshelf_forbidden_truth~chopR"
+              ],
+              [
+                "The",
+                "Way^\u2234^slot:nightshelf_shadow_gen~chopL"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_memorial_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:nightshelf_memorial_anchor^\u2234^slot:nightshelf_remnant~chopL"
+              ],
+              [
+                "slot:nightshelf_memorial_anchor^\u2234^slot:nightshelf_remnant~chopR"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_social_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "Ritus^\u2234^slot:nightshelf_darkness_source~chopR"
+              ],
+              [
+                "slot:nightshelf_rule_anchors^\u2234^slot:nightshelf_communion_type~chopL"
               ]
             ]
           }
@@ -4044,16 +4521,16 @@
           "rules": {
             "name": [
               [
-                "☽'^slot:nightshelf_magic_part_c",
+                "\u263d'^slot:nightshelf_magic_part_c",
                 "slot:nightshelf_magic_part_a^~",
                 "slot:nightshelf_magic_partb"
               ],
               [
-                "slot:nightshelf_shadow_gen~cap^☽",
+                "slot:nightshelf_shadow_gen~cap^\u263d",
                 "slot:nightshelf_magic_part_c"
               ],
               [
-                "slot:nightshelf_magic_part_c^∴^slot:nightshelf_magic_partb"
+                "slot:nightshelf_magic_part_c^\u2234^slot:nightshelf_magic_partb"
               ]
             ]
           }
@@ -4065,9 +4542,9 @@
           "rules": {
             "name": [
               [
-                "☽The",
+                "\u263dThe",
                 "slot:nightshelf_shadow_gen~cap",
-                "Rite☽"
+                "Rite\u263d"
               ],
               [
                 "Order of the",
@@ -4080,7 +4557,7 @@
                 "Doctrine"
               ],
               [
-                "☽^slot:nightshelf_latin_roots~cap^-^slot:nightshelf_magic_part_a^☽",
+                "\u263d^slot:nightshelf_latin_roots~cap^-^slot:nightshelf_magic_part_a^\u263d",
                 "Arts"
               ],
               [
@@ -4097,16 +4574,16 @@
           "rules": {
             "name": [
               [
-                "☽'^slot:nightshelf_latin_roots^slot:nightshelf_whisper_ends"
+                "\u263d'^slot:nightshelf_latin_roots^slot:nightshelf_whisper_ends"
               ],
               [
                 "slot:nightshelf_shadow_gen~cap^'depths^~"
               ],
               [
-                "domain:nightshelf_domain~cap^☽"
+                "domain:nightshelf_domain~cap^\u263d"
               ],
               [
-                "slot:nightshelf_latin_roots~cap^slot:nightshelf_whisper_ends^☽"
+                "slot:nightshelf_latin_roots~cap^slot:nightshelf_whisper_ends^\u263d"
               ]
             ]
           },
@@ -4123,11 +4600,11 @@
                 "slot:nightshelf_shadow_gen^~"
               ],
               [
-                "☽'^slot:nightshelf_shadow_gen",
+                "\u263d'^slot:nightshelf_shadow_gen",
                 "domain:nightshelf_domain^~"
               ],
               [
-                "slot:nightshelf_shadow_gen^☽",
+                "slot:nightshelf_shadow_gen^\u263d",
                 "domain:nightshelf_domain"
               ]
             ]
@@ -4141,11 +4618,11 @@
           "rules": {
             "name": [
               [
-                "☽'^slot:nightshelf_latin_roots~chopL^'",
+                "\u263d'^slot:nightshelf_latin_roots~chopL^'",
                 "slot:nightshelf_faction_groups"
               ],
               [
-                "slot:nightshelf_faction_groups^∴^slot:nightshelf_shadow_gen~chopR^-bound~"
+                "slot:nightshelf_faction_groups^\u2234^slot:nightshelf_shadow_gen~chopR^-bound~"
               ],
               [
                 "slot:nightshelf_shadow_gen~cap^'",
@@ -4166,14 +4643,14 @@
           "rules": {
             "name": [
               [
-                "☽'^slot:nightshelf_magic_part_a~chopL~lower^'",
+                "\u263d'^slot:nightshelf_magic_part_a~chopL~lower^'",
                 "slot:nightshelf_holiday_types~cap"
               ],
               [
                 "slot:nightshelf_holiday_types~cap^~"
               ],
               [
-                "slot:nightshelf_magic_part_c~cap^∴^slot:nightshelf_holiday_types~chopR~cap"
+                "slot:nightshelf_magic_part_c~cap^\u2234^slot:nightshelf_holiday_types~chopR~cap"
               ],
               [
                 "The",
@@ -4195,11 +4672,11 @@
                 "slot:nightshelf_artifact_nouns"
               ],
               [
-                "slot:nightshelf_artifact_nouns^☽",
+                "slot:nightshelf_artifact_nouns^\u263d",
                 "domain:nightshelf_domain~cap^~"
               ],
               [
-                "☽'^domain:nightshelf_domain~lower^'",
+                "\u263d'^domain:nightshelf_domain~lower^'",
                 "slot:nightshelf_artifact_nouns~cap"
               ]
             ]
@@ -4212,7 +4689,7 @@
           "rules": {
             "name": [
               [
-                "☽'^domain:nightshelf_domain~lower^'",
+                "\u263d'^domain:nightshelf_domain~lower^'",
                 "slot:nightshelf_instrument_nouns~cap"
               ],
               [
@@ -4223,11 +4700,6 @@
                 "The",
                 "slot:nightshelf_shadow_gen^ed^~",
                 "slot:nightshelf_instrument_nouns"
-              ],
-              [
-                "slot:nightshelf_instrument_nouns^☽",
-                "of",
-                "slot:nightshelf_shadow_titles"
               ]
             ]
           }
@@ -4566,7 +5038,7 @@
           "name": "Nightshelf Rules",
           "strategyGroups": [
             {
-              "name": "Holidays",
+              "name": "Social Gatherings",
               "priority": 60,
               "conditions": {
                 "entityKinds": [
@@ -4584,7 +5056,7 @@
                 {
                   "type": "grammar",
                   "weight": 1,
-                  "grammarId": "nightshelf_holidays"
+                  "grammarId": "nightshelf_social_name"
                 }
               ]
             },
@@ -4606,13 +5078,8 @@
               "strategies": [
                 {
                   "type": "grammar",
-                  "weight": 0.6,
-                  "grammarId": "nightshelf_holidays"
-                },
-                {
-                  "type": "grammar",
-                  "weight": 0.4,
-                  "grammarId": "nightshelf_magic"
+                  "weight": 1,
+                  "grammarId": "nightshelf_memorial_name"
                 }
               ]
             },
@@ -4635,7 +5102,7 @@
                 {
                   "type": "grammar",
                   "weight": 1,
-                  "grammarId": "nightshelf_magic"
+                  "grammarId": "nightshelf_ideology_name"
                 }
               ]
             },
@@ -4657,13 +5124,8 @@
               "strategies": [
                 {
                   "type": "grammar",
-                  "weight": 0.85,
-                  "grammarId": "nightshelf_magic"
-                },
-                {
-                  "type": "grammar",
-                  "weight": 0.15,
-                  "grammarId": "nightshelf_rules_regional"
+                  "weight": 1,
+                  "grammarId": "nightshelf_law_name"
                 }
               ]
             },
@@ -5030,7 +5492,7 @@
                 {
                   "type": "grammar",
                   "weight": 1,
-                  "grammarId": "nightshelf_holidays"
+                  "grammarId": "nightshelf_celebration_name"
                 }
               ]
             },
@@ -5052,13 +5514,8 @@
               "strategies": [
                 {
                   "type": "grammar",
-                  "weight": 0.6,
-                  "grammarId": "nightshelf_war_name"
-                },
-                {
-                  "type": "grammar",
-                  "weight": 0.4,
-                  "grammarId": "nightshelf_magic"
+                  "weight": 1,
+                  "grammarId": "nightshelf_succession_name"
                 }
               ]
             }
@@ -5911,16 +6368,71 @@
           "id": "orca_celebration_types",
           "description": "Brutal celebration/feast names for Orca culture",
           "entries": [
-            "blood-feast",
-            "kill-day",
-            "gore-tide",
-            "fang-festival",
-            "hunt-rite",
-            "death-dance",
-            "slaughter-moon",
-            "rend-night",
-            "crush-feast",
-            "bone-day"
+            "Blood-feast",
+            "Kill-day",
+            "Gore-tide",
+            "Fang-festival",
+            "Hunt-rite",
+            "Death-dance",
+            "Slaughter-moon",
+            "Rend-night",
+            "Crush-feast",
+            "Bone-day"
+          ],
+          "source": "manual"
+        },
+        "orca_war_prefix": {
+          "id": "orca_war_prefix",
+          "description": "Attack/violence action prefixes for orca war names",
+          "entries": [
+            "Fang",
+            "Maw",
+            "Rend",
+            "Crush",
+            "Devour",
+            "Gore",
+            "Blood"
+          ],
+          "source": "manual"
+        },
+        "orca_war_suffix": {
+          "id": "orca_war_suffix",
+          "description": "War/conflict result suffixes for orca war names",
+          "entries": [
+            "war",
+            "strike",
+            "fall",
+            "tide",
+            "clash",
+            "storm"
+          ],
+          "source": "manual"
+        },
+        "orca_disaster_prefix": {
+          "id": "orca_disaster_prefix",
+          "description": "Nature/element prefixes for orca disaster names",
+          "entries": [
+            "Depth",
+            "Tide",
+            "Current",
+            "Abyss",
+            "Storm",
+            "Wave",
+            "Deep"
+          ],
+          "source": "manual"
+        },
+        "orca_disaster_suffix": {
+          "id": "orca_disaster_suffix",
+          "description": "Destruction suffixes for orca disaster names",
+          "entries": [
+            "quake",
+            "collapse",
+            "fall",
+            "death",
+            "breach",
+            "fury",
+            "rupture"
           ],
           "source": "manual"
         },
@@ -5975,6 +6487,38 @@
             "Furnace",
             "Spire",
             "Obelisk"
+          ],
+          "source": "manual"
+        },
+        "orca_occurrence_result": {
+          "id": "orca_occurrence_result",
+          "description": "Result/outcome words for occurrence noun chains - what happened",
+          "entries": [
+            "tide",
+            "death",
+            "end",
+            "fall",
+            "rise",
+            "blood",
+            "ruin",
+            "doom",
+            "kill",
+            "storm"
+          ],
+          "source": "manual"
+        },
+        "orca_rule_suffix": {
+          "id": "orca_rule_suffix",
+          "description": "Suffix words for rules - signals this is a law/code",
+          "entries": [
+            "way",
+            "code",
+            "law",
+            "rite",
+            "pact",
+            "oath",
+            "bond",
+            "rule"
           ],
           "source": "manual"
         }
@@ -6263,31 +6807,10 @@
           "rules": {
             "name": [
               [
-                "context:selected~poss",
-                "slot:orca_war_epithets"
+                "slot:orca_war_prefix^-^slot:orca_war_suffix^-^slot:orca_occurrence_result"
               ],
               [
-                "The",
-                "slot:orca_war_epithets",
-                "of",
-                "context:target"
-              ],
-              [
-                "context:selected^-^context:target",
-                "slot:orca_war_epithets"
-              ],
-              [
-                "The",
-                "slot:orca_power_words^-^slot:orca_war_epithets"
-              ],
-              [
-                "slot:orca_war_epithets",
-                "of",
-                "slot:orca_region_names"
-              ],
-              [
-                "slot:orca_power_words^-^slot:orca_power_words",
-                "slot:orca_war_epithets"
+                "slot:orca_war_prefix^-^slot:orca_occurrence_result"
               ]
             ]
           }
@@ -6299,31 +6822,10 @@
           "rules": {
             "name": [
               [
-                "context:target~poss",
-                "slot:orca_disaster_epithets"
+                "slot:orca_disaster_prefix^-^slot:orca_disaster_suffix^-^slot:orca_occurrence_result"
               ],
               [
-                "The",
-                "slot:orca_disaster_epithets",
-                "of",
-                "context:selected"
-              ],
-              [
-                "context:selected^-^slot:orca_disaster_epithets"
-              ],
-              [
-                "The",
-                "slot:orca_region_names",
-                "slot:orca_disaster_epithets"
-              ],
-              [
-                "slot:orca_disaster_epithets",
-                "of",
-                "slot:orca_region_names"
-              ],
-              [
-                "domain:orca_domain_short^'s",
-                "slot:orca_disaster_epithets"
+                "slot:orca_disaster_prefix^-^slot:orca_occurrence_result"
               ]
             ]
           }
@@ -6417,13 +6919,55 @@
           "rules": {
             "name": [
               [
-                "slot:orca_prey_glyph^-^slot:orca_deed_root^-law"
+                "slot:orca_law_words^-of^-^slot:orca_territory_glyph"
               ],
               [
-                "slot:orca_territory_glyph^-code"
+                "slot:orca_law_words^-as^-^slot:orca_territory_glyph"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "orca_social_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:orca_warrior_ranks^-^slot:orca_faction_types^-^slot:orca_rule_suffix"
               ],
               [
-                "slot:orca_deed_root^-^slot:orca_territory_glyph^-pact"
+                "slot:orca_warrior_ranks^-^slot:orca_rule_suffix"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "orca_memorial_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:orca_bloodnames^-^slot:orca_kill_titles^-^slot:orca_rule_suffix"
+              ],
+              [
+                "slot:orca_bloodnames^-^slot:orca_rule_suffix"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "orca_ideology_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:orca_power_words^-^slot:orca_superlatives^-^slot:orca_rule_suffix"
+              ],
+              [
+                "slot:orca_power_words^-^slot:orca_rule_suffix"
               ]
             ]
           }
@@ -6435,16 +6979,25 @@
           "rules": {
             "name": [
               [
-                "The",
-                "slot:orca_celebration_types"
+                "slot:orca_prey_glyph^-^slot:orca_celebration_types^-^slot:orca_occurrence_result"
               ],
               [
-                "slot:orca_prey_glyph^-^slot:orca_deed_root",
-                "slot:orca_celebration_types"
+                "slot:orca_prey_glyph^-^slot:orca_celebration_types"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "orca_succession_name",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:orca_bloodnames^-^slot:orca_warrior_ranks^-^slot:orca_occurrence_result"
               ],
               [
-                "The",
-                "slot:orca_territory_glyph^-feast"
+                "slot:orca_bloodnames^-^slot:orca_occurrence_result"
               ]
             ]
           }
@@ -6831,13 +7384,8 @@
               "strategies": [
                 {
                   "type": "grammar",
-                  "weight": 0.7,
-                  "grammarId": "orca_war_name"
-                },
-                {
-                  "type": "grammar",
-                  "weight": 0.3,
-                  "grammarId": "orca_law"
+                  "weight": 1,
+                  "grammarId": "orca_succession_name"
                 }
               ]
             }
@@ -7130,33 +7678,94 @@
           "name": "Orca Rules",
           "strategyGroups": [
             {
-              "name": "Laws and Traditions",
+              "name": "Social Customs",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": [
+                  "rule"
+                ],
+                "prominence": [],
+                "subtypeMatchAll": false,
+                "tagMatchAll": false,
+                "tags": [],
+                "subtypes": [
+                  "social"
+                ]
+              },
+              "strategies": [
+                {
+                  "grammarId": "orca_social_name",
+                  "type": "grammar",
+                  "weight": 1
+                }
+              ]
+            },
+            {
+              "name": "Memorials",
+              "priority": 55,
+              "conditions": {
+                "entityKinds": [
+                  "rule"
+                ],
+                "prominence": [],
+                "subtypeMatchAll": false,
+                "tagMatchAll": false,
+                "tags": [],
+                "subtypes": [
+                  "memorial"
+                ]
+              },
+              "strategies": [
+                {
+                  "grammarId": "orca_memorial_name",
+                  "type": "grammar",
+                  "weight": 1
+                }
+              ]
+            },
+            {
+              "name": "Ideology",
+              "priority": 55,
+              "conditions": {
+                "entityKinds": [
+                  "rule"
+                ],
+                "prominence": [],
+                "subtypeMatchAll": false,
+                "tagMatchAll": false,
+                "tags": [],
+                "subtypes": [
+                  "ideology"
+                ]
+              },
+              "strategies": [
+                {
+                  "grammarId": "orca_ideology_name",
+                  "type": "grammar",
+                  "weight": 1
+                }
+              ]
+            },
+            {
+              "name": "Laws",
               "priority": 50,
               "conditions": {
                 "entityKinds": [
                   "rule"
                 ],
                 "prominence": [],
-                "subtypes": [],
                 "subtypeMatchAll": false,
+                "tagMatchAll": false,
                 "tags": [],
-                "tagMatchAll": false
+                "subtypes": [
+                  "law"
+                ]
               },
               "strategies": [
                 {
+                  "grammarId": "orca_law",
                   "type": "grammar",
-                  "weight": 0.55,
-                  "grammarId": "orca_law"
-                },
-                {
-                  "type": "phonotactic",
-                  "weight": 0.3,
-                  "domainId": "orca_domain"
-                },
-                {
-                  "type": "grammar",
-                  "weight": 0.15,
-                  "grammarId": "orca_rules_regional"
+                  "weight": 1
                 }
               ]
             },

@@ -5,8 +5,14 @@
  * Displays entity metadata, visual traits, and debug request/response.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { QueueItem, NetworkDebugInfo, DescriptionChainDebug } from '../lib/enrichmentTypes';
+import {
+  buildProminenceScale,
+  DEFAULT_PROMINENCE_DISTRIBUTION,
+  prominenceLabelFromScale,
+  type ProminenceScale,
+} from '@canonry/world-schema';
 
 interface EntityEnrichment {
   text?: {
@@ -44,20 +50,12 @@ interface Entity {
   enrichment?: EntityEnrichment;
 }
 
-// Convert numeric prominence to display label
-function prominenceLabel(value: number): string {
-  if (value < 1) return 'forgotten';
-  if (value < 2) return 'marginal';
-  if (value < 3) return 'recognized';
-  if (value < 4) return 'renowned';
-  return 'mythic';
-}
-
 interface EntityDetailsModalProps {
   isOpen: boolean;
   entity: Entity | null;
   queue: QueueItem[];
   onClose: () => void;
+  prominenceScale?: ProminenceScale;
 }
 
 function formatDate(timestamp: number | undefined): string {
@@ -240,9 +238,26 @@ export default function EntityDetailsModal({
   isOpen,
   entity,
   queue,
-  onClose
+  onClose,
+  prominenceScale
 }: EntityDetailsModalProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e: React.MouseEvent) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  const effectiveProminenceScale = useMemo(() => {
+    if (prominenceScale) return prominenceScale;
+    return buildProminenceScale([], { distribution: DEFAULT_PROMINENCE_DISTRIBUTION });
+  }, [prominenceScale]);
 
   // Get debug info - prefer chain debug, fall back to legacy debug or queue
   const enrichment = entity?.enrichment;
@@ -299,7 +314,8 @@ export default function EntityDetailsModal({
         flexDirection: 'column',
         zIndex: 9999,
       }}
-      onClick={onClose}
+      onMouseDown={handleOverlayMouseDown}
+      onClick={handleOverlayClick}
     >
       {/* Header */}
       <div
@@ -320,7 +336,7 @@ export default function EntityDetailsModal({
         <div>
           <h3 style={{ margin: 0, color: 'white', fontSize: '18px' }}>{entity.name}</h3>
           <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px' }}>
-            {entity.kind}/{entity.subtype} · {prominenceLabel(entity.prominence)}
+            {entity.kind}/{entity.subtype} · {prominenceLabelFromScale(entity.prominence, effectiveProminenceScale)}
             {entity.culture && ` · ${entity.culture}`}
           </div>
         </div>

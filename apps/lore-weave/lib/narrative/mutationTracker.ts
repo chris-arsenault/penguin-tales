@@ -201,13 +201,18 @@ export class MutationTracker {
 
   /**
    * Enter an execution context. Pushes onto the context stack.
+   * @param source - The execution source type
+   * @param sourceId - The source identifier
+   * @param success - For actions: whether the action succeeded
+   * @param narration - Optional in-world narrative description
    */
-  enterContext(source: ExecutionSource, sourceId: string, success?: boolean): void {
+  enterContext(source: ExecutionSource, sourceId: string, success?: boolean, narration?: string): void {
     this.contextStack.push({
       tick: this.currentTick,
       source,
       sourceId,
       success,
+      narration,
     });
   }
 

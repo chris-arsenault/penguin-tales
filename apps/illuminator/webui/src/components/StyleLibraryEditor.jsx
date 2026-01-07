@@ -9,7 +9,8 @@
  * - Reset to defaults
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { LocalTextArea } from '@penguin-tales/shared-components';
 
 /**
  * Generate a unique ID for a new style
@@ -71,6 +72,17 @@ function StyleEditModal({ style, type, onSave, onCancel }) {
     promptFragment: style?.promptFragment || '',
     keywords: style?.keywords?.join(', ') || '',
   });
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onCancel();
+    }
+  };
 
   const isNew = !style?.id;
 
@@ -101,8 +113,8 @@ function StyleEditModal({ style, type, onSave, onCancel }) {
   const isValid = formData.name.trim() && formData.promptFragment.trim();
 
   return (
-    <div className="illuminator-modal-overlay" onClick={onCancel}>
-      <div className="illuminator-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="illuminator-modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+      <div className="illuminator-modal">
         <div className="illuminator-modal-header">
           <h3>{isNew ? 'Add' : 'Edit'} {type === 'artistic' ? 'Artistic' : 'Composition'} Style</h3>
           <button onClick={onCancel} className="illuminator-modal-close">&times;</button>
@@ -134,9 +146,9 @@ function StyleEditModal({ style, type, onSave, onCancel }) {
 
           <div className="illuminator-form-group">
             <label className="illuminator-label">Prompt Fragment *</label>
-            <textarea
+            <LocalTextArea
               value={formData.promptFragment}
-              onChange={(e) => handleChange('promptFragment', e.target.value)}
+              onChange={(value) => handleChange('promptFragment', value)}
               className="illuminator-textarea"
               rows={3}
               placeholder="e.g., oil painting style, rich textures, visible brushstrokes"
@@ -291,11 +303,22 @@ function NarrativeStyleCard({ style, onEdit, onDelete }) {
  * Modal for viewing/editing a document-format narrative style (read-only for now)
  */
 function DocumentStyleViewModal({ style, onCancel }) {
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onCancel();
+    }
+  };
+
   return (
-    <div className="illuminator-modal-overlay" onClick={onCancel}>
+    <div className="illuminator-modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
       <div
         className="illuminator-modal"
-        onClick={(e) => e.stopPropagation()}
         style={{ maxWidth: '700px', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
       >
         <div className="illuminator-modal-header">
@@ -417,6 +440,17 @@ function DocumentStyleViewModal({ style, onCancel }) {
  */
 function NarrativeStyleEditModal({ style, onSave, onCancel }) {
   const isNew = !style?.id;
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onCancel();
+    }
+  };
 
   // If this is a document format, show view-only modal
   if (style?.format === 'document') {
@@ -527,10 +561,9 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
   };
 
   return (
-    <div className="illuminator-modal-overlay" onClick={onCancel}>
+    <div className="illuminator-modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
       <div
         className="illuminator-modal"
-        onClick={(e) => e.stopPropagation()}
         style={{ maxWidth: '800px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
       >
         <div className="illuminator-modal-header">
@@ -578,9 +611,9 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
                 </div>
                 <div className="illuminator-form-group">
                   <label className="illuminator-label">Description</label>
-                  <textarea
+                  <LocalTextArea
                     value={formData.description}
-                    onChange={(e) => handleChange('description', e.target.value)}
+                    onChange={(value) => handleChange('description', value)}
                     className="illuminator-textarea"
                     rows={2}
                     placeholder="Brief description of this narrative style"
@@ -657,9 +690,9 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
               <>
                 <div className="illuminator-form-group">
                   <label className="illuminator-label">Narrative Instructions *</label>
-                  <textarea
+                  <LocalTextArea
                     value={formData.narrativeInstructions}
-                    onChange={(e) => handleChange('narrativeInstructions', e.target.value)}
+                    onChange={(value) => handleChange('narrativeInstructions', value)}
                     className="illuminator-textarea"
                     rows={12}
                     placeholder={`Describe the narrative structure for this style. Include:
@@ -686,9 +719,9 @@ Scene Types:
                 </div>
                 <div className="illuminator-form-group">
                   <label className="illuminator-label">Event Instructions</label>
-                  <textarea
+                  <LocalTextArea
                     value={formData.eventInstructions}
-                    onChange={(e) => handleChange('eventInstructions', e.target.value)}
+                    onChange={(value) => handleChange('eventInstructions', value)}
                     className="illuminator-textarea"
                     rows={3}
                     placeholder="How to incorporate events from the world data into the narrative. E.g., 'Use events as dramatic turning points. Higher significance events should be climactic moments...'"
@@ -705,9 +738,9 @@ Scene Types:
               <>
                 <div className="illuminator-form-group">
                   <label className="illuminator-label">Prose Instructions *</label>
-                  <textarea
+                  <LocalTextArea
                     value={formData.proseInstructions}
-                    onChange={(e) => handleChange('proseInstructions', e.target.value)}
+                    onChange={(value) => handleChange('proseInstructions', value)}
                     className="illuminator-textarea"
                     rows={12}
                     placeholder={`Describe the prose style for this narrative. Include:

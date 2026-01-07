@@ -2,6 +2,7 @@
   {
     "id": "hero_emergence",
     "name": "Hero Emergence",
+    "narrationTemplate": "{$hero.name} emerged in {$target.name} under the guidance of {$mentor.name|a seasoned mentor}, mastering {$ability.name|newfound power} and gaining {$companion.name|a loyal ally} as companion. {$colonyFaction.name|The local faction} backed the hero, who carried {$heroWeapon.name|a trusted weapon} into service.",
     "applicability": [
       {
         "type": "or",
@@ -260,6 +261,7 @@
   {
     "id": "leadership_succession",
     "name": "Leadership Succession",
+    "narrationTemplate": "{$successor.name} succeeded {$target.name} as leader of {$colony.name}, with {$aide.name} serving as aide while {$faction.name|the ruling faction} consolidated power under the new administration.",
     "applicability": [
       {
         "type": "entity_count",
@@ -306,7 +308,7 @@
           "template": "Successor to {predecessorName} in {colonyName}",
           "replacements": {
             "predecessorName": "$target.name",
-            "colonyName": "$colony.name"
+            "colonyName": "$colony.name|the colony"
           }
         },
         "tags": {
@@ -332,7 +334,7 @@
         "description": {
           "template": "A minor official serving the leadership in {colonyName}",
           "replacements": {
-            "colonyName": "$colony.name"
+            "colonyName": "$colony.name|the colony"
           }
         },
         "tags": {
@@ -439,6 +441,7 @@
   {
     "id": "orca_raider_arrival",
     "name": "Orca Raider Arrival",
+    "narrationTemplate": "Orca raiders {$orca1.name} and {$orca2.name} arrived near {$target.name} as descendants of {$parentOrca.name|the old pod}, wielding {$warLeaderWeapon.name|brutal strength} against {$defender.name|the defenders}. {$colonyFaction.name|The colony} countered with {$combatAbility.name|desperate tactics}.",
     "applicability": [
       {
         "type": "entity_count",
@@ -672,7 +675,6 @@
             "hero",
             "mayor"
           ],
-          "status": "alive",
           "pickStrategy": "random"
         }
       },
@@ -742,6 +744,7 @@
   {
     "id": "orca_war_ritual",
     "name": "Orca War Ritual",
+    "narrationTemplate": "{$target.name} performed {$ritual.name}, awakening {$battlePower.name} for the coming battle.",
     "applicability": [
       {
         "type": "era_match",
@@ -849,6 +852,7 @@
   {
     "id": "orca_organized_offensive",
     "name": "Orca Organized Offensive",
+    "narrationTemplate": "{$warLeader.name|An orca war-leader} organized {$offensive.name} against {$target.name}.",
     "applicability": [
       {
         "type": "era_match",
@@ -972,14 +976,9 @@
             "orca"
           ],
           "status": "alive",
-          "pickStrategy": "random",
-          "filters": [
-            {
-              "type": "has_tag",
-              "tag": "war_leader"
-            }
-          ]
-        }
+          "pickStrategy": "random"
+        },
+        "required": false
       }
     },
     "enabled": true
@@ -987,6 +986,7 @@
   {
     "id": "faction_splinter",
     "name": "Faction Splinter",
+    "narrationTemplate": "{$splinter.name} splintered from {$target.name} at {$location.name}, led by {$defector.name|a defector} who drew {$recruit1.name} and {$recruit2.name} away from {$members.name|the parent faction}. {$contestedRelic.name|Disputed claims} became the rallying point for the breakaway.",
     "applicability": [
       {
         "type": "entity_count",
@@ -1349,6 +1349,7 @@
   {
     "id": "guild_establishment",
     "name": "Guild Establishment",
+    "narrationTemplate": "{$guild.name} formed in {$target.name} with founding members {$trader1.name} and {$trader2.name}, establishing {$tradeHub.name} as their commercial base for {$tradeGoods.name|valuable goods}. Their operations are governed by {$charter.name}, authenticated by {$guildSeal.name|the guild's authority}.",
     "applicability": [
       {
         "type": "pressure",
@@ -1743,6 +1744,7 @@
   {
     "id": "cult_formation",
     "name": "Cult Formation",
+    "narrationTemplate": "{$cult.name} formed near {$target.name} under {$cultist.name|a prophet}, drawing adherents {$acolyte1.name} and {$acolyte2.name} to the teachings of {$doctrine.name|a new doctrine} rooted in {$existingIdeology.name} and the practice of {$magic.name}. {$sacredRelic.name|A sacred object} replaced {$existingRelic.name|older totems} as their holy focus.",
     "applicability": [
       {
         "type": "pressure",
@@ -2211,6 +2213,7 @@
   {
     "id": "dark_ritual",
     "name": "Dark Ritual",
+    "narrationTemplate": "{$target.name} performed {$ritual.name} at {$location.name|a sacred site}. Dark energy rippled through {$adjacentLocations.name|the surrounding waters}.",
     "applicability": [
       {
         "type": "pressure",
@@ -2246,7 +2249,7 @@
           "template": "A dark ritual performed by {cultName} at {locationName}, breaking the sanctity of cleansed ground",
           "replacements": {
             "cultName": "$target.name",
-            "locationName": "$location.name"
+            "locationName": "$location.name|a sacred site"
           }
         },
         "tags": {
@@ -2378,6 +2381,7 @@
   {
     "id": "colony_founding",
     "name": "Colony Founding",
+    "narrationTemplate": "{$founder.name} founded {$colony.name} from settlers of {$target.name}, establishing {$outpost.name} as the first structure under the governance of {$council.name}. {$settler.name} joined as an early pioneer.",
     "applicability": [
       {
         "type": "pressure",
@@ -2657,6 +2661,7 @@
   {
     "id": "location_discovery",
     "name": " Location Discovery",
+    "narrationTemplate": "{$target.name} discovered {$location.name|a hidden place} near {$nearbyLocation.name|familiar waters}. {$ancientRelic.name} was found within.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -2911,6 +2916,7 @@
   {
     "id": "krill_bloom_discovery",
     "name": "Krill Bloom Discovery",
+    "narrationTemplate": "{$bloom.name} discovered near {$target.name}. {$company.name|Harvesters} formed to exploit it using {$harvestTechnique.name}, backed by {$sponsor.name|local interests}.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -3107,6 +3113,7 @@
   {
     "id": "thermal_vent_discovery",
     "name": "Thermal Vent Discovery",
+    "narrationTemplate": "{$vent.name} discovered near {$target.name}, creating {$anomaly.name}. {$hermit.name} established residence nearby.",
     "applicability": [
       {
         "type": "pressure",
@@ -3267,6 +3274,7 @@
   {
     "id": "war_outbreak",
     "name": "War Outbreak",
+    "narrationTemplate": "After discovering {$warWeapon.name|an ancient relic},  {$target.name} ignited {$war.name} between  themselves, and {$enemy.name} at {$warzone.name|contested waters}. Their expertise in {$battle_style.name|brutal warfare} led them to dominate opposition, until the conflagration drew in {$enemy2.name|allied factions} and {$enemy3.name|others}. ",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -3602,6 +3610,7 @@
   {
     "id": "apocalyptic_war_resolution",
     "name": "Apocalyptic War Resolution",
+    "narrationTemplate": "{$faction1.name} and {$faction2.name|others} joined together to cast {$cataclysm.name}, ending {$target.name}.  They sacrificed their lives and caused chaos at {$warzone.name|the surroundings}, but finally destroyed {$orca.name|the orca forces}.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -3736,6 +3745,12 @@
         "type": "change_status",
         "entity": "$faction1",
         "newStatus": "historical"
+      },
+      {
+        "type": "set_tag",
+        "entity": "$warzone",
+        "tag": "chaotic",
+        "value": true
       }
     ],
     "variables": {
@@ -3795,6 +3810,7 @@
   {
     "id": "succession_crisis",
     "name": "Succession Crisis",
+    "narrationTemplate": "{$crisis.name} erupted in {$target.name} near {$crisisSite.name|the seat of power}.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -3918,6 +3934,7 @@
   {
     "id": "legend_crystallization",
     "name": "Legend Crystallization",
+    "narrationTemplate": "{$memorial.name|A memorial} for {$target.name} is erected at {$location.name|their final stand}.  {$legendaryWeapon.name|Their weapon} became a relic of their glory.",
     "applicability": [
       {
         "type": "entity_count",
@@ -3933,6 +3950,12 @@
         "hero"
       ],
       "status": "historical",
+      "filters": [
+        {
+          "type": "lacks_tag",
+          "tag": "legendary"
+        }
+      ],
       "pickStrategy": "random"
     },
     "creation": [
@@ -4047,11 +4070,6 @@
         "entity": "$target",
         "tag": "legendary",
         "value": true
-      },
-      {
-        "type": "change_status",
-        "entity": "$target",
-        "newStatus": "fictional"
       }
     ],
     "variables": {
@@ -4092,6 +4110,7 @@
   {
     "id": "crisis_legislation",
     "name": "Crisis Legislation",
+    "narrationTemplate": "{$rule.name} enacted in {$target.name} in response to {$mainThreat.name}, replacing {$existingRule.name|old customs}.",
     "applicability": [
       {
         "type": "or",
@@ -4236,6 +4255,7 @@
   {
     "id": "great_festival",
     "name": "Great Festival",
+    "narrationTemplate": "{$festival.name} brought {$faction1.name} and {$faction2.name} together in {$target.name}, announced by {$herald.name} and centered on the display of {$featuredArtifact.name|ceremonial treasures}.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -4494,6 +4514,7 @@
   {
     "id": "tech_breakthrough",
     "name": "Tech Breakthrough",
+    "narrationTemplate": "{$target.name} researched {$tech.name} at a lab in {$location.name|the frozen depths} under the direction of {$leader.name|a researcher}, building on {$parentTech.name|prior knowledge}.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -4521,7 +4542,7 @@
           "template": "A technological breakthrough developed by {factionName} at {locationName}",
           "replacements": {
             "factionName": "$target.name",
-            "locationName": "$location.name"
+            "locationName": "$location.name|their research facility"
           }
         },
         "tags": {
@@ -4624,6 +4645,7 @@
   {
     "id": "orca_combat_technique",
     "name": "Orca Combat Technique",
+    "narrationTemplate": "{$technique.name} developed by {$target.name} in combat alongside {$otherOrca.name|fellow warriors}, refining {$parentTechnique.name|existing methods}.",
     "applicability": [
       {
         "type": "entity_count",
@@ -4764,6 +4786,7 @@
   {
     "id": "magic_discovery",
     "name": "Magic Discovery",
+    "narrationTemplate": "{$empoweredArtifact.name|A conduit}  was discovered by {$target.name} near {$anomaly.name|a place of power}. It radiated {$magic.name}, a new form of {$parentMagic.name|ancient lore}.",
     "applicability": [
       {
         "type": "entity_count",
@@ -4964,6 +4987,7 @@
   {
     "id": "ideology_emergence",
     "name": "Ideology Emergence",
+    "narrationTemplate": "{$ideology.name} emerged from {$target.name} at {$championLocation.name|a gathering place}, championed by {$championFaction.name|followers} and spread by {$factionMember1.name|disciples} who built on {$existingIdeology.name|old beliefs}. {$existingArtifact.name|A relic} became the symbol of this movement.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -5191,6 +5215,7 @@
   {
     "id": "thermal_colony_decline",
     "name": "Thermal Colony Decline",
+    "narrationTemplate": "{$target.name} entered decline due to {$thermal_disaster.name}.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -5295,6 +5320,7 @@
   {
     "id": "thermal_colony_recovery",
     "name": "Thermal Colony Recovery",
+    "narrationTemplate": "{$target.name} began recovery as {$recovery.name} marked the turning point.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -5389,6 +5415,7 @@
   {
     "id": "thermal_migration",
     "name": "Thermal Migration",
+    "narrationTemplate": "{$migrant.name} fled {$target.name} for {$refuge.name}, establishing {$camp.name} along the way.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -5560,6 +5587,7 @@
   {
     "id": "ice_memory_thaw",
     "name": "Ice Memory Thaw",
+    "narrationTemplate": "{$memory.name} emerged from {$target.name}, reviving {$frozen_ability.name|ancient powers}. {$ancientTome.name} now holds this recovered knowledge.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -5723,6 +5751,7 @@
   {
     "id": "economic_colony_decline",
     "name": "Economic Colony Decline",
+    "narrationTemplate": "{$target.name} fell into economic decline. {$economic_crisis.name} disrupted trade and resources throughout the colony.",
     "applicability": [
       {
         "type": "pressure",
@@ -5824,6 +5853,7 @@
   {
     "id": "economic_colony_recovery",
     "name": "Economic Colony Recovery",
+    "narrationTemplate": "{$target.name} began economic recovery. {$revival.name} restored trade and brought renewed prosperity to the colony.",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
@@ -5916,6 +5946,7 @@
   {
     "id": "wild_magical_discovery",
     "name": "Wild Magical Discovery",
+    "narrationTemplate": "{$discoverer.name|A wanderer} discovered {$magic.name} manifesting at {$target.name} and claimed it for their own.",
     "applicability": [
       {
         "type": "pressure",
@@ -5980,7 +6011,7 @@
           "template": "Wild magic manifesting at {locationName}, discovered by {discovererName}",
           "replacements": {
             "locationName": "$target.name",
-            "discovererName": "$discoverer.name"
+            "discovererName": "$discoverer.name|unknown hands"
           }
         },
         "tags": {
@@ -6045,6 +6076,7 @@
   {
     "id": "artifact_crafting",
     "name": "Artifact Crafting",
+    "narrationTemplate": "{$target.name} crafted {$artifact.name} at {$location.name|their workshop}, channeling {$ability.name|their skills} into its creation.",
     "applicability": [
       {
         "type": "entity_count",
@@ -6193,6 +6225,7 @@
   {
     "id": "artifact_discovery",
     "name": "Artifact Discovery",
+    "narrationTemplate": "{$discoverer.name|A traveler} discovered {$artifact.name} hidden at {$target.name} and claimed it for their own.",
     "applicability": [
       {
         "type": "entity_count",
@@ -6305,6 +6338,7 @@
   {
     "id": "crystallized_power",
     "name": "Crystallized Power",
+    "narrationTemplate": "{$event.name} caused raw power to accumulate at {$target.name}, finally crystallizing into {$artifact.name}. ",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",

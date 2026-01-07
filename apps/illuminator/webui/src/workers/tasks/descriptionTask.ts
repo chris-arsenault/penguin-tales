@@ -122,7 +122,9 @@ ${hintBlock}WORLD DATA:
 TASK DATA:
 - Output: JSON with summary, description, aliases
 
-Write personality over plot. One [strong] relationship anchors the narrative.`;
+Write personality over plot. One [strong] relationship anchors the narrative.
+
+USING EVENTS: Notable events are SOURCE MATERIAL, not a checklist. Pick 1-2 evocative moments to weave deeply into the description. Leave most events implied or unmentioned. The description is a narrative impression, not a timeline.`;
 }
 
 /**

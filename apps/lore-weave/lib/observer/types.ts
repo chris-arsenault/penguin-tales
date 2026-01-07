@@ -231,6 +231,8 @@ export interface ActionApplicationPayload {
     successChance: number;
     prominenceMultiplier: number;
     description: string;
+    /** Domain-controlled narration from narrationTemplate */
+    narration?: string;
     relationshipsCreated: Array<{
       kind: string;
       srcId: string;

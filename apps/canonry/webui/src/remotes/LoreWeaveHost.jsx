@@ -56,6 +56,7 @@ export default function LoreWeaveHost({
   onSimulationResultsChange,
   simulationState,
   onSimulationStateChange,
+  onSearchRunScored,
 }) {
   return (
     <div style={styles.container}>
@@ -78,6 +79,7 @@ export default function LoreWeaveHost({
           onSimulationResultsChange={onSimulationResultsChange}
           simulationState={simulationState}
           onSimulationStateChange={onSimulationStateChange}
+          onSearchRunScored={onSearchRunScored}
         />
       </Suspense>
     </div>

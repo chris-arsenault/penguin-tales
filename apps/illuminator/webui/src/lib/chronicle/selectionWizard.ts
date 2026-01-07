@@ -956,6 +956,80 @@ export function getRelevantEvents(
 }
 
 // =============================================================================
+// Event Quality Filtering
+// =============================================================================
+
+export interface ChronicleEventFilterOptions {
+  /** Minimum significance threshold (0, 0.25, 0.50, 0.75) */
+  minSignificance?: number;
+  /** Whether to exclude prominence-only events (default: true) */
+  excludeProminenceOnly?: boolean;
+}
+
+/**
+ * Check if an event is prominence-only based on its stateChanges.
+ * An event is "prominence-only" if ALL of its state changes are
+ * field === 'prominence' changes. These events are typically noise
+ * (gradual prominence shifts) rather than narratively interesting.
+ */
+export function isProminenceOnlyChronicleEvent(
+  event: NarrativeEventContext,
+  assignedEntityIds: Set<string>
+): boolean {
+  // Events with no stateChanges are NOT prominence-only (they might be actions, relationships, etc.)
+  if (!event.stateChanges || event.stateChanges.length === 0) {
+    return false;
+  }
+
+  // Only consider stateChanges for assigned entities
+  const relevantChanges = event.stateChanges.filter(
+    sc => assignedEntityIds.has(sc.entityId)
+  );
+
+  // If no relevant changes, not prominence-only
+  if (relevantChanges.length === 0) {
+    return false;
+  }
+
+  // Check if ALL relevant changes are prominence changes
+  return relevantChanges.every(sc => sc.field === 'prominence');
+}
+
+/**
+ * Filter chronicle events by quality criteria.
+ * Applies significance threshold and prominence-only exclusion.
+ *
+ * @param events - Events to filter (typically from getRelevantEvents)
+ * @param assignedEntityIds - Set of assigned entity IDs for prominence check
+ * @param options - Filter options
+ * @returns Filtered events
+ */
+export function filterChronicleEvents(
+  events: NarrativeEventContext[],
+  assignedEntityIds: Set<string>,
+  options: ChronicleEventFilterOptions = {}
+): NarrativeEventContext[] {
+  const {
+    minSignificance = 0,
+    excludeProminenceOnly = true,
+  } = options;
+
+  return events.filter(event => {
+    // Filter by significance threshold
+    if (event.significance < minSignificance) {
+      return false;
+    }
+
+    // Exclude prominence-only events if configured
+    if (excludeProminenceOnly && isProminenceOnlyChronicleEvent(event, assignedEntityIds)) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+// =============================================================================
 // Wizard Selection Context Builder
 // =============================================================================
 

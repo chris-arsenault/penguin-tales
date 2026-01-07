@@ -293,6 +293,8 @@ export default function App() {
   const isLoadingSlotRef = useRef(false);
   // Track the last saved simulation results object to detect new simulations
   const lastSavedResultsRef = useRef(null);
+  const bestRunScoreRef = useRef(-Infinity);
+  const bestRunSaveQueueRef = useRef(Promise.resolve());
   const activeSection = activeTab ? (activeSectionByTab?.[activeTab] ?? null) : null;
 
   const setActiveSection = useCallback((section) => {
@@ -330,6 +332,11 @@ export default function App() {
       helpModalOpen,
     });
   }, [activeTab, activeSection, activeSectionByTab, showHome, helpModalOpen]);
+
+  useEffect(() => {
+    const score = slots[1]?.runScore;
+    bestRunScoreRef.current = typeof score === 'number' ? score : -Infinity;
+  }, [slots]);
 
   const {
     projects,
@@ -586,6 +593,47 @@ export default function App() {
       cancelled = true;
     };
   }, [currentProject?.id, simulationResults, simulationState]);
+
+  const handleSearchRunScored = useCallback((payload = {}) => {
+    const {
+      runScore,
+      runScoreMax,
+      simulationResults: scoredResults,
+      simulationState: scoredState,
+      runScoreDetails
+    } = payload;
+    if (!currentProject?.id) return Promise.resolve();
+    if (!scoredResults || !Number.isFinite(runScore)) return Promise.resolve();
+    if (runScore <= bestRunScoreRef.current) return Promise.resolve();
+
+    bestRunScoreRef.current = runScore;
+
+    const saveTask = async () => {
+      if (runScore < bestRunScoreRef.current) return;
+      const now = Date.now();
+      const scoreLabel = Number.isFinite(runScoreMax)
+        ? `${runScore}/${runScoreMax}`
+        : `${runScore}`;
+      const slotData = {
+        simulationResults: scoredResults,
+        simulationState: scoredState,
+        worldData: scoredResults,
+        title: `Best Run - Score ${scoreLabel}`,
+        createdAt: now,
+        savedAt: now,
+        runScore,
+        runScoreMax,
+        runScoreDetails,
+      };
+
+      await saveSlot(currentProject.id, 1, slotData);
+      setSlots((prev) => ({ ...prev, 1: slotData }));
+    };
+
+    const queued = bestRunSaveQueueRef.current.then(saveTask);
+    bestRunSaveQueueRef.current = queued.catch(() => {});
+    return queued;
+  }, [currentProject?.id]);
 
   // Persist world data when it changes (for Archivist/Illuminator)
   useEffect(() => {
@@ -1345,6 +1393,7 @@ export default function App() {
                 onSimulationResultsChange={setSimulationResults}
                 simulationState={simulationState}
                 onSimulationStateChange={setSimulationState}
+                onSearchRunScored={handleSearchRunScored}
               />
             </div>
             <div style={{ display: activeTab === 'illuminator' ? 'contents' : 'none' }}>

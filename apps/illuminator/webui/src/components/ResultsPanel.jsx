@@ -10,18 +10,11 @@
  */
 
 import { useState, useMemo } from 'react';
-
-// Convert numeric prominence to display label
-function prominenceLabel(value) {
-  if (typeof value !== 'number') {
-    throw new Error(`prominenceLabel: expected number, got ${typeof value}: ${JSON.stringify(value)}`);
-  }
-  if (value < 1) return 'forgotten';
-  if (value < 2) return 'marginal';
-  if (value < 3) return 'recognized';
-  if (value < 4) return 'renowned';
-  return 'mythic';
-}
+import {
+  buildProminenceScale,
+  DEFAULT_PROMINENCE_DISTRIBUTION,
+  prominenceLabelFromScale,
+} from '@canonry/world-schema';
 
 function EntityResultCard({
   entity,
@@ -30,6 +23,7 @@ function EntityResultCard({
   onToggleSelect,
   onRegenerate,
   onPreviewImage,
+  prominenceScale,
 }) {
   const descriptionTask = tasks.find((t) => t.type === 'description' && t.status === 'complete');
   const imageTask = tasks.find((t) => t.type === 'image' && t.status === 'complete');
@@ -70,7 +64,7 @@ function EntityResultCard({
       <div className="illuminator-entity-details">
         <div className="illuminator-entity-name">{entity.name}</div>
         <div className="illuminator-entity-kind">
-          {entity.kind}/{entity.subtype} - {prominenceLabel(entity.prominence)}
+          {entity.kind}/{entity.subtype} - {prominenceLabelFromScale(entity.prominence, prominenceScale)}
         </div>
         {(descriptionTask?.result?.summary || descriptionTask?.result?.description) && (
           <div className="illuminator-entity-description">
@@ -182,6 +176,12 @@ export default function ResultsPanel({
   const [selectedEntities, setSelectedEntities] = useState(new Set());
   const [previewImage, setPreviewImage] = useState(null);
   const [filterType, setFilterType] = useState('all');
+  const effectiveProminenceScale = useMemo(() => {
+    const values = (worldData?.hardState || [])
+      .map((entity) => entity.prominence)
+      .filter((value) => typeof value === 'number' && Number.isFinite(value));
+    return buildProminenceScale(values, { distribution: DEFAULT_PROMINENCE_DISTRIBUTION });
+  }, [worldData]);
 
   // Get entities with completed tasks
   const enrichedEntities = useMemo(() => {
@@ -312,6 +312,7 @@ export default function ResultsPanel({
                   onToggleSelect={() => toggleSelect(entity.id)}
                   onRegenerate={onRegenerateTask}
                   onPreviewImage={setPreviewImage}
+                  prominenceScale={effectiveProminenceScale}
                 />
               ))}
             </div>

@@ -2,7 +2,7 @@
  * FactorEditorModal - Modal for editing feedback factors
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { FACTOR_TYPES } from '../constants';
 import { ReferenceDropdown, ChipSelect, NumberInput } from '../../shared';
 import TagSelector from '@penguin-tales/shared-components/TagSelector';
@@ -83,6 +83,18 @@ export function FactorEditorModal({
     onClose();
   };
 
+  const mouseDownOnOverlay = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (mouseDownOnOverlay.current && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   const typeConfig = FACTOR_TYPES[selectedType];
@@ -139,8 +151,8 @@ export function FactorEditorModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+      <div className="modal">
         <div className="modal-header">
           <div className="modal-title">
             <span>{typeConfig?.icon}</span>

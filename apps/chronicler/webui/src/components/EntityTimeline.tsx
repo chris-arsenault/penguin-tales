@@ -8,6 +8,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import type { NarrativeEvent, EntityEffect } from '@canonry/world-schema';
 import type { HardState } from '../types/world.ts';
+import { linkifyText } from '../lib/entityLinking.ts';
 
 const colors = {
   bgPrimary: '#0a1929',
@@ -25,7 +26,42 @@ const colors = {
   effectRelationship: '#60a5fa', // blue
   effectTag: '#a78bfa',          // purple
   effectField: '#fbbf24',        // yellow
+  // Weight tier colors (subtle variations)
+  weightHigh: '#f0f4ff',         // bright white-blue
+  weightMidHigh: '#c8d6f0',      // light blue-gray
+  weightMidLow: '#a0b0c8',       // muted blue-gray
+  weightLow: '#788898',          // dim gray
 };
+
+type WeightTier = 'high' | 'mid-high' | 'mid-low' | 'low';
+
+/**
+ * Determine weight tier from significance score (0-1)
+ * >0.75: high, 0.50-0.75: mid-high, 0.25-0.50: mid-low, <0.25: low
+ */
+function getWeightTier(significance: number): WeightTier {
+  if (significance > 0.75) return 'high';
+  if (significance > 0.50) return 'mid-high';
+  if (significance > 0.25) return 'mid-low';
+  return 'low';
+}
+
+/**
+ * Get style adjustments based on weight tier
+ * Uses only color to indicate importance
+ */
+function getWeightStyle(tier: WeightTier): React.CSSProperties {
+  switch (tier) {
+    case 'high':
+      return { color: colors.weightHigh };
+    case 'mid-high':
+      return { color: colors.weightMidHigh };
+    case 'mid-low':
+      return { color: colors.weightMidLow };
+    case 'low':
+      return { color: colors.weightLow };
+  }
+}
 
 const styles = {
   container: {
@@ -182,78 +218,13 @@ function getEffectStyle(type: EntityEffect['type']): { icon: string; color: stri
   }
 }
 
-/**
- * Process effect description to add wiki links for entity names
- */
-function linkifyDescription(
-  description: string,
-  entityIndex: Map<string, HardState>,
-  onNavigate: (entityId: string) => void
-): React.ReactNode {
-  // Find entity names in the description and wrap them in links
-  // This is a simple approach - find names that exist in entityIndex
-  const entityNames = Array.from(entityIndex.values())
-    .map(e => ({ name: e.name, id: e.id }))
-    .sort((a, b) => b.name.length - a.name.length); // Longer names first
-
-  let result: React.ReactNode[] = [description];
-
-  for (const { name, id } of entityNames) {
-    const newResult: React.ReactNode[] = [];
-    for (const part of result) {
-      if (typeof part !== 'string') {
-        newResult.push(part);
-        continue;
-      }
-
-      const regex = new RegExp(`\\b${escapeRegex(name)}\\b`, 'gi');
-      let lastIndex = 0;
-      let match: RegExpExecArray | null;
-
-      const segments: React.ReactNode[] = [];
-      while ((match = regex.exec(part)) !== null) {
-        if (match.index > lastIndex) {
-          segments.push(part.slice(lastIndex, match.index));
-        }
-        segments.push(
-          <span
-            key={`${id}-${match.index}`}
-            style={styles.entityLink}
-            onClick={(e) => {
-              e.stopPropagation();
-              onNavigate(id);
-            }}
-          >
-            {match[0]}
-          </span>
-        );
-        lastIndex = regex.lastIndex;
-      }
-
-      if (segments.length > 0) {
-        if (lastIndex < part.length) {
-          segments.push(part.slice(lastIndex));
-        }
-        newResult.push(...segments);
-      } else {
-        newResult.push(part);
-      }
-    }
-    result = newResult;
-  }
-
-  return <>{result}</>;
-}
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 interface EntityTimelineProps {
   events: NarrativeEvent[];
   entityId: string;
   entityIndex: Map<string, HardState>;
   onNavigate: (entityId: string) => void;
+  onHoverEnter?: (entityId: string, e: React.MouseEvent) => void;
+  onHoverLeave?: () => void;
 }
 
 export default function EntityTimeline({
@@ -261,6 +232,8 @@ export default function EntityTimeline({
   entityId,
   entityIndex,
   onNavigate,
+  onHoverEnter,
+  onHoverLeave,
 }: EntityTimelineProps) {
   // Multi-expand state: set of expanded event IDs
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -324,11 +297,20 @@ export default function EntityTimeline({
     return era?.name ?? eraId;
   }, [entityIndex]);
 
+  // Build linkable entities list for entity linking
+  const linkableEntities = useMemo(() => {
+    return Array.from(entityIndex.values()).map(e => ({ name: e.name, id: e.id }));
+  }, [entityIndex]);
+
   // Render description with wiki links
   const renderDescription = useCallback((event: NarrativeEvent): React.ReactNode => {
     const description = event.description || '';
-    return linkifyDescription(description, entityIndex, onNavigate);
-  }, [entityIndex, onNavigate]);
+    return linkifyText(description, linkableEntities, onNavigate, {
+      linkStyle: styles.entityLink,
+      onHoverEnter,
+      onHoverLeave,
+    });
+  }, [linkableEntities, onNavigate, onHoverEnter, onHoverLeave]);
 
   if (relevantEvents.length === 0 && !showProminenceOnly) {
     return (
@@ -397,7 +379,11 @@ export default function EntityTimeline({
                 >
                   <td style={{ ...styles.td, ...styles.tdTick }}>{event.tick}</td>
                   <td style={{ ...styles.td, ...styles.tdEra }}>{getEraName(event.era)}</td>
-                  <td style={{ ...styles.td, ...styles.tdEvent }}>
+                  <td style={{
+                    ...styles.td,
+                    ...styles.tdEvent,
+                    ...getWeightStyle(getWeightTier(event.significance ?? 0.5)),
+                  }}>
                     {renderDescription(event)}
                   </td>
                   <td style={{ ...styles.td, ...styles.tdExpand }}>
@@ -428,7 +414,11 @@ export default function EntityTimeline({
                                   {icon}
                                 </span>
                                 <span style={styles.effectDescription}>
-                                  {linkifyDescription(effect.description, entityIndex, onNavigate)}
+                                  {linkifyText(effect.description, linkableEntities, onNavigate, {
+                                    linkStyle: styles.entityLink,
+                                    onHoverEnter,
+                                    onHoverLeave,
+                                  })}
                                 </span>
                               </li>
                             );
