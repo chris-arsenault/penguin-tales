@@ -1082,6 +1082,7 @@ function attachImagesToSections(
     const sectionImage: WikiSectionImage = {
       refId: ref.refId,
       type: ref.type === 'entity_ref' ? 'entity_ref' : 'chronicle_image',
+      entityId: ref.type === 'entity_ref' ? ref.entityId : undefined,
       imageId,
       anchorText: ref.anchorText,
       anchorIndex: ref.anchorIndex,

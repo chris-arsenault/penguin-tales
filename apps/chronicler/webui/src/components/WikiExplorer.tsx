@@ -13,11 +13,13 @@ import type { WorldState, LoreData, ImageMetadata, WikiPage, HardState, ImageLoa
 import { buildPageIndex, buildPageById } from '../lib/wikiBuilder.ts';
 import { getCompletedChroniclesForSimulation, type ChronicleRecord } from '../lib/chronicleStorage.ts';
 import { getPublishedStaticPagesForProject, type StaticPage } from '../lib/staticPageStorage.ts';
+import { useBreakpoint } from '../hooks/useBreakpoint.ts';
 import WikiNav from './WikiNav.tsx';
 import ChronicleIndex from './ChronicleIndex.tsx';
 import ConfluxesIndex from './ConfluxesIndex.tsx';
 import HuddlesIndex from './HuddlesIndex.tsx';
 import WikiPageView from './WikiPage.tsx';
+import ImageLightbox from './ImageLightbox.tsx';
 import {
   buildProminenceScale,
   DEFAULT_PROMINENCE_DISTRIBUTION,
@@ -106,6 +108,48 @@ const styles = {
     flexDirection: 'column' as const,
     overflow: 'hidden',
   },
+  // Mobile drawer overlay
+  sidebarDrawer: {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    width: '280px',
+    height: '100%',
+    backgroundColor: colors.bgSidebar,
+    borderRight: `1px solid ${colors.border}`,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    overflow: 'hidden',
+    zIndex: 1001,
+    boxShadow: '4px 0 24px rgba(0, 0, 0, 0.5)',
+  },
+  sidebarBackdrop: {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    zIndex: 1000,
+  },
+  menuButton: {
+    position: 'fixed' as const,
+    bottom: '20px',
+    left: '20px',
+    width: '48px',
+    height: '48px',
+    borderRadius: '50%',
+    backgroundColor: colors.accent,
+    border: 'none',
+    color: colors.bgPrimary,
+    fontSize: '24px',
+    cursor: 'pointer',
+    zIndex: 999,
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   main: {
     flex: 1,
     display: 'flex',
@@ -121,6 +165,11 @@ const styles = {
     flex: 1,
     overflow: 'auto',
     padding: '24px',
+  },
+  contentMobile: {
+    flex: 1,
+    overflow: 'auto',
+    padding: '16px',
   },
 };
 
@@ -154,6 +203,11 @@ export default function WikiExplorer({
   // Initialize from hash on mount
   const [currentPageId, setCurrentPageId] = useState<string | null>(() => parseHashPageId());
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Responsive layout
+  const breakpoint = useBreakpoint();
+  const isMobile = breakpoint === 'mobile';
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Chronicles and static pages loaded from IndexedDB
   const [chronicles, setChronicles] = useState<ChronicleRecord[]>(() => normalizeChronicles(chroniclesOverride));
@@ -429,7 +483,11 @@ export default function WikiExplorer({
     if (window.location.hash !== newHash) {
       window.location.hash = newHash;
     }
-  }, []);
+    // Close sidebar on mobile after navigation
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  }, [isMobile]);
 
   const handleNavigateToEntity = useCallback((entityId: string) => {
     // Check if entity ID exists in index
@@ -519,30 +577,62 @@ export default function WikiExplorer({
     );
   }
 
+  const sidebarContent = (
+    <WikiNav
+      categories={pageIndex.categories}
+      pages={indexAsPages}
+      chronicles={chroniclePages}
+      staticPages={staticPagesAsWikiPages}
+      confluxPages={confluxPages}
+      huddlePages={huddlePages}
+      currentPageId={currentPageId}
+      searchQuery={searchQuery}
+      onSearchQueryChange={setSearchQuery}
+      onNavigate={handleNavigate}
+      onGoHome={handleGoHome}
+      onRefreshIndex={handleRefreshIndex}
+      isRefreshing={isRefreshing}
+      isDrawer={isMobile}
+      onCloseDrawer={() => setIsSidebarOpen(false)}
+    />
+  );
+
   return (
     <div style={styles.container}>
-      {/* Navigation Sidebar */}
-      <div style={styles.sidebar}>
-        <WikiNav
-          categories={pageIndex.categories}
-          pages={indexAsPages}
-          chronicles={chroniclePages}
-          staticPages={staticPagesAsWikiPages}
-          confluxPages={confluxPages}
-          huddlePages={huddlePages}
-          currentPageId={currentPageId}
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          onNavigate={handleNavigate}
-          onGoHome={handleGoHome}
-          onRefreshIndex={handleRefreshIndex}
-          isRefreshing={isRefreshing}
-        />
-      </div>
+      {/* Mobile: Floating menu button */}
+      {isMobile && (
+        <button
+          style={styles.menuButton}
+          onClick={() => setIsSidebarOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          ☰
+        </button>
+      )}
+
+      {/* Mobile: Drawer overlay */}
+      {isMobile && isSidebarOpen && (
+        <>
+          <div
+            style={styles.sidebarBackdrop}
+            onClick={() => setIsSidebarOpen(false)}
+          />
+          <div style={styles.sidebarDrawer}>
+            {sidebarContent}
+          </div>
+        </>
+      )}
+
+      {/* Desktop/Tablet: Static sidebar */}
+      {!isMobile && (
+        <div style={styles.sidebar}>
+          {sidebarContent}
+        </div>
+      )}
 
       {/* Main Content */}
       <div style={styles.main}>
-        <div style={styles.content}>
+        <div style={isMobile ? styles.contentMobile : styles.content}>
           {isChronicleIndex ? (
             <ChronicleIndex
               chronicles={chroniclePages}
@@ -588,6 +678,7 @@ export default function WikiExplorer({
               onNavigate={handleNavigate}
               onNavigateToEntity={handleNavigateToEntity}
               prominenceScale={prominenceScale}
+              breakpoint={breakpoint}
             />
           ) : (
             <HomePage
@@ -600,6 +691,7 @@ export default function WikiExplorer({
               imageLoader={imageLoader}
               onNavigate={handleNavigate}
               prominenceScale={prominenceScale}
+              breakpoint={breakpoint}
             />
           )}
         </div>
@@ -619,6 +711,7 @@ interface HomePageProps {
   imageLoader?: ImageLoader;
   onNavigate: (pageId: string) => void;
   prominenceScale: ProminenceScale;
+  breakpoint: 'mobile' | 'tablet' | 'desktop';
 }
 
 /**
@@ -673,8 +766,10 @@ function HomePage({
   staticPages,
   imageLoader,
   onNavigate,
-  prominenceScale
+  prominenceScale,
+  breakpoint,
 }: HomePageProps) {
+  const isMobile = breakpoint === 'mobile';
   // Find System:About This Project page
   const aboutPage = useMemo(() => {
     return staticPages.find(p =>
@@ -682,6 +777,11 @@ function HomePage({
       p.title.toLowerCase() === 'about this project'
     );
   }, [staticPages]);
+  const [activeImage, setActiveImage] = useState<{
+    url: string;
+    title: string;
+    summary?: string;
+  } | null>(null);
 
   // Get eras
   const eras = useMemo(() =>
@@ -754,6 +854,29 @@ function HomePage({
     });
     return () => { cancelled = true; };
   }, [featuredArticle, imageLoader]);
+
+  const openFeaturedImage = useCallback(async () => {
+    if (!featuredImageUrl || !featuredArticle) return;
+    // Try to load full-size image for lightbox
+    let fullUrl = featuredImageUrl;
+    if (imageLoader && featuredArticle.enrichment?.image?.imageId) {
+      try {
+        const loaded = await imageLoader(featuredArticle.enrichment.image.imageId, 'full');
+        if (loaded) fullUrl = loaded;
+      } catch {
+        // Fall back to thumbnail
+      }
+    }
+    setActiveImage({
+      url: fullUrl,
+      title: featuredArticle.name,
+      summary: featuredArticle.summary,
+    });
+  }, [featuredArticle, featuredImageUrl, imageLoader]);
+
+  const closeImageModal = useCallback(() => {
+    setActiveImage(null);
+  }, []);
 
   // "Did you know" - 5 random relationships as interesting facts
   const didYouKnow = useMemo(() => {
@@ -885,24 +1008,35 @@ function HomePage({
         </div>
       )}
 
-      {/* Two-column layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px' }}>
+      {/* Two-column layout (single column on mobile) */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr',
+        gap: isMobile ? '16px' : '24px',
+      }}>
         {/* Left column */}
         <div>
           {/* Featured Article - Wikipedia style */}
           {featuredArticle && (
             <div style={sectionStyle}>
               <h2 style={sectionTitleStyle}>Featured Article</h2>
-              <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '16px' }}>
                 {featuredImageUrl && (
-                  <div style={{
-                    width: '140px',
-                    height: '140px',
-                    flexShrink: 0,
-                    borderRadius: '6px',
-                    overflow: 'hidden',
-                    backgroundColor: colors.bgTertiary,
-                  }}>
+                  <button
+                    onClick={openFeaturedImage}
+                    style={{
+                      width: isMobile ? '100%' : '140px',
+                      height: isMobile ? '200px' : '140px',
+                      flexShrink: 0,
+                      borderRadius: '6px',
+                      overflow: 'hidden',
+                      backgroundColor: colors.bgTertiary,
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'zoom-in',
+                    }}
+                    aria-label={`Enlarge ${featuredArticle.name} image`}
+                  >
                     <img
                       src={featuredImageUrl}
                       alt={featuredArticle.name}
@@ -912,7 +1046,7 @@ function HomePage({
                         objectFit: 'cover',
                       }}
                     />
-                  </div>
+                  </button>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <button
@@ -1260,6 +1394,13 @@ function HomePage({
         </div>
       </div>
 
+      <ImageLightbox
+        isOpen={Boolean(activeImage)}
+        imageUrl={activeImage?.url || null}
+        title={activeImage?.title || ''}
+        summary={activeImage?.summary}
+        onClose={closeImageModal}
+      />
     </div>
   );
 }

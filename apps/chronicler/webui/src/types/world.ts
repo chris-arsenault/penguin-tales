@@ -88,6 +88,10 @@ export interface EntityImage {
   prompt: string;
   localPath: string;
   imageId: string;
+  /** Optimized thumbnail path (WebP, ~400px wide) - for inline display */
+  thumbPath?: string;
+  /** Optimized full-size path (WebP) - for lightbox view */
+  fullPath?: string;
 }
 
 export interface ImageMetadata {
@@ -97,10 +101,19 @@ export interface ImageMetadata {
 }
 
 /**
- * Lazy image loader function type
- * Takes an imageId and returns a promise that resolves to the image URL (or null)
+ * Image size variants for optimized loading
+ * - 'thumb': Thumbnail (~400px wide) for inline display and hover cards
+ * - 'full': Full-size image for lightbox view
  */
-export type ImageLoader = (imageId: string) => Promise<string | null>;
+export type ImageSize = 'thumb' | 'full';
+
+/**
+ * Lazy image loader function type
+ * Takes an imageId and optional size, returns a promise that resolves to the image URL (or null)
+ * @param imageId - The image identifier
+ * @param size - 'thumb' (default) for inline display, 'full' for lightbox
+ */
+export type ImageLoader = (imageId: string, size?: ImageSize) => Promise<string | null>;
 
 /**
  * Lightweight page index entry for navigation and search
@@ -229,6 +242,7 @@ export type WikiImageSize = 'small' | 'medium' | 'large' | 'full-width';
 export interface WikiSectionImage {
   refId: string;
   type: 'entity_ref' | 'chronicle_image';
+  entityId?: string;
   imageId: string;
   anchorText: string;
   /** Character index where anchorText was found (fallback if text changes) */

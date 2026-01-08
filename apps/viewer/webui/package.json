@@ -7,7 +7,8 @@
     "dev": "vite --port 5008",
     "clean": "rm -rf dist",
     "build": "npm run clean && vite build",
-    "postbuild": "node ./scripts/chunk-viewer-bundle.mjs --input dist/bundles/default/bundle.json --output dist/bundles/default --target-bytes 500000",
+    "postbuild": "npm run optimize-images && npm run chunk-bundle",
+    "optimize-images": "node ./scripts/optimize-images.mjs --input dist/bundles/default/images --output dist/bundles/default/images --bundle-dir dist/bundles/default --delete-originals",
     "chunk-bundle": "node ./scripts/chunk-viewer-bundle.mjs --input dist/bundles/default/bundle.json --output dist/bundles/default --target-bytes 500000",
     "preview": "vite preview",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
@@ -27,6 +28,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.1.0",
+    "sharp": "^0.34.5",
     "vite": "^6.4.1"
   }
 }

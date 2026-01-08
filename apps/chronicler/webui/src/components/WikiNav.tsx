@@ -103,6 +103,10 @@ interface WikiNavProps {
   onGoHome: () => void;
   onRefreshIndex?: () => void;
   isRefreshing?: boolean;
+  /** When true, nav is displayed as a mobile drawer */
+  isDrawer?: boolean;
+  /** Callback to close the drawer */
+  onCloseDrawer?: () => void;
 }
 
 export default function WikiNav({
@@ -119,6 +123,8 @@ export default function WikiNav({
   onGoHome,
   onRefreshIndex,
   isRefreshing,
+  isDrawer,
+  onCloseDrawer,
 }: WikiNavProps) {
   // Get top categories for quick access
   const topCategories = categories
@@ -140,6 +146,37 @@ export default function WikiNav({
 
   return (
     <div style={styles.container}>
+      {/* Drawer header with close button (mobile only) */}
+      {isDrawer && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 16px',
+          borderBottom: `1px solid ${colors.border}`,
+          backgroundColor: colors.bgSecondary,
+        }}>
+          <span style={{ fontWeight: 600, fontSize: '14px', color: colors.textPrimary }}>
+            Navigation
+          </span>
+          <button
+            onClick={onCloseDrawer}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: colors.textMuted,
+              fontSize: '20px',
+              cursor: 'pointer',
+              padding: '4px 8px',
+              lineHeight: 1,
+            }}
+            aria-label="Close navigation"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <nav style={styles.nav}>
 
       {/* Browse by Type */}

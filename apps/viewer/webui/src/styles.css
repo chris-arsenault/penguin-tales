@@ -411,3 +411,63 @@ body {
   color: var(--text-muted);
   font-size: 12px;
 }
+
+/* Mobile responsive styles */
+@media (max-width: 640px) {
+  .app-header {
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .brand-title {
+    display: none;
+  }
+
+  .brand {
+    padding: 4px 8px;
+  }
+
+  .brand-icon {
+    font-size: 20px;
+  }
+
+  .header-search-input {
+    width: 120px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .header-search-input:focus {
+    width: 160px;
+  }
+
+  .view-selector-trigger {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .view-selector-label {
+    display: none;
+  }
+
+  .view-selector-icon {
+    font-size: 16px;
+  }
+
+  .app-footer {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+}
+
+/* Tablet responsive styles */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .app-header {
+    gap: 12px;
+    padding: 10px 16px;
+  }
+
+  .header-search-input {
+    width: 180px;
+  }
+}

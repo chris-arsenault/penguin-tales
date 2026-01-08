@@ -292,6 +292,8 @@ function normalizeBundle(raw, bundleUrl) {
     ? raw.imageData.results.map((image) => ({
       ...image,
       localPath: resolveUrl(image.localPath),
+      thumbPath: image.thumbPath ? resolveUrl(image.thumbPath) : undefined,
+      fullPath: image.fullPath ? resolveUrl(image.fullPath) : undefined,
     }))
     : [];
 
@@ -551,25 +553,36 @@ export default function App() {
     }
   }, [activeView]);
 
+  // Build image lookup maps for optimized images (thumb/full) and legacy (single path)
   const imageLookup = useMemo(() => {
     const map = new Map();
     if (bundle?.images) {
       for (const [imageId, url] of Object.entries(bundle.images)) {
-        if (url) map.set(imageId, url);
+        if (url) map.set(imageId, { url, thumb: url, full: url });
       }
     }
     if (bundle?.imageData?.results) {
       for (const image of bundle.imageData.results) {
-        if (image.imageId && image.localPath) {
-          map.set(image.imageId, image.localPath);
+        if (image.imageId) {
+          // Use optimized paths if available, fall back to localPath
+          const thumb = image.thumbPath || image.localPath;
+          const full = image.fullPath || image.localPath;
+          if (thumb || full) {
+            map.set(image.imageId, { url: thumb, thumb, full });
+          }
         }
       }
     }
     return map;
   }, [bundle]);
 
-  const imageLoader = useCallback(async (imageId) => {
-    return imageLookup.get(imageId) || null;
+  // imageLoader supports optional size parameter:
+  // - 'thumb' (default): returns thumbnail for inline display
+  // - 'full': returns full-size image for lightbox
+  const imageLoader = useCallback(async (imageId, size = 'thumb') => {
+    const entry = imageLookup.get(imageId);
+    if (!entry) return null;
+    return size === 'full' ? entry.full : entry.thumb;
   }, [imageLookup]);
 
   if (status === 'loading') {
