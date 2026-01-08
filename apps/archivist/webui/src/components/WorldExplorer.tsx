@@ -1,4 +1,4 @@
-import { useState, useRef, lazy, Suspense, useMemo } from 'react';
+import { useState, useRef, lazy, Suspense, useMemo, useEffect, useCallback } from 'react';
 import type { WorldState, Filters, EntityKind, LoreData, ImageMetadata } from '../types/world.ts';
 import { applyFilters, applyTemporalFilter, getProminenceLevels } from '../utils/dataTransform.ts';
 import CoordinateMapView from './CoordinateMapView.tsx';
@@ -8,6 +8,30 @@ import TimelineControl from './TimelineControl.tsx';
 import StatsPanel from './StatsPanel.tsx';
 import './WorldExplorer.css';
 import { buildProminenceScale, DEFAULT_PROMINENCE_DISTRIBUTION, type ProminenceScale } from '@canonry/world-schema';
+
+/**
+ * Parse entity ID from URL hash
+ * Hash format: #/entity/{entityId} or #/ for none
+ */
+function parseHashEntityId(): string | undefined {
+  const hash = window.location.hash;
+  if (!hash || hash === '#/' || hash === '#') {
+    return undefined;
+  }
+  // Match #/entity/{entityId}
+  const match = hash.match(/^#\/entity\/(.+)$/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+/**
+ * Build hash URL for an entity
+ */
+function buildEntityHash(entityId: string | undefined): string {
+  if (!entityId) {
+    return '#/';
+  }
+  return `#/entity/${encodeURIComponent(entityId)}`;
+}
 
 interface WorldExplorerProps {
   worldData: WorldState;
@@ -23,12 +47,32 @@ const GraphView3D = lazy(() => import('./GraphView3D.tsx'));
 const TimelineView3D = lazy(() => import('./TimelineView3D.tsx'));
 
 export default function WorldExplorer({ worldData, loreData, imageData }: WorldExplorerProps) {
-  const [selectedEntityId, setSelectedEntityId] = useState<string | undefined>(undefined);
+  // Initialize from hash on mount
+  const [selectedEntityId, setSelectedEntityId] = useState<string | undefined>(() => parseHashEntityId());
   const [currentTick, setCurrentTick] = useState<number>(worldData.metadata.tick);
   const [isStatsPanelOpen, setIsStatsPanelOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('graph3d');
   const [edgeMetric, setEdgeMetric] = useState<EdgeMetric>('strength');
   const recalculateLayoutRef = useRef<(() => void) | null>(null);
+
+  // Sync hash changes to state (for back/forward buttons)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const entityId = parseHashEntityId();
+      setSelectedEntityId(entityId);
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Handle entity selection - updates hash which triggers state update via hashchange
+  const handleEntitySelect = useCallback((entityId: string | undefined) => {
+    const newHash = buildEntityHash(entityId);
+    if (window.location.hash !== newHash) {
+      window.location.hash = newHash;
+    }
+  }, []);
 
   // Get UI configuration from schema
   const entityKinds = worldData.schema.entityKinds.map(ek => ek.kind);
@@ -81,7 +125,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
                 key={`3d-view-${edgeMetric}`}
                 data={filteredData}
                 selectedNodeId={selectedEntityId}
-                onNodeSelect={setSelectedEntityId}
+                onNodeSelect={handleEntitySelect}
                 showCatalyzedBy={filters.showCatalyzedBy}
                 edgeMetric={edgeMetric}
                 prominenceScale={prominenceScale}
@@ -92,7 +136,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
                 key="2d-view"
                 data={filteredData}
                 selectedNodeId={selectedEntityId}
-                onNodeSelect={setSelectedEntityId}
+                onNodeSelect={handleEntitySelect}
                 showCatalyzedBy={filters.showCatalyzedBy}
                 onRecalculateLayoutRef={(handler) => { recalculateLayoutRef.current = handler; }}
                 prominenceScale={prominenceScale}
@@ -103,7 +147,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
                 key={`timeline-view-${edgeMetric}`}
                 data={filteredData}
                 selectedNodeId={selectedEntityId}
-                onNodeSelect={setSelectedEntityId}
+                onNodeSelect={handleEntitySelect}
                 showCatalyzedBy={filters.showCatalyzedBy}
                 edgeMetric={edgeMetric}
                 prominenceScale={prominenceScale}
@@ -115,7 +159,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
               key="map-view"
               data={filteredData}
               selectedNodeId={selectedEntityId}
-              onNodeSelect={setSelectedEntityId}
+              onNodeSelect={handleEntitySelect}
             />
           )}
         </main>
@@ -126,7 +170,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
           worldData={worldData}
           loreData={loreData}
           imageData={imageData}
-          onRelatedClick={setSelectedEntityId}
+          onRelatedClick={handleEntitySelect}
           prominenceScale={prominenceScale}
         />
       </div>

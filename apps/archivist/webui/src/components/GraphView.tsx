@@ -174,15 +174,14 @@ export default function GraphView({
         },
         {
           // Edge strength visualization: strength values (0-1) control visual prominence
-          // MORE DRAMATIC: wider range for better visual distinction
           // - Width: 0.5-7px (stronger = much thicker)
-          // - Color: very light gray to black (stronger = much darker)
           // - Opacity: 0.2-1.0 (stronger = fully opaque, weak = nearly invisible)
+          // Note: mapData doesn't work with colors, so we use fixed color + opacity
           selector: 'edge',
           style: {
             'width': 'mapData(strength, 0, 1, 0.5, 7)' as any,
-            'line-color': 'mapData(strength, 0, 1, "#aaa", "#000")' as any,
-            'target-arrow-color': 'mapData(strength, 0, 1, "#aaa", "#000")' as any,
+            'line-color': '#888',
+            'target-arrow-color': '#888',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
             'opacity': 'mapData(strength, 0, 1, 0.2, 1)' as any,
@@ -229,8 +228,7 @@ export default function GraphView({
         tile: true,
         tilingPaddingVertical: 10,
         tilingPaddingHorizontal: 10
-      } as any,
-      wheelSensitivity: 1.5
+      } as any
     });
 
     // Handle node click
@@ -288,8 +286,8 @@ export default function GraphView({
         selector: 'edge',
         style: {
           'width': 'mapData(strength, 0, 1, 0.5, 7)' as any,
-          'line-color': 'mapData(strength, 0, 1, "#aaa", "#000")' as any,
-          'target-arrow-color': 'mapData(strength, 0, 1, "#aaa", "#000")' as any,
+          'line-color': '#888',
+          'target-arrow-color': '#888',
           'target-arrow-shape': 'triangle',
           'curve-style': 'bezier',
           'opacity': 'mapData(strength, 0, 1, 0.2, 1)' as any,
@@ -437,8 +435,8 @@ export default function GraphView({
   }, [selectedNodeId]);
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
-      <div ref={containerRef} className="cytoscape-container" />
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+      <div ref={containerRef} className="cytoscape-container" style={{ width: '100%', height: '100%' }} />
 
       {/* Legend - Dynamic from schema */}
       <div className="absolute bottom-6 left-6 rounded-xl text-white text-sm shadow-2xl border border-blue-500/30 overflow-hidden"

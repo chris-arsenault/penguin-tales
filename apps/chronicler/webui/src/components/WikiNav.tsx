@@ -2,15 +2,16 @@
  * WikiNav - Sidebar navigation for the wiki
  *
  * Features:
- * - Home link
  * - Browse by category
- * - Random page
+ * - Search, Home, Random at bottom
  */
 
 import type { WikiPage, WikiCategory, PageIndexEntry } from '../types/world.ts';
+import WikiSearch from './WikiSearch.tsx';
 
 const colors = {
   bgSecondary: '#1e3a5f',
+  bgSidebar: '#0c1f2e',
   border: 'rgba(59, 130, 246, 0.3)',
   textPrimary: '#ffffff',
   textSecondary: '#93c5fd',
@@ -20,6 +21,11 @@ const colors = {
 };
 
 const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    height: '100%',
+  },
   nav: {
     flex: 1,
     overflow: 'auto',
@@ -59,6 +65,28 @@ const styles = {
     color: colors.textMuted,
     marginLeft: '8px',
   },
+  bottomSection: {
+    borderTop: `1px solid ${colors.border}`,
+    padding: '12px',
+    backgroundColor: colors.bgSidebar,
+  },
+  bottomLinks: {
+    display: 'flex',
+    gap: '8px',
+    marginTop: '12px',
+  },
+  bottomLink: {
+    flex: 1,
+    padding: '8px',
+    fontSize: '12px',
+    color: colors.textSecondary,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '6px',
+    textAlign: 'center' as const,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
 };
 
 interface WikiNavProps {
@@ -69,6 +97,8 @@ interface WikiNavProps {
   confluxPages: PageIndexEntry[];
   huddlePages: PageIndexEntry[];
   currentPageId: string | null;
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
   onNavigate: (pageId: string) => void;
   onGoHome: () => void;
   onRefreshIndex?: () => void;
@@ -83,6 +113,8 @@ export default function WikiNav({
   confluxPages,
   huddlePages,
   currentPageId,
+  searchQuery,
+  onSearchQueryChange,
   onNavigate,
   onGoHome,
   onRefreshIndex,
@@ -107,45 +139,8 @@ export default function WikiNav({
   const documentChronicles = chroniclePages.filter((page) => page.chronicle?.format === 'document');
 
   return (
-    <nav style={styles.nav}>
-      {/* Main Navigation */}
-      <div style={styles.section}>
-        <button
-          style={{
-            ...styles.navItem,
-            ...(currentPageId === null ? styles.navItemActive : {}),
-          }}
-          onClick={onGoHome}
-          onMouseEnter={(e) => {
-            if (currentPageId !== null) {
-              e.currentTarget.style.backgroundColor = colors.hoverBg;
-              e.currentTarget.style.color = colors.accent;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (currentPageId !== null) {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = colors.textSecondary;
-            }
-          }}
-        >
-          Home
-        </button>
-        <button
-          style={styles.navItem}
-          onClick={handleRandomPage}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = colors.hoverBg;
-            e.currentTarget.style.color = colors.accent;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = colors.textSecondary;
-          }}
-        >
-          Random Page
-        </button>
-      </div>
+    <div style={styles.container}>
+      <nav style={styles.nav}>
 
       {/* Browse by Type */}
       {topCategories.length > 0 && (
@@ -491,6 +486,55 @@ export default function WikiNav({
           </button>
         </div>
       )}
-    </nav>
+      </nav>
+
+      {/* Bottom Section - Search and Links */}
+      <div style={styles.bottomSection}>
+        <WikiSearch
+          pages={pages}
+          query={searchQuery}
+          onQueryChange={onSearchQueryChange}
+          onSelect={onNavigate}
+          expandDirection="up"
+        />
+        <div style={styles.bottomLinks}>
+          <button
+            style={{
+              ...styles.bottomLink,
+              ...(currentPageId === null ? { backgroundColor: colors.accent, color: '#0a1929', borderColor: colors.accent } : {}),
+            }}
+            onClick={onGoHome}
+            onMouseEnter={(e) => {
+              if (currentPageId !== null) {
+                e.currentTarget.style.backgroundColor = colors.hoverBg;
+                e.currentTarget.style.borderColor = colors.accent;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentPageId !== null) {
+                e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+                e.currentTarget.style.borderColor = colors.border;
+              }
+            }}
+          >
+            Home
+          </button>
+          <button
+            style={styles.bottomLink}
+            onClick={handleRandomPage}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = colors.hoverBg;
+              e.currentTarget.style.borderColor = colors.accent;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+              e.currentTarget.style.borderColor = colors.border;
+            }}
+          >
+            Random
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

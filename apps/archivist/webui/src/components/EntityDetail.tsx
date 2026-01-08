@@ -282,14 +282,27 @@ export default function EntityDetail({
         </div>
       )}
 
-      {/* Description or Lore */}
+      {/* Summary or Lore */}
       {descriptionLore ? (
         <LoreSection lore={descriptionLore} />
       ) : (
         <div className="detail-card">
-          <div className="section-header">Description</div>
+          <div className="section-header">
+            Summary
+            <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('canonry:navigate', {
+                  detail: { tab: 'chronicler', pageId: entity.id }
+                }));
+              }}
+              className="chronicler-link"
+              title="View full article in Chronicler"
+            >
+              (view in chronicler)
+            </button>
+          </div>
           <p className="text-sm text-blue-100 leading-relaxed break-words detail-card-content">
-            {entity.description}
+            {(entity as any).summary || 'No summary available'}
           </p>
         </div>
       )}

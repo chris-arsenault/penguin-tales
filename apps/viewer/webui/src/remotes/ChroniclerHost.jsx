@@ -35,6 +35,8 @@ export default function ChroniclerHost({
   imageLoader,
   chronicles,
   staticPages,
+  requestedPageId,
+  onRequestedPageConsumed,
 }) {
   return (
     <div style={styles.container}>
@@ -47,6 +49,8 @@ export default function ChroniclerHost({
           imageLoader={imageLoader}
           chronicles={chronicles}
           staticPages={staticPages}
+          requestedPageId={requestedPageId}
+          onRequestedPageConsumed={onRequestedPageConsumed}
         />
       </Suspense>
     </div>

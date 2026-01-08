@@ -37,7 +37,15 @@ const styles = {
   },
 };
 
-export default function ChroniclerHost({ projectId, worldData, loreData, imageData, imageLoader }) {
+export default function ChroniclerHost({
+  projectId,
+  worldData,
+  loreData,
+  imageData,
+  imageLoader,
+  requestedPageId,
+  onRequestedPageConsumed,
+}) {
   return (
     <div style={styles.container}>
       <Suspense fallback={<div style={styles.loading}>Loading Chronicler...</div>}>
@@ -47,6 +55,8 @@ export default function ChroniclerHost({ projectId, worldData, loreData, imageDa
           loreData={loreData}
           imageData={imageData}
           imageLoader={imageLoader}
+          requestedPageId={requestedPageId}
+          onRequestedPageConsumed={onRequestedPageConsumed}
         />
       </Suspense>
     </div>

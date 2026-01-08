@@ -8,7 +8,7 @@
  * - Page actions/info (right, optional)
  */
 
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useLayoutEffect, useCallback } from 'react';
 import type { WorldState, LoreData, ImageMetadata, WikiPage, HardState, ImageLoader } from '../types/world.ts';
 import { buildPageIndex, buildPageById } from '../lib/wikiBuilder.ts';
 import { getCompletedChroniclesForSimulation, type ChronicleRecord } from '../lib/chronicleStorage.ts';
@@ -18,7 +18,6 @@ import ChronicleIndex from './ChronicleIndex.tsx';
 import ConfluxesIndex from './ConfluxesIndex.tsx';
 import HuddlesIndex from './HuddlesIndex.tsx';
 import WikiPageView from './WikiPage.tsx';
-import WikiSearch from './WikiSearch.tsx';
 import {
   buildProminenceScale,
   DEFAULT_PROMINENCE_DISTRIBUTION,
@@ -123,10 +122,6 @@ const styles = {
     overflow: 'auto',
     padding: '24px',
   },
-  searchContainer: {
-    padding: '16px',
-    borderBottom: `1px solid ${colors.border}`,
-  },
 };
 
 interface WikiExplorerProps {
@@ -139,6 +134,10 @@ interface WikiExplorerProps {
   imageLoader?: ImageLoader;
   chronicles?: ChronicleRecord[];
   staticPages?: StaticPage[];
+  /** Page ID requested by external navigation (e.g., from Archivist) */
+  requestedPageId?: string | null;
+  /** Callback to signal that the requested page has been consumed */
+  onRequestedPageConsumed?: () => void;
 }
 
 export default function WikiExplorer({
@@ -149,6 +148,8 @@ export default function WikiExplorer({
   imageLoader,
   chronicles: chroniclesOverride,
   staticPages: staticPagesOverride,
+  requestedPageId,
+  onRequestedPageConsumed,
 }: WikiExplorerProps) {
   // Initialize from hash on mount
   const [currentPageId, setCurrentPageId] = useState<string | null>(() => parseHashPageId());
@@ -242,6 +243,25 @@ export default function WikiExplorer({
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Handle external navigation requests (e.g., from Archivist)
+  // Use useLayoutEffect to update state synchronously before paint, avoiding flash of home page
+  useLayoutEffect(() => {
+    if (!requestedPageId) return;
+
+    // Update state immediately (before paint)
+    setCurrentPageId(requestedPageId);
+    setSearchQuery('');
+
+    // Update hash (this will be picked up by hashchange listener for future back navigation)
+    const newHash = buildPageHash(requestedPageId);
+    if (window.location.hash !== newHash) {
+      window.location.hash = newHash;
+    }
+
+    // Signal that the request has been handled
+    onRequestedPageConsumed?.();
+  }, [requestedPageId, onRequestedPageConsumed]);
+
   // Validate world data before building index
   // Returns first validation error found, or null if valid
   const dataError = useMemo((): { message: string; details: string } | null => {
@@ -286,18 +306,14 @@ export default function WikiExplorer({
   }, [worldData, loreData, chronicles, staticPages, dataError, prominenceScale]);
 
   // Page cache - stores fully built pages by ID
-  const pageCacheRef = useRef<Map<string, WikiPage>>(new Map());
-
-  // Clear cache when data changes
-  useEffect(() => {
-    pageCacheRef.current.clear();
-  }, [worldData, loreData, imageData, chronicles, staticPages]);
+  // Use useMemo to create a NEW cache when data changes, ensuring synchronous invalidation
+  // (useEffect runs after render, which causes stale cache reads when chunks load)
+  const pageCache = useMemo(() => new Map<string, WikiPage>(), [worldData, loreData, imageData, chronicles, staticPages]);
 
   // Get a page from cache or build it on-demand
   const getPage = useCallback((pageId: string): WikiPage | null => {
-    const cache = pageCacheRef.current;
-    if (cache.has(pageId)) {
-      return cache.get(pageId)!;
+    if (pageCache.has(pageId)) {
+      return pageCache.get(pageId)!;
     }
 
     const page = buildPageById(
@@ -311,10 +327,10 @@ export default function WikiExplorer({
       prominenceScale
     );
     if (page) {
-      cache.set(pageId, page);
+      pageCache.set(pageId, page);
     }
     return page;
-  }, [worldData, loreData, imageData, pageIndex, chronicles, staticPages, prominenceScale]);
+  }, [worldData, loreData, imageData, pageIndex, chronicles, staticPages, prominenceScale, pageCache]);
 
   // Convert index entries to minimal WikiPage objects for navigation components
   const indexAsPages = useMemo(() => {
@@ -449,8 +465,7 @@ export default function WikiExplorer({
         setChronicles(loadedChronicles);
         setStaticPages(loadedStaticPages);
       }
-      // Clear page cache so pages are rebuilt with new data
-      pageCacheRef.current.clear();
+      // Note: Page cache automatically invalidates via useMemo when data changes
     } catch (err) {
       console.error('[WikiExplorer] Failed to refresh index:', err);
     } finally {
@@ -508,14 +523,6 @@ export default function WikiExplorer({
     <div style={styles.container}>
       {/* Navigation Sidebar */}
       <div style={styles.sidebar}>
-        <div style={styles.searchContainer}>
-          <WikiSearch
-            pages={indexAsPages}
-            query={searchQuery}
-            onQueryChange={setSearchQuery}
-            onSelect={handleNavigate}
-          />
-        </div>
         <WikiNav
           categories={pageIndex.categories}
           pages={indexAsPages}
@@ -524,6 +531,8 @@ export default function WikiExplorer({
           confluxPages={confluxPages}
           huddlePages={huddlePages}
           currentPageId={currentPageId}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
           onNavigate={handleNavigate}
           onGoHome={handleGoHome}
           onRefreshIndex={handleRefreshIndex}

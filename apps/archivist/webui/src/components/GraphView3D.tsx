@@ -267,7 +267,7 @@ export default function GraphView3D({
   }, [edgeMetric]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+    <div ref={containerRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
       {isReady && (
         <ForceGraph3D
           key={graphKey}

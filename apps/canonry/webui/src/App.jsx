@@ -474,6 +474,49 @@ export default function App() {
     setShowHome(false);
   }, []);
 
+  // Requested page for Chronicler (set by cross-MFE navigation, cleared after use)
+  const [chroniclerRequestedPage, setChroniclerRequestedPage] = useState(null);
+
+  // Listen for cross-MFE navigation events (e.g., Archivist -> Chronicler)
+  useEffect(() => {
+    const handleCrossNavigation = (e) => {
+      const { tab, pageId } = e.detail || {};
+      if (tab) {
+        setActiveTab(tab);
+        setShowHome(false);
+        // Pass page request via prop instead of hash manipulation
+        if (tab === 'chronicler' && pageId) {
+          setChroniclerRequestedPage(pageId);
+        }
+      }
+    };
+    window.addEventListener('canonry:navigate', handleCrossNavigation);
+    return () => window.removeEventListener('canonry:navigate', handleCrossNavigation);
+  }, []);
+
+  // Listen for hash changes to switch tabs (enables back button across MFEs)
+  // Hash formats: Archivist uses #/entity/{id}, Chronicler uses #/page/{id}
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#/entity/') || hash === '#/entity') {
+        // Archivist hash format
+        if (activeTab !== 'archivist') {
+          setActiveTab('archivist');
+          setShowHome(false);
+        }
+      } else if (hash.startsWith('#/page/') || hash === '#/page') {
+        // Chronicler hash format
+        if (activeTab !== 'chronicler') {
+          setActiveTab('chronicler');
+          setShowHome(false);
+        }
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [activeTab]);
+
   const openExportModal = useCallback((slotIndex) => {
     setExportModalSlotIndex(slotIndex);
   }, []);
@@ -1697,6 +1740,8 @@ export default function App() {
                 loreData={archivistData?.loreData}
                 imageData={archivistData?.imageData}
                 imageLoader={imageLoader}
+                requestedPageId={chroniclerRequestedPage}
+                onRequestedPageConsumed={() => setChroniclerRequestedPage(null)}
               />
             </div>
           </>

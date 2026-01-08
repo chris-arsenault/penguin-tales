@@ -116,6 +116,7 @@
   min-width: 288px;
   max-width: 288px;
   height: 100%;
+  min-height: 0; /* Required for flex item to scroll independently */
   color: white;
   padding: 16px;
   overflow-y: auto;

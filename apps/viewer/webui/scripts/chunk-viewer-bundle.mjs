@@ -35,6 +35,40 @@ function cloneBundle(bundle) {
   return JSON.parse(JSON.stringify(bundle));
 }
 
+/**
+ * Strip debug metadata from enrichment, keeping only aliases.
+ * This removes chainDebug, token counts, costs, and image generation metadata
+ * which are not needed for viewing.
+ */
+function stripEnrichmentDebugData(entity) {
+  if (!entity.enrichment) return entity;
+
+  const { text, ...otherEnrichment } = entity.enrichment;
+
+  // Only keep aliases from text
+  if (text?.aliases && Array.isArray(text.aliases) && text.aliases.length > 0) {
+    return {
+      ...entity,
+      enrichment: {
+        ...otherEnrichment,
+        text: { aliases: text.aliases },
+      },
+    };
+  }
+
+  // No aliases - check if there's other enrichment to keep
+  if (Object.keys(otherEnrichment).length > 0) {
+    return {
+      ...entity,
+      enrichment: otherEnrichment,
+    };
+  }
+
+  // Nothing worth keeping - remove enrichment entirely
+  const { enrichment: _, ...entityWithoutEnrichment } = entity;
+  return entityWithoutEnrichment;
+}
+
 function chunkNarrativeHistory(items, targetBytes) {
   const chunks = [];
   let current = [];
@@ -86,6 +120,11 @@ async function main() {
   const coreBundle = cloneBundle(bundle);
   if (coreBundle?.worldData && typeof coreBundle.worldData === 'object') {
     coreBundle.worldData.narrativeHistory = [];
+
+    // Strip debug metadata from entities (keeps aliases only from enrichment)
+    if (Array.isArray(coreBundle.worldData.hardState)) {
+      coreBundle.worldData.hardState = coreBundle.worldData.hardState.map(stripEnrichmentDebugData);
+    }
   }
 
   const chunks = chunkNarrativeHistory(narrativeHistory, targetBytes);
@@ -116,7 +155,7 @@ async function main() {
 
   const manifest = {
     format: 'viewer-bundle-manifest',
-    version: 1,
+    version: 2, // v2: strips enrichment debug data, keeps aliases only
     generatedAt: new Date().toISOString(),
     core: 'bundle.core.json',
     fallback: 'bundle.json',
@@ -133,9 +172,15 @@ async function main() {
   await writeFile(join(outputDir, 'bundle.core.json'), JSON.stringify(coreBundle), 'utf8');
   await writeFile(join(outputDir, 'bundle.manifest.json'), JSON.stringify(manifest), 'utf8');
 
-  console.log(
-    `Viewer bundle chunked: ${narrativeHistory.length} events -> ${files.length} chunks (target ${targetBytes} bytes).`
-  );
+  // Calculate size reduction from stripping enrichment debug data
+  const originalSize = Buffer.byteLength(raw, 'utf8');
+  const coreSize = Buffer.byteLength(JSON.stringify(coreBundle), 'utf8');
+
+  console.log(`Viewer bundle processed:`);
+  console.log(`  - Original: ${(originalSize / 1024 / 1024).toFixed(2)} MB`);
+  console.log(`  - Core (stripped): ${(coreSize / 1024).toFixed(0)} KB`);
+  console.log(`  - Narrative chunks: ${files.length} files, ${(totalChunkBytes / 1024 / 1024).toFixed(2)} MB`);
+  console.log(`  - Enrichment debug data stripped (kept aliases only)`);
 }
 
 main().catch((error) => {

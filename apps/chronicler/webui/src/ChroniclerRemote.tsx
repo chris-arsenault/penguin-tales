@@ -20,6 +20,10 @@ export interface ChroniclerRemoteProps {
   imageLoader?: ImageLoader;
   chronicles?: ChronicleRecord[];
   staticPages?: StaticPage[];
+  /** Page ID requested by external navigation (e.g., from Archivist) */
+  requestedPageId?: string | null;
+  /** Callback to signal that the requested page has been consumed */
+  onRequestedPageConsumed?: () => void;
 }
 
 export default function ChroniclerRemote({
@@ -30,6 +34,8 @@ export default function ChroniclerRemote({
   imageLoader,
   chronicles,
   staticPages,
+  requestedPageId,
+  onRequestedPageConsumed,
 }: ChroniclerRemoteProps) {
   if (!worldData) {
     return (
@@ -65,6 +71,8 @@ export default function ChroniclerRemote({
       imageLoader={imageLoader}
       chronicles={chronicles}
       staticPages={staticPages}
+      requestedPageId={requestedPageId}
+      onRequestedPageConsumed={onRequestedPageConsumed}
     />
   );
 }

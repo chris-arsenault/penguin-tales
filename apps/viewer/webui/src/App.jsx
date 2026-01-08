@@ -1,15 +1,253 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Fuse from 'fuse.js';
 import ArchivistHost from './remotes/ArchivistHost.jsx';
 import ChroniclerHost from './remotes/ChroniclerHost.jsx';
+
+/**
+ * HeaderSearch - Independent search component for the header bar
+ * Has its own state and dropdown, navigates to Chronicler on selection
+ */
+function HeaderSearch({ worldData, chronicles, staticPages, onNavigate }) {
+  const [query, setQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const containerRef = useRef(null);
+
+  // Build searchable pages from world data
+  const pages = useMemo(() => {
+    const result = [];
+
+    // Add static pages (use pageId as the page ID)
+    if (staticPages) {
+      for (const page of staticPages) {
+        if (page.pageId) {
+          result.push({
+            id: page.pageId,
+            title: page.title || page.pageId,
+            type: 'page',
+            content: { summary: page.summary || '' },
+          });
+        }
+      }
+    }
+
+    // Add chronicles (use chronicleId as the page ID)
+    if (chronicles) {
+      for (const chronicle of chronicles) {
+        if (chronicle.chronicleId) {
+          result.push({
+            id: chronicle.chronicleId,
+            title: chronicle.title || chronicle.chronicleId,
+            type: 'chronicle',
+            content: { summary: chronicle.summary || '' },
+          });
+        }
+      }
+    }
+
+    // Add entities from hardState (use entity.id directly)
+    if (worldData?.hardState) {
+      for (const entity of worldData.hardState) {
+        if (entity && entity.id && entity.name && entity.kind !== 'era') {
+          result.push({
+            id: entity.id,
+            title: entity.name,
+            type: entity.kind || 'entity',
+            content: { summary: entity.description || entity.summary || '' },
+          });
+        }
+      }
+    }
+
+    return result;
+  }, [worldData, chronicles, staticPages]);
+
+  // Build Fuse.js search index
+  const fuse = useMemo(() => {
+    return new Fuse(pages, {
+      keys: [
+        { name: 'title', weight: 2 },
+        { name: 'content.summary', weight: 1 },
+      ],
+      threshold: 0.3,
+      includeScore: true,
+      minMatchCharLength: 2,
+    });
+  }, [pages]);
+
+  // Search results
+  const results = useMemo(() => {
+    if (!query || query.length < 2) return [];
+    return fuse.search(query).slice(0, 8);
+  }, [fuse, query]);
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!isOpen || results.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(i => Math.min(i + 1, results.length - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(i => Math.max(i - 1, 0));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (results[selectedIndex]) {
+          onNavigate(results[selectedIndex].item.id);
+          setIsOpen(false);
+          setQuery('');
+        }
+        break;
+      case 'Escape':
+        setIsOpen(false);
+        break;
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Reset selection when results change
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [results]);
+
+  return (
+    <div className="header-search" ref={containerRef}>
+      <input
+        type="text"
+        className="header-search-input"
+        placeholder="Search wiki..."
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onKeyDown={handleKeyDown}
+      />
+      {isOpen && query.length >= 2 && (
+        <div className="header-search-dropdown">
+          {results.length > 0 ? (
+            results.map((result, index) => (
+              <button
+                key={result.item.id}
+                type="button"
+                className={`header-search-result ${index === selectedIndex ? 'selected' : ''}`}
+                onClick={() => {
+                  onNavigate(result.item.id);
+                  setIsOpen(false);
+                  setQuery('');
+                }}
+                onMouseEnter={() => setSelectedIndex(index)}
+              >
+                <span className="header-search-result-title">{result.item.title}</span>
+                <span className="header-search-result-type">{result.item.type}</span>
+              </button>
+            ))
+          ) : (
+            <div className="header-search-no-results">No results found</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const VIEW_OPTIONS = [
+  { value: 'chronicler', label: 'Chronicler', icon: '📜', description: 'Wiki & Lore' },
+  { value: 'archivist', label: 'Archivist', icon: '🗺️', description: 'Graph Explorer' },
+];
+
+function ViewSelector({ value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const selectedOption = VIEW_OPTIONS.find(opt => opt.value === value) || VIEW_OPTIONS[0];
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleSelect = (optionValue) => {
+    if (optionValue !== value) {
+      onChange(optionValue);
+    }
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="view-selector" ref={containerRef}>
+      <button
+        type="button"
+        className={`view-selector-trigger ${isOpen ? 'open' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+      >
+        <span className="view-selector-icon">{selectedOption.icon}</span>
+        <span className="view-selector-label">{selectedOption.label}</span>
+        <span className="view-selector-caret" aria-hidden="true">
+          {isOpen ? '▴' : '▾'}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="view-selector-dropdown" role="listbox">
+          {VIEW_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`view-selector-option ${option.value === value ? 'selected' : ''}`}
+              onClick={() => handleSelect(option.value)}
+              role="option"
+              aria-selected={option.value === value}
+            >
+              <span className="view-selector-option-icon">{option.icon}</span>
+              <div className="view-selector-option-text">
+                <span className="view-selector-option-label">{option.label}</span>
+                <span className="view-selector-option-desc">{option.description}</span>
+              </div>
+              {option.value === value && (
+                <span className="view-selector-option-check">✓</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const DEFAULT_BUNDLE_PATH = 'bundles/default/bundle.json';
 const DEFAULT_BUNDLE_MANIFEST_PATH = 'bundles/default/bundle.manifest.json';
 const CHRONICLER_HASH_PREFIX = '#/page/';
+const ARCHIVIST_HASH_PREFIX = '#/entity/';
 
 function deriveViewFromHash(hash) {
   if (!hash || hash === '#/' || hash === '#') return 'chronicler';
   if (hash.startsWith(CHRONICLER_HASH_PREFIX)) return 'chronicler';
   if (hash === '#/chronicler') return 'chronicler';
+  if (hash.startsWith(ARCHIVIST_HASH_PREFIX)) return 'archivist';
   if (hash === '#/archivist') return 'archivist';
   return 'chronicler';
 }
@@ -109,6 +347,26 @@ export default function App() {
     window.location.hash.startsWith(CHRONICLER_HASH_PREFIX) ? window.location.hash : null
   );
 
+  // Requested page for Chronicler (set by cross-MFE navigation, cleared after use)
+  const [chroniclerRequestedPage, setChroniclerRequestedPage] = useState(null);
+
+  // Listen for cross-MFE navigation events (e.g., Archivist -> Chronicler)
+  useEffect(() => {
+    const handleCrossNavigation = (e) => {
+      const { tab, pageId } = e.detail || {};
+      if (tab === 'chronicler') {
+        if (pageId) {
+          setChroniclerRequestedPage(pageId);
+        }
+        setActiveView('chronicler');
+      } else if (tab === 'archivist') {
+        setActiveView('archivist');
+      }
+    };
+    window.addEventListener('canonry:navigate', handleCrossNavigation);
+    return () => window.removeEventListener('canonry:navigate', handleCrossNavigation);
+  }, []);
+
   const bundleManifestUrl = useMemo(() => resolveBundleManifestUrl(), []);
   const bundleFallbackUrl = useMemo(() => resolveBundleUrl(), []);
 
@@ -189,18 +447,22 @@ export default function App() {
     };
   }, [loadBundle]);
 
+  // Load narrative history chunks after initial bundle is ready
+  // Note: bundle is intentionally NOT in the dependency array - we only want to start
+  // chunk loading once when chunkPlan becomes available, not restart when bundle updates
+  const bundleReady = bundle?.worldData != null;
   useEffect(() => {
     if (!chunkPlan || chunkLoadStarted.current) return;
-    if (!bundle?.worldData) return;
+    if (!bundleReady) return;
     if (!chunkPlan.files.length) return;
 
     chunkLoadStarted.current = true;
     const sequence = loadSequence.current;
-    let cancelled = false;
 
     const loadChunks = async () => {
       for (const file of chunkPlan.files) {
-        if (cancelled || sequence !== loadSequence.current) return;
+        // Only check sequence (not cancelled) - we want to complete loading even across re-renders
+        if (sequence !== loadSequence.current) return;
         const chunkPath = typeof file?.path === 'string' ? file.path : null;
         if (!chunkPath) continue;
         const chunkUrl = resolveAssetUrl(chunkPath, chunkPlan.baseUrl);
@@ -213,7 +475,7 @@ export default function App() {
           const payload = await response.json();
           const items = extractChunkItems(payload);
           if (!items.length) continue;
-          if (cancelled || sequence !== loadSequence.current) return;
+          if (sequence !== loadSequence.current) return;
 
           setBundle((prev) => {
             if (!prev?.worldData) return prev;
@@ -237,18 +499,17 @@ export default function App() {
     const scheduleIdle = window.requestIdleCallback
       ? window.requestIdleCallback.bind(window)
       : (cb) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 }), 250);
-    const cancelIdle = window.cancelIdleCallback
-      ? window.cancelIdleCallback.bind(window)
-      : window.clearTimeout;
     const idleHandle = scheduleIdle(() => {
       loadChunks();
     });
 
+    // Only cancel idle callback scheduling, not in-flight chunk loading
     return () => {
-      cancelled = true;
-      cancelIdle(idleHandle);
+      window.cancelIdleCallback
+        ? window.cancelIdleCallback(idleHandle)
+        : window.clearTimeout(idleHandle);
     };
-  }, [bundle, chunkPlan]);
+  }, [bundleReady, chunkPlan]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -366,24 +627,29 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="header-spacer" />
-        <div className="brand">
+        <ViewSelector value={activeView} onChange={handleViewChange} />
+        <button
+          type="button"
+          className="brand"
+          onClick={() => {
+            setChroniclerRequestedPage('home');
+            setActiveView('chronicler');
+            window.location.hash = '#/';
+          }}
+        >
+          <span className="brand-icon">🐧</span>
           <span className="brand-title">Penguin Tales</span>
-        </div>
-        <div className="view-selector">
-          <span className="view-selector-label">App</span>
-          <div className="view-selector-control">
-            <select
-              className="view-selector-input"
-              value={activeView}
-              onChange={(event) => handleViewChange(event.target.value)}
-            >
-              <option value="chronicler">Chronicler</option>
-              <option value="archivist">Archivist</option>
-            </select>
-            <span className="view-selector-caret" aria-hidden="true">▾</span>
-          </div>
-        </div>
+        </button>
+        <HeaderSearch
+          worldData={bundle.worldData}
+          chronicles={bundle.chronicles}
+          staticPages={bundle.staticPages}
+          onNavigate={(pageId) => {
+            setChroniclerRequestedPage(pageId);
+            setActiveView('chronicler');
+          }}
+        />
+        <div className="header-spacer" />
       </header>
       <main className="app-main">
         <div className="panel" style={{ display: activeView === 'archivist' ? 'block' : 'none' }}>
@@ -402,6 +668,8 @@ export default function App() {
             imageLoader={imageLoader}
             chronicles={bundle.chronicles}
             staticPages={bundle.staticPages}
+            requestedPageId={chroniclerRequestedPage}
+            onRequestedPageConsumed={() => setChroniclerRequestedPage(null)}
           />
         </div>
       </main>

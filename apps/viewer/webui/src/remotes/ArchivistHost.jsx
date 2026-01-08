@@ -15,7 +15,7 @@ const ArchivistRemote = lazy(() =>
 const styles = {
   container: {
     height: '100%',
-    overflow: 'auto',
+    overflow: 'hidden',
   },
   loading: {
     display: 'flex',

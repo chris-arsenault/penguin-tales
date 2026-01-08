@@ -45,6 +45,9 @@ const ERA_SPACING = 200;
 const ERA_Y_POSITION = 0;
 const ERA_Z_POSITION = 0;
 
+// Relationship kinds that link entities to eras
+const ERA_RELATIONSHIP_KINDS = ['active_during', 'created_during'];
+
 export default function TimelineView3D({
   data,
   selectedNodeId,
@@ -56,6 +59,17 @@ export default function TimelineView3D({
   const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  // Delay render by one frame to let any stale animation callbacks clear
+  const [isReady, setIsReady] = useState(false);
+  // Unique ID per mount to ensure ForceGraph gets a fresh instance
+  const [mountId] = useState(() => Date.now());
+
+  useEffect(() => {
+    const frameId = requestAnimationFrame(() => {
+      setIsReady(true);
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, []);
 
   // Get container dimensions
   useEffect(() => {
@@ -76,7 +90,7 @@ export default function TimelineView3D({
   }, []);
 
   // Identify eras and sort by createdAt
-  const eraPositions = useMemo(() => {
+  const { eraPositions, entityEraMap } = useMemo(() => {
     const eras = data.hardState
       .filter(e => e.kind === 'era')
       .sort((a, b) => a.createdAt - b.createdAt);
@@ -87,8 +101,38 @@ export default function TimelineView3D({
       const centerOffset = (eras.length - 1) * ERA_SPACING / 2;
       positions.set(era.id, index * ERA_SPACING - centerOffset);
     });
-    return positions;
-  }, [data.hardState]);
+
+    // Build entity -> era mapping
+    // Priority: 1. eraId field, 2. created_during relationship, 3. first era
+    const entityToEra = new Map<string, string>();
+    const firstEraId = eras.length > 0 ? eras[0].id : null;
+
+    // First pass: use eraId field directly
+    data.hardState.forEach(entity => {
+      if (entity.kind !== 'era' && (entity as any).eraId) {
+        entityToEra.set(entity.id, (entity as any).eraId);
+      }
+    });
+
+    // Second pass: use created_during relationships for entities without eraId
+    data.relationships.forEach(rel => {
+      if (rel.kind === 'created_during' && !entityToEra.has(rel.src)) {
+        // created_during: src is entity, dst is era
+        if (positions.has(rel.dst)) {
+          entityToEra.set(rel.src, rel.dst);
+        }
+      }
+    });
+
+    // Third pass: entities still without era get assigned to first era
+    data.hardState.forEach(entity => {
+      if (entity.kind !== 'era' && !entityToEra.has(entity.id) && firstEraId) {
+        entityToEra.set(entity.id, firstEraId);
+      }
+    });
+
+    return { eraPositions: positions, entityEraMap: entityToEra };
+  }, [data.hardState, data.relationships]);
 
   const legendItems = useMemo(() => {
     return data.schema.entityKinds
@@ -107,7 +151,18 @@ export default function TimelineView3D({
   const graphData = useMemo(() => {
     const nodes: GraphNode[] = data.hardState.map(entity => {
       const isEra = entity.kind === 'era';
-      const eraX = eraPositions.get(entity.id);
+
+      // For eras: use their fixed position
+      // For entities: get their era's X position as a soft target (not fixed)
+      let eraX: number | undefined;
+      if (isEra) {
+        eraX = eraPositions.get(entity.id);
+      } else {
+        const entityEraId = entityEraMap.get(entity.id);
+        if (entityEraId) {
+          eraX = eraPositions.get(entityEraId);
+        }
+      }
 
       return {
         id: entity.id,
@@ -117,16 +172,19 @@ export default function TimelineView3D({
         color: isEra ? '#FFD700' : getKindColor(entity.kind, data.schema), // Gold for eras
         val: isEra ? 6 : prominenceToNumber(entity.prominence, data.schema, prominenceScale) + 1, // Eras are larger
         createdAt: entity.createdAt,
-        // Fix era positions along X-axis
+        // Fix era positions along X-axis, but not entity positions
         fx: isEra ? eraX : undefined,
         fy: isEra ? ERA_Y_POSITION : undefined,
         fz: isEra ? ERA_Z_POSITION : undefined,
-      };
+        // Store the target X position for non-era entities (used by force simulation)
+        _targetX: isEra ? undefined : eraX,
+      } as GraphNode & { _targetX?: number };
     });
 
     const links: GraphLink[] = data.relationships.map(rel => {
       const catalyzedBy = (rel as any).catalyzedBy;
-      const isCreatedDuring = rel.kind === 'created_during';
+      // Both active_during and created_during link entities to eras
+      const isEraLink = ERA_RELATIONSHIP_KINDS.includes(rel.kind);
 
       return {
         source: rel.src,
@@ -135,12 +193,18 @@ export default function TimelineView3D({
         strength: rel.strength ?? 0.5,
         distance: rel.distance,
         catalyzed: showCatalyzedBy && !!catalyzedBy,
-        isCreatedDuring,
+        isCreatedDuring: isEraLink, // Renamed to isEraLink semantically, but keeping field name for compatibility
       };
     });
 
     return { nodes, links };
-  }, [data, showCatalyzedBy, eraPositions, prominenceScale]);
+  }, [data, showCatalyzedBy, eraPositions, entityEraMap, prominenceScale]);
+
+  // Generate a stable key - includes mountId for fresh instance on remount,
+  // and entity count for clean reset when filters change
+  const graphKey = useMemo(() => {
+    return `timeline-${mountId}-${data.hardState.length}`;
+  }, [mountId, data.hardState.length]);
 
   // Calculate link distance based on selected metric and relationship type
   const linkDistance = useCallback((link: any) => {
@@ -252,98 +316,127 @@ export default function TimelineView3D({
     return link.strength * 2;
   }, []);
 
-  // Set initial camera position
+  // Set initial camera position and cleanup on unmount
   useEffect(() => {
-    if (fgRef.current) {
-      const camera = fgRef.current.camera();
-      // Position camera to see timeline from the side
-      camera.position.set(0, 200, 500);
+    if (!isReady || !fgRef.current) {
+      return;
     }
-  }, []);
+
+    const camera = fgRef.current.camera();
+    // Position camera to see timeline from the side
+    camera.position.set(0, 200, 500);
+
+    // Cleanup: pause animation when component unmounts to prevent stale tick errors
+    return () => {
+      if (fgRef.current) {
+        fgRef.current.pauseAnimation?.();
+        // Also stop the d3 simulation
+        const simulation = fgRef.current.d3Force?.('simulation');
+        simulation?.stop?.();
+      }
+    };
+  }, [isReady]);
 
   // Configure d3 forces for timeline layout
   useEffect(() => {
-    if (fgRef.current) {
-      const fg = fgRef.current;
-
-      // Configure the d3 link force
-      const linkForce = fg.d3Force('link');
-      if (linkForce) {
-        linkForce
-          .distance((link: any) => {
-            // created_during links are shorter and stronger
-            if (link.isCreatedDuring) {
-              return 50;
-            }
-            if (edgeMetric === 'none') {
-              return 100;
-            } else if (edgeMetric === 'distance') {
-              const dist = link.distance ?? 0.5;
-              return 30 + dist * 170;
-            } else {
-              const strength = link.strength ?? 0.5;
-              return 30 + (1 - strength) * 170;
-            }
-          })
-          .strength((link: any) => {
-            // created_during links have higher strength to pull entities toward eras
-            if (link.isCreatedDuring) {
-              return 1.5; // Higher strength
-            }
-            return 0.5; // Normal strength
-          });
-
-        fg.d3ReheatSimulation();
-      }
-
-      // Add a weak force pushing non-era nodes away from X-axis
-      // This spreads entities vertically/depth-wise while keeping them near their era
-      fg.d3Force('y', (alpha: number) => {
-        graphData.nodes.forEach((node: any) => {
-          if (node.kind !== 'era' && node.fy === undefined) {
-            // Weak force pushing away from y=0
-            const sign = (node.y ?? 0) >= 0 ? 1 : -1;
-            node.vy = (node.vy || 0) + sign * alpha * 0.5;
-          }
-        });
-      });
+    if (!isReady || !fgRef.current) {
+      return;
     }
-  }, [edgeMetric, graphData.nodes]);
+
+    const fg = fgRef.current;
+
+    // Configure the d3 link force
+    const linkForce = fg.d3Force('link');
+    if (linkForce) {
+      linkForce
+        .distance((link: any) => {
+          // Era links (active_during, created_during) are shorter to cluster near era
+          if (link.isCreatedDuring) {
+            return 50;
+          }
+          if (edgeMetric === 'none') {
+            return 100;
+          } else if (edgeMetric === 'distance') {
+            const dist = link.distance ?? 0.5;
+            return 30 + dist * 170;
+          } else {
+            const strength = link.strength ?? 0.5;
+            return 30 + (1 - strength) * 170;
+          }
+        })
+        .strength((link: any) => {
+          // Era links have higher strength to pull entities toward eras
+          if (link.isCreatedDuring) {
+            return 1.5;
+          }
+          return 0.5;
+        });
+
+      fg.d3ReheatSimulation();
+    }
+
+    // Add custom force to pull entities toward their era's X position
+    // This works even for entities without direct era relationships
+    fg.d3Force('eraX', (alpha: number) => {
+      graphData.nodes.forEach((node: any) => {
+        if (node.kind !== 'era' && node._targetX !== undefined && node.fx === undefined) {
+          // Pull toward era's X position
+          const dx = node._targetX - (node.x ?? 0);
+          node.vx = (node.vx || 0) + dx * alpha * 0.1;
+        }
+      });
+    });
+
+    // Add a weak force pushing non-era nodes away from Y=0 axis
+    // This spreads entities vertically while keeping them near their era
+    fg.d3Force('spreadY', (alpha: number) => {
+      graphData.nodes.forEach((node: any) => {
+        if (node.kind !== 'era' && node.fy === undefined) {
+          // Weak force pushing away from y=0
+          const sign = (node.y ?? 0) >= 0 ? 1 : -1;
+          node.vy = (node.vy || 0) + sign * alpha * 0.5;
+        }
+      });
+    });
+  }, [edgeMetric, graphData.nodes, isReady]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
-      <ForceGraph3D
-        ref={fgRef}
-        graphData={graphData}
-        width={dimensions.width}
-        height={dimensions.height}
-        nodeId="id"
-        nodeLabel="name"
-        nodeColor="color"
-        nodeVal="val"
-        nodeThreeObject={nodeThreeObject}
-        onNodeClick={handleNodeClick}
-        onBackgroundClick={handleBackgroundClick}
-        linkSource="source"
-        linkTarget="target"
-        linkColor={linkColor}
-        linkWidth={linkWidth}
-        linkOpacity={0.6}
-        // @ts-expect-error react-force-graph supports linkDistance
-        linkDistance={linkDistance}
-        linkDirectionalArrowLength={3}
-        linkDirectionalArrowRelPos={1}
-        enableNodeDrag={true}
-        enableNavigationControls={true}
-        showNavInfo={false}
-        backgroundColor="#0a1929"
-        d3VelocityDecay={0.4}
-        d3AlphaDecay={0.015}
-        d3AlphaMin={0.001}
-        warmupTicks={200}
-        cooldownTicks={Infinity}
-        cooldownTime={20000}
-      />
+    <div ref={containerRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+      {isReady && (
+        <ForceGraph3D
+          key={graphKey}
+          ref={fgRef}
+          graphData={graphData}
+          width={dimensions.width}
+          height={dimensions.height}
+          nodeId="id"
+          nodeLabel="name"
+          nodeColor="color"
+          nodeVal="val"
+          nodeThreeObject={nodeThreeObject}
+          onNodeClick={handleNodeClick}
+          onBackgroundClick={handleBackgroundClick}
+          linkSource="source"
+          linkTarget="target"
+          linkColor={linkColor}
+          linkWidth={linkWidth}
+          linkOpacity={0.6}
+          // @ts-expect-error react-force-graph supports linkDistance
+          linkDistance={linkDistance}
+          linkDirectionalArrowLength={3}
+          linkDirectionalArrowRelPos={1}
+          enableNodeDrag={true}
+          enableNavigationControls={true}
+          showNavInfo={false}
+          backgroundColor="#0a1929"
+          d3VelocityDecay={0.4}
+          d3AlphaDecay={0.015}
+          d3AlphaMin={0.001}
+          warmupTicks={200}
+          cooldownTicks={Infinity}
+          cooldownTime={20000}
+        />
+      )}
 
       {/* Legend */}
       <div className="absolute bottom-6 left-6 rounded-xl text-white text-sm shadow-2xl border border-amber-500/30 overflow-hidden"
@@ -364,11 +457,11 @@ export default function TimelineView3D({
           ))}
           <div className="flex items-center gap-3">
             <div className="w-8 h-0.5 shadow-lg flex-shrink-0" style={{ backgroundColor: '#FFD700' }}></div>
-            <span className="font-medium">created_during links</span>
+            <span className="font-medium">Era links</span>
           </div>
         </div>
         <div className="px-5 py-3 border-t border-amber-500/20" style={{ background: 'rgba(255, 215, 0, 0.05)' }}>
-          <div className="text-xs text-amber-300 italic">Entities cluster near their origin era</div>
+          <div className="text-xs text-amber-300 italic">Entities cluster near their creation era</div>
         </div>
       </div>
 

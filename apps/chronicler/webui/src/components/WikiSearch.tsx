@@ -78,6 +78,8 @@ interface WikiSearchProps {
   query: string;
   onQueryChange: (query: string) => void;
   onSelect: (pageId: string) => void;
+  /** Direction to expand dropdown - 'down' (default) or 'up' */
+  expandDirection?: 'down' | 'up';
 }
 
 export default function WikiSearch({
@@ -85,6 +87,7 @@ export default function WikiSearch({
   query,
   onQueryChange,
   onSelect,
+  expandDirection = 'down',
 }: WikiSearchProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -171,7 +174,15 @@ export default function WikiSearch({
       />
 
       {isOpen && query.length >= 2 && (
-        <div style={styles.dropdown}>
+        <div style={{
+          ...styles.dropdown,
+          ...(expandDirection === 'up' ? {
+            top: 'auto',
+            bottom: '100%',
+            marginTop: 0,
+            marginBottom: '4px',
+          } : {}),
+        }}>
           {results.length > 0 ? (
             results.map((result, index) => (
               <button

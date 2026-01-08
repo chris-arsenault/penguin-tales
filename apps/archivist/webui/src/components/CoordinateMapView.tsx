@@ -256,26 +256,36 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
     return new Map(nodes.map(n => [n.id, { x: n.x, y: n.y, anchored: n.anchored }]));
   }, [mapEntities, data.relationships, mapKind]);
 
+  // Use uniform scale to preserve aspect ratio (circles stay circular)
+  const padding = 40;
+  const worldRange = bounds.max - bounds.min || 1; // Prevent division by zero
+  const availableWidth = Math.max(1, dimensions.width - padding * 2);
+  const availableHeight = Math.max(1, dimensions.height - padding * 2);
+  // Use the smaller scale so everything fits
+  const uniformScale = Math.max(0.001, Math.min(availableWidth, availableHeight) / worldRange);
+  // Center the content in the larger dimension
+  const offsetX = padding + (availableWidth - worldRange * uniformScale) / 2;
+  const offsetY = padding + (availableHeight - worldRange * uniformScale) / 2;
+
   // Convert world coordinates to canvas coordinates
   const worldToCanvas = (x: number, y: number): { x: number; y: number } => {
-    const padding = 40;
-    const scaleX = (dimensions.width - padding * 2) / (bounds.max - bounds.min);
-    const scaleY = (dimensions.height - padding * 2) / (bounds.max - bounds.min);
     return {
-      x: padding + (x - bounds.min) * scaleX,
-      y: dimensions.height - padding - (y - bounds.min) * scaleY // Flip Y for canvas
+      x: offsetX + (x - bounds.min) * uniformScale,
+      y: dimensions.height - offsetY - (y - bounds.min) * uniformScale // Flip Y for canvas
     };
   };
 
   // Convert canvas coordinates to world coordinates
   const canvasToWorld = (canvasX: number, canvasY: number): { x: number; y: number } => {
-    const padding = 40;
-    const scaleX = (dimensions.width - padding * 2) / (bounds.max - bounds.min);
-    const scaleY = (dimensions.height - padding * 2) / (bounds.max - bounds.min);
     return {
-      x: bounds.min + (canvasX - padding) / scaleX,
-      y: bounds.min + (dimensions.height - padding - canvasY) / scaleY
+      x: bounds.min + (canvasX - offsetX) / uniformScale,
+      y: bounds.min + (dimensions.height - offsetY - canvasY) / uniformScale
     };
+  };
+
+  // Convert world distance to canvas pixels (for radius calculations)
+  const worldToCanvasDistance = (worldDistance: number): number => {
+    return worldDistance * uniformScale;
   };
 
   // Handle resize
@@ -420,11 +430,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
 
         if (region.bounds.shape === 'circle') {
           const center = worldToCanvas(region.bounds.center.x, region.bounds.center.y);
-          const edgePoint = worldToCanvas(
-            region.bounds.center.x + region.bounds.radius,
-            region.bounds.center.y
-          );
-          const radiusPixels = edgePoint.x - center.x;
+          const radiusPixels = worldToCanvasDistance(region.bounds.radius);
 
           ctx.beginPath();
           ctx.arc(center.x, center.y, radiusPixels, 0, Math.PI * 2);
