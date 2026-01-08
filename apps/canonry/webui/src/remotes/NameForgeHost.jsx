@@ -36,6 +36,12 @@ const styles = {
   },
 };
 
+const loadingFallback = React.createElement(
+  'div',
+  { style: styles.loading },
+  'Loading Name Forge...'
+);
+
 export default function NameForgeHost({
   projectId,
   schema,
@@ -47,7 +53,7 @@ export default function NameForgeHost({
 }) {
   return (
     <div style={styles.container}>
-      <Suspense fallback={<div style={styles.loading}>Loading Name Forge...</div>}>
+      <Suspense fallback={loadingFallback}>
         <NameForgeRemote
           projectId={projectId}
           schema={schema}

@@ -72,20 +72,20 @@
 }
 
 .alert-error {
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background-color: rgb(239 68 68 / 10%);
+  border: 1px solid rgb(239 68 68 / 30%);
   color: #fca5a5;
 }
 
 .alert-warning {
-  background-color: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background-color: rgb(245 158 11 / 10%);
+  border: 1px solid rgb(245 158 11 / 30%);
   color: #fcd34d;
 }
 
 .alert-info {
-  background-color: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background-color: rgb(59 130 246 / 10%);
+  border: 1px solid rgb(59 130 246 / 30%);
   color: #93c5fd;
 }
 
@@ -217,7 +217,7 @@
 }
 
 .chip-active {
-  background-color: rgba(245, 158, 11, 0.2);
+  background-color: rgb(245 158 11 / 20%);
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
@@ -242,8 +242,8 @@
 }
 
 .chip-clickable:hover {
-  background-color: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.4);
+  background-color: rgb(59 130 246 / 15%);
+  border-color: rgb(59 130 246 / 40%);
 }
 
 .chip-container-input {
@@ -425,7 +425,7 @@
 }
 
 .type-pill-selected {
-  background-color: rgba(245, 158, 11, 0.2);
+  background-color: rgb(245 158 11 / 20%);
   border-color: var(--color-accent);
   color: var(--color-accent);
 }

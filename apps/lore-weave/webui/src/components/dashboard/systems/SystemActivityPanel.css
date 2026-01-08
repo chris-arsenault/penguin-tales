@@ -23,7 +23,7 @@
 .system-activity-toggles {
   display: flex;
   gap: 4px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(0 0 0 / 20%);
   border-radius: 6px;
   padding: 2px;
 }
@@ -44,7 +44,7 @@
 }
 
 .system-toggle.active {
-  background: rgba(139, 92, 246, 0.3);
+  background: rgb(139 92 246 / 30%);
   color: #c4b5fd;
 }
 
@@ -56,7 +56,7 @@
 }
 
 .system-card {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(0 0 0 / 20%);
   border-radius: 6px;
   padding: 10px 12px;
   border-left: 3px solid #64748b;
@@ -82,7 +82,7 @@
 .system-card-count {
   font-size: 10px;
   color: #64748b;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgb(0 0 0 / 30%);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -114,7 +114,7 @@
 /* Chart area */
 .system-activity-chart {
   min-height: 200px;
-  background: rgba(0, 0, 0, 0.15);
+  background: rgb(0 0 0 / 15%);
   border-radius: 8px;
   padding: 8px;
 }
@@ -144,8 +144,8 @@
 .legend-line.dashed {
   background: repeating-linear-gradient(
     to right,
-    currentColor 0,
-    currentColor 4px,
+    currentcolor 0,
+    currentcolor 4px,
     transparent 4px,
     transparent 6px
   );

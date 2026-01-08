@@ -2,9 +2,9 @@
 
 .chain-link-section {
   margin-top: 16px;
-  border: 2px solid rgba(139, 92, 246, 0.4);
+  border: 2px solid rgb(139 92 246 / 40%);
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);
+  background: linear-gradient(135deg, rgb(139 92 246 / 5%) 0%, rgb(124 58 237 / 5%) 100%);
   overflow: hidden;
 }
 
@@ -13,8 +13,8 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(124, 58, 237, 0.15) 100%);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+  background: linear-gradient(135deg, rgb(139 92 246 / 15%) 0%, rgb(124 58 237 / 15%) 100%);
+  border-bottom: 1px solid rgb(139 92 246 / 20%);
 }
 
 .chain-link-icon {
@@ -35,15 +35,15 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(139, 92, 246, 0.08);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+  background: rgb(139 92 246 / 8%);
+  border-bottom: 1px solid rgb(139 92 246 / 15%);
   font-size: 11px;
 }
 
 .chain-link-location {
   padding: 2px 8px;
-  background: rgba(139, 92, 246, 0.2);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgb(139 92 246 / 20%);
+  border: 1px solid rgb(139 92 246 / 30%);
   border-radius: 4px;
   color: #e9d5ff;
   font-weight: 600;
@@ -61,8 +61,8 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: rgba(139, 92, 246, 0.05);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+  background: rgb(139 92 246 / 5%);
+  border-bottom: 1px solid rgb(139 92 246 / 15%);
   font-size: 11px;
 }
 
@@ -75,8 +75,8 @@
 
 .chain-link-theme-badge {
   padding: 2px 8px;
-  background: rgba(167, 139, 250, 0.2);
-  border: 1px solid rgba(167, 139, 250, 0.3);
+  background: rgb(167 139 250 / 20%);
+  border: 1px solid rgb(167 139 250 / 30%);
   border-radius: 10px;
   color: #e9d5ff;
   font-weight: 600;
@@ -87,21 +87,21 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1px;
-  background: rgba(139, 92, 246, 0.15);
+  background: rgb(139 92 246 / 15%);
 }
 
 .chain-link-observation,
 .chain-link-clue {
   padding: 12px;
-  background: rgba(10, 25, 41, 0.6);
+  background: rgb(10 25 41 / 60%);
 }
 
 .chain-link-observation {
-  background: rgba(30, 27, 75, 0.3);
+  background: rgb(30 27 75 / 30%);
 }
 
 .chain-link-clue {
-  background: rgba(55, 48, 163, 0.15);
+  background: rgb(55 48 163 / 15%);
 }
 
 .chain-link-section-label {

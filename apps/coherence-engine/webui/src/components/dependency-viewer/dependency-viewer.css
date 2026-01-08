@@ -62,7 +62,7 @@
 }
 
 .dependency-section-header:hover {
-  background-color: rgba(59, 130, 246, 0.05);
+  background-color: rgb(59 130 246 / 5%);
 }
 
 .dependency-section-title {
@@ -131,27 +131,27 @@
 }
 
 .dependency-badge-generator {
-  background-color: rgba(96, 165, 250, 0.2);
+  background-color: rgb(96 165 250 / 20%);
   color: #60a5fa;
 }
 
 .dependency-badge-system {
-  background-color: rgba(168, 85, 247, 0.2);
+  background-color: rgb(168 85 247 / 20%);
   color: #a855f7;
 }
 
 .dependency-badge-action {
-  background-color: rgba(34, 197, 94, 0.2);
+  background-color: rgb(34 197 94 / 20%);
   color: #22c55e;
 }
 
 .dependency-badge-pressure {
-  background-color: rgba(245, 158, 11, 0.2);
+  background-color: rgb(245 158 11 / 20%);
   color: #fbbf24;
 }
 
 .dependency-badge-era {
-  background-color: rgba(236, 72, 153, 0.2);
+  background-color: rgb(236 72 153 / 20%);
   color: #ec4899;
 }
 

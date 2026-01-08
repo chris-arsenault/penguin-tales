@@ -36,6 +36,12 @@ const styles = {
   },
 };
 
+const loadingFallback = React.createElement(
+  'div',
+  { style: styles.loading },
+  'Loading Cosmographer...'
+);
+
 export default function CosmographerHost({
   schema,
   axisDefinitions,
@@ -54,7 +60,7 @@ export default function CosmographerHost({
 }) {
   return (
     <div style={styles.container}>
-      <Suspense fallback={<div style={styles.loading}>Loading Cosmographer...</div>}>
+      <Suspense fallback={loadingFallback}>
         <CosmographerRemote
           schema={schema}
           axisDefinitions={axisDefinitions}

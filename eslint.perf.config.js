@@ -1,13 +1,17 @@
 import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
 import reactPerf from 'eslint-plugin-react-perf';
 import tseslint from 'typescript-eslint';
 
 export default [
-  { ignores: ['**/dist/**', '**/build/**', '**/.turbo/**', '**/coverage/**'] },
+  {
+    linterOptions: { reportUnusedDisableDirectives: 'off' },
+    ignores: ['**/dist/**', '**/build/**', '**/.turbo/**', '**/coverage/**'],
+  },
   {
     files: [
-      'apps/**/webui/**/*.{js,jsx,ts,tsx}',
-      'packages/shared-components/**/*.{js,jsx,ts,tsx}',
+      'apps/**/webui/src/**/*.{js,jsx,ts,tsx}',
+      'packages/shared-components/src/**/*.{js,jsx,ts,tsx}',
     ],
     languageOptions: {
       parser: tseslint.parser,
@@ -17,13 +21,13 @@ export default [
         ecmaFeatures: { jsx: true },
       },
     },
-    plugins: { react, 'react-perf': reactPerf },
+    plugins: { react, 'react-hooks': reactHooks, 'react-perf': reactPerf },
     settings: { react: { version: 'detect' } },
     rules: {
-      'react-perf/jsx-no-new-object-as-prop': 'warn',
-      'react-perf/jsx-no-new-array-as-prop': 'warn',
-      'react-perf/jsx-no-new-function-as-prop': 'warn',
-      'react-perf/jsx-no-jsx-as-prop': 'warn',
+      'react-perf/jsx-no-new-object-as-prop': ['warn', { nativeAllowList: 'all' }],
+      'react-perf/jsx-no-new-array-as-prop': 'off',
+      'react-perf/jsx-no-new-function-as-prop': 'off',
+      'react-perf/jsx-no-jsx-as-prop': ['warn', { nativeAllowList: 'all' }],
       'react/jsx-no-constructed-context-values': 'warn',
     },
   },

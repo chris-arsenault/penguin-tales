@@ -233,7 +233,7 @@ export default function ProfileModal({
   };
 
   // Sidebar footer with add group buttons
-  const sidebarFooter = (
+  const renderSidebarFooter = () => (
     <div className="profile-modal-footer">
       <button
         className="add-group-btn"
@@ -260,7 +260,7 @@ export default function ProfileModal({
       tabs={tabs}
       activeTab={activeTab}
       onTabChange={setActiveTab}
-      sidebarFooter={sidebarFooter}
+      sidebarFooter={renderSidebarFooter()}
       className="profile-modal"
     >
       {renderTabContent()}

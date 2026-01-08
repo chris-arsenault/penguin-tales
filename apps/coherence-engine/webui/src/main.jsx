@@ -6,11 +6,11 @@ import '@penguin-tales/shared-components/styles';
 // Standalone entry point for development
 // In production, this is loaded via Module Federation from The Canonry
 
-const mockSchema = {
+const mockSchema = Object.freeze({
   entityKinds: [],
   relationshipKinds: [],
   cultures: [],
-};
+});
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

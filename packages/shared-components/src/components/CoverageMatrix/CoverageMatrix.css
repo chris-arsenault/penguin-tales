@@ -17,7 +17,7 @@
 .cm-title {
   font-size: var(--font-size-2xl, 24px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text, #ffffff);
+  color: var(--color-text, #fff);
   margin: 0 0 var(--spacing-sm, 8px) 0;
 }
 
@@ -33,8 +33,8 @@
   gap: var(--spacing-lg, 16px);
   margin-bottom: var(--spacing-lg, 16px);
   padding: var(--spacing-md, 12px) var(--spacing-lg, 16px);
-  background: rgba(15, 23, 42, 0.4);
-  border: 1px solid rgba(59, 130, 246, 0.15);
+  background: rgb(15 23 42 / 40%);
+  border: 1px solid rgb(59 130 246 / 15%);
   border-radius: var(--radius-lg, 8px);
   flex-wrap: wrap;
 }
@@ -44,7 +44,7 @@
   flex-direction: column;
   align-items: center;
   padding: 0 var(--spacing-md, 12px);
-  border-right: 1px solid rgba(59, 130, 246, 0.15);
+  border-right: 1px solid rgb(59 130 246 / 15%);
 }
 
 .cm-stat:last-child {
@@ -84,10 +84,10 @@
 .cm-search {
   padding: var(--spacing-sm, 8px) var(--spacing-md, 12px);
   font-size: var(--font-size-sm, 13px);
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgb(15 23 42 / 60%);
+  border: 1px solid rgb(59 130 246 / 20%);
   border-radius: var(--radius-md, 6px);
-  color: var(--color-text, #ffffff);
+  color: var(--color-text, #fff);
   width: 250px;
   outline: none;
   transition: border-color 0.15s;
@@ -110,8 +110,8 @@
   padding: var(--spacing-xs, 6px) var(--spacing-md, 12px);
   font-size: var(--font-size-xs, 12px);
   font-weight: var(--font-weight-medium, 500);
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgb(15 23 42 / 60%);
+  border: 1px solid rgb(59 130 246 / 20%);
   border-radius: var(--radius-md, 6px);
   color: var(--color-text-dim, #93c5fd);
   cursor: pointer;
@@ -119,12 +119,12 @@
 }
 
 .cm-filter-btn:hover {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgb(245 158 11 / 15%);
   color: var(--color-accent, #f59e0b);
 }
 
 .cm-filter-btn.active {
-  background: rgba(245, 158, 11, 0.2);
+  background: rgb(245 158 11 / 20%);
   border-color: var(--color-accent, #f59e0b);
   color: var(--color-accent, #f59e0b);
 }
@@ -133,8 +133,8 @@
 .cm-container {
   flex: 1;
   overflow: auto;
-  background: rgba(15, 23, 42, 0.4);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgb(15 23 42 / 40%);
+  border: 1px solid rgb(59 130 246 / 20%);
   border-radius: var(--radius-xl, 12px);
 }
 
@@ -158,7 +158,7 @@
 .cm-table td {
   padding: var(--spacing-sm, 10px) var(--spacing-md, 12px);
   text-align: left;
-  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  border-bottom: 1px solid rgb(59 130 246 / 10%);
 }
 
 .cm-table th {
@@ -198,7 +198,7 @@
 }
 
 .cm-data-col.uncovered {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgb(239 68 68 / 10%);
 }
 
 /* Row Styles */
@@ -207,7 +207,7 @@
 }
 
 .cm-row:hover {
-  background: rgba(59, 130, 246, 0.05);
+  background: rgb(59 130 246 / 5%);
 }
 
 .cm-row.clickable {
@@ -215,7 +215,7 @@
 }
 
 .cm-row.clickable:hover {
-  background: rgba(245, 158, 11, 0.08);
+  background: rgb(245 158 11 / 8%);
 }
 
 /* Group & Label */
@@ -226,7 +226,7 @@
 }
 
 .cm-item-label {
-  color: var(--color-text, #ffffff);
+  color: var(--color-text, #fff);
   font-weight: var(--font-weight-medium, 500);
 }
 
@@ -242,29 +242,29 @@
 }
 
 .cm-badge.default {
-  background: rgba(34, 197, 94, 0.2);
+  background: rgb(34 197 94 / 20%);
   color: #22c55e;
 }
 
 .cm-badge.bound,
 .cm-badge.primary {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgb(59 130 246 / 20%);
   color: #60a5fa;
 }
 
 .cm-badge.unbound,
 .cm-badge.warning {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgb(239 68 68 / 20%);
   color: #f87171;
 }
 
 .cm-badge.secondary {
-  background: rgba(168, 85, 247, 0.2);
+  background: rgb(168 85 247 / 20%);
   color: #a78bfa;
 }
 
 .cm-badge.both {
-  background: rgba(245, 158, 11, 0.2);
+  background: rgb(245 158 11 / 20%);
   color: #fbbf24;
 }
 
@@ -307,8 +307,8 @@
   gap: var(--spacing-lg, 16px);
   margin-top: var(--spacing-lg, 16px);
   padding: var(--spacing-md, 12px) var(--spacing-lg, 16px);
-  background: rgba(15, 23, 42, 0.4);
-  border: 1px solid rgba(59, 130, 246, 0.15);
+  background: rgb(15 23 42 / 40%);
+  border: 1px solid rgb(59 130 246 / 15%);
   border-radius: var(--radius-lg, 8px);
   flex-wrap: wrap;
 }
@@ -327,9 +327,9 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid rgb(59 130 246 / 20%);
   border-radius: 4px;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgb(15 23 42 / 60%);
 }
 
 .cm-cell-icon.sample.primary,

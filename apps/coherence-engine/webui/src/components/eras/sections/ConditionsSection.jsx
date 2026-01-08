@@ -6,6 +6,18 @@ import React from 'react';
 import { SectionHeader, EmptyState, AddItemButton } from '../../shared';
 import { TransitionConditionEditor } from '../shared';
 
+const EMPTY_STATE_STYLES = Object.freeze({
+  emptyState: {
+    padding: '16px',
+    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+    borderRadius: '8px',
+  },
+});
+
+const ADD_ITEM_STYLES = Object.freeze({
+  addItemBtn: { marginTop: '10px', padding: '10px 16px' },
+});
+
 /**
  * @param {Object} props
  * @param {string} props.title - Section title
@@ -45,7 +57,7 @@ export function ConditionsSection({
         {conditions.length === 0 ? (
           <EmptyState
             title={emptyMessage}
-            styles={{ emptyState: { padding: '16px', backgroundColor: `rgba(59, 130, 246, 0.05)`, borderRadius: '8px' } }}
+            styles={EMPTY_STATE_STYLES}
           />
         ) : (
           conditions.map((condition, index) => (
@@ -64,7 +76,7 @@ export function ConditionsSection({
       <AddItemButton
         onClick={onAdd}
         label={addLabel}
-        styles={{ addItemBtn: { marginTop: '10px', padding: '10px 16px' } }}
+        styles={ADD_ITEM_STYLES}
       />
     </div>
   );

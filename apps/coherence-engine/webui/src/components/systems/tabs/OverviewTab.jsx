@@ -6,6 +6,8 @@ import React from 'react';
 import { SYSTEM_TYPES } from '../constants';
 import { EnableToggle, useLocalInputState, LocalTextArea } from '../../shared';
 
+const DESCRIPTION_TEXTAREA_STYLE = Object.freeze({ minHeight: '60px' });
+
 /**
  * @param {Object} props
  * @param {Object} props.system - The system being edited
@@ -62,7 +64,7 @@ export function OverviewTab({ system, onChange, onDelete }) {
             <LocalTextArea
               value={config.description || ''}
               onChange={(value) => updateConfig('description', value)}
-              style={{ minHeight: '60px' }}
+              style={DESCRIPTION_TEXTAREA_STYLE}
               placeholder="Describe what this system does..."
             />
           </div>

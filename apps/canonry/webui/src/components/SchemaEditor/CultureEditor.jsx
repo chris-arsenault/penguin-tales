@@ -59,17 +59,41 @@ export default function CultureEditor({ cultures, onChange }) {
     return parts.length > 0 ? parts.join(', ') : 'not configured';
   };
 
+  const renderHeaderActions = () => (
+    <button className="btn btn-primary" onClick={addCulture}>
+      + Add Culture
+    </button>
+  );
+
+  const renderCultureTitle = (culture) => (
+    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <span
+        style={{
+          width: '16px',
+          height: '16px',
+          borderRadius: '50%',
+          backgroundColor: culture.color,
+          border: '2px solid var(--color-border)',
+        }}
+      />
+      {culture.name}
+    </span>
+  );
+
+  const renderCultureActions = (culture, isFramework) => (
+    <span className="text-muted text-small">
+      {getCultureSummary(culture)}
+      {isFramework && <span className="badge badge-info" style={{ marginLeft: '8px' }}>framework</span>}
+    </span>
+  );
+
   return (
     <div className="editor-container" style={{ maxWidth: '900px' }}>
       <SectionHeader
         title="Cultures"
         description="Define cultural groups with their own naming conventions and placement biases."
         count={cultures.length}
-        actions={
-          <button className="btn btn-primary" onClick={addCulture}>
-            + Add Culture
-          </button>
-        }
+        actions={renderHeaderActions()}
       />
 
       {cultures.length === 0 ? (
@@ -90,27 +114,9 @@ export default function CultureEditor({ cultures, onChange }) {
                 key={stableKey}
                 expanded={isExpanded}
                 onToggle={() => toggleCulture(stableKey)}
-                title={
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span
-                      style={{
-                        width: '16px',
-                        height: '16px',
-                        borderRadius: '50%',
-                        backgroundColor: culture.color,
-                        border: '2px solid var(--color-border)',
-                      }}
-                    />
-                    {culture.name}
-                  </span>
-                }
+                title={renderCultureTitle(culture)}
                 subtitle={culture.id}
-                actions={
-                  <span className="text-muted text-small">
-                    {getCultureSummary(culture)}
-                    {isFramework && <span className="badge badge-info" style={{ marginLeft: '8px' }}>framework</span>}
-                  </span>
-                }
+                actions={renderCultureActions(culture, isFramework)}
               >
                 {/* Name and ID */}
                 <FormRow>

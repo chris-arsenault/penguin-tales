@@ -31,56 +31,56 @@
 
 /* Color variants */
 .badge-error {
-  background-color: rgba(239, 68, 68, 0.2);
+  background-color: rgb(239 68 68 / 20%);
   color: var(--color-danger);
 }
 
 .badge-warning {
-  background-color: rgba(245, 158, 11, 0.2);
+  background-color: rgb(245 158 11 / 20%);
   color: var(--color-warning);
 }
 
 .badge-success {
-  background-color: rgba(34, 197, 94, 0.15);
+  background-color: rgb(34 197 94 / 15%);
   color: var(--color-success);
 }
 
 .badge-info {
-  background-color: rgba(59, 130, 246, 0.15);
+  background-color: rgb(59 130 246 / 15%);
   color: var(--color-text-dim);
 }
 
 .badge-orphan {
-  background-color: rgba(107, 114, 128, 0.2);
+  background-color: rgb(107 114 128 / 20%);
   color: var(--color-gray);
 }
 
 /* Entity type badges */
 .badge-actor {
-  background-color: rgba(59, 130, 246, 0.2);
+  background-color: rgb(59 130 246 / 20%);
   color: #60a5fa;
 }
 
 .badge-target {
-  background-color: rgba(168, 85, 247, 0.2);
+  background-color: rgb(168 85 247 / 20%);
   color: #c084fc;
 }
 
 .badge-pressure {
-  background-color: rgba(245, 158, 11, 0.2);
+  background-color: rgb(245 158 11 / 20%);
   color: #fbbf24;
 }
 
 /* Era badge */
 .badge-era {
-  background-color: rgba(59, 130, 246, 0.15);
+  background-color: rgb(59 130 246 / 15%);
   color: #60a5fa;
   padding: 3px 8px;
 }
 
 /* Usage badge */
 .badge-usage {
-  background-color: rgba(34, 197, 94, 0.15);
+  background-color: rgb(34 197 94 / 15%);
   color: var(--color-success);
   font-size: var(--font-size-xs);
   padding: 2px 6px;
@@ -89,7 +89,7 @@
 
 /* Compatibility badge */
 .badge-compatibility {
-  background-color: rgba(245, 158, 11, 0.2);
+  background-color: rgb(245 158 11 / 20%);
   color: var(--color-warning);
 }
 
@@ -152,50 +152,50 @@
 /* Tool badge variants */
 .tool-badge-nameforge {
   color: #fbbf24;
-  background-color: rgba(251, 191, 36, 0.15);
-  border-color: rgba(251, 191, 36, 0.4);
+  background-color: rgb(251 191 36 / 15%);
+  border-color: rgb(251 191 36 / 40%);
 }
 
 .tool-badge-seed {
   color: #60a5fa;
-  background-color: rgba(96, 165, 250, 0.15);
-  border-color: rgba(96, 165, 250, 0.4);
+  background-color: rgb(96 165 250 / 15%);
+  border-color: rgb(96 165 250 / 40%);
 }
 
 .tool-badge-coherence {
   color: #f59e0b;
-  background-color: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.4);
+  background-color: rgb(245 158 11 / 15%);
+  border-color: rgb(245 158 11 / 40%);
 }
 
 .tool-badge-loreweave {
   color: #a78bfa;
-  background-color: rgba(167, 139, 250, 0.15);
-  border-color: rgba(167, 139, 250, 0.4);
+  background-color: rgb(167 139 250 / 15%);
+  border-color: rgb(167 139 250 / 40%);
 }
 
 .tool-badge-generators {
   color: #34d399;
-  background-color: rgba(52, 211, 153, 0.15);
-  border-color: rgba(52, 211, 153, 0.4);
+  background-color: rgb(52 211 153 / 15%);
+  border-color: rgb(52 211 153 / 40%);
 }
 
 .tool-badge-systems {
   color: #c084fc;
-  background-color: rgba(192, 132, 252, 0.15);
-  border-color: rgba(192, 132, 252, 0.4);
+  background-color: rgb(192 132 252 / 15%);
+  border-color: rgb(192 132 252 / 40%);
 }
 
 .tool-badge-pressures {
   color: #fb923c;
-  background-color: rgba(251, 146, 60, 0.15);
-  border-color: rgba(251, 146, 60, 0.4);
+  background-color: rgb(251 146 60 / 15%);
+  border-color: rgb(251 146 60 / 40%);
 }
 
 .tool-badge-axis {
   color: #22d3ee;
-  background-color: rgba(34, 211, 238, 0.15);
-  border-color: rgba(34, 211, 238, 0.4);
+  background-color: rgb(34 211 238 / 15%);
+  border-color: rgb(34 211 238 / 40%);
 }
 
 /* ========================================
@@ -221,30 +221,30 @@
 /* Detail badge variants */
 .detail-badge-generator {
   color: #60a5fa;
-  background-color: rgba(96, 165, 250, 0.15);
+  background-color: rgb(96 165 250 / 15%);
 }
 
 .detail-badge-system {
   color: #a855f7;
-  background-color: rgba(168, 85, 247, 0.15);
+  background-color: rgb(168 85 247 / 15%);
 }
 
 .detail-badge-action {
   color: #22c55e;
-  background-color: rgba(34, 197, 94, 0.15);
+  background-color: rgb(34 197 94 / 15%);
 }
 
 .detail-badge-pressure {
   color: #fbbf24;
-  background-color: rgba(251, 191, 36, 0.15);
+  background-color: rgb(251 191 36 / 15%);
 }
 
 .detail-badge-era {
   color: #ec4899;
-  background-color: rgba(236, 72, 153, 0.15);
+  background-color: rgb(236 72 153 / 15%);
 }
 
 .detail-badge-orphan {
   color: var(--color-text-muted);
-  background-color: rgba(107, 114, 128, 0.2);
+  background-color: rgb(107 114 128 / 20%);
 }

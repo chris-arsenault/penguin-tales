@@ -439,9 +439,9 @@ export default function GraphView({
       <div ref={containerRef} className="cytoscape-container" style={{ width: '100%', height: '100%' }} />
 
       {/* Legend - Dynamic from schema */}
-      <div className="absolute bottom-6 left-6 rounded-xl text-white text-sm shadow-2xl border border-blue-500/30 overflow-hidden"
+      <div className="absolute bottom-6 left-6 rounded-xl text-white text-sm shadow-2xl border border-blue-500-30 overflow-hidden"
         style={{ background: 'linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(10, 25, 41, 0.95) 100%)' }}>
-        <div className="px-5 py-3 border-b border-blue-500/20" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
+        <div className="px-5 py-3 border-b border-blue-500-20" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
           <div className="font-bold text-blue-200 uppercase tracking-wider text-xs">Legend</div>
         </div>
         <div className="px-5 py-4 space-y-3">
@@ -463,15 +463,15 @@ export default function GraphView({
             </div>
           ))}
         </div>
-        <div className="px-5 py-3 border-t border-blue-500/20" style={{ background: 'rgba(59, 130, 246, 0.05)' }}>
+        <div className="px-5 py-3 border-t border-blue-500-20" style={{ background: 'rgba(59, 130, 246, 0.05)' }}>
           <div className="text-xs text-blue-300 italic">Size indicates prominence</div>
         </div>
       </div>
 
       {/* Controls hint */}
-      <div className="absolute top-6 left-6 rounded-xl text-white text-xs shadow-2xl border border-blue-500/30 overflow-hidden"
+      <div className="absolute top-6 left-6 rounded-xl text-white text-xs shadow-2xl border border-blue-500-30 overflow-hidden"
         style={{ background: 'linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(10, 25, 41, 0.95) 100%)' }}>
-        <div className="px-5 py-3 border-b border-blue-500/20" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
+        <div className="px-5 py-3 border-b border-blue-500-20" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
           <div className="font-bold text-blue-200 uppercase tracking-wider">Controls</div>
         </div>
         <div className="px-5 py-3 space-y-2">

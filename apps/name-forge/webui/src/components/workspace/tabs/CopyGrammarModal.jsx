@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { previewGrammarNames } from '../../../lib/browser-generator';
 
+const EMPTY_LEXEME_LISTS = Object.freeze({});
+
 /**
  * Generate a unique ID with culture prefix, avoiding conflicts
  */
@@ -408,7 +410,7 @@ export function CopyGrammarModal({ cultureId, cultureConfig, allCultures, existi
                 <GrammarPreview
                   grammar={substitutedGrammar}
                   domains={cultureConfig?.naming?.domains || []}
-                  lexemeLists={cultureConfig?.naming?.lexemeLists || {}}
+                  lexemeLists={cultureConfig?.naming?.lexemeLists || EMPTY_LEXEME_LISTS}
                 />
               </div>
             </div>

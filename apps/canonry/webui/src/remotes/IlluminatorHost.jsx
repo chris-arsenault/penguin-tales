@@ -38,6 +38,12 @@ const styles = {
   },
 };
 
+const loadingFallback = React.createElement(
+  'div',
+  { style: styles.loading },
+  'Loading Illuminator...'
+);
+
 export default function IlluminatorHost({
   projectId,
   schema,
@@ -59,7 +65,7 @@ export default function IlluminatorHost({
 }) {
   return (
     <div style={styles.container}>
-      <Suspense fallback={<div style={styles.loading}>Loading Illuminator...</div>}>
+      <Suspense fallback={loadingFallback}>
         <IlluminatorRemote
           projectId={projectId}
           schema={schema}

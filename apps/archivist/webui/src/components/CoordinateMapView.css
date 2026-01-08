@@ -14,13 +14,13 @@
   position: absolute;
   top: 16px;
   left: 16px;
-  background: linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(10, 25, 41, 0.95) 100%);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, rgb(30 58 95 / 95%) 0%, rgb(10 25 41 / 95%) 100%);
+  border: 1px solid rgb(59 130 246 / 30%);
   border-radius: 12px;
   padding: 16px;
   color: white;
   font-size: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 40%);
   min-width: 160px;
   z-index: 10;
 }
@@ -37,7 +37,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(147, 197, 253, 0.8);
+  color: rgb(147 197 253 / 80%);
   margin-bottom: 6px;
   font-size: 10px;
 }
@@ -45,8 +45,8 @@
 .control-select {
   width: 100%;
   padding: 6px 8px;
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: rgb(59 130 246 / 15%);
+  border: 1px solid rgb(59 130 246 / 30%);
   border-radius: 6px;
   color: white;
   font-size: 12px;
@@ -54,7 +54,7 @@
 }
 
 .control-select:hover {
-  background: rgba(59, 130, 246, 0.25);
+  background: rgb(59 130 246 / 25%);
 }
 
 .control-select option {
@@ -64,7 +64,7 @@
 
 .control-description {
   font-size: 10px;
-  color: rgba(147, 197, 253, 0.6);
+  color: rgb(147 197 253 / 60%);
   margin-top: 4px;
   font-style: italic;
 }
@@ -96,13 +96,13 @@
   position: absolute;
   bottom: 16px;
   left: 16px;
-  background: linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(10, 25, 41, 0.95) 100%);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, rgb(30 58 95 / 95%) 0%, rgb(10 25 41 / 95%) 100%);
+  border: 1px solid rgb(59 130 246 / 30%);
   border-radius: 12px;
   padding: 12px 16px;
   color: white;
   font-size: 11px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 40%);
   max-height: calc(100% - 250px);
   overflow-y: auto;
   z-index: 10;
@@ -112,7 +112,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(147, 197, 253, 0.8);
+  color: rgb(147 197 253 / 80%);
   margin-bottom: 8px;
   font-size: 10px;
 }
@@ -133,13 +133,13 @@
 
 .legend-divider {
   height: 1px;
-  background: rgba(59, 130, 246, 0.3);
+  background: rgb(59 130 246 / 30%);
   margin: 10px 0;
 }
 
 .anchor-badge {
   font-size: 9px;
-  background: rgba(59, 130, 246, 0.3);
+  background: rgb(59 130 246 / 30%);
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: auto;
@@ -148,15 +148,15 @@
 /* Tooltip */
 .coordinate-map-tooltip {
   position: absolute;
-  background: linear-gradient(135deg, rgba(30, 58, 95, 0.98) 0%, rgba(10, 25, 41, 0.98) 100%);
-  border: 1px solid rgba(59, 130, 246, 0.5);
+  background: linear-gradient(135deg, rgb(30 58 95 / 98%) 0%, rgb(10 25 41 / 98%) 100%);
+  border: 1px solid rgb(59 130 246 / 50%);
   border-radius: 8px;
   padding: 10px 14px;
   color: white;
   font-size: 12px;
   pointer-events: none;
   z-index: 100;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 50%);
   max-width: 200px;
 }
 
@@ -167,7 +167,7 @@
 }
 
 .tooltip-info {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(255 255 255 / 70%);
   font-size: 11px;
 }
 
@@ -175,7 +175,7 @@
   margin-top: 6px;
   font-family: monospace;
   font-size: 10px;
-  color: rgba(147, 197, 253, 0.8);
+  color: rgb(147 197 253 / 80%);
 }
 
 /* Coordinate display */
@@ -183,11 +183,11 @@
   position: absolute;
   bottom: 16px;
   right: 16px;
-  background: rgba(10, 25, 41, 0.9);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: rgb(10 25 41 / 90%);
+  border: 1px solid rgb(59 130 246 / 30%);
   border-radius: 6px;
   padding: 6px 12px;
-  color: rgba(147, 197, 253, 0.8);
+  color: rgb(147 197 253 / 80%);
   font-family: monospace;
   font-size: 11px;
 }

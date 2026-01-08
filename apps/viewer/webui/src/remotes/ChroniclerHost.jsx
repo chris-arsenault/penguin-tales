@@ -27,6 +27,12 @@ const styles = {
   },
 };
 
+const loadingFallback = React.createElement(
+  'div',
+  { style: styles.loading },
+  'Loading Chronicler...'
+);
+
 export default function ChroniclerHost({
   projectId,
   worldData,
@@ -40,7 +46,7 @@ export default function ChroniclerHost({
 }) {
   return (
     <div style={styles.container}>
-      <Suspense fallback={<div style={styles.loading}>Loading Chronicler...</div>}>
+      <Suspense fallback={loadingFallback}>
         <ChroniclerRemote
           projectId={projectId}
           worldData={worldData}

@@ -7,6 +7,8 @@ import ValidationPopover from './ValidationPopover';
 import TracePopover from './TracePopover';
 import SlotSelector from './SlotSelector';
 
+const EMPTY_SLOTS = Object.freeze({});
+
 export default function ProjectManager({
   projects,
   currentProject,
@@ -25,7 +27,7 @@ export default function ProjectManager({
   simulationState,
   systems = [],
   // Slot management props
-  slots = {},
+  slots = EMPTY_SLOTS,
   activeSlotIndex = 0,
   onLoadSlot,
   onSaveToSlot,

@@ -124,6 +124,36 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
     onChange(tagRegistry.map((t) => (t.tag === tagId ? { ...t, ...updates } : t)));
   };
 
+  const usageNumberStyle = useMemo(
+    () => ({ width: '60px', padding: '4px 6px', textAlign: 'center' }),
+    []
+  );
+
+  const renderTagTitle = (tag) => (
+    <span style={{ fontFamily: 'monospace' }}>{tag.tag}</span>
+  );
+
+  const renderTagActions = (tag, catColor, rarColor, isFramework) => (
+    <>
+      <span className="badge" style={{ backgroundColor: catColor.bg, color: catColor.color }}>
+        {tag.category}
+      </span>
+      <span className="badge" style={{ backgroundColor: rarColor.bg, color: rarColor.color }}>
+        {tag.rarity}
+      </span>
+      {tag.isAxis && (
+        <span className="badge" style={{ backgroundColor: 'rgba(34, 211, 238, 0.2)', color: '#22d3ee' }}>
+          ↔ axis
+        </span>
+      )}
+      {isFramework && <span className="badge badge-info">framework</span>}
+      {tagUsage[tag.tag] && <UsageBadges usage={tagUsage[tag.tag]} compact />}
+      <span className="text-muted text-small">
+        {tag.minUsage || 0}-{tag.maxUsage || '∞'} | {(tag.entityKinds || []).length} kinds
+      </span>
+    </>
+  );
+
   const deleteTag = (tagId) => {
     const existing = tagRegistry.find((t) => t.tag === tagId);
     if (existing?.isFramework) return;
@@ -215,27 +245,8 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                 key={tag.tag}
                 expanded={isExpanded}
                 onToggle={() => toggleTag(tag.tag)}
-                title={<span style={{ fontFamily: 'monospace' }}>{tag.tag}</span>}
-                actions={
-                  <>
-                    <span className="badge" style={{ backgroundColor: catColor.bg, color: catColor.color }}>
-                      {tag.category}
-                    </span>
-                    <span className="badge" style={{ backgroundColor: rarColor.bg, color: rarColor.color }}>
-                      {tag.rarity}
-                    </span>
-                    {tag.isAxis && (
-                      <span className="badge" style={{ backgroundColor: 'rgba(34, 211, 238, 0.2)', color: '#22d3ee' }}>
-                        ↔ axis
-                      </span>
-                    )}
-                    {isFramework && <span className="badge badge-info">framework</span>}
-                    {tagUsage[tag.tag] && <UsageBadges usage={tagUsage[tag.tag]} compact />}
-                    <span className="text-muted text-small">
-                      {tag.minUsage || 0}-{tag.maxUsage || '∞'} | {(tag.entityKinds || []).length} kinds
-                    </span>
-                  </>
-                }
+                title={renderTagTitle(tag)}
+                actions={renderTagActions(tag, catColor, rarColor, isFramework)}
               >
                 {/* Basic Info Row */}
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '12px' }}>
@@ -326,7 +337,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <NumberInput
                       className="input"
-                      style={{ width: '60px', padding: '4px 6px', textAlign: 'center' }}
+                      style={usageNumberStyle}
                       min={0}
                       value={tag.minUsage || 0}
                       disabled={isFramework}
@@ -336,7 +347,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                     <span className="text-small text-muted">–</span>
                     <NumberInput
                       className="input"
-                      style={{ width: '60px', padding: '4px 6px', textAlign: 'center' }}
+                      style={usageNumberStyle}
                       min={0}
                       value={tag.maxUsage || 50}
                       disabled={isFramework}

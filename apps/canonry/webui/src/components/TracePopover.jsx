@@ -80,6 +80,15 @@ export default function TracePopover({ simulationState }) {
     return { ...styles.button, ...styles.buttonActive };
   }, [hasData]);
 
+  const loadingFallback = useMemo(
+    () => (
+      <div style={styles.loadingOverlay}>
+        Loading trace visualization...
+      </div>
+    ),
+    []
+  );
+
   const handleOpen = () => {
     if (hasData) {
       setIsOpen(true);
@@ -102,11 +111,7 @@ export default function TracePopover({ simulationState }) {
       </button>
 
       {isOpen && hasData && (
-        <Suspense fallback={
-          <div style={styles.loadingOverlay}>
-            Loading trace visualization...
-          </div>
-        }>
+        <Suspense fallback={loadingFallback}>
           <SimulationTraceVisx
             pressureUpdates={simulationState.pressureUpdates}
             epochStats={simulationState.epochStats}

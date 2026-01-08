@@ -9,6 +9,10 @@ import React from 'react';
 import { EmptyState, AddItemButton, SearchableDropdown } from '../../shared';
 import { TransitionConditionEditor, TransitionEffectItem } from '../shared';
 
+const ADD_ITEM_STYLES = Object.freeze({
+  addItemBtn: { marginTop: '8px', padding: '6px 12px', fontSize: '12px' },
+});
+
 /**
  * Compact section within the grid
  */
@@ -109,7 +113,7 @@ export function TransitionsGrid({
           <AddItemButton
             onClick={onAddEntryCondition}
             label="+ Condition"
-            styles={{ addItemBtn: { marginTop: '8px', padding: '6px 12px', fontSize: '12px' } }}
+            styles={ADD_ITEM_STYLES}
           />
         </MiniSection>
 
@@ -176,7 +180,7 @@ export function TransitionsGrid({
           <AddItemButton
             onClick={onAddExitCondition}
             label="+ Condition"
-            styles={{ addItemBtn: { marginTop: '8px', padding: '6px 12px', fontSize: '12px' } }}
+            styles={ADD_ITEM_STYLES}
           />
         </MiniSection>
 

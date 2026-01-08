@@ -415,6 +415,11 @@ const styles = {
   },
 };
 
+const markdownStyle = Object.freeze({
+  backgroundColor: 'transparent',
+  color: colors.textSecondary,
+});
+
 /**
  * Check if image size is a float (small/medium) vs block (large/full-width)
  */
@@ -855,10 +860,7 @@ function MarkdownSection({
     >
       <MDEditor.Markdown
         source={processedContent}
-        style={{
-          backgroundColor: 'transparent',
-          color: colors.textSecondary,
-        }}
+        style={markdownStyle}
       />
       <style>{`
         .wmde-markdown {

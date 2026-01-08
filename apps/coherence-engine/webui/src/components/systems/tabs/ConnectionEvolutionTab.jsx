@@ -7,6 +7,8 @@ import { METRIC_TYPES, DIRECTIONS } from '../constants';
 import { ReferenceDropdown, NumberInput, LocalTextArea } from '../../shared';
 import TagSelector from '@penguin-tales/shared-components/TagSelector';
 
+const NARRATION_TEXTAREA_STYLE = Object.freeze({ fontSize: '12px' });
+
 /**
  * RuleCard - Expandable card for rule configuration
  */
@@ -252,7 +254,7 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
               onChange={(value) => onChange({ ...rule, narrationTemplate: value || undefined })}
               placeholder="e.g., {$member.name} and {$member2.name} forged an alliance."
               rows={2}
-              style={{ fontSize: '12px' }}
+              style={NARRATION_TEXTAREA_STYLE}
             />
           </div>
         </div>

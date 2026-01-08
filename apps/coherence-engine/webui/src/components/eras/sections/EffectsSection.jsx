@@ -6,6 +6,14 @@ import React from 'react';
 import { SectionHeader, EmptyState, SearchableDropdown } from '../../shared';
 import { TransitionEffectItem } from '../shared';
 
+const EMPTY_STATE_STYLES = Object.freeze({
+  emptyState: {
+    padding: '16px',
+    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+    borderRadius: '8px',
+  },
+});
+
 /**
  * @param {Object} props
  * @param {string} props.title - Section title
@@ -45,7 +53,7 @@ export function EffectsSection({
         {pressureChanges.length === 0 ? (
           <EmptyState
             title={emptyMessage}
-            styles={{ emptyState: { padding: '16px', backgroundColor: `rgba(59, 130, 246, 0.05)`, borderRadius: '8px' } }}
+            styles={EMPTY_STATE_STYLES}
           />
         ) : (
           pressureChanges.map(([pressureId, value]) => (

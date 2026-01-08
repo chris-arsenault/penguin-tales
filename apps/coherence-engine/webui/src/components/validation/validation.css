@@ -37,17 +37,17 @@
 }
 
 .validation-status-clean {
-  background-color: rgba(34, 197, 94, 0.2);
+  background-color: rgb(34 197 94 / 20%);
   color: var(--color-success);
 }
 
 .validation-status-warning {
-  background-color: rgba(245, 158, 11, 0.2);
+  background-color: rgb(245 158 11 / 20%);
   color: var(--color-warning);
 }
 
 .validation-status-error {
-  background-color: rgba(239, 68, 68, 0.2);
+  background-color: rgb(239 68 68 / 20%);
   color: var(--color-danger);
 }
 
@@ -182,7 +182,7 @@
 }
 
 .validation-issue-header:hover {
-  background-color: rgba(59, 130, 246, 0.05);
+  background-color: rgb(59 130 246 / 5%);
 }
 
 .validation-issue-icon {
@@ -227,7 +227,7 @@
 
 .validation-issue-message {
   padding: var(--spacing-lg);
-  background-color: rgba(59, 130, 246, 0.05);
+  background-color: rgb(59 130 246 / 5%);
   border-left: 3px solid var(--color-info);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);

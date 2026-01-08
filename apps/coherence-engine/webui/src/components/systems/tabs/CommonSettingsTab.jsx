@@ -6,6 +6,9 @@ import React from 'react';
 import { PressureChangesEditor, NumberInput } from '../../shared';
 import SelectionRuleEditor from '../../shared/SelectionRuleEditor';
 
+const DEFAULT_SELECTION = Object.freeze({ strategy: 'by_kind', kind: 'any' });
+const EMPTY_PRESSURE_CHANGES = Object.freeze({});
+
 /**
  * @param {Object} props
  * @param {Object} props.system - The system being edited
@@ -15,7 +18,7 @@ import SelectionRuleEditor from '../../shared/SelectionRuleEditor';
  */
 export function CommonSettingsTab({ system, onChange, schema, pressures }) {
   const config = system.config;
-  const selection = config.selection || { strategy: 'by_kind', kind: 'any' };
+  const selection = config.selection || DEFAULT_SELECTION;
   const supportsSelection = [
     'graphContagion',
     'connectionEvolution',
@@ -84,7 +87,7 @@ export function CommonSettingsTab({ system, onChange, schema, pressures }) {
 
       <div className="section">
         <PressureChangesEditor
-          value={config.pressureChanges || {}}
+          value={config.pressureChanges || EMPTY_PRESSURE_CHANGES}
           onChange={(v) => updateConfig('pressureChanges', Object.keys(v).length > 0 ? v : undefined)}
           pressures={pressures}
         />

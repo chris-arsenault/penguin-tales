@@ -16,8 +16,8 @@
 .weight-matrix-editor .title {
   font-size: 24px;
   font-weight: 600;
-  color: #ffffff;
-  margin: 0 0 8px 0;
+  color: #fff;
+  margin: 0 0 8px;
 }
 
 .weight-matrix-editor .subtitle {
@@ -51,10 +51,10 @@
 /* View Toggle */
 .view-toggle {
   display: flex;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgb(15 23 42 / 60%);
   border-radius: 8px;
   padding: 4px;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid rgb(59 130 246 / 20%);
 }
 
 .view-toggle .toggle-btn {
@@ -70,7 +70,7 @@
 }
 
 .view-toggle .toggle-btn:hover {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgb(245 158 11 / 15%);
   color: #f59e0b;
 }
 
@@ -83,10 +83,10 @@
 .matrix-search {
   padding: 8px 12px;
   font-size: 13px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgb(15 23 42 / 60%);
+  border: 1px solid rgb(59 130 246 / 20%);
   border-radius: 6px;
-  color: #ffffff;
+  color: #fff;
   width: 200px;
   outline: none;
   transition: border-color 0.15s;
@@ -106,8 +106,8 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgb(245 158 11 / 10%);
+  border: 1px solid rgb(245 158 11 / 30%);
   border-radius: 8px;
 }
 
@@ -121,10 +121,10 @@
   width: 60px;
   padding: 6px 8px;
   font-size: 13px;
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: rgb(15 23 42 / 80%);
+  border: 1px solid rgb(59 130 246 / 30%);
   border-radius: 4px;
-  color: #ffffff;
+  color: #fff;
   text-align: center;
 }
 
@@ -132,7 +132,7 @@
   font-size: 12px;
   color: #22c55e;
   padding: 4px 8px;
-  background: rgba(34, 197, 94, 0.1);
+  background: rgb(34 197 94 / 10%);
   border-radius: 4px;
 }
 
@@ -140,8 +140,8 @@
 .matrix-container {
   flex: 1;
   overflow: auto;
-  background: rgba(15, 23, 42, 0.4);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgb(15 23 42 / 40%);
+  border: 1px solid rgb(59 130 246 / 20%);
   border-radius: 12px;
 }
 
@@ -156,7 +156,7 @@
 .matrix-table td {
   padding: 10px 12px;
   text-align: left;
-  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  border-bottom: 1px solid rgb(59 130 246 / 10%);
 }
 
 .matrix-table th {
@@ -207,7 +207,7 @@
 }
 
 .matrix-row:hover {
-  background: rgba(59, 130, 246, 0.05);
+  background: rgb(59 130 246 / 5%);
 }
 
 .matrix-row.unused {
@@ -219,12 +219,12 @@
 }
 
 .matrix-row.selected {
-  background: rgba(245, 158, 11, 0.08);
+  background: rgb(245 158 11 / 8%);
 }
 
 /* Item Name */
 .item-name {
-  color: #ffffff;
+  color: #fff;
   font-weight: 500;
   display: block;
   overflow: hidden;
@@ -237,7 +237,7 @@
   margin-top: 2px;
   font-size: 10px;
   color: #64748b;
-  background: rgba(100, 116, 139, 0.2);
+  background: rgb(100 116 139 / 20%);
   padding: 2px 6px;
   border-radius: 3px;
   text-transform: uppercase;
@@ -250,12 +250,12 @@
   font-size: 11px;
   font-weight: 600;
   border-radius: 10px;
-  background: rgba(34, 197, 94, 0.2);
+  background: rgb(34 197 94 / 20%);
   color: #22c55e;
 }
 
 .era-count.zero {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgb(239 68 68 / 20%);
   color: #f87171;
 }
 
@@ -269,7 +269,7 @@
 }
 
 .weight-cell:hover {
-  outline: 2px solid rgba(245, 158, 11, 0.5);
+  outline: 2px solid rgb(245 158 11 / 50%);
   outline-offset: -2px;
 }
 
@@ -288,10 +288,10 @@
   font-size: 13px;
   font-weight: 600;
   text-align: center;
-  background: rgba(15, 23, 42, 0.9);
+  background: rgb(15 23 42 / 90%);
   border: 2px solid #f59e0b;
   border-radius: 4px;
-  color: #ffffff;
+  color: #fff;
   outline: none;
 }
 
@@ -312,27 +312,27 @@
   padding: 4px 8px;
   font-size: 11px;
   font-weight: 500;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgb(59 130 246 / 30%);
   border-radius: 4px;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgb(15 23 42 / 60%);
   color: #93c5fd;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .action-btn:hover {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.5);
+  background: rgb(59 130 246 / 20%);
+  border-color: rgb(59 130 246 / 50%);
 }
 
 .action-btn.danger {
   color: #f87171;
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: rgb(239 68 68 / 30%);
 }
 
 .action-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.5);
+  background: rgb(239 68 68 / 20%);
+  border-color: rgb(239 68 68 / 50%);
 }
 
 /* Empty Row */
@@ -350,8 +350,8 @@
   gap: 12px;
   margin-top: 16px;
   padding: 12px 16px;
-  background: rgba(15, 23, 42, 0.4);
-  border: 1px solid rgba(59, 130, 246, 0.15);
+  background: rgb(15 23 42 / 40%);
+  border: 1px solid rgb(59 130 246 / 15%);
   border-radius: 8px;
 }
 
@@ -376,7 +376,7 @@
   font-size: 11px;
   font-weight: 600;
   color: #fbbf24;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid rgb(59 130 246 / 20%);
 }
 
 .legend-item:first-child {
@@ -406,13 +406,13 @@
 }
 
 .btn-secondary {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgb(59 130 246 / 20%);
   color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgb(59 130 246 / 30%);
 }
 
 .btn-secondary:hover {
-  background: rgba(59, 130, 246, 0.3);
+  background: rgb(59 130 246 / 30%);
 }
 
 .btn-ghost {
@@ -421,7 +421,7 @@
 }
 
 .btn-ghost:hover {
-  background: rgba(59, 130, 246, 0.1);
+  background: rgb(59 130 246 / 10%);
 }
 
 /* Checkbox styling */
@@ -439,8 +439,8 @@
   justify-content: space-between;
   padding: 12px 16px;
   margin-bottom: 16px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgb(239 68 68 / 10%);
+  border: 1px solid rgb(239 68 68 / 30%);
   border-radius: 8px;
   gap: 16px;
 }
@@ -472,9 +472,9 @@
 }
 
 .btn-warning {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgb(239 68 68 / 20%);
   color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  border: 1px solid rgb(239 68 68 / 40%);
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 500;
@@ -485,8 +485,8 @@
 }
 
 .btn-warning:hover {
-  background: rgba(239, 68, 68, 0.3);
-  border-color: rgba(239, 68, 68, 0.6);
+  background: rgb(239 68 68 / 30%);
+  border-color: rgb(239 68 68 / 60%);
 }
 
 /* Orphan badge on toggle buttons */
@@ -501,6 +501,6 @@
   font-size: 10px;
   font-weight: 700;
   background: #ef4444;
-  color: #ffffff;
+  color: #fff;
   border-radius: 9px;
 }

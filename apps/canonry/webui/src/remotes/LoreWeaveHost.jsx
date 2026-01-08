@@ -38,6 +38,12 @@ const styles = {
   },
 };
 
+const loadingFallback = React.createElement(
+  'div',
+  { style: styles.loading },
+  'Loading Lore Weave...'
+);
+
 export default function LoreWeaveHost({
   projectId,
   schema,
@@ -60,7 +66,7 @@ export default function LoreWeaveHost({
 }) {
   return (
     <div style={styles.container}>
-      <Suspense fallback={<div style={styles.loading}>Loading Lore Weave...</div>}>
+      <Suspense fallback={loadingFallback}>
         <LoreWeaveRemote
           projectId={projectId}
           schema={schema}

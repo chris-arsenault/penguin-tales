@@ -128,7 +128,7 @@
 }
 
 .expandable-card-header:hover {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgb(59 130 246 / 10%);
 }
 
 .expandable-card-left {
@@ -379,12 +379,12 @@
 
 .icon-button:hover {
   color: var(--color-text);
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgb(255 255 255 / 10%);
 }
 
 .delete-button:hover {
   color: var(--color-danger);
-  background-color: rgba(239, 68, 68, 0.1);
+  background-color: rgb(239 68 68 / 10%);
 }
 
 /* ==========================================================================
@@ -448,7 +448,7 @@
 .danger-zone {
   margin-top: var(--spacing-2xl);
   padding-top: var(--spacing-xl);
-  border-top: 1px solid rgba(239, 68, 68, 0.3);
+  border-top: 1px solid rgb(239 68 68 / 30%);
   display: flex;
   gap: var(--spacing-lg);
 }
@@ -674,7 +674,7 @@
 }
 
 .btn-sm-danger:hover {
-  background-color: rgba(239, 68, 68, 0.15);
+  background-color: rgb(239 68 68 / 15%);
 }
 
 .btn-xs {
@@ -689,10 +689,6 @@
 
 .btn-xs:hover {
   color: var(--color-text);
-}
-
-.btn-xs-danger {
-  color: var(--color-danger);
 }
 
 /* ==========================================================================
@@ -984,5 +980,5 @@
 }
 
 .btn-xs-danger:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgb(239 68 68 / 20%);
 }

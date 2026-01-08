@@ -609,7 +609,9 @@ function TemplateDetailPanel({ template, isLocked, onClear }) {
                       <div className="lw-trace-view-entity-placement-row">
                         <span className="lw-trace-view-entity-placement-label">Resolved Via</span>
                         <span className="lw-trace-view-entity-placement-value">
-                          <span className={`lw-trace-view-resolved-badge ${entity.placement?.resolvedVia || 'unknown'}`}>
+                        <span
+                          className={`lw-trace-view-resolved-badge ${(entity.placement?.resolvedVia || 'unknown').replace(/_/g, '-')}`}
+                        >
                             {entity.placement?.resolvedVia || entity.placementStrategy}
                           </span>
                           {entity.placement?.resolvedVia === 'random' && (
@@ -1199,11 +1201,14 @@ function TraceVisualization({
   // 4. Chart area height
   const pressureChartHeight = chartBottom - chartTop;
 
-  const margin = {
-    ...DEFAULT_MARGIN,
-    top: chartTop,
-    bottom: height - chartBottom,
-  };
+  const margin = useMemo(
+    () => ({
+      ...DEFAULT_MARGIN,
+      top: chartTop,
+      bottom: height - chartBottom,
+    }),
+    [chartTop, chartBottom, height]
+  );
 
   // Marker stacking configuration
   const MARKER_SIZE = 10;
@@ -1729,6 +1734,20 @@ export default function SimulationTraceVisx({
   const activeDiffusionId = selectedDiffusionId ?? diffusionSystemsWithData[0]?.id ?? null;
   const activeContagionId = selectedContagionId ?? contagionSystemsWithData[0]?.id ?? null;
 
+  const diffusionConfig = useMemo(
+    () => ({
+      name: diffusionSystemsWithData.find(s => s.id === activeDiffusionId)?.name,
+    }),
+    [diffusionSystemsWithData, activeDiffusionId]
+  );
+
+  const contagionConfig = useMemo(
+    () => ({
+      name: contagionSystemsWithData.find(s => s.id === activeContagionId)?.name,
+    }),
+    [contagionSystemsWithData, activeContagionId]
+  );
+
   // Transform data
   const { data: pressureData, pressureIds, breakdownsByTick } = useMemo(
     () => transformPressureData(pressureUpdates),
@@ -2010,7 +2029,7 @@ export default function SimulationTraceVisx({
                       </label>
                     </div>
                     <PlaneDiffusionVis
-                      config={{ name: diffusionSystemsWithData.find(s => s.id === activeDiffusionId)?.name }}
+                      config={diffusionConfig}
                       systemActions={systemActions.filter(a => a.systemId === activeDiffusionId)}
                       selectedTick={lockedTick ?? selectedTick}
                       autoScaleColors={autoScaleColors}
@@ -2064,7 +2083,7 @@ export default function SimulationTraceVisx({
                       </div>
                     </div>
                     <GraphContagionVis
-                      config={{ name: contagionSystemsWithData.find(s => s.id === activeContagionId)?.name }}
+                      config={contagionConfig}
                       systemActions={systemActions.filter(a => a.systemId === activeContagionId)}
                       selectedTick={lockedTick ?? selectedTick}
                     />

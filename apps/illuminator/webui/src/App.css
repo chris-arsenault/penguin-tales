@@ -7,11 +7,11 @@
   --bg-sidebar: #0c1f2e;
 
   /* Borders - Blue tinted */
-  --border-color: rgba(59, 130, 246, 0.3);
-  --border-light: rgba(59, 130, 246, 0.5);
+  --border-color: rgb(59 130 246 / 30%);
+  --border-light: rgb(59 130 246 / 50%);
 
   /* Text - Ice white tones */
-  --text-color: #ffffff;
+  --text-color: #fff;
   --text-secondary: #93c5fd;
   --text-muted: #60a5fa;
 
@@ -67,8 +67,8 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   font-size: var(--text-base);
   line-height: 1.5;
   background: var(--bg-primary);
@@ -206,14 +206,6 @@ body {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   margin-bottom: var(--space-sm);
-}
-
-.illuminator-progress-bar {
-  width: 100%;
-  height: 6px;
-  background: var(--bg-tertiary);
-  border-radius: 3px;
-  overflow: hidden;
 }
 
 .illuminator-progress-fill {
@@ -373,15 +365,6 @@ body {
   cursor: not-allowed;
 }
 
-.illuminator-button-secondary {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-}
-
-.illuminator-button-secondary:hover {
-  background: var(--bg-secondary);
-}
-
 /* Queue item styles */
 .illuminator-queue-item {
   display: flex;
@@ -425,22 +408,22 @@ body {
 }
 
 .illuminator-status-pending {
-  background: rgba(156, 163, 175, 0.2);
+  background: rgb(156 163 175 / 20%);
   color: #9ca3af;
 }
 
 .illuminator-status-running {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgb(59 130 246 / 20%);
   color: #3b82f6;
 }
 
 .illuminator-status-complete {
-  background: rgba(34, 197, 94, 0.2);
+  background: rgb(34 197 94 / 20%);
   color: #22c55e;
 }
 
 .illuminator-status-error {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgb(239 68 68 / 20%);
   color: #ef4444;
 }
 
@@ -522,8 +505,8 @@ body {
   gap: var(--space-md);
   padding: var(--space-md) var(--space-lg);
   margin: 0 var(--space-lg) var(--space-lg) var(--space-lg);
-  background: rgba(234, 179, 8, 0.15);
-  border: 1px solid rgba(234, 179, 8, 0.4);
+  background: rgb(234 179 8 / 15%);
+  border: 1px solid rgb(234 179 8 / 40%);
   border-radius: 6px;
   color: #fcd34d;
   font-size: var(--text-sm);
@@ -577,12 +560,12 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: var(--space-md);
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: var(--text-xs);
   line-height: 1.6;
   color: var(--text-secondary);
   white-space: pre-wrap;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
   overflow-x: auto;
   margin: 0;
 }
@@ -635,7 +618,7 @@ body {
 }
 
 .illuminator-context-field-name {
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: Monaco, Menlo, monospace;
   color: var(--text-color);
   min-width: 160px;
 }
@@ -646,7 +629,7 @@ body {
 }
 
 .illuminator-context-field-warning {
-  background: rgba(234, 179, 8, 0.2);
+  background: rgb(234 179 8 / 20%);
   color: #fcd34d;
   padding: 2px 6px;
   border-radius: 3px;
@@ -661,8 +644,8 @@ body {
   gap: var(--space-md);
   padding: var(--space-md) var(--space-lg);
   margin-top: var(--space-lg);
-  background: rgba(234, 179, 8, 0.15);
-  border: 1px solid rgba(234, 179, 8, 0.4);
+  background: rgb(234 179 8 / 15%);
+  border: 1px solid rgb(234 179 8 / 40%);
   border-radius: 6px;
   color: #fcd34d;
   font-size: var(--text-sm);
@@ -740,14 +723,14 @@ body {
 .illuminator-template-kind-badge {
   display: inline-block;
   padding: 2px 8px;
-  background: rgba(168, 85, 247, 0.2);
+  background: rgb(168 85 247 / 20%);
   border-radius: 4px;
   font-size: var(--text-xs);
   color: var(--accent-color);
 }
 
 .illuminator-template-kind-badge.default {
-  background: rgba(156, 163, 175, 0.2);
+  background: rgb(156 163 175 / 20%);
   color: #9ca3af;
 }
 
@@ -813,7 +796,7 @@ body {
   border-radius: 6px;
   color: var(--text-color);
   font-size: var(--text-sm);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.6;
   resize: vertical;
   min-height: 80px;
@@ -847,9 +830,9 @@ body {
 
 .illuminator-template-variables code {
   padding: 2px 6px;
-  background: rgba(168, 85, 247, 0.15);
+  background: rgb(168 85 247 / 15%);
   border-radius: 3px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: var(--text-xs);
   color: var(--accent-hover);
 }
@@ -857,8 +840,8 @@ body {
 /* Override Notice */
 .illuminator-template-override-notice {
   padding: var(--space-md);
-  background: rgba(234, 179, 8, 0.1);
-  border: 1px solid rgba(234, 179, 8, 0.3);
+  background: rgb(234 179 8 / 10%);
+  border: 1px solid rgb(234 179 8 / 30%);
   border-radius: 6px;
   color: #fcd34d;
   font-size: var(--text-sm);
@@ -868,7 +851,7 @@ body {
 /* Full Template Badge */
 .illuminator-template-full-badge {
   padding: 2px 8px;
-  background: rgba(168, 85, 247, 0.2);
+  background: rgb(168 85 247 / 20%);
   border-radius: 4px;
   font-size: var(--text-xs);
   color: var(--accent-color);
@@ -919,8 +902,8 @@ body {
 
 .illuminator-template-visual-steps-info {
   padding: var(--space-sm) var(--space-md);
-  background: rgba(96, 165, 250, 0.1);
-  border: 1px solid rgba(96, 165, 250, 0.2);
+  background: rgb(96 165 250 / 10%);
+  border: 1px solid rgb(96 165 250 / 20%);
   border-radius: 4px;
   font-size: var(--text-xs);
   color: var(--text-muted);
@@ -1019,7 +1002,7 @@ body {
   color: var(--text-muted);
   font-style: italic;
   padding: var(--space-sm);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(0 0 0 / 20%);
   border-radius: 4px;
 }
 
@@ -1036,7 +1019,7 @@ body {
 
 .illuminator-style-keyword {
   padding: 2px 8px;
-  background: rgba(168, 85, 247, 0.15);
+  background: rgb(168 85 247 / 15%);
   border-radius: 3px;
   font-size: var(--text-xs);
   color: var(--accent-hover);
@@ -1089,7 +1072,7 @@ body {
 }
 
 .illuminator-btn-danger:hover {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgb(239 68 68 / 15%);
   border-color: var(--danger);
 }
 
@@ -1101,11 +1084,8 @@ body {
 /* Modal Styles */
 .illuminator-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  inset: 0;
+  background: rgb(0 0 0 / 80%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1121,7 +1101,7 @@ body {
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 50%);
 }
 
 .illuminator-modal-header {
@@ -1206,7 +1186,7 @@ body {
 }
 
 .illuminator-checkbox-label:has(input:checked) {
-  background: rgba(168, 85, 247, 0.15);
+  background: rgb(168 85 247 / 15%);
   border-color: var(--accent-color);
   color: var(--accent-hover);
 }
@@ -1250,7 +1230,7 @@ body {
 }
 
 .illuminator-visual-identity-entry.is-empty {
-  background: rgba(239, 68, 68, 0.05);
+  background: rgb(239 68 68 / 5%);
   border-radius: 4px;
   padding: 4px;
   margin: -4px;
@@ -1258,7 +1238,7 @@ body {
 
 .illuminator-input.warning {
   border-color: var(--warning-color, #f59e0b);
-  background: rgba(245, 158, 11, 0.05);
+  background: rgb(245 158 11 / 5%);
 }
 
 .illuminator-input.warning::placeholder {
@@ -1308,13 +1288,13 @@ body {
 }
 
 .illuminator-button-small.danger {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgb(239 68 68 / 10%);
   border-color: var(--error-color);
   color: var(--error-color);
 }
 
 .illuminator-button-small.danger:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgb(239 68 68 / 20%);
 }
 
 /* Collapsible Identity Section */
@@ -1340,7 +1320,7 @@ body {
 }
 
 .illuminator-identity-section-header:hover {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgb(59 130 246 / 20%);
 }
 
 .illuminator-identity-section-toggle {
@@ -1394,7 +1374,7 @@ body {
 .llm-config-override-count {
   font-size: var(--text-xs);
   color: var(--accent-color);
-  background: rgba(168, 85, 247, 0.15);
+  background: rgb(168 85 247 / 15%);
   padding: 2px 8px;
   border-radius: 10px;
 }
@@ -1568,8 +1548,8 @@ body {
 }
 
 .llm-table-reset-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: rgb(239 68 68 / 10%);
+  border-color: rgb(239 68 68 / 30%);
   color: #ef4444;
 }
 
@@ -1667,7 +1647,7 @@ body {
 }
 
 .static-pages-list-item.selected {
-  background: rgba(139, 92, 246, 0.1);
+  background: rgb(139 92 246 / 10%);
   border-color: var(--accent-color);
 }
 
@@ -1770,12 +1750,12 @@ body {
 }
 
 .static-page-status-badge.published {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgb(16 185 129 / 15%);
   color: #10b981;
 }
 
 .static-page-status-badge.draft {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgb(245 158 11 / 15%);
   color: #f59e0b;
 }
 
@@ -1797,14 +1777,14 @@ body {
   transition: all 0.15s ease;
 }
 
-.static-page-button:hover:not(:disabled) {
-  border-color: var(--border-light);
-  color: var(--text-color);
-}
-
 .static-page-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.static-page-button:hover:not(:disabled) {
+  border-color: var(--border-light);
+  color: var(--text-color);
 }
 
 .static-page-button.primary {
@@ -1822,8 +1802,8 @@ body {
 }
 
 .static-page-button.danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: rgb(239 68 68 / 10%);
+  border-color: rgb(239 68 68 / 30%);
 }
 
 .static-page-summary-section {
@@ -1965,11 +1945,8 @@ body {
 
 .static-page-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  inset: 0;
+  background: rgb(0 0 0 / 60%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1985,7 +1962,7 @@ body {
   border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 40px rgb(0 0 0 / 40%);
 }
 
 .static-page-modal.image-picker-modal {
@@ -2117,7 +2094,7 @@ body {
 
 .image-picker-item.selected {
   border-color: var(--accent-color);
-  background: rgba(139, 92, 246, 0.1);
+  background: rgb(139 92 246 / 10%);
 }
 
 .image-picker-thumb {

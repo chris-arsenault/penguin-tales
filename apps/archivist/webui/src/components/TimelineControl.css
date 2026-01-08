@@ -6,9 +6,9 @@
   left: 0;
   right: 0;
   background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%);
-  border-top: 1px solid rgba(59, 130, 246, 0.3);
+  border-top: 1px solid rgb(59 130 246 / 30%);
   padding: 12px 20px;
-  box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 -10px 25px rgb(0 0 0 / 40%);
   z-index: 100;
 }
 
@@ -29,8 +29,8 @@
 .timeline-expand-btn {
   width: 28px;
   height: 28px;
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgb(59 130 246 / 40%);
+  background: rgb(59 130 246 / 20%);
   color: #93c5fd;
   border-radius: 6px;
   cursor: pointer;
@@ -43,8 +43,8 @@
 }
 
 .timeline-expand-btn:hover {
-  background: rgba(59, 130, 246, 0.4);
-  color: #ffffff;
+  background: rgb(59 130 246 / 40%);
+  color: #fff;
 }
 
 .timeline-title {
@@ -81,10 +81,10 @@
 
 .era-badge {
   text-transform: capitalize;
-  background: rgba(59, 130, 246, 0.3);
+  background: rgb(59 130 246 / 30%);
   padding: 2px 8px;
   border-radius: 10px;
-  color: #ffffff;
+  color: #fff;
   font-weight: 600;
 }
 
@@ -97,24 +97,22 @@
 .timeline-slider {
   width: 100%;
   height: 6px;
-  -webkit-appearance: none;
   appearance: none;
-  background: linear-gradient(90deg, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.6) 100%);
+  background: linear-gradient(90deg, rgb(59 130 246 / 30%) 0%, rgb(59 130 246 / 60%) 100%);
   border-radius: 3px;
   outline: none;
   cursor: pointer;
 }
 
 .timeline-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
   appearance: none;
   width: 16px;
   height: 16px;
   background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  border: 2px solid #ffffff;
+  border: 2px solid #fff;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 30%);
   transition: transform 0.1s;
 }
 
@@ -126,10 +124,10 @@
   width: 16px;
   height: 16px;
   background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  border: 2px solid #ffffff;
+  border: 2px solid #fff;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 30%);
   transition: transform 0.1s;
 }
 
@@ -151,15 +149,14 @@
   align-items: center;
   gap: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(59, 130, 246, 0.2);
+  border-top: 1px solid rgb(59 130 246 / 20%);
 }
 
 .timeline-btn {
   width: 32px;
   height: 32px;
-  border: none;
-  background: rgba(59, 130, 246, 0.3);
-  color: #ffffff;
+  background: rgb(59 130 246 / 30%);
+  color: #fff;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
@@ -167,11 +164,11 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  border: 1px solid rgba(59, 130, 246, 0.4);
+  border: 1px solid rgb(59 130 246 / 40%);
 }
 
 .timeline-btn:hover {
-  background: rgba(59, 130, 246, 0.5);
+  background: rgb(59 130 246 / 50%);
   transform: translateY(-1px);
 }
 
@@ -199,8 +196,8 @@
 }
 
 .timeline-speed-select {
-  background: rgba(10, 25, 41, 0.6);
-  color: #ffffff;
+  background: rgb(10 25 41 / 60%);
+  color: #fff;
   border: 1px solid #3b82f6;
   border-radius: 4px;
   padding: 4px 8px;
@@ -216,7 +213,7 @@
 .timeline-events {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid rgba(59, 130, 246, 0.2);
+  border-top: 1px solid rgb(59 130 246 / 20%);
   height: 60px;
   display: flex;
   flex-direction: column;
@@ -235,8 +232,7 @@
 .timeline-events-ticker {
   display: flex;
   gap: 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto hidden;
   padding-bottom: 4px;
   flex: 1;
   align-items: center;
@@ -247,7 +243,7 @@
 }
 
 .timeline-events-ticker::-webkit-scrollbar-track {
-  background: rgba(10, 25, 41, 0.4);
+  background: rgb(10 25 41 / 40%);
   border-radius: 3px;
 }
 
@@ -265,7 +261,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: rgba(30, 58, 95, 0.3);
+  background: rgb(30 58 95 / 30%);
   border-radius: 6px;
   border-left: 3px solid #3b82f6;
   font-size: 12px;
@@ -275,7 +271,7 @@
 
 .timeline-event-growth {
   border-left-color: #22c55e;
-  background: rgba(20, 58, 40, 0.2);
+  background: rgb(20 58 40 / 20%);
 }
 
 .timeline-event-simulation {
@@ -284,7 +280,7 @@
 
 .timeline-event-special {
   border-left-color: #f59e0b;
-  background: rgba(120, 53, 15, 0.2);
+  background: rgb(120 53 15 / 20%);
 }
 
 .timeline-event-type {
@@ -293,7 +289,7 @@
 }
 
 .timeline-event-desc {
-  color: #ffffff;
+  color: #fff;
 }
 
 .timeline-event-empty {
@@ -332,69 +328,70 @@
 
 /* Era Narrative Milestones */
 .timeline-milestone-era {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.9) 0%, rgba(217, 119, 6, 0.9) 100%);
+  background: linear-gradient(135deg, rgb(251 191 36 / 90%) 0%, rgb(217 119 6 / 90%) 100%);
   border: 2px solid #fbbf24;
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 10px rgb(251 191 36 / 50%), 0 2px 4px rgb(0 0 0 / 30%);
 }
 
 .timeline-milestone-era:hover {
   transform: translateX(-50%) scale(1.3);
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.8), 0 4px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 20px rgb(251 191 36 / 80%), 0 4px 8px rgb(0 0 0 / 40%);
   z-index: 20;
 }
 
 .timeline-milestone-era.active {
   background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  border-color: #ffffff;
-  box-shadow: 0 0 15px rgba(251, 191, 36, 0.9), 0 2px 4px rgba(0, 0, 0, 0.4);
+  border-color: #fff;
+  box-shadow: 0 0 15px rgb(251 191 36 / 90%), 0 2px 4px rgb(0 0 0 / 40%);
   animation: pulse 2s infinite;
 }
 
 /* Discovery Milestones */
 .timeline-milestone-discovery {
-  background: linear-gradient(135deg, rgba(217, 119, 6, 0.9) 0%, rgba(180, 83, 9, 0.9) 100%);
+  background: linear-gradient(135deg, rgb(217 119 6 / 90%) 0%, rgb(180 83 9 / 90%) 100%);
   border: 2px solid #ea580c;
-  box-shadow: 0 0 10px rgba(217, 119, 6, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 10px rgb(217 119 6 / 50%), 0 2px 4px rgb(0 0 0 / 30%);
 }
 
 .timeline-milestone-discovery:hover {
   transform: translateX(-50%) scale(1.3);
-  box-shadow: 0 0 20px rgba(217, 119, 6, 0.8), 0 4px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 20px rgb(217 119 6 / 80%), 0 4px 8px rgb(0 0 0 / 40%);
   z-index: 20;
 }
 
 .timeline-milestone-discovery.active {
   background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
-  border-color: #ffffff;
-  box-shadow: 0 0 15px rgba(217, 119, 6, 0.9), 0 2px 4px rgba(0, 0, 0, 0.4);
+  border-color: #fff;
+  box-shadow: 0 0 15px rgb(217 119 6 / 90%), 0 2px 4px rgb(0 0 0 / 40%);
   animation: pulse 2s infinite;
 }
 
 /* Discovery Type Colors */
 .timeline-milestone-pressure {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%);
+  background: linear-gradient(135deg, rgb(239 68 68 / 90%) 0%, rgb(220 38 38 / 90%) 100%);
   border-color: #ef4444;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 10px rgb(239 68 68 / 50%), 0 2px 4px rgb(0 0 0 / 30%);
 }
 
 .timeline-milestone-pressure:hover {
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.8), 0 4px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 20px rgb(239 68 68 / 80%), 0 4px 8px rgb(0 0 0 / 40%);
 }
 
 .timeline-milestone-chain {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.9) 0%, rgba(124, 58, 237, 0.9) 100%);
+  background: linear-gradient(135deg, rgb(139 92 246 / 90%) 0%, rgb(124 58 237 / 90%) 100%);
   border-color: #8b5cf6;
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 10px rgb(139 92 246 / 50%), 0 2px 4px rgb(0 0 0 / 30%);
 }
 
 .timeline-milestone-chain:hover {
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.8), 0 4px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 20px rgb(139 92 246 / 80%), 0 4px 8px rgb(0 0 0 / 40%);
 }
 
 @keyframes pulse {
   0%, 100% {
     transform: translateX(-50%) scale(1);
   }
+
   50% {
     transform: translateX(-50%) scale(1.2);
   }
@@ -404,7 +401,7 @@
 .era-transition-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgb(0 0 0 / 70%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -414,11 +411,11 @@
 
 .era-transition-content {
   background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%);
-  border: 1px solid rgba(251, 191, 36, 0.4);
+  border: 1px solid rgb(251 191 36 / 40%);
   border-radius: 12px;
   width: 90%;
   max-width: 500px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(251, 191, 36, 0.2);
+  box-shadow: 0 20px 40px rgb(0 0 0 / 50%), 0 0 20px rgb(251 191 36 / 20%);
   overflow: hidden;
 }
 
@@ -427,8 +424,8 @@
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background: rgba(251, 191, 36, 0.1);
-  border-bottom: 1px solid rgba(251, 191, 36, 0.2);
+  background: rgb(251 191 36 / 10%);
+  border-bottom: 1px solid rgb(251 191 36 / 20%);
 }
 
 .era-transition-icon {
@@ -466,7 +463,7 @@
 .era-transition-era {
   font-size: 24px;
   font-weight: 700;
-  color: #ffffff;
+  color: #fff;
   margin-bottom: 8px;
   text-transform: capitalize;
 }

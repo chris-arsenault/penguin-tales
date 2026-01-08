@@ -30,6 +30,11 @@ const SYSTEM_COLORS = {
   'default': '#64748b',
 };
 
+const AXIS_LABEL_PROPS = Object.freeze({
+  fill: '#64748b',
+  fontSize: 11,
+});
+
 function getSystemColor(systemId) {
   for (const [key, color] of Object.entries(SYSTEM_COLORS)) {
     if (systemId.includes(key)) return color;
@@ -196,10 +201,7 @@ function SystemSwimlaneChart({ systems, maxTick, width, height }) {
           })}
           label="Tick"
           labelOffset={25}
-          labelProps={{
-            fill: '#64748b',
-            fontSize: 11,
-          }}
+          labelProps={AXIS_LABEL_PROPS}
         />
       </Group>
     </svg>

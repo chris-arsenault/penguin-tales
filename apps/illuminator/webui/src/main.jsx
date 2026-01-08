@@ -15,7 +15,7 @@ window.illuminatorDebug = {
   downloadImagePromptExport,
 };
 
-const mockSchema = {
+const mockSchema = Object.freeze({
   entityKinds: [
     {
       kind: 'npc',
@@ -44,10 +44,10 @@ const mockSchema = {
     { id: 'northern', name: 'Northern Realm', description: 'Hardy folk from the frozen north', color: '#60a5fa' },
     { id: 'southern', name: 'Southern Empire', description: 'Sophisticated traders of the south', color: '#f59e0b' },
   ],
-};
+});
 
 // Mock world data simulating lore-weave output
-const mockWorldData = {
+const mockWorldData = Object.freeze({
   schema: mockSchema,
   metadata: {
     tick: 120,
@@ -64,7 +64,7 @@ const mockWorldData = {
   ],
   relationships: [],
   pressures: {},
-};
+});
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

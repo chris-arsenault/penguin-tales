@@ -230,17 +230,37 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
     });
   };
 
+  const renderHeaderActions = () => (
+    <button className="btn btn-primary" onClick={addEntityKind}>
+      + Add Entity Kind
+    </button>
+  );
+
+  const renderKindActions = (kind, profileCount, isFramework) => (
+    <>
+      <UsageBadges usage={getEntityKindUsageSummary(schemaUsage, kind.kind)} compact />
+      {isFramework && <span className="badge badge-info">framework</span>}
+      {profileCount > 0 && (
+        <span
+          className="badge badge-warning"
+          title={`Used in ${profileCount} naming profile group${profileCount !== 1 ? 's' : ''}`}
+        >
+          ✎ {profileCount}
+        </span>
+      )}
+      <span className="text-muted text-small">
+        {kind.subtypes.length} subtypes, {kind.statuses.length} statuses
+      </span>
+    </>
+  );
+
   return (
     <div className="editor-container" style={{ maxWidth: '900px' }}>
       <SectionHeader
         title="Entity Kinds"
         description="Define the types of entities that exist in your world."
         count={entityKinds.length}
-        actions={
-          <button className="btn btn-primary" onClick={addEntityKind}>
-            + Add Entity Kind
-          </button>
-        }
+        actions={renderHeaderActions()}
       />
 
       {entityKinds.length === 0 ? (
@@ -265,23 +285,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                 onToggle={() => toggleKind(stableKey)}
                 title={ek.description}
                 subtitle={ek.kind}
-                actions={
-                  <>
-                    <UsageBadges usage={getEntityKindUsageSummary(schemaUsage, ek.kind)} compact />
-                    {isFramework && <span className="badge badge-info">framework</span>}
-                    {profileCount > 0 && (
-                      <span
-                        className="badge badge-warning"
-                        title={`Used in ${profileCount} naming profile group${profileCount !== 1 ? 's' : ''}`}
-                      >
-                        ✎ {profileCount}
-                      </span>
-                    )}
-                    <span className="text-muted text-small">
-                      {ek.subtypes.length} subtypes, {ek.statuses.length} statuses
-                    </span>
-                  </>
-                }
+                actions={renderKindActions(ek, profileCount, isFramework)}
               >
                 {/* Display Name and Kind ID */}
                 <FormRow>

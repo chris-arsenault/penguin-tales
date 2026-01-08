@@ -7,11 +7,11 @@
   --lw-bg-sidebar: #0c1f2e;
 
   /* Borders - Blue tinted */
-  --lw-border-color: rgba(59, 130, 246, 0.3);
-  --lw-border-light: rgba(59, 130, 246, 0.15);
+  --lw-border-color: rgb(59 130 246 / 30%);
+  --lw-border-light: rgb(59 130 246 / 15%);
 
   /* Text - Ice white tones */
-  --lw-text-primary: #ffffff;
+  --lw-text-primary: #fff;
   --lw-text-secondary: #93c5fd;
   --lw-text-muted: #60a5fa;
 
@@ -281,7 +281,7 @@
 }
 
 .lw-timeline-icon.active {
-  background-color: rgba(167, 139, 250, 0.3);
+  background-color: rgb(167 139 250 / 30%);
   color: var(--lw-accent);
 }
 
@@ -583,7 +583,7 @@
 
 .lw-filter-steps li.lw-blocked-step {
   border-left-color: var(--lw-danger);
-  background-color: rgba(239, 68, 68, 0.1);
+  background-color: rgb(239 68 68 / 10%);
 }
 
 .lw-step-desc {
@@ -940,7 +940,7 @@
 }
 
 .lw-btn-debug.active {
-  background-color: rgba(109, 40, 217, 0.2);
+  background-color: rgb(109 40 217 / 20%);
   border-color: var(--lw-accent-dark);
   color: var(--lw-accent-light);
 }
@@ -961,8 +961,8 @@
    ======================================== */
 
 .lw-warning-box {
-  background-color: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background-color: rgb(245 158 11 / 10%);
+  border: 1px solid rgb(245 158 11 / 30%);
   border-radius: var(--lw-radius-lg);
   padding: var(--lw-space-lg);
   margin-bottom: var(--lw-space-xl);
@@ -971,8 +971,8 @@
 }
 
 .lw-error-box {
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background-color: rgb(239 68 68 / 10%);
+  border: 1px solid rgb(239 68 68 / 30%);
   border-radius: var(--lw-radius-lg);
   padding: var(--lw-space-lg);
   margin-bottom: var(--lw-space-xl);
@@ -982,7 +982,7 @@
 
 .lw-info-box {
   padding: var(--lw-space-sm) var(--lw-space-md);
-  background-color: rgba(167, 139, 250, 0.15);
+  background-color: rgb(167 139 250 / 15%);
   border-radius: var(--lw-radius-md);
   font-size: var(--lw-text-sm);
   color: var(--lw-accent);
@@ -1015,7 +1015,7 @@
   overflow: auto;
   max-height: 300px;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* ========================================
@@ -1046,15 +1046,15 @@
 }
 
 .lw-validity-valid {
-  background-color: rgba(34, 197, 94, 0.15);
+  background-color: rgb(34 197 94 / 15%);
   color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  border: 1px solid rgb(34 197 94 / 30%);
 }
 
 .lw-validity-invalid {
-  background-color: rgba(239, 68, 68, 0.15);
+  background-color: rgb(239 68 68 / 15%);
   color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgb(239 68 68 / 30%);
 }
 
 /* ========================================
@@ -1190,22 +1190,22 @@
 }
 
 .lw-badge-error {
-  background-color: rgba(239, 68, 68, 0.2);
+  background-color: rgb(239 68 68 / 20%);
   color: var(--lw-danger);
 }
 
 .lw-badge-warn {
-  background-color: rgba(245, 158, 11, 0.2);
+  background-color: rgb(245 158 11 / 20%);
   color: var(--lw-warning);
 }
 
 .lw-badge-success {
-  background-color: rgba(34, 197, 94, 0.2);
+  background-color: rgb(34 197 94 / 20%);
   color: var(--lw-success);
 }
 
 .lw-badge-info {
-  background-color: rgba(59, 130, 246, 0.2);
+  background-color: rgb(59 130 246 / 20%);
   color: var(--lw-info);
 }
 
@@ -1243,7 +1243,7 @@
 .lw-modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgb(0 0 0 / 60%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1434,13 +1434,13 @@
 }
 
 .lw-validation-box.valid {
-  background-color: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background-color: rgb(34 197 94 / 10%);
+  border: 1px solid rgb(34 197 94 / 30%);
 }
 
 .lw-validation-box.invalid {
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background-color: rgb(239 68 68 / 10%);
+  border: 1px solid rgb(239 68 68 / 30%);
 }
 
 .lw-validation-title {
@@ -1545,7 +1545,7 @@
   overflow: auto;
   max-height: 400px;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* ========================================
@@ -1683,7 +1683,7 @@
 }
 
 .lw-nav-button:hover {
-  background-color: rgba(109, 40, 217, 0.15);
+  background-color: rgb(109 40 217 / 15%);
   color: var(--lw-accent-dark);
 }
 
@@ -1707,7 +1707,7 @@
 
 .lw-nav-badge {
   margin-left: var(--lw-space-sm);
-  background-color: rgba(34, 197, 94, 0.2);
+  background-color: rgb(34 197 94 / 20%);
   color: var(--lw-success);
   font-size: 10px;
   padding: 2px 6px;
@@ -1730,7 +1730,7 @@
   background-color: var(--lw-bg-secondary);
   border: 1px solid var(--lw-border-color);
   border-radius: var(--lw-radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
   font-size: 12px;
 }
 
@@ -1751,7 +1751,7 @@
 .lw-tooltip-section {
   margin-top: var(--lw-space-sm);
   padding-top: var(--lw-space-sm);
-  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  border-top: 1px dashed rgb(255 255 255 / 10%);
 }
 
 .lw-tooltip-section:first-of-type {
@@ -1798,12 +1798,12 @@
 .lw-tooltip-subtotal {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgb(255 255 255 / 10%);
   font-weight: 600;
 }
 
 .lw-tooltip-final {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgb(0 0 0 / 20%);
   margin: var(--lw-space-sm) calc(-1 * var(--lw-space-md)) calc(-1 * var(--lw-space-md));
   padding: var(--lw-space-sm) var(--lw-space-md);
   border-radius: 0 0 var(--lw-radius-md) var(--lw-radius-md);
@@ -1827,7 +1827,7 @@
   font-size: 10px;
   color: var(--lw-text-muted);
   padding: 4px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
   margin-bottom: 4px;
 }
 
@@ -1842,7 +1842,7 @@
 
 .lw-tooltip-mod-header {
   font-weight: 600;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgb(255 255 255 / 5%);
   margin: 0 -8px;
   padding: 2px 8px;
 }
@@ -1856,6 +1856,6 @@
 .lw-tooltip-actual-change {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid rgb(255 255 255 / 20%);
   font-size: 13px;
 }

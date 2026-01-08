@@ -21,8 +21,15 @@ import './validation.css';
 import { exportAsJson, exportAsCsv, runValidations, getOverallStatus, validationRules } from './utils';
 import { IssueCard } from './cards';
 
+const DEFAULT_SCHEMA = Object.freeze({
+  entityKinds: [],
+  relationshipKinds: [],
+  cultures: [],
+  tagRegistry: [],
+});
+
 export default function ValidationEditor({
-  schema = { entityKinds: [], relationshipKinds: [], cultures: [], tagRegistry: [] },
+  schema = DEFAULT_SCHEMA,
   eras = [],
   pressures = [],
   generators = [],

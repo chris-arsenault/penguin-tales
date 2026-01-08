@@ -10,6 +10,8 @@ import { createNewRule } from './createNewRule';
 import { GraphPathEditor } from '../filters/GraphPathEditor';
 import TagSelector from '@penguin-tales/shared-components/TagSelector';
 
+const NUMBER_INPUT_STYLE = Object.freeze({ width: '80px' });
+
 /**
  * @param {Object} props
  * @param {Object} props.rule - The rule configuration
@@ -295,7 +297,7 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                     min={0}
                     max={100}
                     integer
-                    style={{ width: '80px' }}
+                    style={NUMBER_INPUT_STYLE}
                   />
                   <span>%</span>
                 </div>

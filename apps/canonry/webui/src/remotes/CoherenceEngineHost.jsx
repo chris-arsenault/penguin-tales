@@ -35,6 +35,12 @@ const styles = {
   },
 };
 
+const loadingFallback = React.createElement(
+  'div',
+  { style: styles.loading },
+  'Loading Coherence Engine...'
+);
+
 export default function CoherenceEngineHost({
   projectId,
   schema,
@@ -53,7 +59,7 @@ export default function CoherenceEngineHost({
 }) {
   return (
     <div style={styles.container}>
-      <Suspense fallback={<div style={styles.loading}>Loading Coherence Engine...</div>}>
+      <Suspense fallback={loadingFallback}>
         <CoherenceEngineRemote
           projectId={projectId}
           schema={schema}

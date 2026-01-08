@@ -491,7 +491,7 @@ export default function EntityDetail({
       )}
 
       {/* Connection Summary */}
-      <div className="pt-6 border-t border-blue-500/20">
+      <div className="pt-6 border-t border-blue-500-20">
         <div className="section-header">Connection Summary</div>
         <div className="summary-grid">
           <div className="summary-card">

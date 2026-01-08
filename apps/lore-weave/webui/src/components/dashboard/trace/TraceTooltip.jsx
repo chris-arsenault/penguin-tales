@@ -5,6 +5,16 @@
 import React from 'react';
 import { useTooltip, TooltipWithBounds } from '@visx/tooltip';
 
+const TOOLTIP_STYLE = Object.freeze({
+  backgroundColor: 'rgba(15, 23, 42, 0.95)',
+  border: '1px solid rgba(148, 163, 184, 0.2)',
+  borderRadius: '6px',
+  padding: '8px 12px',
+  color: '#e2e8f0',
+  fontSize: '12px',
+  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+});
+
 /**
  * Tooltip hook and component for trace visualization
  */
@@ -27,15 +37,7 @@ export default function TraceTooltip({
     <TooltipWithBounds
       left={tooltipLeft}
       top={tooltipTop}
-      style={{
-        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-        border: '1px solid rgba(148, 163, 184, 0.2)',
-        borderRadius: '6px',
-        padding: '8px 12px',
-        color: '#e2e8f0',
-        fontSize: '12px',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
-      }}
+      style={TOOLTIP_STYLE}
     >
       {tooltipData.type === 'tick' && (
         <div>

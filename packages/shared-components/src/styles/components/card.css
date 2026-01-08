@@ -104,7 +104,7 @@
 
 .item-card-header:hover,
 .item-card-header-hover {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgb(59 130 246 / 10%);
 }
 
 .item-card-icon {
@@ -115,20 +115,20 @@
   align-items: center;
   justify-content: center;
   font-size: var(--font-size-xl);
-  background-color: rgba(59, 130, 246, 0.2);
+  background-color: rgb(59 130 246 / 20%);
   flex-shrink: 0;
 }
 
 .item-card-icon-variable {
-  background-color: rgba(168, 85, 247, 0.2);
+  background-color: rgb(168 85 247 / 20%);
 }
 
 .item-card-icon-relationship {
-  background-color: rgba(20, 184, 166, 0.2);
+  background-color: rgb(20 184 166 / 20%);
 }
 
 .item-card-icon-creation {
-  background-color: rgba(245, 158, 11, 0.2);
+  background-color: rgb(245 158 11 / 20%);
 }
 
 .item-card-info {
@@ -168,7 +168,7 @@
   font-family: monospace;
   font-size: var(--font-size-lg);
   color: var(--color-purple);
-  background-color: rgba(168, 85, 247, 0.15);
+  background-color: rgb(168 85 247 / 15%);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
 }
@@ -185,7 +185,7 @@
   font-family: monospace;
   font-size: var(--font-size-md);
   color: var(--color-purple);
-  background-color: rgba(168, 85, 247, 0.15);
+  background-color: rgb(168 85 247 / 15%);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
 }
@@ -198,7 +198,7 @@
 .rel-kind {
   font-size: var(--font-size-md);
   color: var(--color-teal);
-  background-color: rgba(20, 184, 166, 0.15);
+  background-color: rgb(20 184 166 / 15%);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
 }
@@ -260,7 +260,7 @@
   font-size: var(--font-size-xs);
   padding: 2px 8px;
   border-radius: var(--radius-pill);
-  background-color: rgba(239, 68, 68, 0.2);
+  background-color: rgb(239 68 68 / 20%);
   color: #fca5a5;
 }
 
@@ -268,7 +268,7 @@
   font-size: var(--font-size-xs);
   padding: 2px 8px;
   border-radius: var(--radius-pill);
-  background-color: rgba(59, 130, 246, 0.2);
+  background-color: rgb(59 130 246 / 20%);
   color: #93c5fd;
 }
 
@@ -276,7 +276,7 @@
   font-size: var(--font-size-xs);
   padding: 2px 8px;
   border-radius: var(--radius-pill);
-  background-color: rgba(156, 163, 175, 0.2);
+  background-color: rgb(156 163 175 / 20%);
   color: #d1d5db;
 }
 
@@ -313,7 +313,7 @@
 }
 
 .weights-accordion-header:hover {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgb(59 130 246 / 10%);
 }
 
 .weights-accordion-header.expanded {
@@ -458,7 +458,7 @@
 }
 
 /* Responsive: stack on smaller screens */
-@media (max-width: 900px) {
+@media (width <= 900px) {
   .transitions-grid {
     grid-template-columns: 1fr;
     gap: var(--spacing-md);

@@ -2,7 +2,7 @@
  * RelationshipKindEditor - Edit relationship kinds
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ExpandableCard, FormGroup, SectionHeader, EmptyState } from '@penguin-tales/shared-components';
 import { ToolUsageBadges as UsageBadges, getRelationshipKindUsageSummary } from '@penguin-tales/shared-components';
 
@@ -70,17 +70,40 @@ export default function RelationshipKindEditor({
     return { srcNames, dstNames };
   };
 
+  const flexFormStyle = useMemo(() => ({ flex: 1 }), []);
+
+  const renderHeaderActions = () => (
+    <button className="btn btn-primary" onClick={addRelationship}>
+      + Add Relationship
+    </button>
+  );
+
+  const renderRelationshipActions = (rel, srcNames, dstNames, isFramework) => (
+    <>
+      <UsageBadges usage={getRelationshipKindUsageSummary(schemaUsage, rel.kind)} compact />
+      {isFramework && <span className="badge badge-info">framework</span>}
+      {rel.cullable === false && <span className="badge badge-info">protected</span>}
+      <div className="text-muted text-small" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {srcNames.map((name, i) => (
+          <span key={i} className="badge">{name}</span>
+        ))}
+        {rel.srcKinds?.length > 2 && <span>+{rel.srcKinds.length - 2}</span>}
+        <span>→</span>
+        {dstNames.map((name, i) => (
+          <span key={i} className="badge">{name}</span>
+        ))}
+        {rel.dstKinds?.length > 2 && <span>+{rel.dstKinds.length - 2}</span>}
+      </div>
+    </>
+  );
+
   return (
     <div className="editor-container" style={{ maxWidth: '900px' }}>
       <SectionHeader
         title="Relationship Kinds"
         description="Define how entities can be connected to each other."
         count={relationshipKinds.length}
-        actions={
-          <button className="btn btn-primary" onClick={addRelationship}>
-            + Add Relationship
-          </button>
-        }
+        actions={renderHeaderActions()}
       />
 
       {relationshipKinds.length === 0 ? (
@@ -104,24 +127,7 @@ export default function RelationshipKindEditor({
                 onToggle={() => toggleRel(stableKey)}
                 title={rel.description}
                 subtitle={rel.kind}
-                actions={
-                  <>
-                    <UsageBadges usage={getRelationshipKindUsageSummary(schemaUsage, rel.kind)} compact />
-                    {isFramework && <span className="badge badge-info">framework</span>}
-                    {rel.cullable === false && <span className="badge badge-info">protected</span>}
-                    <div className="text-muted text-small" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {srcNames.map((name, i) => (
-                        <span key={i} className="badge">{name}</span>
-                      ))}
-                      {rel.srcKinds?.length > 2 && <span>+{rel.srcKinds.length - 2}</span>}
-                      <span>→</span>
-                      {dstNames.map((name, i) => (
-                        <span key={i} className="badge">{name}</span>
-                      ))}
-                      {rel.dstKinds?.length > 2 && <span>+{rel.dstKinds.length - 2}</span>}
-                    </div>
-                  </>
-                }
+                actions={renderRelationshipActions(rel, srcNames, dstNames, isFramework)}
               >
                 {/* Display Name and Kind ID */}
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
@@ -252,7 +258,7 @@ export default function RelationshipKindEditor({
                     Verbs used in narrative event descriptions when this relationship is formed or ended.
                   </div>
                   <div style={{ display: 'flex', gap: '12px' }}>
-                    <FormGroup label="Formed" style={{ flex: 1 }}>
+                    <FormGroup label="Formed" style={flexFormStyle}>
                       <input
                         className="input"
                         value={rel.verbs?.formed || ''}
@@ -263,7 +269,7 @@ export default function RelationshipKindEditor({
                         placeholder="e.g., joined, allied with"
                       />
                     </FormGroup>
-                    <FormGroup label="Ended" style={{ flex: 1 }}>
+                    <FormGroup label="Ended" style={flexFormStyle}>
                       <input
                         className="input"
                         value={rel.verbs?.ended || ''}

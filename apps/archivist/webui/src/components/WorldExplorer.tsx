@@ -99,6 +99,10 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
   // Apply temporal filter first, then regular filters
   const temporalData = applyTemporalFilter(worldData, currentTick);
   const filteredData = applyFilters(temporalData, filters, prominenceScale);
+  const loadingFallback = useMemo(
+    () => <div className="world-loading">Loading view…</div>,
+    []
+  );
 
   return (
     <div className="world-explorer">
@@ -119,7 +123,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
 
         {/* Graph View */}
         <main className="world-graph-container">
-          <Suspense fallback={<div className="world-loading">Loading view…</div>}>
+          <Suspense fallback={loadingFallback}>
             {viewMode === 'graph3d' && (
               <GraphView3D
                 key={`3d-view-${edgeMetric}`}

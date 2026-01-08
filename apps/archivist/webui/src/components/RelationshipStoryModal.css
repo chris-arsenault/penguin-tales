@@ -2,11 +2,8 @@
 
 .relationship-story-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.75);
+  inset: 0;
+  background: rgb(0 0 0 / 75%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -16,13 +13,13 @@
 
 .relationship-story-modal {
   background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%);
-  border: 2px solid rgba(59, 130, 246, 0.5);
+  border: 2px solid rgb(59 130 246 / 50%);
   border-radius: 12px;
   max-width: 700px;
   width: 100%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 50%);
 }
 
 .relationship-story-header {
@@ -30,8 +27,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 2px solid rgba(59, 130, 246, 0.3);
-  background: rgba(59, 130, 246, 0.1);
+  border-bottom: 2px solid rgb(59 130 246 / 30%);
+  background: rgb(59 130 246 / 10%);
 }
 
 .relationship-story-entities {
@@ -44,13 +41,13 @@
 .relationship-story-entity {
   font-size: 14px;
   font-weight: 700;
-  color: #ffffff;
+  color: #fff;
 }
 
 .relationship-story-kind {
   padding: 4px 12px;
-  background: rgba(59, 130, 246, 0.3);
-  border: 1px solid rgba(59, 130, 246, 0.5);
+  background: rgb(59 130 246 / 30%);
+  border: 1px solid rgb(59 130 246 / 50%);
   border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
@@ -65,8 +62,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgb(239 68 68 / 20%);
+  border: 1px solid rgb(239 68 68 / 40%);
   border-radius: 6px;
   color: #fca5a5;
   font-size: 24px;
@@ -77,14 +74,14 @@
 }
 
 .relationship-story-close:hover {
-  background: rgba(239, 68, 68, 0.3);
-  border-color: rgba(239, 68, 68, 0.6);
-  color: #ffffff;
+  background: rgb(239 68 68 / 30%);
+  border-color: rgb(239 68 68 / 60%);
+  color: #fff;
 }
 
 .relationship-story-section {
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+  border-bottom: 1px solid rgb(59 130 246 / 15%);
 }
 
 .relationship-story-section:last-child {
@@ -122,13 +119,13 @@
 
 /* Different section backgrounds */
 .relationship-story-section:nth-child(2) {
-  background: rgba(59, 130, 246, 0.03);
+  background: rgb(59 130 246 / 3%);
 }
 
 .relationship-story-section:nth-child(3) {
-  background: rgba(251, 191, 36, 0.03);
+  background: rgb(251 191 36 / 3%);
 }
 
 .relationship-story-section:nth-child(4) {
-  background: rgba(139, 92, 246, 0.03);
+  background: rgb(139 92 246 / 3%);
 }
