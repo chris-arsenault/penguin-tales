@@ -1,6 +1,6 @@
 import type { WorkerTask } from '../../lib/enrichmentTypes';
 import { estimateImageCost, calculateActualImageCost } from '../../lib/costEstimation';
-import { saveImage, generateImageId } from '../../lib/workerStorage';
+import { saveImage, generateImageId, extractImageDimensions } from '../../lib/workerStorage';
 import { saveCostRecordWithDefaults } from '../../lib/costStorage';
 import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
@@ -10,6 +10,8 @@ import type { ResolvedLLMCallConfig } from '../../lib/llmModelSettings';
 
 interface ImagePromptFormatResult {
   prompt: string;
+  /** The full prompt sent to Claude for formatting (template + globalImageRules + original prompt) */
+  formattingPrompt?: string;
   cost?: {
     estimated: number;
     actual: number;
@@ -23,7 +25,7 @@ interface ImagePromptFormatResult {
  */
 async function formatImagePromptWithClaude(
   originalPrompt: string,
-  config: { useClaudeForImagePrompt?: boolean; claudeImagePromptTemplate?: string; imageModel?: string },
+  config: { useClaudeForImagePrompt?: boolean; claudeImagePromptTemplate?: string; imageModel?: string; globalImageRules?: string },
   llmClient: LLMClient,
   callConfig: ResolvedLLMCallConfig
 ): Promise<ImagePromptFormatResult> {
@@ -37,9 +39,11 @@ async function formatImagePromptWithClaude(
   }
 
   const imageModel = config.imageModel || 'dall-e-3';
+  const globalRules = config.globalImageRules || '';
   const formattingPrompt = config.claudeImagePromptTemplate
     .replace(/\{\{modelName\}\}/g, imageModel)
-    .replace(/\{\{prompt\}\}/g, originalPrompt);
+    .replace(/\{\{prompt\}\}/g, originalPrompt)
+    .replace(/\{\{globalImageRules\}\}/g, globalRules);
 
   try {
     const formattingCall = await runTextCall({
@@ -57,6 +61,7 @@ async function formatImagePromptWithClaude(
 
       return {
         prompt: result.text.trim(),
+        formattingPrompt,
         cost: {
           estimated: formattingCall.estimate.estimatedCost,
           actual: formattingCall.usage.actualCost,
@@ -69,7 +74,7 @@ async function formatImagePromptWithClaude(
     console.warn('[Worker] Failed to format image prompt with Claude:', err);
   }
 
-  return { prompt: originalPrompt };
+  return { prompt: originalPrompt, formattingPrompt };
 }
 
 export const imageTask = {
@@ -82,8 +87,9 @@ export const imageTask = {
     }
 
     const imageModel = config.imageModel || 'dall-e-3';
-    const imageSize = config.imageSize || '1024x1024';
-    const imageQuality = config.imageQuality || 'standard';
+    // Use task-level overrides if provided, otherwise fall back to global config
+    const imageSize = task.imageSize || config.imageSize || '1024x1024';
+    const imageQuality = task.imageQuality || config.imageQuality || 'standard';
     const estimatedCost = estimateImageCost(imageModel, imageSize, imageQuality);
 
     // Store original prompt before any refinement
@@ -132,6 +138,9 @@ export const imageTask = {
     const generatedAt = Date.now();
     const imageId = generateImageId(task.entityId);
 
+    // Extract image dimensions for aspect-aware display
+    const dimensions = await extractImageDimensions(result.imageBlob);
+
     // Save directly to IndexedDB
     await saveImage(imageId, result.imageBlob, {
       entityId: task.entityId,
@@ -140,14 +149,20 @@ export const imageTask = {
       entityKind: task.entityKind,
       entityCulture: task.entityCulture,
       originalPrompt,
+      formattingPrompt: formatResult.formattingPrompt,
       finalPrompt,
       generatedAt,
       model: imageModel,
+      size: imageSize,
       revisedPrompt: result.revisedPrompt,
       estimatedCost,
       actualCost,
       inputTokens: result.usage?.inputTokens,
       outputTokens: result.usage?.outputTokens,
+      // Image dimensions for aspect-aware display
+      width: dimensions.width,
+      height: dimensions.height,
+      aspect: dimensions.aspect,
       // Chronicle image fields
       imageType: task.imageType,
       chronicleId: task.chronicleId,
@@ -181,6 +196,10 @@ export const imageTask = {
         actualCost,
         inputTokens: result.usage?.inputTokens,
         outputTokens: result.usage?.outputTokens,
+        // Image dimensions for aspect-aware display
+        width: dimensions.width,
+        height: dimensions.height,
+        aspect: dimensions.aspect,
       },
       debug,
     };

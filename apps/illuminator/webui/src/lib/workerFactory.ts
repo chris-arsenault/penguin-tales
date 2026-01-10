@@ -429,3 +429,22 @@ export function createWorkerPool(config: WorkerConfig, count: number): WorkerHan
 
   return handles;
 }
+
+export function resetWorkerPool(): void {
+  const sharedPool = getSharedWorkerPool();
+  for (const handle of sharedPool) {
+    handle?.terminate();
+  }
+  sharedPool.length = 0;
+
+  const servicePool = getServiceWorkerPool();
+  for (const handle of servicePool) {
+    handle?.terminate();
+  }
+  servicePool.length = 0;
+
+  const globalScope = globalThis as GlobalServiceWorkerState;
+  if (globalScope.__illuminatorServiceWorkerHandleMap) {
+    globalScope.__illuminatorServiceWorkerHandleMap.clear();
+  }
+}

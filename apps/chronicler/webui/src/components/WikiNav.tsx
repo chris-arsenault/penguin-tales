@@ -6,88 +6,10 @@
  * - Search, Home, Random at bottom
  */
 
+import { useState } from 'react';
 import type { WikiPage, WikiCategory, PageIndexEntry } from '../types/world.ts';
 import WikiSearch from './WikiSearch.tsx';
-
-const colors = {
-  bgSecondary: '#1e3a5f',
-  bgSidebar: '#0c1f2e',
-  border: 'rgba(59, 130, 246, 0.3)',
-  textPrimary: '#ffffff',
-  textSecondary: '#93c5fd',
-  textMuted: '#60a5fa',
-  accent: '#10b981',
-  hoverBg: 'rgba(16, 185, 129, 0.15)',
-};
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    height: '100%',
-  },
-  nav: {
-    flex: 1,
-    overflow: 'auto',
-    padding: '8px',
-  },
-  section: {
-    marginBottom: '16px',
-  },
-  sectionTitle: {
-    fontSize: '11px',
-    fontWeight: 600,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-    color: colors.textMuted,
-    padding: '8px 12px',
-  },
-  navItem: {
-    display: 'block',
-    width: '100%',
-    padding: '8px 12px',
-    fontSize: '13px',
-    color: colors.textSecondary,
-    backgroundColor: 'transparent',
-    border: 'none',
-    borderRadius: '4px',
-    textAlign: 'left' as const,
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-  },
-  navItemActive: {
-    backgroundColor: colors.accent,
-    color: '#0a1929',
-    fontWeight: 500,
-  },
-  badge: {
-    fontSize: '11px',
-    color: colors.textMuted,
-    marginLeft: '8px',
-  },
-  bottomSection: {
-    borderTop: `1px solid ${colors.border}`,
-    padding: '12px',
-    backgroundColor: colors.bgSidebar,
-  },
-  bottomLinks: {
-    display: 'flex',
-    gap: '8px',
-    marginTop: '12px',
-  },
-  bottomLink: {
-    flex: 1,
-    padding: '8px',
-    fontSize: '12px',
-    color: colors.textSecondary,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '6px',
-    textAlign: 'center' as const,
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-  },
-};
+import styles from './WikiNav.module.css';
 
 interface WikiNavProps {
   categories: WikiCategory[];
@@ -126,6 +48,10 @@ export default function WikiNav({
   isDrawer,
   onCloseDrawer,
 }: WikiNavProps) {
+  // Collapsible section state (confluxes and huddles default to collapsed)
+  const [confluxesExpanded, setConfluxesExpanded] = useState(false);
+  const [huddlesExpanded, setHuddlesExpanded] = useState(false);
+
   // Get top categories for quick access
   const topCategories = categories
     .filter(c => c.id.startsWith('kind-'))
@@ -145,31 +71,14 @@ export default function WikiNav({
   const documentChronicles = chroniclePages.filter((page) => page.chronicle?.format === 'document');
 
   return (
-    <div style={styles.container}>
+    <div className={styles.container}>
       {/* Drawer header with close button (mobile only) */}
       {isDrawer && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-          borderBottom: `1px solid ${colors.border}`,
-          backgroundColor: colors.bgSecondary,
-        }}>
-          <span style={{ fontWeight: 600, fontSize: '14px', color: colors.textPrimary }}>
-            Navigation
-          </span>
+        <div className={styles.drawerHeader}>
+          <span className={styles.drawerTitle}>Navigation</span>
           <button
             onClick={onCloseDrawer}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: colors.textMuted,
-              fontSize: '20px',
-              cursor: 'pointer',
-              padding: '4px 8px',
-              lineHeight: 1,
-            }}
+            className={styles.drawerClose}
             aria-label="Close navigation"
           >
             ×
@@ -177,233 +86,60 @@ export default function WikiNav({
         </div>
       )}
 
-      <nav style={styles.nav}>
+      <nav className={styles.nav}>
 
       {/* Browse by Type */}
       {topCategories.length > 0 && (
-        <div style={styles.section}>
-          <div style={styles.sectionTitle}>Browse by Type</div>
-          {topCategories.map(category => (
-            <button
-              key={category.id}
-              style={{
-                ...styles.navItem,
-                ...(currentPageId === `category-${category.id}` ? styles.navItemActive : {}),
-              }}
-              onClick={() => onNavigate(`category-${category.id}`)}
-              onMouseEnter={(e) => {
-                if (currentPageId !== `category-${category.id}`) {
-                  e.currentTarget.style.backgroundColor = colors.hoverBg;
-                  e.currentTarget.style.color = colors.accent;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (currentPageId !== `category-${category.id}`) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = colors.textSecondary;
-                }
-              }}
-            >
-              {category.name.replace('Kind: ', '')}
-              <span style={styles.badge}>({category.pageCount})</span>
-            </button>
-          ))}
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>Browse by Type</div>
+          {topCategories.map(category => {
+            const isActive = currentPageId === `category-${category.id}`;
+            return (
+              <button
+                key={category.id}
+                className={isActive ? styles.navItemActive : styles.navItem}
+                onClick={() => onNavigate(`category-${category.id}`)}
+              >
+                {category.name.replace('Kind: ', '')}
+                <span className={isActive ? styles.badgeActive : styles.badge}>({category.pageCount})</span>
+              </button>
+            );
+          })}
         </div>
       )}
 
       {chroniclePages.length > 0 && (
-        <div style={styles.section}>
-          <div style={styles.sectionTitle}>Chronicles</div>
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>Chronicles</div>
           <button
-            style={{
-              ...styles.navItem,
-              ...(currentPageId === 'chronicles' ? styles.navItemActive : {}),
-            }}
+            className={currentPageId === 'chronicles' ? styles.navItemActive : styles.navItem}
             onClick={() => onNavigate('chronicles')}
-            onMouseEnter={(e) => {
-              if (currentPageId !== 'chronicles') {
-                e.currentTarget.style.backgroundColor = colors.hoverBg;
-                e.currentTarget.style.color = colors.accent;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (currentPageId !== 'chronicles') {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = colors.textSecondary;
-              }
-            }}
           >
             All Chronicles
-            <span style={styles.badge}>({chroniclePages.length})</span>
+            <span className={currentPageId === 'chronicles' ? styles.badgeActive : styles.badge}>({chroniclePages.length})</span>
           </button>
           {storyChronicles.length > 0 && (
             <button
-              style={{
-                ...styles.navItem,
-                ...(currentPageId === 'chronicles-story' ? styles.navItemActive : {}),
-              }}
+              className={currentPageId === 'chronicles-story' ? styles.navItemActive : styles.navItem}
               onClick={() => onNavigate('chronicles-story')}
-              onMouseEnter={(e) => {
-                if (currentPageId !== 'chronicles-story') {
-                  e.currentTarget.style.backgroundColor = colors.hoverBg;
-                  e.currentTarget.style.color = colors.accent;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (currentPageId !== 'chronicles-story') {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = colors.textSecondary;
-                }
-              }}
             >
               Stories
-              <span style={styles.badge}>({storyChronicles.length})</span>
+              <span className={currentPageId === 'chronicles-story' ? styles.badgeActive : styles.badge}>({storyChronicles.length})</span>
             </button>
           )}
           {documentChronicles.length > 0 && (
             <button
-              style={{
-                ...styles.navItem,
-                ...(currentPageId === 'chronicles-document' ? styles.navItemActive : {}),
-              }}
+              className={currentPageId === 'chronicles-document' ? styles.navItemActive : styles.navItem}
               onClick={() => onNavigate('chronicles-document')}
-              onMouseEnter={(e) => {
-                if (currentPageId !== 'chronicles-document') {
-                  e.currentTarget.style.backgroundColor = colors.hoverBg;
-                  e.currentTarget.style.color = colors.accent;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (currentPageId !== 'chronicles-document') {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = colors.textSecondary;
-                }
-              }}
             >
               Documents
-              <span style={styles.badge}>({documentChronicles.length})</span>
+              <span className={currentPageId === 'chronicles-document' ? styles.badgeActive : styles.badge}>({documentChronicles.length})</span>
             </button>
           )}
         </div>
       )}
 
-      {/* Confluxes */}
-      {confluxPages.length > 0 && (
-        <div style={styles.section}>
-          <div style={styles.sectionTitle}>Confluxes</div>
-          <button
-            style={{
-              ...styles.navItem,
-              ...(currentPageId === 'confluxes' ? styles.navItemActive : {}),
-            }}
-            onClick={() => onNavigate('confluxes')}
-            onMouseEnter={(e) => {
-              if (currentPageId !== 'confluxes') {
-                e.currentTarget.style.backgroundColor = colors.hoverBg;
-                e.currentTarget.style.color = colors.accent;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (currentPageId !== 'confluxes') {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = colors.textSecondary;
-              }
-            }}
-          >
-            All Confluxes
-            <span style={styles.badge}>({confluxPages.length})</span>
-          </button>
-          {/* Show 5 rarest confluxes */}
-          {confluxPages
-            .sort((a, b) => (a.conflux?.manifestations ?? 0) - (b.conflux?.manifestations ?? 0))
-            .slice(0, 5)
-            .map(page => (
-              <button
-                key={page.id}
-                style={{
-                  ...styles.navItem,
-                  ...(currentPageId === page.id ? styles.navItemActive : {}),
-                }}
-                onClick={() => onNavigate(page.id)}
-                onMouseEnter={(e) => {
-                  if (currentPageId !== page.id) {
-                    e.currentTarget.style.backgroundColor = colors.hoverBg;
-                    e.currentTarget.style.color = colors.accent;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentPageId !== page.id) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = colors.textSecondary;
-                  }
-                }}
-              >
-                {page.title}
-                <span style={styles.badge}>({page.conflux?.manifestations ?? 0})</span>
-              </button>
-            ))}
-        </div>
-      )}
-
-      {/* Huddles */}
-      {huddlePages.length > 0 && (
-        <div style={styles.section}>
-          <div style={styles.sectionTitle}>Huddles</div>
-          <button
-            style={{
-              ...styles.navItem,
-              ...(currentPageId === 'huddles' ? styles.navItemActive : {}),
-            }}
-            onClick={() => onNavigate('huddles')}
-            onMouseEnter={(e) => {
-              if (currentPageId !== 'huddles') {
-                e.currentTarget.style.backgroundColor = colors.hoverBg;
-                e.currentTarget.style.color = colors.accent;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (currentPageId !== 'huddles') {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = colors.textSecondary;
-              }
-            }}
-          >
-            All Huddles
-            <span style={styles.badge}>({huddlePages.length})</span>
-          </button>
-          {/* Show 5 largest huddle types */}
-          {huddlePages
-            .sort((a, b) => (b.huddleType?.largestSize ?? 0) - (a.huddleType?.largestSize ?? 0))
-            .slice(0, 5)
-            .map(page => (
-              <button
-                key={page.id}
-                style={{
-                  ...styles.navItem,
-                  ...(currentPageId === page.id ? styles.navItemActive : {}),
-                }}
-                onClick={() => onNavigate(page.id)}
-                onMouseEnter={(e) => {
-                  if (currentPageId !== page.id) {
-                    e.currentTarget.style.backgroundColor = colors.hoverBg;
-                    e.currentTarget.style.color = colors.accent;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentPageId !== page.id) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = colors.textSecondary;
-                  }
-                }}
-              >
-                {page.title}
-                <span style={styles.badge}>({page.huddleType?.largestSize ?? 0})</span>
-              </button>
-            ))}
-        </div>
-      )}
-
-      {/* Static Pages - show by namespace category */}
+      {/* Static Pages - show by namespace category (moved above confluxes/huddles) */}
       {staticPages.length > 0 && (() => {
         // Group pages by namespace prefix (e.g., "System:", "Cultures:", "Names:")
         const pagesByNamespace = new Map<string, WikiPage[]>();
@@ -424,101 +160,139 @@ export default function WikiNav({
         });
 
         return (
-          <div style={styles.section}>
-            <div style={styles.sectionTitle}>Pages</div>
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>Pages</div>
             <button
-              style={{
-                ...styles.navItem,
-                ...(currentPageId === 'pages' ? styles.navItemActive : {}),
-              }}
+              className={currentPageId === 'pages' ? styles.navItemActive : styles.navItem}
               onClick={() => onNavigate('pages')}
-              onMouseEnter={(e) => {
-                if (currentPageId !== 'pages') {
-                  e.currentTarget.style.backgroundColor = colors.hoverBg;
-                  e.currentTarget.style.color = colors.accent;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (currentPageId !== 'pages') {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = colors.textSecondary;
-                }
-              }}
             >
               All Pages
-              <span style={styles.badge}>({staticPages.length})</span>
+              <span className={currentPageId === 'pages' ? styles.badgeActive : styles.badge}>({staticPages.length})</span>
             </button>
-            {sortedNamespaces.map(namespace => (
-              <button
-                key={namespace}
-                style={{
-                  ...styles.navItem,
-                  ...(currentPageId === `page-category-${namespace}` ? styles.navItemActive : {}),
-                }}
-                onClick={() => onNavigate(`page-category-${namespace}`)}
-                onMouseEnter={(e) => {
-                  if (currentPageId !== `page-category-${namespace}`) {
-                    e.currentTarget.style.backgroundColor = colors.hoverBg;
-                    e.currentTarget.style.color = colors.accent;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentPageId !== `page-category-${namespace}`) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = colors.textSecondary;
-                  }
-                }}
-              >
-                {namespace}
-                <span style={styles.badge}>({pagesByNamespace.get(namespace)!.length})</span>
-              </button>
-            ))}
+            {sortedNamespaces.map(namespace => {
+              const isActive = currentPageId === `page-category-${namespace}`;
+              return (
+                <button
+                  key={namespace}
+                  className={isActive ? styles.navItemActive : styles.navItem}
+                  onClick={() => onNavigate(`page-category-${namespace}`)}
+                >
+                  {namespace}
+                  <span className={isActive ? styles.badgeActive : styles.badge}>({pagesByNamespace.get(namespace)!.length})</span>
+                </button>
+              );
+            })}
           </div>
         );
       })()}
 
+      {/* Confluxes - collapsible, default collapsed */}
+      {confluxPages.length > 0 && (
+        <div className={styles.section}>
+          <button
+            className={styles.sectionTitleCollapsible}
+            onClick={() => setConfluxesExpanded(!confluxesExpanded)}
+            aria-expanded={confluxesExpanded}
+          >
+            <span className={styles.collapseIcon}>{confluxesExpanded ? '▼' : '▶'}</span>
+            Confluxes
+            <span className={styles.badge}>({confluxPages.length})</span>
+          </button>
+          {confluxesExpanded && (
+            <>
+              <button
+                className={currentPageId === 'confluxes' ? styles.navItemActive : styles.navItem}
+                onClick={() => onNavigate('confluxes')}
+              >
+                All Confluxes
+                <span className={currentPageId === 'confluxes' ? styles.badgeActive : styles.badge}>({confluxPages.length})</span>
+              </button>
+              {/* Show 5 rarest confluxes */}
+              {confluxPages
+                .sort((a, b) => (a.conflux?.manifestations ?? 0) - (b.conflux?.manifestations ?? 0))
+                .slice(0, 5)
+                .map(page => {
+                  const isActive = currentPageId === page.id;
+                  return (
+                    <button
+                      key={page.id}
+                      className={isActive ? styles.navItemActive : styles.navItem}
+                      onClick={() => onNavigate(page.id)}
+                    >
+                      {page.title}
+                      <span className={isActive ? styles.badgeActive : styles.badge}>({page.conflux?.manifestations ?? 0})</span>
+                    </button>
+                  );
+                })}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Huddles - collapsible, default collapsed */}
+      {huddlePages.length > 0 && (
+        <div className={styles.section}>
+          <button
+            className={styles.sectionTitleCollapsible}
+            onClick={() => setHuddlesExpanded(!huddlesExpanded)}
+            aria-expanded={huddlesExpanded}
+          >
+            <span className={styles.collapseIcon}>{huddlesExpanded ? '▼' : '▶'}</span>
+            Huddles
+            <span className={styles.badge}>({huddlePages.length})</span>
+          </button>
+          {huddlesExpanded && (
+            <>
+              <button
+                className={currentPageId === 'huddles' ? styles.navItemActive : styles.navItem}
+                onClick={() => onNavigate('huddles')}
+              >
+                All Huddles
+                <span className={currentPageId === 'huddles' ? styles.badgeActive : styles.badge}>({huddlePages.length})</span>
+              </button>
+              {/* Show 5 largest huddle types */}
+              {huddlePages
+                .sort((a, b) => (b.huddleType?.largestSize ?? 0) - (a.huddleType?.largestSize ?? 0))
+                .slice(0, 5)
+                .map(page => {
+                  const isActive = currentPageId === page.id;
+                  return (
+                    <button
+                      key={page.id}
+                      className={isActive ? styles.navItemActive : styles.navItem}
+                      onClick={() => onNavigate(page.id)}
+                    >
+                      {page.title}
+                      <span className={isActive ? styles.badgeActive : styles.badge}>({page.huddleType?.largestSize ?? 0})</span>
+                    </button>
+                  );
+                })}
+            </>
+          )}
+        </div>
+      )}
+
       {/* All Categories */}
-      <div style={styles.section}>
-        <div style={styles.sectionTitle}>All Categories</div>
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>All Categories</div>
         <button
-          style={styles.navItem}
+          className={styles.navItem}
           onClick={() => onNavigate('all-categories')}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = colors.hoverBg;
-            e.currentTarget.style.color = colors.accent;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = colors.textSecondary;
-          }}
         >
           View All Categories
-          <span style={styles.badge}>({categories.length})</span>
+          <span className={styles.badge}>({categories.length})</span>
         </button>
       </div>
 
       {/* Refresh Index */}
       {onRefreshIndex && (
-        <div style={styles.section}>
+        <div className={styles.section}>
           <button
-            style={{
-              ...styles.navItem,
-              opacity: isRefreshing ? 0.6 : 1,
-              cursor: isRefreshing ? 'wait' : 'pointer',
-            }}
+            className={styles.refreshButton}
             onClick={onRefreshIndex}
             disabled={isRefreshing}
-            onMouseEnter={(e) => {
-              if (!isRefreshing) {
-                e.currentTarget.style.backgroundColor = colors.hoverBg;
-                e.currentTarget.style.color = colors.accent;
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = colors.textSecondary;
-            }}
           >
+            {isRefreshing && <span className={styles.refreshSpinner}>↻</span>}
             {isRefreshing ? 'Refreshing...' : 'Refresh Index'}
           </button>
         </div>
@@ -526,7 +300,7 @@ export default function WikiNav({
       </nav>
 
       {/* Bottom Section - Search and Links */}
-      <div style={styles.bottomSection}>
+      <div className={styles.bottomSection}>
         <WikiSearch
           pages={pages}
           query={searchQuery}
@@ -534,39 +308,16 @@ export default function WikiNav({
           onSelect={onNavigate}
           expandDirection="up"
         />
-        <div style={styles.bottomLinks}>
+        <div className={styles.bottomLinks}>
           <button
-            style={{
-              ...styles.bottomLink,
-              ...(currentPageId === null ? { backgroundColor: colors.accent, color: '#0a1929', borderColor: colors.accent } : {}),
-            }}
+            className={currentPageId === null ? styles.navItemActive : styles.bottomLink}
             onClick={onGoHome}
-            onMouseEnter={(e) => {
-              if (currentPageId !== null) {
-                e.currentTarget.style.backgroundColor = colors.hoverBg;
-                e.currentTarget.style.borderColor = colors.accent;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (currentPageId !== null) {
-                e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
-                e.currentTarget.style.borderColor = colors.border;
-              }
-            }}
           >
             Home
           </button>
           <button
-            style={styles.bottomLink}
+            className={styles.bottomLink}
             onClick={handleRandomPage}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = colors.hoverBg;
-              e.currentTarget.style.borderColor = colors.accent;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
-              e.currentTarget.style.borderColor = colors.border;
-            }}
           >
             Random
           </button>

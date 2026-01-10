@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import type { MouseEvent } from 'react';
+import styles from './ImageLightbox.module.css';
 
 interface ImageLightboxProps {
   isOpen: boolean;
@@ -49,84 +50,25 @@ export default function ImageLightbox({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.88)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '24px',
-        zIndex: 10000,
-      }}
+      className={styles.overlay}
       onMouseDown={handleOverlayMouseDown}
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
       aria-label={title || 'Image viewer'}
     >
-      <button
-        onClick={onClose}
-        style={{
-          position: 'absolute',
-          top: '20px',
-          right: '24px',
-          background: 'rgba(255, 255, 255, 0.1)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          borderRadius: '6px',
-          color: '#ffffff',
-          padding: '8px 14px',
-          cursor: 'pointer',
-          fontSize: '13px',
-        }}
-      >
+      <button onClick={onClose} className={styles.closeButton}>
         Close
       </button>
-      <div
-        style={{
-          maxWidth: '900px',
-          width: '100%',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '16px',
-        }}
-      >
+      <div className={styles.content}>
         <img
           src={imageUrl}
           alt={title || 'Expanded view'}
-          style={{
-            maxWidth: '100%',
-            maxHeight: '70vh',
-            objectFit: 'contain',
-            borderRadius: '10px',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.55)',
-          }}
+          className={styles.image}
         />
-        <div
-          style={{
-            width: '100%',
-            maxWidth: '820px',
-            textAlign: 'center',
-            color: 'rgba(255, 255, 255, 0.92)',
-            display: 'grid',
-            gap: '8px',
-          }}
-        >
-          {title && (
-            <div style={{ fontSize: '18px', fontWeight: 600 }}>{title}</div>
-          )}
-          {summary && (
-            <div style={{
-              fontSize: '14px',
-              lineHeight: 1.6,
-              maxHeight: '20vh',
-              overflowY: 'auto',
-            }}>
-              {summary}
-            </div>
-          )}
+        <div className={styles.caption}>
+          {title && <div className={styles.title}>{title}</div>}
+          {summary && <div className={styles.summary}>{summary}</div>}
         </div>
       </div>
     </div>

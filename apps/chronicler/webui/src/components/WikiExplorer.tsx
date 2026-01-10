@@ -26,6 +26,7 @@ import {
   prominenceLabelFromScale,
   type ProminenceScale,
 } from '@canonry/world-schema';
+import styles from './WikiExplorer.module.css';
 
 /**
  * Parse page ID from URL hash
@@ -77,101 +78,6 @@ function normalizeStaticPages(pages?: StaticPage[]): StaticPage[] {
     .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-// Theme colors matching canonry arctic theme
-const colors = {
-  bgPrimary: '#0a1929',
-  bgSecondary: '#1e3a5f',
-  bgTertiary: '#2d4a6f',
-  bgSidebar: '#0c1f2e',
-  border: 'rgba(59, 130, 246, 0.3)',
-  textPrimary: '#ffffff',
-  textSecondary: '#93c5fd',
-  textMuted: '#60a5fa',
-  accent: '#10b981', // Emerald for chronicler
-  accentLight: '#34d399',
-};
-
-const styles = {
-  container: {
-    display: 'flex',
-    height: '100%',
-    backgroundColor: colors.bgPrimary,
-    color: colors.textPrimary,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-  },
-  sidebar: {
-    width: '240px',
-    flexShrink: 0,
-    backgroundColor: colors.bgSidebar,
-    borderRight: `1px solid ${colors.border}`,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    overflow: 'hidden',
-  },
-  // Mobile drawer overlay
-  sidebarDrawer: {
-    position: 'fixed' as const,
-    top: 0,
-    left: 0,
-    width: '280px',
-    height: '100%',
-    backgroundColor: colors.bgSidebar,
-    borderRight: `1px solid ${colors.border}`,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    overflow: 'hidden',
-    zIndex: 1001,
-    boxShadow: '4px 0 24px rgba(0, 0, 0, 0.5)',
-  },
-  sidebarBackdrop: {
-    position: 'fixed' as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    zIndex: 1000,
-  },
-  menuButton: {
-    position: 'fixed' as const,
-    bottom: '20px',
-    left: '20px',
-    width: '48px',
-    height: '48px',
-    borderRadius: '50%',
-    backgroundColor: colors.accent,
-    border: 'none',
-    color: colors.bgPrimary,
-    fontSize: '24px',
-    cursor: 'pointer',
-    zIndex: 999,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  main: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    overflow: 'hidden',
-  },
-  header: {
-    padding: '12px 24px',
-    borderBottom: `1px solid ${colors.border}`,
-    backgroundColor: colors.bgSecondary,
-  },
-  content: {
-    flex: 1,
-    overflow: 'auto',
-    padding: '24px',
-  },
-  contentMobile: {
-    flex: 1,
-    overflow: 'auto',
-    padding: '16px',
-  },
-};
 
 interface WikiExplorerProps {
   /** Project ID - used to load static pages (project-scoped, not simulation-scoped) */
@@ -187,6 +93,8 @@ interface WikiExplorerProps {
   requestedPageId?: string | null;
   /** Callback to signal that the requested page has been consumed */
   onRequestedPageConsumed?: () => void;
+  /** Whether narrative history chunks are still loading (affects confluxes, timelines) */
+  narrativeHistoryLoading?: boolean;
 }
 
 export default function WikiExplorer({
@@ -199,6 +107,7 @@ export default function WikiExplorer({
   staticPages: staticPagesOverride,
   requestedPageId,
   onRequestedPageConsumed,
+  narrativeHistoryLoading = false,
 }: WikiExplorerProps) {
   // Initialize from hash on mount
   const [currentPageId, setCurrentPageId] = useState<string | null>(() => parseHashPageId());
@@ -542,30 +451,18 @@ export default function WikiExplorer({
   // Show data error UI
   if (dataError) {
     return (
-      <div style={styles.container}>
-        <div style={{ ...styles.main, padding: '48px', maxWidth: '600px', margin: '0 auto' }}>
-          <div style={{
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '8px',
-            padding: '24px',
-          }}>
-            <h2 style={{ color: '#ef4444', margin: '0 0 16px 0', fontSize: '18px' }}>
+      <div className={styles.container}>
+        <div className={styles.errorContainer}>
+          <div className={styles.errorCard}>
+            <h2 className={styles.errorTitle}>
               {dataError.message}
             </h2>
-            <p style={{ color: colors.textSecondary, margin: '0 0 16px 0', fontSize: '14px', lineHeight: 1.6 }}>
+            <p className={styles.errorDetails}>
               {dataError.details}
             </p>
-            <div style={{
-              backgroundColor: colors.bgSecondary,
-              borderRadius: '4px',
-              padding: '12px 16px',
-              fontSize: '13px',
-              color: colors.textPrimary,
-              lineHeight: 1.6,
-            }}>
+            <div className={styles.errorFix}>
               <strong>How to fix:</strong>
-              <ol style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+              <ol>
                 <li>In the Canonry shell, click the <strong>"Run Slots"</strong> dropdown in the top navigation bar</li>
                 <li>Click the <strong>×</strong> button next to the saved simulation slot to delete it</li>
                 <li>Re-run the simulation to generate fresh data</li>
@@ -598,11 +495,11 @@ export default function WikiExplorer({
   );
 
   return (
-    <div style={styles.container}>
+    <div className={styles.container}>
       {/* Mobile: Floating menu button */}
       {isMobile && (
         <button
-          style={styles.menuButton}
+          className={styles.menuButton}
           onClick={() => setIsSidebarOpen(true)}
           aria-label="Open navigation menu"
         >
@@ -614,10 +511,10 @@ export default function WikiExplorer({
       {isMobile && isSidebarOpen && (
         <>
           <div
-            style={styles.sidebarBackdrop}
+            className={styles.sidebarBackdrop}
             onClick={() => setIsSidebarOpen(false)}
           />
-          <div style={styles.sidebarDrawer}>
+          <div className={styles.sidebarDrawer}>
             {sidebarContent}
           </div>
         </>
@@ -625,14 +522,14 @@ export default function WikiExplorer({
 
       {/* Desktop/Tablet: Static sidebar */}
       {!isMobile && (
-        <div style={styles.sidebar}>
+        <div className={styles.sidebar}>
           {sidebarContent}
         </div>
       )}
 
       {/* Main Content */}
-      <div style={styles.main}>
-        <div style={isMobile ? styles.contentMobile : styles.content}>
+      <div className={styles.main}>
+        <div className={isMobile ? styles.contentMobile : styles.content}>
           {isChronicleIndex ? (
             <ChronicleIndex
               chronicles={chroniclePages}
@@ -655,6 +552,7 @@ export default function WikiExplorer({
             <ConfluxesIndex
               confluxPages={confluxPages}
               onNavigate={handleNavigate}
+              narrativeHistoryLoading={narrativeHistoryLoading}
             />
           ) : isHuddlesIndex ? (
             <HuddlesIndex
@@ -919,23 +817,6 @@ function HomePage({
       .slice(0, 8);
   }, [worldData.hardState]);
 
-  const sectionStyle = {
-    marginBottom: '24px',
-    padding: '20px',
-    backgroundColor: colors.bgSecondary,
-    borderRadius: '8px',
-    border: `1px solid ${colors.border}`,
-  };
-
-  const sectionTitleStyle = {
-    fontSize: '14px',
-    fontWeight: 600,
-    marginBottom: '16px',
-    color: colors.accent,
-    borderBottom: `1px solid ${colors.border}`,
-    paddingBottom: '8px',
-  };
-
   // Format relationship kind for display
   const formatRelKind = (kind: string) => {
     return kind.replace(/_/g, ' ');
@@ -948,25 +829,11 @@ function HomePage({
   };
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <div className={styles.homeContainer}>
       {/* Header with stats */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px',
-        paddingBottom: '16px',
-        borderBottom: `1px solid ${colors.border}`,
-      }}>
-        <h1 style={{
-          fontSize: '28px',
-          fontWeight: 600,
-          color: colors.textPrimary,
-          margin: 0,
-        }}>
-          World Chronicle
-        </h1>
-        <div style={{ fontSize: '13px', color: colors.textMuted }}>
+      <div className={styles.homeHeader}>
+        <h1 className={styles.homeTitle}>World Chronicle</h1>
+        <div className={styles.homeStats}>
           {worldData.hardState.filter(e => e.kind !== 'era').length} entities
           {' · '}
           {worldData.relationships.length} relationships
@@ -976,128 +843,63 @@ function HomePage({
 
       {/* About This Project banner - if exists */}
       {aboutPage && (
-        <div style={{
-          marginBottom: '24px',
-          padding: '16px 20px',
-          backgroundColor: 'rgba(16, 185, 129, 0.08)',
-          borderRadius: '8px',
-          borderLeft: `4px solid ${colors.accent}`,
-        }}>
-          <div style={{
-            fontSize: '14px',
-            color: colors.textSecondary,
-            lineHeight: 1.6,
-            marginBottom: '12px',
-          }}>
+        <div className={styles.aboutBanner}>
+          <div className={styles.aboutBannerText}>
             {aboutPage.content.summary || 'Learn about this world and its lore.'}
           </div>
           <button
             onClick={() => onNavigate(aboutPage.id)}
-            style={{
-              padding: '6px 12px',
-              backgroundColor: 'transparent',
-              border: `1px solid ${colors.accent}`,
-              borderRadius: '4px',
-              color: colors.accent,
-              cursor: 'pointer',
-              fontSize: '12px',
-            }}
+            className={styles.aboutBannerButton}
           >
-            Read more →
+            Read more &rarr;
           </button>
         </div>
       )}
 
       {/* Two-column layout (single column on mobile) */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr',
-        gap: isMobile ? '16px' : '24px',
-      }}>
+      <div className={isMobile ? styles.homeGridMobile : styles.homeGrid}>
         {/* Left column */}
         <div>
           {/* Featured Article - Wikipedia style */}
           {featuredArticle && (
-            <div style={sectionStyle}>
-              <h2 style={sectionTitleStyle}>Featured Article</h2>
-              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '16px' }}>
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>Featured Article</h2>
+              <div className={isMobile ? styles.featuredLayoutMobile : styles.featuredLayout}>
                 {featuredImageUrl && (
                   <button
                     onClick={openFeaturedImage}
-                    style={{
-                      width: isMobile ? '100%' : '140px',
-                      height: isMobile ? '200px' : '140px',
-                      flexShrink: 0,
-                      borderRadius: '6px',
-                      overflow: 'hidden',
-                      backgroundColor: colors.bgTertiary,
-                      border: 'none',
-                      padding: 0,
-                      cursor: 'zoom-in',
-                    }}
+                    className={isMobile ? styles.featuredImageMobile : styles.featuredImage}
                     aria-label={`Enlarge ${featuredArticle.name} image`}
                   >
                     <img
                       src={featuredImageUrl}
                       alt={featuredArticle.name}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
+                      className={styles.featuredImageInner}
                     />
                   </button>
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div className={styles.featuredContent}>
                   <button
                     onClick={() => onNavigate(featuredArticle.id)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
+                    className={styles.titleButton}
                   >
-                    <h3 style={{
-                      fontSize: '18px',
-                      fontWeight: 600,
-                      color: colors.textPrimary,
-                      marginBottom: '4px',
-                    }}>
+                    <h3 className={styles.titleButtonText}>
                       {featuredArticle.name}
                     </h3>
                   </button>
-                  <div style={{
-                    fontSize: '11px',
-                    color: colors.textMuted,
-                    marginBottom: '8px',
-                    textTransform: 'capitalize',
-                  }}>
+                  <div className={styles.featuredMeta}>
                     {featuredArticle.kind}
                     {featuredArticle.subtype && featuredArticle.subtype !== featuredArticle.kind && (
                       <> · {featuredArticle.subtype}</>
                     )}
                     {featuredArticle.culture && <> · {featuredArticle.culture}</>}
                   </div>
-                  <p style={{
-                    fontSize: '13px',
-                    color: colors.textSecondary,
-                    lineHeight: 1.6,
-                    margin: 0,
-                  }}>
+                  <p className={styles.featuredSummary}>
                     {truncateSummary(featuredArticle.summary || '', 280)}
                     {' '}
                     <button
                       onClick={() => onNavigate(featuredArticle.id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        color: colors.accent,
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                      }}
+                      className={styles.inlineLink}
                     >
                       (Full article...)
                     </button>
@@ -1109,47 +911,22 @@ function HomePage({
 
           {/* Did You Know - Wikipedia style */}
           {didYouKnow.length > 0 && (
-            <div style={sectionStyle}>
-              <h2 style={sectionTitleStyle}>Did you know...</h2>
-              <ul style={{
-                margin: 0,
-                paddingLeft: '20px',
-                listStyle: 'disc',
-              }}>
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>Did you know...</h2>
+              <ul className={styles.didYouKnowList}>
                 {didYouKnow.map((fact, idx) => (
-                  <li key={idx} style={{
-                    fontSize: '13px',
-                    color: colors.textSecondary,
-                    lineHeight: 1.7,
-                    marginBottom: '8px',
-                  }}>
+                  <li key={idx} className={styles.didYouKnowItem}>
                     ...that{' '}
                     <button
                       onClick={() => onNavigate(fact.srcEntity.id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        color: colors.accent,
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontWeight: 500,
-                      }}
+                      className={styles.entityLinkBold}
                     >
                       {fact.srcEntity.name}
                     </button>
                     {' '}has a <em>{formatRelKind(fact.kind)}</em> relationship with{' '}
                     <button
                       onClick={() => onNavigate(fact.dstEntity.id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        color: colors.accent,
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontWeight: 500,
-                      }}
+                      className={styles.entityLinkBold}
                     >
                       {fact.dstEntity.name}
                     </button>
@@ -1162,44 +939,19 @@ function HomePage({
 
           {/* Eras */}
           {eras.length > 0 && (
-            <div style={sectionStyle}>
-              <h2 style={sectionTitleStyle}>Eras of History</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>Eras of History</h2>
+              <div className={styles.eraList}>
                 {eras.map((era, idx) => (
                   <button
                     key={era.id}
                     onClick={() => onNavigate(era.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      textAlign: 'left',
-                      padding: '8px 12px',
-                      backgroundColor: colors.bgTertiary,
-                      border: 'none',
-                      borderRadius: '4px',
-                      color: colors.textPrimary,
-                      cursor: 'pointer',
-                    }}
+                    className={styles.eraButton}
                   >
-                    <span style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      backgroundColor: colors.accent,
-                      color: colors.bgPrimary,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      flexShrink: 0,
-                    }}>
-                      {idx + 1}
-                    </span>
-                    <span style={{ fontSize: '13px', fontWeight: 500 }}>{era.name}</span>
+                    <span className={styles.eraNumber}>{idx + 1}</span>
+                    <span className={styles.eraButtonName}>{era.name}</span>
                     {era.summary && (
-                      <span style={{ fontSize: '11px', color: colors.textMuted, marginLeft: 'auto' }}>
+                      <span className={styles.eraButtonSummary}>
                         {truncateSummary(era.summary, 40)}
                       </span>
                     )}
@@ -1213,44 +965,27 @@ function HomePage({
         {/* Right column */}
         <div>
           {/* Most Connected - with more context */}
-          <div style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>Most Connected</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Most Connected</h2>
+            <div className={styles.entityListColumn}>
               {linkStats.mostLinked.map(entity => {
                 const linkCount = linkStats.totalLinks.get(entity.id) || 0;
                 return (
                   <button
                     key={entity.id}
                     onClick={() => onNavigate(entity.id)}
-                    style={{
-                      display: 'block',
-                      textAlign: 'left',
-                      padding: '10px 12px',
-                      backgroundColor: colors.bgTertiary,
-                      border: 'none',
-                      borderRadius: '4px',
-                      color: colors.textPrimary,
-                      cursor: 'pointer',
-                    }}
+                    className={styles.entityListItem}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 500, fontSize: '13px' }}>{entity.name}</span>
-                      <span style={{
-                        fontSize: '11px',
-                        color: colors.textMuted,
-                        backgroundColor: colors.bgSecondary,
-                        padding: '2px 6px',
-                        borderRadius: '8px',
-                      }}>
-                        {linkCount} links
-                      </span>
+                    <div className={styles.entityListHeader}>
+                      <span className={styles.entityListName}>{entity.name}</span>
+                      <span className={styles.entityListBadge}>{linkCount} links</span>
                     </div>
-                    <div style={{ fontSize: '11px', color: colors.textMuted, textTransform: 'capitalize' }}>
+                    <div className={styles.entityListMeta}>
                       {entity.kind}
                       {entity.culture && <> · {entity.culture}</>}
                     </div>
                     {entity.summary && (
-                      <div style={{ fontSize: '12px', color: colors.textSecondary, marginTop: '6px', lineHeight: 1.5 }}>
+                      <div className={styles.entityListSummary}>
                         {truncateSummary(entity.summary, 80)}
                       </div>
                     )}
@@ -1261,47 +996,30 @@ function HomePage({
           </div>
 
           {/* Hidden Gems - with more context */}
-          <div style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>Hidden Gems</h2>
-            <p style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '12px', marginTop: 0 }}>
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Hidden Gems</h2>
+            <p className={styles.sectionSubtext}>
               Lesser-known entities worth exploring
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className={styles.entityListColumn}>
               {linkStats.leastLinked.map(entity => {
                 const linkCount = linkStats.totalLinks.get(entity.id) || 0;
                 return (
                   <button
                     key={entity.id}
                     onClick={() => onNavigate(entity.id)}
-                    style={{
-                      display: 'block',
-                      textAlign: 'left',
-                      padding: '10px 12px',
-                      backgroundColor: colors.bgTertiary,
-                      border: 'none',
-                      borderRadius: '4px',
-                      color: colors.textPrimary,
-                      cursor: 'pointer',
-                    }}
+                    className={styles.entityListItem}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 500, fontSize: '13px' }}>{entity.name}</span>
-                      <span style={{
-                        fontSize: '11px',
-                        color: colors.textMuted,
-                        backgroundColor: colors.bgSecondary,
-                        padding: '2px 6px',
-                        borderRadius: '8px',
-                      }}>
-                        {linkCount} links
-                      </span>
+                    <div className={styles.entityListHeader}>
+                      <span className={styles.entityListName}>{entity.name}</span>
+                      <span className={styles.entityListBadge}>{linkCount} links</span>
                     </div>
-                    <div style={{ fontSize: '11px', color: colors.textMuted, textTransform: 'capitalize' }}>
+                    <div className={styles.entityListMeta}>
                       {entity.kind}
                       {entity.culture && <> · {entity.culture}</>}
                     </div>
                     {entity.summary && (
-                      <div style={{ fontSize: '12px', color: colors.textSecondary, marginTop: '6px', lineHeight: 1.5 }}>
+                      <div className={styles.entityListSummary}>
                         {truncateSummary(entity.summary, 80)}
                       </div>
                     )}
@@ -1310,32 +1028,23 @@ function HomePage({
               })}
             </div>
             {linkStats.isolated.length > 0 && (
-              <div style={{ marginTop: '12px', fontSize: '11px', color: colors.textMuted }}>
+              <div className={styles.sectionFootnote}>
                 + {linkStats.isolated.length} isolated entities with no connections
               </div>
             )}
           </div>
 
           {/* Browse by Type */}
-          <div style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>Browse by Type</h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Browse by Type</h2>
+            <div className={styles.browseTypeGrid}>
               {kindDistribution.map(([kind, count]) => (
                 <button
                   key={kind}
                   onClick={() => onNavigate(`category-kind-${kind}`)}
-                  style={{
-                    padding: '6px 10px',
-                    backgroundColor: colors.bgTertiary,
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: colors.textSecondary,
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    textTransform: 'capitalize',
-                  }}
+                  className={styles.browseTypeButton}
                 >
-                  {kind} <span style={{ color: colors.textMuted }}>({count})</span>
+                  {kind} <span className={styles.browseTypeCount}>({count})</span>
                 </button>
               ))}
             </div>
@@ -1343,29 +1052,17 @@ function HomePage({
 
           {/* Chronicles */}
           {chronicles.length > 0 && (
-            <div style={sectionStyle}>
-              <h2 style={sectionTitleStyle}>Chronicles</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>Chronicles</h2>
+              <div className={styles.chroniclesList}>
                 {chronicles.slice(0, 4).map(chronicle => (
                   <button
                     key={chronicle.id}
                     onClick={() => onNavigate(chronicle.id)}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      textAlign: 'left',
-                      padding: '8px 10px',
-                      backgroundColor: colors.bgTertiary,
-                      border: 'none',
-                      borderRadius: '4px',
-                      color: colors.textPrimary,
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                    }}
+                    className={styles.chronicleItem}
                   >
                     <span>{chronicle.title}</span>
-                    <span style={{ fontSize: '10px', color: colors.textMuted }}>
+                    <span className={styles.chronicleFormat}>
                       {chronicle.chronicle?.format === 'story' ? 'Story' : 'Document'}
                     </span>
                   </button>
@@ -1374,19 +1071,9 @@ function HomePage({
               {chronicles.length > 4 && (
                 <button
                   onClick={() => onNavigate('chronicles')}
-                  style={{
-                    marginTop: '10px',
-                    padding: '6px 10px',
-                    backgroundColor: 'transparent',
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: '4px',
-                    color: colors.textMuted,
-                    cursor: 'pointer',
-                    fontSize: '11px',
-                    width: '100%',
-                  }}
+                  className={styles.viewAllButton}
                 >
-                  View all {chronicles.length} chronicles →
+                  View all {chronicles.length} chronicles &rarr;
                 </button>
               )}
             </div>
@@ -1432,80 +1119,35 @@ function PagesIndex({ pages, onNavigate }: PagesIndexProps) {
   }, [pages]);
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-      <h1 style={{
-        fontSize: '28px',
-        fontWeight: 600,
-        marginBottom: '8px',
-        color: colors.textPrimary,
-      }}>
-        Pages
-      </h1>
-      <p style={{
-        fontSize: '14px',
-        color: colors.textSecondary,
-        marginBottom: '24px',
-        lineHeight: 1.6,
-      }}>
+    <div className={styles.pagesIndexContainer}>
+      <h1 className={styles.pagesIndexTitle}>Pages</h1>
+      <p className={styles.pagesIndexDescription}>
         User-authored pages providing additional world context, cultural overviews, and lore articles.
       </p>
 
       {pages.length === 0 ? (
-        <div style={{
-          padding: '48px 24px',
-          textAlign: 'center',
-          backgroundColor: colors.bgSecondary,
-          borderRadius: '8px',
-          border: `1px solid ${colors.border}`,
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
-          <div style={{ fontSize: '16px', color: colors.textSecondary, marginBottom: '8px' }}>
-            No pages yet
-          </div>
-          <div style={{ fontSize: '13px', color: colors.textMuted }}>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyStateIcon}>📝</div>
+          <div className={styles.emptyStateTitle}>No pages yet</div>
+          <div className={styles.emptyStateDescription}>
             Create and publish pages in Illuminator to see them here.
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className={styles.pageList}>
           {pagesByNamespace.map(([namespace, pagesInNs]) => (
-            <div key={namespace}>
-              <h2 style={{
-                fontSize: '16px',
-                fontWeight: 600,
-                color: colors.accent,
-                marginBottom: '12px',
-                paddingBottom: '8px',
-                borderBottom: `1px solid ${colors.border}`,
-              }}>
-                {namespace}
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div key={namespace} className={styles.namespaceGroup}>
+              <h2 className={styles.namespaceTitle}>{namespace}</h2>
+              <div className={styles.pageList}>
                 {pagesInNs.map(page => (
                   <button
                     key={page.id}
                     onClick={() => onNavigate(page.id)}
-                    style={{
-                      display: 'block',
-                      textAlign: 'left',
-                      padding: '12px 16px',
-                      backgroundColor: colors.bgSecondary,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: '6px',
-                      color: colors.textPrimary,
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                    }}
+                    className={styles.pageItem}
                   >
                     {page.title}
                     {page.content.summary && (
-                      <div style={{
-                        fontSize: '12px',
-                        color: colors.textMuted,
-                        marginTop: '4px',
-                        fontWeight: 400,
-                      }}>
+                      <div className={styles.pageItemSummary}>
                         {page.content.summary}
                       </div>
                     )}
@@ -1538,66 +1180,30 @@ function PageCategoryIndex({ namespace, pages, onNavigate }: PageCategoryIndexPr
   }, [pages, namespace]);
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-      <h1 style={{
-        fontSize: '28px',
-        fontWeight: 600,
-        marginBottom: '8px',
-        color: colors.textPrimary,
-      }}>
-        {namespace} Pages
-      </h1>
-      <p style={{
-        fontSize: '14px',
-        color: colors.textSecondary,
-        marginBottom: '24px',
-        lineHeight: 1.6,
-      }}>
+    <div className={styles.pagesIndexContainer}>
+      <h1 className={styles.pagesIndexTitle}>{namespace} Pages</h1>
+      <p className={styles.pagesIndexDescription}>
         {namespace === 'General'
           ? 'Pages without a namespace prefix.'
           : `Pages in the ${namespace} namespace.`}
       </p>
 
       {filteredPages.length === 0 ? (
-        <div style={{
-          padding: '48px 24px',
-          textAlign: 'center',
-          backgroundColor: colors.bgSecondary,
-          borderRadius: '8px',
-          border: `1px solid ${colors.border}`,
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
-          <div style={{ fontSize: '16px', color: colors.textSecondary, marginBottom: '8px' }}>
-            No pages in this category
-          </div>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyStateIcon}>📝</div>
+          <div className={styles.emptyStateTitle}>No pages in this category</div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className={styles.pageList}>
           {filteredPages.map(page => (
             <button
               key={page.id}
               onClick={() => onNavigate(page.id)}
-              style={{
-                display: 'block',
-                textAlign: 'left',
-                padding: '16px 20px',
-                backgroundColor: colors.bgSecondary,
-                border: `1px solid ${colors.border}`,
-                borderRadius: '6px',
-                color: colors.textPrimary,
-                cursor: 'pointer',
-                fontSize: '15px',
-                fontWeight: 500,
-              }}
+              className={styles.pageItem}
             >
               {page.title}
               {page.content.summary && (
-                <div style={{
-                  fontSize: '13px',
-                  color: colors.textMuted,
-                  marginTop: '4px',
-                  fontWeight: 400,
-                }}>
+                <div className={styles.pageItemSummary}>
                   {page.content.summary}
                 </div>
               )}

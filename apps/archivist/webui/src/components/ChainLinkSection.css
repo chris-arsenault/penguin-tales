@@ -1,9 +1,9 @@
 /* ChainLinkSection Component Styles */
 
 .chain-link-section {
-  margin-top: 16px;
-  border: 2px solid rgb(139 92 246 / 40%);
-  border-radius: 8px;
+  margin-top: var(--spacing-xl);
+  border: 2px solid var(--color-bg-purple-border);
+  border-radius: var(--radius-lg);
   background: linear-gradient(135deg, rgb(139 92 246 / 5%) 0%, rgb(124 58 237 / 5%) 100%);
   overflow: hidden;
 }
@@ -11,21 +11,21 @@
 .chain-link-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   background: linear-gradient(135deg, rgb(139 92 246 / 15%) 0%, rgb(124 58 237 / 15%) 100%);
   border-bottom: 1px solid rgb(139 92 246 / 20%);
 }
 
 .chain-link-icon {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   line-height: 1;
 }
 
 .chain-link-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #c4b5fd;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-purple-300);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -33,53 +33,53 @@
 .chain-link-flow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   background: rgb(139 92 246 / 8%);
   border-bottom: 1px solid rgb(139 92 246 / 15%);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .chain-link-location {
-  padding: 2px 8px;
+  padding: 2px var(--spacing-md);
   background: rgb(139 92 246 / 20%);
   border: 1px solid rgb(139 92 246 / 30%);
-  border-radius: 4px;
-  color: #e9d5ff;
-  font-weight: 600;
-  font-family: monospace;
+  border-radius: var(--radius-sm);
+  color: var(--color-purple-200);
+  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-mono);
 }
 
 .chain-link-arrow {
-  color: #a78bfa;
-  font-weight: 700;
-  font-size: 14px;
+  color: var(--color-purple-400);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
 }
 
 .chain-link-theme {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
   background: rgb(139 92 246 / 5%);
   border-bottom: 1px solid rgb(139 92 246 / 15%);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .chain-link-theme-label {
-  color: #a78bfa;
-  font-weight: 600;
+  color: var(--color-purple-400);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .chain-link-theme-badge {
-  padding: 2px 8px;
+  padding: 2px var(--spacing-md);
   background: rgb(167 139 250 / 20%);
   border: 1px solid rgb(167 139 250 / 30%);
-  border-radius: 10px;
-  color: #e9d5ff;
-  font-weight: 600;
+  border-radius: var(--radius-2xl);
+  color: var(--color-purple-200);
+  font-weight: var(--font-weight-semibold);
   text-transform: capitalize;
 }
 
@@ -92,8 +92,8 @@
 
 .chain-link-observation,
 .chain-link-clue {
-  padding: 12px;
-  background: rgb(10 25 41 / 60%);
+  padding: var(--spacing-lg);
+  background: var(--color-bg-deep-60);
 }
 
 .chain-link-observation {
@@ -105,18 +105,18 @@
 }
 
 .chain-link-section-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: #a78bfa;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-purple-400);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 6px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .chain-link-text {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 12px;
-  line-height: 1.6;
-  color: #ddd6fe;
+  font-family: var(--font-serif);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-purple-100);
   font-style: italic;
 }

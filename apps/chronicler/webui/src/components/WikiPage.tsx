@@ -10,415 +10,14 @@
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import MDEditor from '@uiw/react-md-editor';
-import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, ImageLoader, DisambiguationEntry } from '../types/world.ts';
+import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, ImageLoader, DisambiguationEntry, ImageAspect } from '../types/world.ts';
 import { SeedModal, type ChronicleSeedData } from './ChronicleSeedViewer.tsx';
 import { applyWikiLinks } from '../lib/wikiBuilder.ts';
 import EntityTimeline from './EntityTimeline.tsx';
 import ProminenceTimeline from './ProminenceTimeline.tsx';
 import ImageLightbox from './ImageLightbox.tsx';
 import { prominenceLabelFromScale, type ProminenceScale } from '@canonry/world-schema';
-
-const colors = {
-  bgPrimary: '#0a1929',
-  bgSecondary: '#1e3a5f',
-  bgTertiary: '#2d4a6f',
-  border: 'rgba(59, 130, 246, 0.3)',
-  textPrimary: '#ffffff',
-  textSecondary: '#93c5fd',
-  textMuted: '#60a5fa',
-  accent: '#10b981',
-  accentLight: '#34d399',
-};
-
-const styles = {
-  container: {
-    maxWidth: '900px',
-    margin: '0 auto',
-  },
-  header: {
-    marginBottom: '24px',
-  },
-  title: {
-    fontSize: '28px',
-    fontWeight: 600,
-    color: colors.textPrimary,
-    marginBottom: '8px',
-  },
-  summary: {
-    fontSize: '14px',
-    lineHeight: 1.6,
-    color: colors.textSecondary,
-    marginTop: '8px',
-  },
-  breadcrumbs: {
-    fontSize: '12px',
-    color: colors.textMuted,
-    marginBottom: '16px',
-  },
-  breadcrumbLink: {
-    color: colors.accent,
-    cursor: 'pointer',
-    textDecoration: 'none',
-  },
-  content: {
-    display: 'flex',
-    gap: '24px',
-  },
-  main: {
-    flex: 1,
-    minWidth: 0,
-  },
-  infobox: {
-    width: '260px',
-    flexShrink: 0,
-    backgroundColor: colors.bgSecondary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '8px',
-    overflow: 'hidden',
-    alignSelf: 'flex-start',
-    position: 'sticky' as const,
-    top: '24px',
-  },
-  infoboxHeader: {
-    padding: '12px 16px',
-    backgroundColor: colors.accent,
-    color: colors.bgPrimary,
-    fontWeight: 600,
-    fontSize: '14px',
-    textAlign: 'center' as const,
-  },
-  infoboxImage: {
-    width: '100%',
-    height: '180px',
-    objectFit: 'cover' as const,
-    display: 'block',
-  },
-  infoboxBody: {
-    padding: '12px',
-  },
-  infoboxRow: {
-    display: 'flex',
-    padding: '6px 0',
-    borderBottom: `1px solid ${colors.border}`,
-    fontSize: '12px',
-  },
-  infoboxLabel: {
-    width: '80px',
-    color: colors.textMuted,
-    flexShrink: 0,
-  },
-  infoboxValue: {
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  toc: {
-    backgroundColor: colors.bgSecondary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '6px',
-    padding: '16px',
-    marginBottom: '24px',
-  },
-  tocTitle: {
-    fontSize: '14px',
-    fontWeight: 600,
-    color: colors.textPrimary,
-    marginBottom: '12px',
-  },
-  tocItem: {
-    fontSize: '13px',
-    color: colors.accent,
-    cursor: 'pointer',
-    padding: '4px 0',
-    display: 'block',
-    textDecoration: 'none',
-    border: 'none',
-    backgroundColor: 'transparent',
-    textAlign: 'left' as const,
-    width: '100%',
-  },
-  section: {
-    marginBottom: '24px',
-  },
-  sectionHeading: {
-    fontSize: '18px',
-    fontWeight: 600,
-    color: colors.textPrimary,
-    marginBottom: '12px',
-    paddingBottom: '8px',
-    borderBottom: `1px solid ${colors.border}`,
-  },
-  paragraph: {
-    fontSize: '14px',
-    lineHeight: 1.7,
-    color: colors.textSecondary,
-    marginBottom: '12px',
-    whiteSpace: 'pre-wrap' as const,
-  },
-  entityLink: {
-    color: colors.accent,
-    cursor: 'pointer',
-    borderBottom: `1px dotted ${colors.accent}`,
-    textDecoration: 'none',
-  },
-  backlinks: {
-    marginTop: '32px',
-    padding: '16px',
-    backgroundColor: colors.bgSecondary,
-    borderRadius: '6px',
-    border: `1px solid ${colors.border}`,
-  },
-  chronicles: {
-    marginTop: '32px',
-    padding: '16px',
-    backgroundColor: colors.bgSecondary,
-    borderRadius: '6px',
-    border: `1px solid ${colors.border}`,
-  },
-  backlinksTitle: {
-    fontSize: '14px',
-    fontWeight: 600,
-    color: colors.textMuted,
-    marginBottom: '12px',
-  },
-  chroniclesTitle: {
-    fontSize: '14px',
-    fontWeight: 600,
-    color: colors.textMuted,
-    marginBottom: '12px',
-  },
-  backlinkItem: {
-    fontSize: '13px',
-    color: colors.accent,
-    cursor: 'pointer',
-    padding: '4px 0',
-    display: 'block',
-    border: 'none',
-    backgroundColor: 'transparent',
-    textAlign: 'left' as const,
-  },
-  chronicleItem: {
-    fontSize: '13px',
-    color: colors.accent,
-    cursor: 'pointer',
-    padding: '4px 0',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    border: 'none',
-    backgroundColor: 'transparent',
-    textAlign: 'left' as const,
-  },
-  chronicleMeta: {
-    fontSize: '11px',
-    color: colors.textMuted,
-  },
-  categories: {
-    marginTop: '24px',
-    paddingTop: '16px',
-    borderTop: `1px solid ${colors.border}`,
-  },
-  categoriesLabel: {
-    fontSize: '12px',
-    color: colors.textMuted,
-    marginBottom: '8px',
-  },
-  categoryTag: {
-    display: 'inline-block',
-    padding: '4px 8px',
-    margin: '0 4px 4px 0',
-    fontSize: '11px',
-    backgroundColor: colors.bgTertiary,
-    borderRadius: '4px',
-    color: colors.textSecondary,
-    cursor: 'pointer',
-    border: 'none',
-  },
-  // Disambiguation notice (Wikipedia-style hatnote)
-  disambiguationNotice: {
-    marginBottom: '16px',
-    padding: '10px 14px',
-    fontSize: '13px',
-    fontStyle: 'italic' as const,
-    color: colors.textMuted,
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
-    borderRadius: '4px',
-    borderLeft: `3px solid ${colors.accent}`,
-    lineHeight: 1.5,
-  },
-  disambiguationLink: {
-    color: colors.accent,
-    cursor: 'pointer',
-    marginLeft: '4px',
-    fontStyle: 'normal' as const,
-    fontWeight: 500,
-  },
-  // Chronicle inline image styles - Wikipedia-style thumb frames
-  sectionWithImages: {
-    position: 'relative' as const,
-  },
-  // Wikipedia-style thumb: floated box with frame, border, caption
-  imageThumbRight: {
-    float: 'right' as const,
-    clear: 'right' as const,
-    margin: '4px 0 12px 16px',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '4px',
-    backgroundColor: colors.bgSecondary,
-    padding: '4px',
-  },
-  imageThumbLeft: {
-    float: 'left' as const,
-    clear: 'left' as const,
-    margin: '4px 16px 12px 0',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '4px',
-    backgroundColor: colors.bgSecondary,
-    padding: '4px',
-  },
-  imageSmall: {
-    width: '150px',
-  },
-  imageMedium: {
-    width: '220px',
-  },
-  imageLarge: {
-    width: '350px',
-    margin: '16px auto',
-    display: 'block',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '4px',
-    backgroundColor: colors.bgSecondary,
-    padding: '4px',
-  },
-  imageFullWidth: {
-    width: '100%',
-    margin: '24px 0',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '4px',
-    backgroundColor: colors.bgSecondary,
-    padding: '4px',
-  },
-  figureImage: {
-    width: '100%',
-    display: 'block',
-    borderRadius: '2px',
-    cursor: 'zoom-in',
-  },
-  imageCaption: {
-    fontSize: '11px',
-    lineHeight: 1.4,
-    color: colors.textMuted,
-    padding: '6px 4px 2px',
-    textAlign: 'center' as const,
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: '100px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: colors.textMuted,
-    fontSize: '11px',
-    backgroundColor: colors.bgTertiary,
-    borderRadius: '2px',
-  },
-  clearfix: {
-    clear: 'both' as const,
-  },
-  seedButton: {
-    padding: '6px 12px',
-    fontSize: '12px',
-    background: colors.bgTertiary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '4px',
-    color: colors.textSecondary,
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    marginTop: '12px',
-  },
-  // Entity preview card styles
-  previewCard: {
-    position: 'fixed' as const,
-    zIndex: 1000,
-    width: '260px',
-    backgroundColor: colors.bgSecondary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '8px',
-    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
-    overflow: 'hidden',
-    pointerEvents: 'none' as const,
-  },
-  previewHeader: {
-    display: 'flex',
-    gap: '10px',
-    padding: '10px 12px',
-    backgroundColor: colors.accent,
-    color: colors.bgPrimary,
-  },
-  previewThumbnail: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '4px',
-    objectFit: 'cover' as const,
-    flexShrink: 0,
-  },
-  previewThumbnailPlaceholder: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '4px',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '18px',
-    flexShrink: 0,
-  },
-  previewTitle: {
-    fontWeight: 600,
-    fontSize: '14px',
-    lineHeight: 1.3,
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-  },
-  previewBody: {
-    padding: '10px 12px',
-  },
-  previewBadges: {
-    display: 'flex',
-    flexWrap: 'wrap' as const,
-    gap: '4px',
-    marginBottom: '8px',
-  },
-  previewBadge: {
-    display: 'inline-block',
-    padding: '2px 6px',
-    fontSize: '10px',
-    borderRadius: '3px',
-    backgroundColor: colors.bgTertiary,
-    color: colors.textSecondary,
-  },
-  previewBadgeKind: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    color: colors.accentLight,
-  },
-  previewBadgeStatus: {
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-    color: colors.textMuted,
-  },
-  previewSummary: {
-    fontSize: '12px',
-    lineHeight: 1.5,
-    color: colors.textSecondary,
-  },
-};
-
-const markdownStyle = Object.freeze({
-  backgroundColor: 'transparent',
-  color: colors.textSecondary,
-});
+import styles from './WikiPage.module.css';
 
 /**
  * Check if image size is a float (small/medium) vs block (large/full-width)
@@ -428,21 +27,53 @@ function isFloatImage(size: WikiSectionImage['size']): boolean {
 }
 
 /**
- * Get the combined style for an image based on size
+ * Get the combined className for an image based on size
  * Float images (small/medium): thumb frame + size width
  * Block images (large/full-width): centered block style
  */
-function getImageStyle(size: WikiSectionImage['size'], position: 'left' | 'right' = 'right'): React.CSSProperties {
+function getImageClassName(size: WikiSectionImage['size'], position: 'left' | 'right' = 'right'): string {
   const isFloat = isFloatImage(size);
 
   if (isFloat) {
-    const thumbStyle = position === 'left' ? styles.imageThumbLeft : styles.imageThumbRight;
-    const sizeStyle = size === 'small' ? styles.imageSmall : styles.imageMedium;
-    return { ...thumbStyle, ...sizeStyle };
+    const thumbClass = position === 'left' ? styles.imageThumbLeft : styles.imageThumbRight;
+    const sizeClass = size === 'small' ? styles.imageSmall : styles.imageMedium;
+    return `${thumbClass} ${sizeClass}`;
   }
 
   // Block images
   return size === 'full-width' ? styles.imageFullWidth : styles.imageLarge;
+}
+
+/**
+ * Classify aspect ratio from width/height (for runtime detection fallback)
+ */
+function classifyAspect(width: number, height: number): ImageAspect {
+  const ratio = width / height;
+  if (ratio < 0.9) return 'portrait';
+  if (ratio > 1.1) return 'landscape';
+  return 'square';
+}
+
+/**
+ * Get infobox image CSS class based on aspect ratio
+ */
+function getInfoboxImageClass(aspect: ImageAspect | undefined, isMobile: boolean): string {
+  // If no aspect info, use the fallback class that handles any aspect gracefully
+  if (!aspect) {
+    return isMobile ? styles.infoboxImageMobile : styles.infoboxImage;
+  }
+  // Use aspect-specific classes
+  const suffix = isMobile ? 'Mobile' : '';
+  switch (aspect) {
+    case 'portrait':
+      return styles[`infoboxImagePortrait${suffix}`] || styles.infoboxImagePortrait;
+    case 'landscape':
+      return styles[`infoboxImageLandscape${suffix}`] || styles.infoboxImageLandscape;
+    case 'square':
+      return styles[`infoboxImageSquare${suffix}`] || styles.infoboxImageSquare;
+    default:
+      return isMobile ? styles.infoboxImageMobile : styles.infoboxImage;
+  }
 }
 
 /**
@@ -506,12 +137,12 @@ function ChronicleImage({
     };
   }, [image.imageId, imageData, imageLoader]);
 
-  const imageStyle = getImageStyle(image.size);
+  const imageClassName = getImageClassName(image.size);
 
   if (loading) {
     return (
-      <figure style={imageStyle}>
-        <div style={styles.imagePlaceholder}>Loading...</div>
+      <figure className={imageClassName}>
+        <div className={styles.imagePlaceholder}>Loading...</div>
       </figure>
     );
   }
@@ -521,16 +152,16 @@ function ChronicleImage({
   }
 
   return (
-    <figure style={imageStyle}>
+    <figure className={imageClassName}>
       <img
         src={imageUrl}
         alt={image.caption || 'Chronicle illustration'}
-        style={styles.figureImage}
+        className={styles.figureImage}
         onError={() => setError(true)}
         onClick={() => onOpen?.(imageUrl, image)}
       />
       {image.caption && (
-        <figcaption style={styles.imageCaption}>{image.caption}</figcaption>
+        <figcaption className={styles.imageCaption}>{image.caption}</figcaption>
       )}
     </figure>
   );
@@ -634,7 +265,7 @@ function SectionWithImages({
   }
 
   return (
-    <div style={styles.sectionWithImages}>
+    <div className={styles.sectionWithImages}>
       {fragments.map((fragment, i) => {
         if (fragment.type === 'image') {
           const isFloat = isFloatImage(fragment.image.size);
@@ -653,7 +284,7 @@ function SectionWithImages({
             // Block images need clearfix before them
             return (
               <React.Fragment key={`img-${fragment.image.refId}-${i}`}>
-                <div style={styles.clearfix} />
+                <div className={styles.clearfix} />
                 <ChronicleImage
                   image={fragment.image}
                   imageData={imageData}
@@ -679,7 +310,7 @@ function SectionWithImages({
         }
       })}
       {/* Final clearfix to contain floats */}
-      <div style={styles.clearfix} />
+      <div className={styles.clearfix} />
     </div>
   );
 }
@@ -729,35 +360,35 @@ function EntityPreviewCard({
   const initial = entity.name.charAt(0).toUpperCase();
 
   return (
-    <div style={{ ...styles.previewCard, left, top }}>
-      <div style={styles.previewHeader}>
+    <div className={styles.previewCard} style={{ left, top }}>
+      <div className={styles.previewHeader}>
         {imageUrl ? (
-          <img src={imageUrl} alt="" style={styles.previewThumbnail} />
+          <img src={imageUrl} alt="" className={styles.previewThumbnail} />
         ) : (
-          <div style={styles.previewThumbnailPlaceholder}>{initial}</div>
+          <div className={styles.previewThumbnailPlaceholder}>{initial}</div>
         )}
-        <div style={styles.previewTitle}>{entity.name}</div>
+        <div className={styles.previewTitle}>{entity.name}</div>
       </div>
-      <div style={styles.previewBody}>
-        <div style={styles.previewBadges}>
-          <span style={{ ...styles.previewBadge, ...styles.previewBadgeKind }}>
+      <div className={styles.previewBody}>
+        <div className={styles.previewBadges}>
+          <span className={styles.previewBadgeKind}>
             {entity.kind}
           </span>
           {entity.subtype && (
-            <span style={styles.previewBadge}>{entity.subtype}</span>
+            <span className={styles.previewBadge}>{entity.subtype}</span>
           )}
-          <span style={{ ...styles.previewBadge, ...styles.previewBadgeStatus }}>
+          <span className={styles.previewBadgeStatus}>
             {entity.status}
           </span>
-          <span style={styles.previewBadge}>
+          <span className={styles.previewBadge}>
             {prominenceLabelFromScale(entity.prominence, prominenceScale)}
           </span>
           {entity.culture && (
-            <span style={styles.previewBadge}>{entity.culture}</span>
+            <span className={styles.previewBadge}>{entity.culture}</span>
           )}
         </div>
         {summary && (
-          <div style={styles.previewSummary}>
+          <div className={styles.previewSummary}>
             {summary.length > 250 ? `${summary.slice(0, 250)}...` : summary}
           </div>
         )}
@@ -790,17 +421,35 @@ function MarkdownSection({
 }) {
   // Pre-process content:
   // 1. Apply wiki links to wrap entity names with [[...]]
-  // 2. Convert [[Entity Name]] to markdown links with proper URLs
+  // 2. Convert [[Entity Name]] or [[Entity Name|entityId]] to markdown links with proper URLs
   const processedContent = useMemo(() => {
     // First apply wiki links to detect entity names
     const linkedContent = applyWikiLinks(content, linkableNames);
-    // Then convert [[Entity Name]] to markdown-friendly link format with proper URLs
-    return linkedContent.replace(/\[\[([^\]]+)\]\]/g, (match, name) => {
-      const normalized = name.toLowerCase().trim();
-      const pageId = entityNameMap.get(normalized) || aliasMap.get(normalized);
+    // Then convert [[...]] to markdown-friendly link format with proper URLs
+    // Supports both [[EntityName]] (lookup by name) and [[EntityName|entityId]] (direct ID)
+    return linkedContent.replace(/\[\[([^\]]+)\]\]/g, (match, linkContent) => {
+      // Support [[EntityName|entityId]] format for ID-based linking
+      // This is used by conflux pages where entities may exist in narrativeHistory
+      // but not in hardState (entityNameMap is built from hardState)
+      const pipeIndex = linkContent.lastIndexOf('|');
+      let displayName: string;
+      let pageId: string | undefined;
+
+      if (pipeIndex > 0 && pipeIndex < linkContent.length - 1) {
+        // Format: [[DisplayName|entityId]] - use provided ID directly
+        displayName = linkContent.slice(0, pipeIndex);
+        pageId = linkContent.slice(pipeIndex + 1);
+      } else {
+        // Format: [[EntityName]] - look up by name
+        displayName = linkContent;
+        // Use Unicode NFC normalization for consistent lookup with entityNameMap
+        const normalized = displayName.toLowerCase().trim().normalize('NFC');
+        pageId = entityNameMap.get(normalized) || aliasMap.get(normalized);
+      }
+
       if (pageId) {
         // Use #/page/{pageId} format that matches the router
-        return `[${name}](#/page/${encodeURIComponent(pageId)})`;
+        return `[${displayName}](#/page/${encodeURIComponent(pageId)})`;
       }
       // Keep as-is if page not found
       return match;
@@ -852,20 +501,16 @@ function MarkdownSection({
       onClick={handleClick}
       onMouseOver={handleMouseOver}
       onMouseOut={handleMouseOut}
-      style={{
-        fontSize: '14px',
-        lineHeight: 1.7,
-        color: colors.textSecondary,
-      }}
+      className={styles.markdownSection}
     >
       <MDEditor.Markdown
         source={processedContent}
-        style={markdownStyle}
+        style={{ backgroundColor: 'transparent', color: 'var(--color-text-secondary)' }}
       />
       <style>{`
         .wmde-markdown {
           background: transparent !important;
-          color: ${colors.textSecondary} !important;
+          color: var(--color-text-secondary) !important;
           font-size: 14px !important;
           line-height: 1.7 !important;
         }
@@ -873,28 +518,28 @@ function MarkdownSection({
         .wmde-markdown h2,
         .wmde-markdown h3,
         .wmde-markdown h4 {
-          color: ${colors.textPrimary} !important;
+          color: var(--color-text-primary) !important;
           border-bottom: none !important;
           margin-top: 1.5em !important;
           margin-bottom: 0.5em !important;
         }
         .wmde-markdown a {
-          color: ${colors.accent} !important;
+          color: var(--color-accent) !important;
           text-decoration: none !important;
-          border-bottom: 1px dotted ${colors.accent};
+          border-bottom: 1px dotted var(--color-accent);
         }
         .wmde-markdown a:hover {
           opacity: 0.8;
         }
         .wmde-markdown code {
-          background: ${colors.bgTertiary} !important;
-          color: ${colors.textSecondary} !important;
+          background: var(--color-bg-tertiary) !important;
+          color: var(--color-text-secondary) !important;
           padding: 2px 6px !important;
           border-radius: 4px !important;
         }
         .wmde-markdown pre {
-          background: ${colors.bgSecondary} !important;
-          border: 1px solid ${colors.border} !important;
+          background: var(--color-bg-secondary) !important;
+          border: 1px solid var(--color-border) !important;
           border-radius: 6px !important;
         }
         .wmde-markdown pre code {
@@ -902,8 +547,8 @@ function MarkdownSection({
           padding: 0 !important;
         }
         .wmde-markdown blockquote {
-          border-left: 3px solid ${colors.accent} !important;
-          color: ${colors.textMuted} !important;
+          border-left: 3px solid var(--color-accent) !important;
+          color: var(--color-text-muted) !important;
           background: rgba(16, 185, 129, 0.08) !important;
           padding: 8px 16px !important;
           margin: 16px 0 !important;
@@ -921,17 +566,17 @@ function MarkdownSection({
         }
         .wmde-markdown th,
         .wmde-markdown td {
-          border: 1px solid ${colors.border} !important;
+          border: 1px solid var(--color-border) !important;
           padding: 8px 12px !important;
         }
         .wmde-markdown th {
-          background: ${colors.bgSecondary} !important;
+          background: var(--color-bg-secondary) !important;
         }
         .wmde-markdown hr {
-          border-color: ${colors.border} !important;
+          border-color: var(--color-border) !important;
         }
         .wmde-markdown strong {
-          color: ${colors.textPrimary} !important;
+          color: var(--color-text-primary) !important;
         }
       `}</style>
     </div>
@@ -1160,23 +805,25 @@ export default function WikiPageView({
   }, [pages, page.id]);
 
   // Build name to ID map for link resolution (entities + static pages)
+  // Use Unicode NFC normalization to ensure consistent string comparison
+  // (important for names with special characters like ☽, ~, accents, etc.)
   const entityNameMap = useMemo(() => {
     const map = new Map<string, string>();
     // Add entity names
     for (const [id, entity] of entityIndex) {
-      map.set(entity.name.toLowerCase(), id);
+      map.set(entity.name.toLowerCase().normalize('NFC'), id);
     }
     // Add static page titles (full title and base name without namespace)
     for (const p of pages) {
       if (p.type !== 'static') continue;
-      const titleLower = p.title.toLowerCase();
+      const titleLower = p.title.toLowerCase().normalize('NFC');
       if (!map.has(titleLower)) {
         map.set(titleLower, p.id);
       }
       // Also add base name (e.g., "The Berg" from "World:The Berg")
       const colonIdx = p.title.indexOf(':');
       if (colonIdx > 0 && colonIdx < p.title.length - 1) {
-        const baseName = p.title.slice(colonIdx + 1).trim().toLowerCase();
+        const baseName = p.title.slice(colonIdx + 1).trim().toLowerCase().normalize('NFC');
         if (baseName && !map.has(baseName)) {
           map.set(baseName, p.id);
         }
@@ -1190,7 +837,8 @@ export default function WikiPageView({
     for (const candidate of pages) {
       if (candidate.type !== 'entity' || !candidate.aliases?.length) continue;
       for (const alias of candidate.aliases) {
-        const normalized = alias.toLowerCase().trim();
+        // Use Unicode NFC normalization for consistent string comparison
+        const normalized = alias.toLowerCase().trim().normalize('NFC');
         if (!normalized || entityNameMap.has(normalized)) continue;
         if (!map.has(normalized)) {
           map.set(normalized, candidate.id);
@@ -1231,8 +879,29 @@ export default function WikiPageView({
     return names;
   }, [entityIndex, pages]);
 
-  // Get image for infobox
+  // Get image for infobox with dimension info
   const infoboxImage = page.content.infobox?.image?.path || page.images[0]?.path;
+  const infoboxImageAspect = page.content.infobox?.image?.aspect || page.images[0]?.aspect;
+
+  // State for detected aspect (fallback when metadata is missing)
+  const [detectedAspect, setDetectedAspect] = useState<ImageAspect | undefined>(undefined);
+
+  // Effective aspect: use metadata if available, otherwise use detected
+  const effectiveAspect = infoboxImageAspect || detectedAspect;
+
+  // Handle image load to detect aspect for images without metadata
+  const handleInfoboxImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    if (!infoboxImageAspect) {
+      const img = e.currentTarget;
+      const detected = classifyAspect(img.naturalWidth, img.naturalHeight);
+      setDetectedAspect(detected);
+    }
+  }, [infoboxImageAspect]);
+
+  // Reset detected aspect when page changes
+  useEffect(() => {
+    setDetectedAspect(undefined);
+  }, [page.id]);
 
   // Handle infobox image click - load full-size for lightbox
   const handleInfoboxImageClick = useCallback(async () => {
@@ -1260,12 +929,12 @@ export default function WikiPageView({
   }, [infoboxImage, entityIndex, page.id, page.title, page.content.summary, imageLoader, openImageModal]);
 
   return (
-    <div style={styles.container}>
+    <div className={styles.container}>
       {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.breadcrumbs}>
+      <div className={styles.header}>
+        <div className={styles.breadcrumbs}>
           <span
-            style={styles.breadcrumbLink}
+            className={styles.breadcrumbLink}
             onClick={() => onNavigate('')}
           >
             Home
@@ -1281,13 +950,13 @@ export default function WikiPageView({
               : page.type}
           </span>
           {' / '}
-          <span style={{ color: colors.textSecondary }}>{page.title}</span>
+          <span className={styles.breadcrumbCurrent}>{page.title}</span>
         </div>
-        <h1 style={styles.title}>{page.title}</h1>
+        <h1 className={styles.title}>{page.title}</h1>
 
         {/* Disambiguation notice - Wikipedia-style hatnote */}
         {disambiguation && disambiguation.length > 0 && (
-          <div style={styles.disambiguationNotice}>
+          <div className={styles.disambiguationNotice}>
             This page is about the {
               page.type === 'entity' || page.type === 'era'
                 ? (entityIndex.get(page.id)?.kind || page.type)
@@ -1303,7 +972,7 @@ export default function WikiPageView({
               .map((d, i, arr) => (
                 <span key={d.pageId}>
                   <span
-                    style={styles.disambiguationLink}
+                    className={styles.disambiguationLink}
                     onClick={() => onNavigate(d.pageId)}
                   >
                     {d.title}
@@ -1315,11 +984,11 @@ export default function WikiPageView({
         )}
 
         {page.content.summary && (
-          <div style={styles.summary}>{page.content.summary}</div>
+          <div className={styles.summary}>{page.content.summary}</div>
         )}
         {seedData && (
           <button
-            style={styles.seedButton}
+            className={styles.seedButton}
             onClick={() => setShowSeedModal(true)}
           >
             View Generation Context
@@ -1327,38 +996,31 @@ export default function WikiPageView({
         )}
       </div>
 
-      <div style={{
-        ...styles.content,
-        flexDirection: showInfoboxInline ? 'column' : 'row',
-      }}>
+      <div className={showInfoboxInline ? styles.contentColumn : styles.content}>
         {/* Infobox - inline on mobile/tablet (rendered first, above content) */}
         {showInfoboxInline && page.content.infobox && (
-          <div style={{
-            ...styles.infobox,
-            width: '100%',
-            position: 'static',
-            marginBottom: '24px',
-          }}>
-            <div style={styles.infoboxHeader}>{page.title}</div>
+          <div className={styles.infoboxInline}>
+            <div className={styles.infoboxHeader}>{page.title}</div>
             {infoboxImage && (
               <img
                 src={infoboxImage}
                 alt={page.title}
-                style={{ ...styles.infoboxImage, cursor: 'zoom-in', height: isMobile ? '200px' : '180px' }}
+                className={getInfoboxImageClass(effectiveAspect, isMobile)}
+                onLoad={handleInfoboxImageLoad}
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
                 onClick={handleInfoboxImageClick}
               />
             )}
-            <div style={styles.infoboxBody}>
+            <div className={styles.infoboxBody}>
               {page.content.infobox.fields.map((field, i) => (
-                <div key={i} style={styles.infoboxRow}>
-                  <div style={styles.infoboxLabel}>{field.label}</div>
-                  <div style={styles.infoboxValue}>
+                <div key={i} className={styles.infoboxRow}>
+                  <div className={styles.infoboxLabel}>{field.label}</div>
+                  <div className={styles.infoboxValue}>
                     {field.linkedEntity ? (
                       <span
-                        style={styles.entityLink}
+                        className={styles.entityLink}
                         onClick={() => onNavigateToEntity(field.linkedEntity!)}
                       >
                         {Array.isArray(field.value) ? field.value.join(', ') : field.value}
@@ -1374,18 +1036,16 @@ export default function WikiPageView({
         )}
 
         {/* Main Content */}
-        <div style={styles.main}>
+        <div className={styles.main}>
           {/* Table of Contents (if > 2 sections) */}
           {page.content.sections.length > 2 && (
-            <div style={styles.toc}>
-              <div style={styles.tocTitle}>Contents</div>
+            <div className={styles.toc}>
+              <div className={styles.tocTitle}>Contents</div>
               {page.content.sections.map((section, i) => (
                 <button
                   key={section.id}
-                  style={{
-                    ...styles.tocItem,
-                    paddingLeft: `${(section.level - 1) * 16}px`,
-                  }}
+                  className={styles.tocItem}
+                  style={{ paddingLeft: `${(section.level - 1) * 16}px` }}
                   onClick={() => {
                     const el = document.getElementById(section.id);
                     el?.scrollIntoView({ behavior: 'smooth' });
@@ -1399,8 +1059,8 @@ export default function WikiPageView({
 
           {/* Sections */}
           {page.content.sections.map(section => (
-            <div key={section.id} id={section.id} style={styles.section}>
-              <h2 style={styles.sectionHeading}>{section.heading}</h2>
+            <div key={section.id} id={section.id} className={styles.section}>
+              <h2 className={styles.sectionHeading}>{section.heading}</h2>
               {section.heading === 'Timeline' && page.timelineEvents && page.timelineEvents.length > 0 ? (
                 <>
                   {/* Prominence Timeline graph - shows prominence changes over time */}
@@ -1438,26 +1098,26 @@ export default function WikiPageView({
 
           {/* Chronicles */}
           {chronicleLinks.length > 0 && (
-            <div style={styles.chronicles}>
-              <div style={styles.chroniclesTitle}>
+            <div className={styles.chronicles}>
+              <div className={styles.chroniclesTitle}>
                 Chronicles ({chronicleLinks.length})
               </div>
               {chronicleLinks.slice(0, 20).map(link => (
                 <button
                   key={link.id}
-                  style={styles.chronicleItem}
+                  className={styles.chronicleItem}
                   onClick={() => onNavigate(link.id)}
                 >
                   <span>{link.title}</span>
                   {link.chronicle?.format && (
-                    <span style={styles.chronicleMeta}>
+                    <span className={styles.chronicleMeta}>
                       {link.chronicle.format === 'document' ? 'Document' : 'Story'}
                     </span>
                   )}
                 </button>
               ))}
               {chronicleLinks.length > 20 && (
-                <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '8px' }}>
+                <div className={styles.moreText}>
                   ...and {chronicleLinks.length - 20} more
                 </div>
               )}
@@ -1466,21 +1126,21 @@ export default function WikiPageView({
 
           {/* Backlinks */}
           {backlinks.length > 0 && (
-            <div style={styles.backlinks}>
-              <div style={styles.backlinksTitle}>
+            <div className={styles.backlinks}>
+              <div className={styles.backlinksTitle}>
                 What links here ({backlinks.length})
               </div>
               {backlinks.slice(0, 20).map(link => (
                 <button
                   key={link.id}
-                  style={styles.backlinkItem}
+                  className={styles.backlinkItem}
                   onClick={() => onNavigate(link.id)}
                 >
                   {link.title}
                 </button>
               ))}
               {backlinks.length > 20 && (
-                <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '8px' }}>
+                <div className={styles.moreText}>
                   ...and {backlinks.length - 20} more
                 </div>
               )}
@@ -1489,12 +1149,12 @@ export default function WikiPageView({
 
           {/* Categories */}
           {page.categories.length > 0 && (
-            <div style={styles.categories}>
-              <div style={styles.categoriesLabel}>Categories:</div>
+            <div className={styles.categories}>
+              <div className={styles.categoriesLabel}>Categories:</div>
               {page.categories.map(catId => (
                 <button
                   key={catId}
-                  style={styles.categoryTag}
+                  className={styles.categoryTag}
                   onClick={() => onNavigate(`category-${catId}`)}
                 >
                   {formatCategoryName(catId)}
@@ -1506,27 +1166,28 @@ export default function WikiPageView({
 
         {/* Infobox - sidebar on desktop (rendered after main content) */}
         {!showInfoboxInline && page.content.infobox && (
-          <div style={styles.infobox}>
-            <div style={styles.infoboxHeader}>{page.title}</div>
+          <div className={styles.infobox}>
+            <div className={styles.infoboxHeader}>{page.title}</div>
             {infoboxImage && (
               <img
                 src={infoboxImage}
                 alt={page.title}
-                style={{ ...styles.infoboxImage, cursor: 'zoom-in' }}
+                className={getInfoboxImageClass(effectiveAspect, false)}
+                onLoad={handleInfoboxImageLoad}
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
                 onClick={handleInfoboxImageClick}
               />
             )}
-            <div style={styles.infoboxBody}>
+            <div className={styles.infoboxBody}>
               {page.content.infobox.fields.map((field, i) => (
-                <div key={i} style={styles.infoboxRow}>
-                  <div style={styles.infoboxLabel}>{field.label}</div>
-                  <div style={styles.infoboxValue}>
+                <div key={i} className={styles.infoboxRow}>
+                  <div className={styles.infoboxLabel}>{field.label}</div>
+                  <div className={styles.infoboxValue}>
                     {field.linkedEntity ? (
                       <span
-                        style={styles.entityLink}
+                        className={styles.entityLink}
                         onClick={() => onNavigateToEntity(field.linkedEntity!)}
                       >
                         {Array.isArray(field.value) ? field.value.join(', ') : field.value}

@@ -24,6 +24,7 @@ import {
   prominenceLabelFromScale,
   prominenceThresholdFromScale,
 } from '@canonry/world-schema';
+import { getSizeOptions, getQualityOptions } from '../lib/imageSettings';
 
 // Thumbnail component that loads image from local storage
 function ImageThumbnail({ imageId, alt, onClick }) {
@@ -289,7 +290,7 @@ function EntityRow({
         </div>
 
         {/* Image status and action */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <EnrichmentStatusBadge status={canQueueImage ? imgStatus : 'disabled'} label="Image" cost={canQueueImage ? imgCost : undefined} />
           {needsDescription && (
             <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
@@ -431,6 +432,9 @@ export default function EntityBrowser({
   const [imageModal, setImageModal] = useState({ open: false, imageId: '', title: '' });
   const [entityModal, setEntityModal] = useState({ open: false, entity: null });
   const [imagePickerEntity, setImagePickerEntity] = useState(null);
+  const imageModel = config.imageModel || 'dall-e-3';
+  const sizeOptions = useMemo(() => getSizeOptions(imageModel), [imageModel]);
+  const qualityOptions = useMemo(() => getQualityOptions(imageModel), [imageModel]);
 
   // Get unique values for filters
   const filterOptions = useMemo(() => {
@@ -533,15 +537,19 @@ export default function EntityBrowser({
     setSelectedIds(new Set());
   }, []);
 
-  // Queue single item
+  // Queue single item (with optional image overrides for image tasks)
   const queueItem = useCallback(
     (entity, type) => {
       const prompt = buildPrompt(entity, type);
       // For description tasks, pass visual config from template
       const visualConfig = type === 'description' && getVisualConfig ? getVisualConfig(entity) : {};
-      onEnqueue([{ entity, type, prompt, ...visualConfig }]);
+      // For image tasks, apply current global size/quality
+      const imageOverrides = type === 'image'
+        ? { imageSize: config.imageSize, imageQuality: config.imageQuality }
+        : {};
+      onEnqueue([{ entity, type, prompt, ...visualConfig, ...imageOverrides }]);
     },
-    [onEnqueue, buildPrompt, getVisualConfig]
+    [onEnqueue, buildPrompt, getVisualConfig, config.imageSize, config.imageQuality]
   );
 
   // Cancel single item
@@ -583,7 +591,13 @@ export default function EntityBrowser({
         getStatus(entity, 'image') === 'missing' &&
         (!config.requireDescription || (entity.summary && entity.description))
       ) {
-        items.push({ entity, type: 'image', prompt: buildPrompt(entity, 'image') });
+        items.push({
+          entity,
+          type: 'image',
+          prompt: buildPrompt(entity, 'image'),
+          imageSize: config.imageSize,
+          imageQuality: config.imageQuality,
+        });
       }
     }
     if (items.length > 0) {
@@ -597,6 +611,8 @@ export default function EntityBrowser({
     buildPrompt,
     config.minProminenceForImage,
     config.requireDescription,
+    config.imageSize,
+    config.imageQuality,
     effectiveProminenceScale,
   ]);
 
@@ -625,7 +641,13 @@ export default function EntityBrowser({
         prominenceAtLeast(entity.prominence, config.minProminenceForImage, effectiveProminenceScale) &&
         getStatus(entity, 'image') === 'complete'
       ) {
-        items.push({ entity, type: 'image', prompt: buildPrompt(entity, 'image') });
+        items.push({
+          entity,
+          type: 'image',
+          prompt: buildPrompt(entity, 'image'),
+          imageSize: config.imageSize,
+          imageQuality: config.imageQuality,
+        });
       }
     }
     if (items.length > 0) {
@@ -638,6 +660,8 @@ export default function EntityBrowser({
     onEnqueue,
     buildPrompt,
     config.minProminenceForImage,
+    config.imageSize,
+    config.imageQuality,
     effectiveProminenceScale,
   ]);
 
@@ -672,7 +696,13 @@ export default function EntityBrowser({
           const visualConfig = getVisualConfig ? getVisualConfig(entity) : {};
           items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), ...visualConfig });
         }
-        items.push({ entity, type: 'image', prompt: buildPrompt(entity, 'image') });
+        items.push({
+          entity,
+          type: 'image',
+          prompt: buildPrompt(entity, 'image'),
+          imageSize: config.imageSize,
+          imageQuality: config.imageQuality,
+        });
       }
     }
     if (items.length > 0) {
@@ -686,6 +716,8 @@ export default function EntityBrowser({
     getVisualConfig,
     config.minProminenceForImage,
     config.requireDescription,
+    config.imageSize,
+    config.imageQuality,
     effectiveProminenceScale,
   ]);
 
@@ -994,6 +1026,45 @@ export default function EntityBrowser({
             />
           </div>
         )}
+
+        {/* Image Size + Quality */}
+        <div
+          style={{
+            padding: '8px 12px',
+            background: 'var(--bg-tertiary)',
+            borderRadius: '4px',
+            marginBottom: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Image size:</span>
+            <select
+              value={config.imageSize}
+              onChange={(e) => onConfigChange({ imageSize: e.target.value })}
+              className="illuminator-select"
+              style={{ width: 'auto', minWidth: '150px' }}
+            >
+              {sizeOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Quality:</span>
+            <select
+              value={config.imageQuality}
+              onChange={(e) => onConfigChange({ imageQuality: e.target.value })}
+              className="illuminator-select"
+              style={{ width: 'auto', minWidth: '120px' }}
+            >
+              {qualityOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         {/* Min Event Significance for Descriptions */}
         <div style={{ marginBottom: '12px' }}>

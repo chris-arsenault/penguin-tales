@@ -5,6 +5,7 @@
  * Persistence is handled by canonry's worldStore (per-project IndexedDB).
  */
 
+import './index.css';
 import WorldExplorer from './components/WorldExplorer.tsx';
 import type { WorldState, LoreData, ImageMetadata } from './types/world.ts';
 import { validateWorldData } from './utils/schemaValidation.ts';
@@ -22,22 +23,11 @@ export default function ArchivistRemote({
 }: ArchivistRemoteProps) {
   if (!worldData) {
     return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#0a0a0f',
-          color: '#707080',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📜</div>
-          <div style={{ fontSize: '18px', color: '#f0f0f0', marginBottom: '8px' }}>
-            No World Data
-          </div>
-          <div style={{ fontSize: '14px' }}>
+      <div className="archivist-empty-state">
+        <div className="archivist-state-content">
+          <div className="archivist-state-icon">📜</div>
+          <div className="archivist-state-title">No World Data</div>
+          <div className="archivist-state-message">
             Run a simulation in Lore Weave and click "View in Archivist" to explore your world.
           </div>
         </div>
@@ -48,23 +38,13 @@ export default function ArchivistRemote({
   const schemaIssues = validateWorldData(worldData);
   if (schemaIssues.length > 0) {
     return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#0a0a0f',
-          color: '#707080',
-          padding: '24px',
-        }}
-      >
-        <div style={{ textAlign: 'left', maxWidth: '640px' }}>
-          <div style={{ fontSize: '32px', marginBottom: '16px' }}>❌</div>
-          <div style={{ fontSize: '18px', color: '#f0f0f0', marginBottom: '12px' }}>
+      <div className="archivist-error-state">
+        <div className="archivist-state-content">
+          <div className="archivist-state-icon">❌</div>
+          <div className="archivist-state-title">
             World data is missing required schema fields
           </div>
-          <ul style={{ margin: 0, paddingLeft: '18px', lineHeight: 1.6 }}>
+          <ul className="archivist-state-list">
             {schemaIssues.map((issue, index) => (
               <li key={`${issue}-${index}`}>{issue}</li>
             ))}

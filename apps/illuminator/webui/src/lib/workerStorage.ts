@@ -85,6 +85,9 @@ function openImageDb(): Promise<IDBDatabase> {
 /** Type of image: entity (default) or chronicle (scene/illustration) */
 export type ImageType = 'entity' | 'chronicle';
 
+/** Image aspect ratio classification */
+export type ImageAspect = 'portrait' | 'landscape' | 'square';
+
 export interface ImageMetadata {
   entityId: string;
   projectId: string;
@@ -93,6 +96,8 @@ export interface ImageMetadata {
   entityCulture?: string;
   /** The original prompt built from template (before Claude refinement) */
   originalPrompt?: string;
+  /** The full prompt sent to Claude for formatting (template + globalImageRules + original prompt) */
+  formattingPrompt?: string;
   /** The final prompt sent to image model (after Claude refinement, or same as original if no refinement) */
   finalPrompt?: string;
   generatedAt: number;
@@ -103,6 +108,14 @@ export interface ImageMetadata {
   actualCost?: number;
   inputTokens?: number;
   outputTokens?: number;
+
+  // Image dimensions (added for aspect-aware display)
+  /** Image width in pixels */
+  width?: number;
+  /** Image height in pixels */
+  height?: number;
+  /** Aspect ratio classification: portrait (<0.9), square (0.9-1.1), landscape (>1.1) */
+  aspect?: ImageAspect;
 
   // Chronicle image fields (optional, present when imageType === 'chronicle')
   /** Type of image: 'entity' (default) or 'chronicle' */
@@ -125,6 +138,26 @@ export interface ImageRecord extends ImageMetadata {
 
 export function generateImageId(entityId: string): string {
   return `img_${entityId}_${Date.now()}`;
+}
+
+/**
+ * Classify aspect ratio from width/height
+ */
+export function classifyAspect(width: number, height: number): ImageAspect {
+  const ratio = width / height;
+  if (ratio < 0.9) return 'portrait';
+  if (ratio > 1.1) return 'landscape';
+  return 'square';
+}
+
+/**
+ * Extract dimensions from an image blob using createImageBitmap (works in workers)
+ */
+export async function extractImageDimensions(blob: Blob): Promise<{ width: number; height: number; aspect: ImageAspect }> {
+  const bitmap = await createImageBitmap(blob);
+  const { width, height } = bitmap;
+  bitmap.close(); // Release resources
+  return { width, height, aspect: classifyAspect(width, height) };
 }
 
 export async function saveImage(
@@ -334,6 +367,8 @@ export interface ImagePromptExport {
   model: string;
   /** The original prompt built from template (before Claude refinement) */
   originalPrompt?: string;
+  /** The full prompt sent to Claude for formatting (template + globalImageRules + original prompt) */
+  formattingPrompt?: string;
   /** The final prompt sent to image model (after Claude refinement) */
   finalPrompt?: string;
   /** The revised prompt returned by the image model (DALL-E's interpretation) */
@@ -367,6 +402,7 @@ export async function exportImagePrompts(): Promise<ImagePromptExport[]> {
         generatedAt: record.generatedAt,
         model: record.model,
         originalPrompt: record.originalPrompt,
+        formattingPrompt: record.formattingPrompt,
         finalPrompt: record.finalPrompt,
         revisedPrompt: record.revisedPrompt,
         imageType: record.imageType,

@@ -9,29 +9,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import type { NarrativeEvent, EntityEffect } from '@canonry/world-schema';
 import type { HardState } from '../types/world.ts';
 import { linkifyText } from '../lib/entityLinking.ts';
-
-const colors = {
-  bgPrimary: '#0a1929',
-  bgSecondary: '#1e3a5f',
-  bgTertiary: '#2d4a6f',
-  border: 'rgba(59, 130, 246, 0.3)',
-  textPrimary: '#ffffff',
-  textSecondary: '#93c5fd',
-  textMuted: '#60a5fa',
-  accent: '#10b981',
-  accentLight: '#34d399',
-  // Effect type colors
-  effectCreated: '#34d399',      // green
-  effectEnded: '#f87171',        // red
-  effectRelationship: '#60a5fa', // blue
-  effectTag: '#a78bfa',          // purple
-  effectField: '#fbbf24',        // yellow
-  // Weight tier colors (subtle variations)
-  weightHigh: '#f0f4ff',         // bright white-blue
-  weightMidHigh: '#c8d6f0',      // light blue-gray
-  weightMidLow: '#a0b0c8',       // muted blue-gray
-  weightLow: '#788898',          // dim gray
-};
+import styles from './EntityTimeline.module.css';
 
 type WeightTier = 'high' | 'mid-high' | 'mid-low' | 'low';
 
@@ -47,176 +25,52 @@ function getWeightTier(significance: number): WeightTier {
 }
 
 /**
- * Get style adjustments based on weight tier
- * Uses only color to indicate importance
+ * Get CSS class for weight tier
  */
-function getWeightStyle(tier: WeightTier): React.CSSProperties {
+function getWeightClass(tier: WeightTier): string {
   switch (tier) {
     case 'high':
-      return { color: colors.weightHigh };
+      return styles.weightHigh;
     case 'mid-high':
-      return { color: colors.weightMidHigh };
+      return styles.weightMidHigh;
     case 'mid-low':
-      return { color: colors.weightMidLow };
+      return styles.weightMidLow;
     case 'low':
-      return { color: colors.weightLow };
+      return styles.weightLow;
   }
 }
-
-const styles = {
-  container: {
-    width: '100%',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse' as const,
-    fontSize: '13px',
-  },
-  headerRow: {
-    backgroundColor: colors.bgSecondary,
-  },
-  th: {
-    padding: '10px 12px',
-    textAlign: 'left' as const,
-    fontWeight: 600,
-    color: colors.textPrimary,
-    borderBottom: `1px solid ${colors.border}`,
-  },
-  thTick: {
-    width: '60px',
-  },
-  thEra: {
-    width: '120px',
-  },
-  thExpand: {
-    width: '40px',
-    textAlign: 'center' as const,
-  },
-  row: {
-    borderBottom: `1px solid ${colors.border}`,
-    cursor: 'pointer',
-    transition: 'background-color 0.15s',
-  },
-  rowHover: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-  },
-  rowExpanded: {
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-  },
-  td: {
-    padding: '10px 12px',
-    color: colors.textSecondary,
-    verticalAlign: 'top' as const,
-  },
-  tdTick: {
-    fontFamily: 'monospace',
-    color: colors.textMuted,
-  },
-  tdEra: {
-    color: colors.textMuted,
-  },
-  tdEvent: {
-    lineHeight: 1.5,
-  },
-  tdExpand: {
-    textAlign: 'center' as const,
-    color: colors.textMuted,
-    fontSize: '12px',
-  },
-  expandIcon: {
-    display: 'inline-block',
-    transition: 'transform 0.2s',
-    userSelect: 'none' as const,
-  },
-  expandIconOpen: {
-    transform: 'rotate(90deg)',
-  },
-  effectsRow: {
-    backgroundColor: 'rgba(16, 185, 129, 0.05)',
-  },
-  effectsCell: {
-    padding: '8px 12px 12px 48px',
-    borderBottom: `1px solid ${colors.border}`,
-  },
-  effectsList: {
-    margin: 0,
-    padding: 0,
-    listStyle: 'none',
-  },
-  effectItem: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '8px',
-    padding: '4px 0',
-    fontSize: '12px',
-    lineHeight: 1.4,
-  },
-  effectIcon: {
-    flexShrink: 0,
-    width: '16px',
-    textAlign: 'center' as const,
-  },
-  effectDescription: {
-    color: colors.textSecondary,
-  },
-  entityLink: {
-    color: colors.accent,
-    cursor: 'pointer',
-    borderBottom: `1px dotted ${colors.accent}`,
-    textDecoration: 'none',
-  },
-  emptyState: {
-    padding: '24px',
-    textAlign: 'center' as const,
-    color: colors.textMuted,
-    fontStyle: 'italic' as const,
-  },
-  noEffects: {
-    color: colors.textMuted,
-    fontStyle: 'italic' as const,
-    fontSize: '12px',
-  },
-  filterRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '12px',
-    fontSize: '12px',
-    color: colors.textMuted,
-  },
-  checkbox: {
-    accentColor: colors.accent,
-    cursor: 'pointer',
-  },
-  checkboxLabel: {
-    cursor: 'pointer',
-    userSelect: 'none' as const,
-  },
-};
 
 /**
- * Get icon and color for an effect type
+ * Get icon and CSS class for an effect type
  */
-function getEffectStyle(type: EntityEffect['type']): { icon: string; color: string } {
+function getEffectStyle(type: EntityEffect['type']): { icon: string; colorClass: string } {
   switch (type) {
     case 'created':
-      return { icon: '+', color: colors.effectCreated };
+      return { icon: '+', colorClass: styles.effectCreated };
     case 'ended':
-      return { icon: '×', color: colors.effectEnded };
+      return { icon: '×', colorClass: styles.effectEnded };
     case 'relationship_formed':
-      return { icon: '↔', color: colors.effectRelationship };
+      return { icon: '↔', colorClass: styles.effectRelationship };
     case 'relationship_ended':
-      return { icon: '↮', color: colors.effectEnded };
+      return { icon: '↮', colorClass: styles.effectEnded };
     case 'tag_gained':
-      return { icon: '●', color: colors.effectTag };
+      return { icon: '●', colorClass: styles.effectTag };
     case 'tag_lost':
-      return { icon: '○', color: colors.effectEnded };
+      return { icon: '○', colorClass: styles.effectEnded };
     case 'field_changed':
-      return { icon: '△', color: colors.effectField };
+      return { icon: '△', colorClass: styles.effectField };
     default:
-      return { icon: '•', color: colors.textMuted };
+      return { icon: '•', colorClass: '' };
   }
 }
+
+// Entity link style for linkifyText (kept as inline style since it's passed to external function)
+const entityLinkStyle = {
+  color: '#10b981',
+  cursor: 'pointer',
+  borderBottom: '1px dotted #10b981',
+  textDecoration: 'none',
+};
 
 interface EntityTimelineProps {
   events: NarrativeEvent[];
@@ -306,7 +160,7 @@ export default function EntityTimeline({
   const renderDescription = useCallback((event: NarrativeEvent): React.ReactNode => {
     const description = event.description || '';
     return linkifyText(description, linkableEntities, onNavigate, {
-      linkStyle: styles.entityLink,
+      linkStyle: entityLinkStyle,
       onHoverEnter,
       onHoverLeave,
     });
@@ -314,17 +168,17 @@ export default function EntityTimeline({
 
   if (relevantEvents.length === 0 && !showProminenceOnly) {
     return (
-      <div style={styles.container}>
-        <label style={styles.filterRow}>
+      <div className={styles.container}>
+        <label className={styles.filterRow}>
           <input
             type="checkbox"
             checked={showProminenceOnly}
             onChange={(e) => setShowProminenceOnly(e.target.checked)}
-            style={styles.checkbox}
+            className={styles.checkbox}
           />
-          <span style={styles.checkboxLabel}>Show prominence-only events</span>
+          <span className={styles.checkboxLabel}>Show prominence-only events</span>
         </label>
-        <div style={styles.emptyState}>
+        <div className={styles.emptyState}>
           No timeline events recorded for this entity.
         </div>
       </div>
@@ -332,23 +186,23 @@ export default function EntityTimeline({
   }
 
   return (
-    <div style={styles.container}>
-      <label style={styles.filterRow}>
+    <div className={styles.container}>
+      <label className={styles.filterRow}>
         <input
           type="checkbox"
           checked={showProminenceOnly}
           onChange={(e) => setShowProminenceOnly(e.target.checked)}
-          style={styles.checkbox}
+          className={styles.checkbox}
         />
-        <span style={styles.checkboxLabel}>Show prominence-only events</span>
+        <span className={styles.checkboxLabel}>Show prominence-only events</span>
       </label>
-      <table style={styles.table}>
+      <table className={styles.table}>
         <thead>
-          <tr style={styles.headerRow}>
-            <th style={{ ...styles.th, ...styles.thTick }}>Tick</th>
-            <th style={{ ...styles.th, ...styles.thEra }}>Era</th>
-            <th style={styles.th}>Event</th>
-            <th style={{ ...styles.th, ...styles.thExpand }}></th>
+          <tr className={styles.headerRow}>
+            <th className={styles.thTick}>Tick</th>
+            <th className={styles.thEra}>Era</th>
+            <th className={styles.th}>Event</th>
+            <th className={styles.thExpand}></th>
           </tr>
         </thead>
         <tbody>
@@ -361,39 +215,17 @@ export default function EntityTimeline({
               <React.Fragment key={event.id}>
                 {/* Main event row */}
                 <tr
-                  style={{
-                    ...styles.row,
-                    ...(isExpanded ? styles.rowExpanded : {}),
-                  }}
+                  className={isExpanded ? styles.rowExpanded : styles.row}
                   onClick={() => canExpand && toggleExpand(event.id)}
-                  onMouseEnter={(e) => {
-                    if (canExpand) {
-                      (e.currentTarget as HTMLElement).style.backgroundColor =
-                        isExpanded ? 'rgba(16, 185, 129, 0.12)' : 'rgba(59, 130, 246, 0.1)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.backgroundColor =
-                      isExpanded ? 'rgba(16, 185, 129, 0.08)' : '';
-                  }}
                 >
-                  <td style={{ ...styles.td, ...styles.tdTick }}>{event.tick}</td>
-                  <td style={{ ...styles.td, ...styles.tdEra }}>{getEraName(event.era)}</td>
-                  <td style={{
-                    ...styles.td,
-                    ...styles.tdEvent,
-                    ...getWeightStyle(getWeightTier(event.significance ?? 0.5)),
-                  }}>
+                  <td className={`${styles.td} ${styles.tdTick}`}>{event.tick}</td>
+                  <td className={`${styles.td} ${styles.tdEra}`}>{getEraName(event.era)}</td>
+                  <td className={`${styles.td} ${styles.tdEvent} ${getWeightClass(getWeightTier(event.significance ?? 0.5))}`}>
                     {renderDescription(event)}
                   </td>
-                  <td style={{ ...styles.td, ...styles.tdExpand }}>
+                  <td className={`${styles.td} ${styles.tdExpand}`}>
                     {canExpand && (
-                      <span
-                        style={{
-                          ...styles.expandIcon,
-                          ...(isExpanded ? styles.expandIconOpen : {}),
-                        }}
-                      >
+                      <span className={`${styles.expandIcon} ${isExpanded ? styles.expandIconOpen : ''}`}>
                         ▶
                       </span>
                     )}
@@ -402,20 +234,20 @@ export default function EntityTimeline({
 
                 {/* Expanded effects row */}
                 {isExpanded && (
-                  <tr style={styles.effectsRow}>
-                    <td colSpan={4} style={styles.effectsCell}>
+                  <tr className={styles.effectsRow}>
+                    <td colSpan={4} className={styles.effectsCell}>
                       {effects.length > 0 ? (
-                        <ul style={styles.effectsList}>
+                        <ul className={styles.effectsList}>
                           {effects.map((effect, idx) => {
-                            const { icon, color } = getEffectStyle(effect.type);
+                            const { icon, colorClass } = getEffectStyle(effect.type);
                             return (
-                              <li key={idx} style={styles.effectItem}>
-                                <span style={{ ...styles.effectIcon, color }}>
+                              <li key={idx} className={styles.effectItem}>
+                                <span className={`${styles.effectIcon} ${colorClass}`}>
                                   {icon}
                                 </span>
-                                <span style={styles.effectDescription}>
+                                <span className={styles.effectDescription}>
                                   {linkifyText(effect.description, linkableEntities, onNavigate, {
-                                    linkStyle: styles.entityLink,
+                                    linkStyle: entityLinkStyle,
                                     onHoverEnter,
                                     onHoverLeave,
                                   })}
@@ -425,7 +257,7 @@ export default function EntityTimeline({
                           })}
                         </ul>
                       ) : (
-                        <span style={styles.noEffects}>No specific effects recorded</span>
+                        <span className={styles.noEffects}>No specific effects recorded</span>
                       )}
                     </td>
                   </tr>

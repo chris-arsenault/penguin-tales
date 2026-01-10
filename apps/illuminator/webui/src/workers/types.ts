@@ -22,6 +22,8 @@ export interface WorkerConfig {
   numWorkers?: number;
   useClaudeForImagePrompt?: boolean;
   claudeImagePromptTemplate?: string;
+  /** Global rules for image generation (e.g., species constraints). Injected into Claude image prompt template. */
+  globalImageRules?: string;
 
   // Per-call LLM configuration (model + thinking budget + max tokens)
   llmCallSettings: ResolvedLLMCallSettings;

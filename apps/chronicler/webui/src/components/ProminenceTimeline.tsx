@@ -10,36 +10,23 @@
 
 import React, { useMemo, useState, useCallback } from 'react';
 import { prominenceLabelFromScale, type ProminenceScale, type NarrativeEvent } from '@canonry/world-schema';
+import styles from './ProminenceTimeline.module.css';
 
-const colors = {
-  bgPrimary: '#0a1929',
-  bgSecondary: '#1e3a5f',
-  bgTertiary: '#2d4a6f',
-  border: 'rgba(59, 130, 246, 0.3)',
-  textPrimary: '#ffffff',
-  textSecondary: '#93c5fd',
-  textMuted: '#60a5fa',
-  accent: '#10b981',
-  accentLight: '#34d399',
-  // Prominence level colors
+// Prominence level colors used in SVG
+const PROMINENCE_COLORS = {
   forgotten: '#6b7280',   // gray
   marginal: '#f59e0b',    // amber
   recognized: '#3b82f6',  // blue
   renowned: '#8b5cf6',    // purple
   mythic: '#ec4899',      // pink
-  // Graph colors
-  line: '#10b981',
-  marker: '#f59e0b',
-  gridLine: 'rgba(59, 130, 246, 0.15)',
-  levelLine: 'rgba(255, 255, 255, 0.1)',
 };
 
-const PROMINENCE_COLORS = {
-  forgotten: colors.forgotten,
-  marginal: colors.marginal,
-  recognized: colors.recognized,
-  renowned: colors.renowned,
-  mythic: colors.mythic,
+// SVG graph colors
+const graphColors = {
+  line: '#10b981',
+  marker: '#f59e0b',
+  levelLine: 'rgba(255, 255, 255, 0.1)',
+  textMuted: '#60a5fa',
 };
 
 interface ProminenceDataPoint {
@@ -110,60 +97,6 @@ function extractProminenceData(
   return dataPoints;
 }
 
-const styles = {
-  container: {
-    width: '100%',
-    backgroundColor: colors.bgSecondary,
-    borderRadius: '8px',
-    border: `1px solid ${colors.border}`,
-    padding: '16px',
-    marginBottom: '16px',
-  },
-  title: {
-    fontSize: '14px',
-    fontWeight: 600,
-    color: colors.textPrimary,
-    marginBottom: '12px',
-  },
-  graphContainer: {
-    position: 'relative' as const,
-    height: '50px',
-  },
-  svg: {
-    width: '100%',
-    height: '100%',
-  },
-  tooltip: {
-    position: 'absolute' as const,
-    backgroundColor: colors.bgPrimary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '6px',
-    padding: '8px 12px',
-    fontSize: '12px',
-    color: colors.textSecondary,
-    zIndex: 100,
-    pointerEvents: 'none' as const,
-    maxWidth: '200px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-  },
-  tooltipValue: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    marginBottom: '4px',
-  },
-  tooltipDescription: {
-    fontSize: '11px',
-    color: colors.textMuted,
-    fontStyle: 'italic' as const,
-  },
-  emptyState: {
-    textAlign: 'center' as const,
-    padding: '32px',
-    color: colors.textMuted,
-    fontSize: '13px',
-  },
-};
 
 export default function ProminenceTimeline({
   events,
@@ -283,11 +216,11 @@ export default function ProminenceTimeline({
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.title}>Prominence Over Time</div>
+    <div className={styles.container}>
+      <div className={styles.title}>Prominence Over Time</div>
 
-      <div style={styles.graphContainer}>
-        <svg style={styles.svg} viewBox="0 0 100 100" preserveAspectRatio="none">
+      <div className={styles.graphContainer}>
+        <svg className={styles.svg} viewBox="0 0 100 100" preserveAspectRatio="none">
           {graphMetrics && (
             <>
               {/* Background level bands */}
@@ -314,7 +247,7 @@ export default function ProminenceTimeline({
                   y1={graphMetrics.yScale(threshold)}
                   x2={100}
                   y2={graphMetrics.yScale(threshold)}
-                  stroke={colors.levelLine}
+                  stroke={graphColors.levelLine}
                   strokeWidth={0.2}
                 />
               ))}
@@ -323,7 +256,7 @@ export default function ProminenceTimeline({
               <path
                 d={linePath}
                 fill="none"
-                stroke={colors.line}
+                stroke={graphColors.line}
                 strokeWidth={0.8}
                 vectorEffect="non-scaling-stroke"
               />
@@ -336,7 +269,7 @@ export default function ProminenceTimeline({
                     y1={0}
                     x2={graphMetrics.xScale(point.tick)}
                     y2={100}
-                    stroke={colors.marker}
+                    stroke={graphColors.marker}
                     strokeWidth={0.5}
                     opacity={0.7}
                   />
@@ -350,7 +283,7 @@ export default function ProminenceTimeline({
                   cx={graphMetrics.xScale(point.tick)}
                   cy={graphMetrics.yScale(point.newValue)}
                   r={2}
-                  fill={colors.marker}
+                  fill={graphColors.marker}
                   style={{ cursor: 'pointer' }}
                   onMouseEnter={(e) => handlePointHover(point, e)}
                   onMouseLeave={() => handlePointHover(null)}
@@ -363,22 +296,19 @@ export default function ProminenceTimeline({
         {/* Tooltip - shows narrative description on hover */}
         {hoveredPoint && (
           <div
-            style={{
-              ...styles.tooltip,
-              left: hoveredPoint.x + 10,
-              top: hoveredPoint.y - 40,
-            }}
+            className={styles.tooltip}
+            style={{ left: hoveredPoint.x + 10, top: hoveredPoint.y - 40 }}
           >
-            <div style={styles.tooltipValue}>
+            <div className={styles.tooltipValue}>
               <span style={{ color: resolveColor(hoveredPoint.point.previousValue) }}>
                 {resolveLabel(hoveredPoint.point.previousValue)}
               </span>
-              <span style={{ color: colors.textMuted }}>→</span>
+              <span style={{ color: graphColors.textMuted }}>&rarr;</span>
               <span style={{ color: resolveColor(hoveredPoint.point.newValue) }}>
                 {resolveLabel(hoveredPoint.point.newValue)}
               </span>
             </div>
-            <div style={styles.tooltipDescription}>
+            <div className={styles.tooltipDescription}>
               {hoveredPoint.point.description}
             </div>
           </div>

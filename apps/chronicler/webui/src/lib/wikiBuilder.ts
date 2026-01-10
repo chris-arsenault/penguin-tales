@@ -31,6 +31,7 @@ import type {
   NarrativeEvent,
   HuddleType,
   HuddleInstance,
+  ImageAspect,
 } from '../types/world.ts';
 import type { ChronicleRecord } from './chronicleStorage.ts';
 import { getChronicleContent } from './chronicleStorage.ts';
@@ -1101,7 +1102,7 @@ function buildEntityPage(
   entity: HardState,
   worldData: WorldState,
   loreIndex: Map<string, LoreRecord[]>,
-  imageIndex: Map<string, string>,
+  imageIndex: Map<string, ImageInfo>,
   aliasIndex: Map<string, string>,
   prominenceScale: ProminenceScale
 ): WikiPage {
@@ -1243,7 +1244,14 @@ function buildEntityPage(
     categories,
     linkedEntities,
     images: imageIndex.has(entity.id)
-      ? [{ entityId: entity.id, path: imageIndex.get(entity.id)!, caption: entity.name }]
+      ? [{
+          entityId: entity.id,
+          path: imageIndex.get(entity.id)!.path,
+          caption: entity.name,
+          width: imageIndex.get(entity.id)!.width,
+          height: imageIndex.get(entity.id)!.height,
+          aspect: imageIndex.get(entity.id)!.aspect,
+        }]
       : [],
     timelineEvents: timelineEvents.length > 0 ? timelineEvents : undefined,
     lastUpdated: entity.updatedAt || entity.createdAt,
@@ -1376,7 +1384,7 @@ function formatRelationships(
 function buildEntityInfobox(
   entity: HardState,
   worldData: WorldState,
-  imageIndex: Map<string, string>,
+  imageIndex: Map<string, ImageInfo>,
   prominenceScale: ProminenceScale
 ): WikiInfobox {
   const fields: WikiInfobox['fields'] = [];
@@ -1431,11 +1439,18 @@ function buildEntityInfobox(
     fields.push({ label: 'Coords', value: coordStr });
   }
 
+  const imageInfo = imageIndex.get(entity.id);
   return {
     type: entity.kind === 'era' ? 'era' : 'entity',
     fields,
-    image: imageIndex.has(entity.id)
-      ? { entityId: entity.id, path: imageIndex.get(entity.id)! }
+    image: imageInfo
+      ? {
+          entityId: entity.id,
+          path: imageInfo.path,
+          width: imageInfo.width,
+          height: imageInfo.height,
+          aspect: imageInfo.aspect,
+        }
       : undefined,
   };
 }
@@ -1696,14 +1711,26 @@ function buildLoreIndex(loreData: LoreData | null): Map<string, LoreRecord[]> {
 }
 
 /**
- * Build index of entity images
+ * Image info with path and optional dimensions
+ * Used for aspect-aware display of images
+ */
+interface ImageInfo {
+  path: string;
+  width?: number;
+  height?: number;
+  aspect?: ImageAspect;
+}
+
+/**
+ * Build index of entity images with dimension data
  * Handles both file paths and object URLs
+ * Includes dimensions from imageData or entity enrichment for aspect-aware display
  */
 function buildImageIndex(
   worldData: WorldState,
   imageData: ImageMetadata | null
-): Map<string, string> {
-  const index = new Map<string, string>();
+): Map<string, ImageInfo> {
+  const index = new Map<string, ImageInfo>();
   if (!imageData) return index;
 
   const imageById = new Map(imageData.results.map((img) => [img.imageId, img]));
@@ -1721,7 +1748,13 @@ function buildImageIndex(
     const webPath = path.startsWith('blob:') || path.startsWith('data:')
       ? path
       : path.replace('output/images/', 'images/');
-    index.set(entity.id, webPath);
+
+    // Get dimensions from imageData results (entity.enrichment.image only has imageId)
+    const width = img.width;
+    const height = img.height;
+    const aspect = img.aspect;
+
+    index.set(entity.id, { path: webPath, width, height, aspect });
   }
 
   return index;
@@ -2044,6 +2077,14 @@ function buildConfluxPage(
 ): WikiPage | null {
   const narrativeHistory = worldData.narrativeHistory ?? [];
   const confluxIndex = buildConfluxIndex(narrativeHistory);
+
+  // Build entity lookup from hardState for resolving current names
+  // Narrative history stores snapshot names at event time, which may differ from
+  // the entity's current name. Using hardState names ensures link resolution works.
+  const entityById = new Map<string, HardState>();
+  for (const entity of worldData.hardState) {
+    entityById.set(entity.id, entity);
+  }
   const summary = confluxIndex.get(confluxId);
 
   if (!summary) return null;
@@ -2090,15 +2131,20 @@ function buildConfluxPage(
   }
 
   // Top 10 most touched entities
+  // Use current names from hardState for link resolution, falling back to snapshot names
   const mostTouched = Array.from(entityEffectCounts.values())
     .sort((a, b) => b.count - a.count)
     .slice(0, 10)
-    .map(e => ({
-      entityId: e.id,
-      entityName: e.name,
-      entityKind: e.kind,
-      effectCount: e.count,
-    }));
+    .map(e => {
+      const currentEntity = entityById.get(e.id);
+      return {
+        entityId: e.id,
+        // Use current name from hardState for link resolution
+        entityName: currentEntity?.name ?? e.name,
+        entityKind: currentEntity?.kind ?? e.kind,
+        effectCount: e.count,
+      };
+    });
 
   // Find related confluxes (share entities)
   const relatedConfluxes: ConfluxPageData['relatedConfluxes'] = [];
@@ -2195,9 +2241,11 @@ function buildConfluxPage(
   }
 
   // Those Touched section
+  // Use [[EntityName|entityId]] format so links can be resolved by ID
+  // (some entities may exist in narrativeHistory but not in hardState)
   if (mostTouched.length > 0) {
     const touchedLines = mostTouched.map(e =>
-      `- [[${e.entityName}]] (${e.entityKind}) - ${e.effectCount} effects`
+      `- [[${e.entityName}|${e.entityId}]] (${e.entityKind}) - ${e.effectCount} effects`
     );
 
     sections.push({
@@ -2238,8 +2286,12 @@ function buildConfluxPage(
       for (const journey of completeJourneys.slice(0, 5)) {
         const firstA = journey.confluxAEvents[0];
         const firstB = journey.confluxBEvents[0];
+        // Use current name from hardState for link resolution, with ID fallback
+        const currentEntity = entityById.get(journey.entityId);
+        const entityName = currentEntity?.name ?? journey.entityName;
+        // Use [[EntityName|entityId]] format so links can be resolved by ID
         convergenceLines.push(
-          `- [[${journey.entityName}]]: tick ${firstA?.tick ?? '?'} → tick ${firstB?.tick ?? '?'}`
+          `- [[${entityName}|${journey.entityId}]]: tick ${firstA?.tick ?? '?'} → tick ${firstB?.tick ?? '?'}`
         );
       }
 

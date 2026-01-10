@@ -55,6 +55,7 @@ export interface WorldContext {
   description: string;          // Genre/setting brief (1-2 sentences)
   canonFacts: string[];         // Facts that must not be contradicted
   tone?: string;                // "dark fantasy", "whimsical", "gritty realism"
+  speciesConstraint?: string;   // Species rule for image generation (e.g., "All figures must be penguins or orcas")
 }
 
 /**
@@ -491,8 +492,14 @@ export function buildImagePromptFromGuidance(
     ? `COMPOSITION: ${styleInfo.compositionPromptFragment}`
     : '';
 
+  // Species constraint section - placed prominently after IMAGE INSTRUCTIONS
+  const speciesSection = worldContext.speciesConstraint
+    ? `SPECIES REQUIREMENT: ${worldContext.speciesConstraint}`
+    : '';
+
   const parts = [
     `IMAGE INSTRUCTIONS: ${guidance.imageInstructions}`,
+    speciesSection,
     '',
     `SUBJECT: ${e.name}, a ${e.subtype} ${kind}`,
     summaryText ? `CONTEXT: ${summaryText}` : '',

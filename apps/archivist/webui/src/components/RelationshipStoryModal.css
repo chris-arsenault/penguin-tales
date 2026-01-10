@@ -7,51 +7,51 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
-  padding: 20px;
+  z-index: var(--z-modal);
+  padding: var(--spacing-2xl);
 }
 
 .relationship-story-modal {
-  background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%);
-  border: 2px solid rgb(59 130 246 / 50%);
-  border-radius: 12px;
+  background: var(--gradient-bg-header);
+  border: 2px solid var(--color-border-strong);
+  border-radius: var(--radius-xl);
   max-width: 700px;
   width: 100%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 50%);
+  box-shadow: var(--shadow-2xl);
 }
 
 .relationship-story-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 2px solid rgb(59 130 246 / 30%);
-  background: rgb(59 130 246 / 10%);
+  padding: var(--spacing-xl) var(--spacing-2xl);
+  border-bottom: 2px solid var(--color-border);
+  background: var(--color-bg-blue-10);
 }
 
 .relationship-story-entities {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-lg);
   flex: 1;
 }
 
 .relationship-story-entity {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
 }
 
 .relationship-story-kind {
-  padding: 4px 12px;
-  background: rgb(59 130 246 / 30%);
-  border: 1px solid rgb(59 130 246 / 50%);
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #93c5fd;
+  padding: var(--spacing-xs) var(--spacing-lg);
+  background: var(--color-bg-blue-30);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-blue-200);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -62,26 +62,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgb(239 68 68 / 20%);
-  border: 1px solid rgb(239 68 68 / 40%);
-  border-radius: 6px;
-  color: #fca5a5;
-  font-size: 24px;
-  font-weight: 700;
+  background: var(--color-bg-red-20);
+  border: 1px solid var(--color-bg-red-border);
+  border-radius: var(--radius-md);
+  color: var(--color-red-300);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-normal);
   flex-shrink: 0;
 }
 
 .relationship-story-close:hover {
-  background: rgb(239 68 68 / 30%);
+  background: var(--color-bg-red-30);
   border-color: rgb(239 68 68 / 60%);
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 .relationship-story-section {
-  padding: 16px 20px;
-  border-bottom: 1px solid rgb(59 130 246 / 15%);
+  padding: var(--spacing-xl) var(--spacing-2xl);
+  border-bottom: 1px solid var(--color-bg-blue-15);
 }
 
 .relationship-story-section:last-child {
@@ -91,41 +91,41 @@
 .relationship-story-section-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
 .relationship-story-section-icon {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   line-height: 1;
 }
 
 .relationship-story-section-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #60a5fa;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-blue-400);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .relationship-story-section-content {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 14px;
-  line-height: 1.7;
-  color: #e0e7ff;
+  font-family: var(--font-serif);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-loose);
+  color: var(--color-indigo-200);
   font-style: italic;
-  padding-left: 26px;
+  padding-left: var(--spacing-3xl);
 }
 
 /* Different section backgrounds */
 .relationship-story-section:nth-child(2) {
-  background: rgb(59 130 246 / 3%);
+  background: var(--color-bg-blue-3);
 }
 
 .relationship-story-section:nth-child(3) {
-  background: rgb(251 191 36 / 3%);
+  background: var(--color-bg-gold-3);
 }
 
 .relationship-story-section:nth-child(4) {
-  background: rgb(139 92 246 / 3%);
+  background: var(--color-bg-purple-3);
 }

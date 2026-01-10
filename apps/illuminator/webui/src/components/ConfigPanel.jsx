@@ -10,67 +10,35 @@
 
 import LLMCallConfigPanel from './LLMCallConfigPanel';
 import { LocalTextArea } from '@penguin-tales/shared-components';
+import {
+  IMAGE_MODELS,
+  IMAGE_SIZES_BY_MODEL,
+  IMAGE_QUALITY_BY_MODEL,
+} from '../lib/imageSettings';
 
-const IMAGE_MODELS = [
-  { value: 'gpt-image-1.5', label: 'GPT Image 1.5' },
-  { value: 'gpt-image-1', label: 'GPT Image 1' },
-  { value: 'dall-e-3', label: 'DALL-E 3' },
-  { value: 'dall-e-2', label: 'DALL-E 2 (cheaper)' },
-];
+const DEFAULT_IMAGE_PROMPT_TEMPLATE = `Transform the structured prompt below into a single, coherent image prompt for {{modelName}}. Do NOT simply reformat—actively synthesize and reshape:
 
-const DEFAULT_IMAGE_PROMPT_TEMPLATE = `Reformat the below prompt into something appropriate for generating a {{modelName}} image of an entity. Avoid bestiary/manuscript/folio style pages - instead create artwork that directly represents the subject as if they exist in the world.
+Honor the VISUAL THESIS: This is the primary visual signal. The thesis describes the dominant silhouette feature that makes this entity instantly recognizable. Build the entire image around it.
 
+Synthesize, don't list:
+- Merge SUBJECT + CONTEXT + CULTURAL IDENTITY into a unified visual
+- Apply STYLE (artistic approach) and COMPOSITION (framing/perspective) to shape the rendering
+- Translate SUPPORTING TRAITS into concrete visual details that reinforce the thesis
+- Incorporate COLOR PALETTE if provided
+
+Establish clear composition and perspective:
+- Honor the COMPOSITION directive for framing and vantage point
+- Use environmental storytelling (objects, weathering, traces) to convey history
+- The SETTING provides world context but the subject is the focus
+
+Create specific visual instructions: Rather than listing adjectives, use concrete visual language: "weathered by decades of X," "visible scars of Y," "rendered in the style of Z"
+
+Respect the AVOID list: These are hard constraints—elements that break the visual language.
+
+Condense to a single, authoritative prompt: Output should be 150-300 words, reading as clear artistic direction that could be handed to a concept artist—not a bulleted list.
+{{globalImageRules}}
 Original prompt:
 {{prompt}}`;
-
-// Model-specific size options
-const IMAGE_SIZES_BY_MODEL = {
-  'gpt-image-1.5': [
-    { value: 'auto', label: 'Auto' },
-    { value: '1024x1024', label: '1024x1024 (Square)' },
-    { value: '1536x1024', label: '1536x1024 (Landscape)' },
-    { value: '1024x1536', label: '1024x1536 (Portrait)' },
-  ],
-  'gpt-image-1': [
-    { value: 'auto', label: 'Auto' },
-    { value: '1024x1024', label: '1024x1024 (Square)' },
-    { value: '1536x1024', label: '1536x1024 (Landscape)' },
-    { value: '1024x1536', label: '1024x1536 (Portrait)' },
-  ],
-  'dall-e-3': [
-    { value: '1024x1024', label: '1024x1024 (Square)' },
-    { value: '1792x1024', label: '1792x1024 (Landscape)' },
-    { value: '1024x1792', label: '1024x1792 (Portrait)' },
-  ],
-  'dall-e-2': [
-    { value: '1024x1024', label: '1024x1024' },
-    { value: '512x512', label: '512x512' },
-    { value: '256x256', label: '256x256' },
-  ],
-};
-
-// Model-specific quality options
-const IMAGE_QUALITY_BY_MODEL = {
-  'gpt-image-1.5': [
-    { value: 'auto', label: 'Auto' },
-    { value: 'high', label: 'High' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'low', label: 'Low' },
-  ],
-  'gpt-image-1': [
-    { value: 'auto', label: 'Auto' },
-    { value: 'high', label: 'High' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'low', label: 'Low' },
-  ],
-  'dall-e-3': [
-    { value: 'standard', label: 'Standard' },
-    { value: 'hd', label: 'HD' },
-  ],
-  'dall-e-2': [
-    { value: 'standard', label: 'Standard' },
-  ],
-};
 
 export default function ConfigPanel({ config, onConfigChange }) {
   const sizeOptions = IMAGE_SIZES_BY_MODEL[config.imageModel] || IMAGE_SIZES_BY_MODEL['dall-e-3'];
@@ -189,18 +157,33 @@ export default function ConfigPanel({ config, onConfigChange }) {
         </p>
 
         {config.useClaudeForImagePrompt && (
-          <div className="illuminator-form-group" style={{ marginLeft: '24px' }}>
-            <label className="illuminator-label">Claude formatting prompt</label>
-            <LocalTextArea
-              value={config.claudeImagePromptTemplate || DEFAULT_IMAGE_PROMPT_TEMPLATE}
-              onChange={(value) => onConfigChange({ claudeImagePromptTemplate: value })}
-              className="illuminator-template-textarea"
-              placeholder={DEFAULT_IMAGE_PROMPT_TEMPLATE}
-            />
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Use {'{{modelName}}'} for the image model name and {'{{prompt}}'} for the original prompt.
-            </p>
-          </div>
+          <>
+            <div className="illuminator-form-group" style={{ marginLeft: '24px' }}>
+              <label className="illuminator-label">Global Image Rules</label>
+              <LocalTextArea
+                value={config.globalImageRules || ''}
+                onChange={(value) => onConfigChange({ globalImageRules: value })}
+                className="illuminator-template-textarea"
+                placeholder="SPECIES RULE: This world contains only [species]. Any figures depicted must be explicitly described as [species], never as humans or generic figures."
+                rows={4}
+              />
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Domain-specific rules injected into all image prompts. Use this to enforce species, setting constraints, or other world-specific requirements.
+              </p>
+            </div>
+            <div className="illuminator-form-group" style={{ marginLeft: '24px' }}>
+              <label className="illuminator-label">Claude formatting prompt</label>
+              <LocalTextArea
+                value={config.claudeImagePromptTemplate || DEFAULT_IMAGE_PROMPT_TEMPLATE}
+                onChange={(value) => onConfigChange({ claudeImagePromptTemplate: value })}
+                className="illuminator-template-textarea"
+                placeholder={DEFAULT_IMAGE_PROMPT_TEMPLATE}
+              />
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Use {'{{modelName}}'} for the image model name, {'{{prompt}}'} for the original prompt, and {'{{globalImageRules}}'} for the global rules above.
+              </p>
+            </div>
+          </>
         )}
       </div>
 

@@ -80,8 +80,27 @@ const TABS = [
 ];
 
 // Default image prompt template for Claude formatting
-const DEFAULT_IMAGE_PROMPT_TEMPLATE = `Reformat the below prompt into something appropriate for generating a {{modelName}} image of an entity. Avoid bestiary/manuscript/folio style pages - instead create artwork that directly represents the subject as if they exist in the world.
+const DEFAULT_IMAGE_PROMPT_TEMPLATE = `Transform the structured prompt below into a single, coherent image prompt for {{modelName}}. Do NOT simply reformat—actively synthesize and reshape:
 
+Honor the VISUAL THESIS: This is the primary visual signal. The thesis describes the dominant silhouette feature that makes this entity instantly recognizable. Build the entire image around it.
+
+Synthesize, don't list:
+- Merge SUBJECT + CONTEXT + CULTURAL IDENTITY into a unified visual
+- Apply STYLE (artistic approach) and COMPOSITION (framing/perspective) to shape the rendering
+- Translate SUPPORTING TRAITS into concrete visual details that reinforce the thesis
+- Incorporate COLOR PALETTE if provided
+
+Establish clear composition and perspective:
+- Honor the COMPOSITION directive for framing and vantage point
+- Use environmental storytelling (objects, weathering, traces) to convey history
+- The SETTING provides world context but the subject is the focus
+
+Create specific visual instructions: Rather than listing adjectives, use concrete visual language: "weathered by decades of X," "visible scars of Y," "rendered in the style of Z"
+
+Respect the AVOID list: These are hard constraints—elements that break the visual language.
+
+Condense to a single, authoritative prompt: Output should be 150-300 words, reading as clear artistic direction that could be handed to a concept artist—not a bulleted list.
+{{globalImageRules}}
 Original prompt:
 {{prompt}}`;
 
@@ -98,6 +117,8 @@ const DEFAULT_CONFIG = {
   requireDescription: false,
   useClaudeForImagePrompt: false,
   claudeImagePromptTemplate: DEFAULT_IMAGE_PROMPT_TEMPLATE,
+  // Global image rules - domain-specific constraints injected into Claude image prompt
+  globalImageRules: '',
   // Description generation options
   minEventSignificance: 0.25, // Include events above 'low' threshold
 };
@@ -763,6 +784,7 @@ export default function IlluminatorRemote({
         // Multishot prompting options
         useClaudeForImagePrompt: config.useClaudeForImagePrompt,
         claudeImagePromptTemplate: config.claudeImagePromptTemplate,
+        globalImageRules: config.globalImageRules,
         // Per-call LLM model settings (resolved from localStorage)
         llmCallSettings: getResolvedLLMCallSettings(),
       });

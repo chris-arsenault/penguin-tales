@@ -51,6 +51,10 @@ export interface EnrichmentResult {
   actualCost?: number;
   inputTokens?: number;
   outputTokens?: number;
+  // Image dimensions for aspect-aware display
+  width?: number;
+  height?: number;
+  aspect?: 'portrait' | 'landscape' | 'square';
   // Debug info (persisted for description enrichments)
   debug?: NetworkDebugInfo;
   /** Debug info for description chain (narrative → thesis → traits) */
@@ -110,6 +114,10 @@ export interface EntityEnrichment {
     actualCost?: number;
     inputTokens?: number;  // GPT Image models return token usage
     outputTokens?: number;
+    // Image dimensions for aspect-aware display
+    width?: number;
+    height?: number;
+    aspect?: 'portrait' | 'landscape' | 'square';
   };
   entityChronicle?: {
     chronicleId: string;  // Reference to stored chronicle in chronicleStore
@@ -137,6 +145,10 @@ export interface EnrichmentTaskBase {
   simulationRunId: string;
   type: EnrichmentType;
   prompt: string;
+  /** Per-task image size override (uses global config if not set) */
+  imageSize?: string;
+  /** Per-task image quality override (uses global config if not set) */
+  imageQuality?: string;
   // For entityChronicle tasks
   chronicleContext?: ChronicleGenerationContext;
   chronicleStep?: ChronicleStep;
@@ -357,6 +369,10 @@ export function applyEnrichmentResult(
           actualCost: result.actualCost,
           inputTokens: result.inputTokens,
           outputTokens: result.outputTokens,
+          // Image dimensions for aspect-aware display
+          width: result.width,
+          height: result.height,
+          aspect: result.aspect,
         },
       },
     };

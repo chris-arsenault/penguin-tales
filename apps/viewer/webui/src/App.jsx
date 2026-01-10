@@ -352,6 +352,14 @@ export default function App() {
   // Requested page for Chronicler (set by cross-MFE navigation, cleared after use)
   const [chroniclerRequestedPage, setChroniclerRequestedPage] = useState(null);
 
+  // Track narrative history chunk loading status for features that depend on complete data
+  const [narrativeHistoryStatus, setNarrativeHistoryStatus] = useState({
+    loading: false,
+    totalExpected: 0,
+    chunksLoaded: 0,
+    chunksTotal: 0,
+  });
+
   // Listen for cross-MFE navigation events (e.g., Archivist -> Chronicler)
   useEffect(() => {
     const handleCrossNavigation = (e) => {
@@ -394,7 +402,8 @@ export default function App() {
       }
       const coreUrl = resolveAssetUrl(corePath, manifestBaseUrl);
       setBundleRequestUrl(coreUrl);
-      const data = await fetchJson(coreUrl, { cache: 'no-store' });
+      // Core bundle has content hash in filename - safe to cache aggressively
+      const data = await fetchJson(coreUrl);
       if (sequence !== loadSequence.current) return;
 
       const normalized = normalizeBundle(data, coreUrl);
@@ -412,6 +421,14 @@ export default function App() {
         : [];
       if (chunkFiles.length > 0) {
         setChunkPlan({ baseUrl: manifestBaseUrl, files: chunkFiles });
+        // Initialize loading status for features that depend on complete narrative history
+        const totalExpected = manifest?.chunks?.narrativeHistory?.totalEvents ?? 0;
+        setNarrativeHistoryStatus({
+          loading: true,
+          totalExpected,
+          chunksLoaded: 0,
+          chunksTotal: chunkFiles.length,
+        });
       }
       return;
     } catch (err) {
@@ -462,6 +479,9 @@ export default function App() {
     const sequence = loadSequence.current;
 
     const loadChunks = async () => {
+      let chunksLoaded = 0;
+      const chunksTotal = chunkPlan.files.length;
+
       for (const file of chunkPlan.files) {
         // Only check sequence (not cancelled) - we want to complete loading even across re-renders
         if (sequence !== loadSequence.current) return;
@@ -469,13 +489,16 @@ export default function App() {
         if (!chunkPath) continue;
         const chunkUrl = resolveAssetUrl(chunkPath, chunkPlan.baseUrl);
         try {
-          const response = await fetch(chunkUrl, { cache: 'force-cache' });
+          // Chunk files have content hash in filename - safe to cache aggressively
+          const response = await fetch(chunkUrl);
           if (!response.ok) {
             console.warn(`Viewer: narrativeHistory chunk fetch failed (${response.status}).`, chunkUrl);
+            chunksLoaded++;
             continue;
           }
           const payload = await response.json();
           const items = extractChunkItems(payload);
+          chunksLoaded++;
           if (!items.length) continue;
           if (sequence !== loadSequence.current) return;
 
@@ -492,10 +515,24 @@ export default function App() {
               },
             };
           });
+
+          // Update loading progress
+          setNarrativeHistoryStatus((prev) => ({
+            ...prev,
+            chunksLoaded,
+          }));
         } catch (chunkError) {
           console.warn('Viewer: failed to load narrativeHistory chunk.', chunkError);
+          chunksLoaded++;
         }
       }
+
+      // Mark loading complete
+      setNarrativeHistoryStatus((prev) => ({
+        ...prev,
+        loading: false,
+        chunksLoaded: chunksTotal,
+      }));
     };
 
     const scheduleIdle = window.requestIdleCallback
@@ -683,6 +720,7 @@ export default function App() {
             staticPages={bundle.staticPages}
             requestedPageId={chroniclerRequestedPage}
             onRequestedPageConsumed={() => setChroniclerRequestedPage(null)}
+            narrativeHistoryLoading={narrativeHistoryStatus.loading}
           />
         </div>
       </main>

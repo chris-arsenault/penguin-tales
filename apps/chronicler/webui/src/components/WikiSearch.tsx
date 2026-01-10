@@ -7,71 +7,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import type { WikiPage } from '../types/world.ts';
-
-const colors = {
-  bgPrimary: '#0a1929',
-  bgSecondary: '#1e3a5f',
-  bgTertiary: '#2d4a6f',
-  border: 'rgba(59, 130, 246, 0.3)',
-  textPrimary: '#ffffff',
-  textSecondary: '#93c5fd',
-  textMuted: '#60a5fa',
-  accent: '#10b981',
-};
-
-const styles = {
-  container: {
-    position: 'relative' as const,
-  },
-  input: {
-    width: '100%',
-    padding: '10px 12px',
-    fontSize: '13px',
-    backgroundColor: colors.bgTertiary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '6px',
-    color: colors.textPrimary,
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-  },
-  dropdown: {
-    position: 'absolute' as const,
-    top: '100%',
-    left: 0,
-    right: 0,
-    marginTop: '4px',
-    backgroundColor: colors.bgSecondary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '6px',
-    maxHeight: '300px',
-    overflow: 'auto',
-    zIndex: 100,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-  },
-  result: {
-    display: 'block',
-    width: '100%',
-    padding: '10px 12px',
-    fontSize: '13px',
-    color: colors.textPrimary,
-    backgroundColor: 'transparent',
-    border: 'none',
-    borderBottom: `1px solid ${colors.border}`,
-    textAlign: 'left' as const,
-    cursor: 'pointer',
-  },
-  resultType: {
-    fontSize: '11px',
-    color: colors.textMuted,
-    marginLeft: '8px',
-  },
-  noResults: {
-    padding: '12px',
-    fontSize: '13px',
-    color: colors.textMuted,
-    textAlign: 'center' as const,
-  },
-};
+import styles from './WikiSearch.module.css';
 
 interface WikiSearchProps {
   pages: WikiPage[];
@@ -159,7 +95,7 @@ export default function WikiSearch({
   }, [results]);
 
   return (
-    <div ref={containerRef} style={styles.container}>
+    <div ref={containerRef} className={styles.container}>
       <input
         type="text"
         placeholder="Search..."
@@ -170,27 +106,16 @@ export default function WikiSearch({
         }}
         onFocus={() => setIsOpen(true)}
         onKeyDown={handleKeyDown}
-        style={styles.input}
+        className={styles.input}
       />
 
       {isOpen && query.length >= 2 && (
-        <div style={{
-          ...styles.dropdown,
-          ...(expandDirection === 'up' ? {
-            top: 'auto',
-            bottom: '100%',
-            marginTop: 0,
-            marginBottom: '4px',
-          } : {}),
-        }}>
+        <div className={expandDirection === 'up' ? styles.dropdownUp : styles.dropdown}>
           {results.length > 0 ? (
             results.map((result, index) => (
               <button
                 key={result.item.id}
-                style={{
-                  ...styles.result,
-                  backgroundColor: index === selectedIndex ? colors.bgTertiary : 'transparent',
-                }}
+                className={index === selectedIndex ? styles.resultSelected : styles.result}
                 onClick={() => {
                   onSelect(result.item.id);
                   setIsOpen(false);
@@ -199,11 +124,11 @@ export default function WikiSearch({
                 onMouseEnter={() => setSelectedIndex(index)}
               >
                 {result.item.title}
-                <span style={styles.resultType}>{result.item.type}</span>
+                <span className={styles.resultType}>{result.item.type}</span>
               </button>
             ))
           ) : (
-            <div style={styles.noResults}>No results found</div>
+            <div className={styles.noResults}>No results found</div>
           )}
         </div>
       )}

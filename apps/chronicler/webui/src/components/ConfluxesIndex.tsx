@@ -5,6 +5,7 @@
 
 import { useState, useMemo } from 'react';
 import type { PageIndexEntry } from '../types/world.ts';
+import styles from './ConfluxesIndex.module.css';
 
 /**
  * Map internal source types to in-universe terminology:
@@ -22,173 +23,11 @@ function getSourceTypeLabel(sourceType: string): string {
   return SOURCE_TYPE_LABELS[sourceType] || sourceType;
 }
 
-const colors = {
-  bgPrimary: '#0a1929',
-  bgSecondary: '#1e3a5f',
-  bgTertiary: '#2d4a6f',
-  border: 'rgba(59, 130, 246, 0.3)',
-  textPrimary: '#ffffff',
-  textSecondary: '#93c5fd',
-  textMuted: '#60a5fa',
-  accent: '#10b981',
-  accentSecondary: '#f59e0b',
-  accentTertiary: '#8b5cf6',
-};
-
-const styles = {
-  container: {
-    maxWidth: '900px',
-    margin: '0 auto',
-  },
-  heading: {
-    fontSize: '28px',
-    fontWeight: 600,
-    color: colors.textPrimary,
-    marginBottom: '8px',
-  },
-  description: {
-    fontSize: '14px',
-    color: colors.textSecondary,
-    marginBottom: '24px',
-    lineHeight: 1.6,
-  },
-  statsBar: {
-    display: 'flex',
-    gap: '16px',
-    marginBottom: '24px',
-    flexWrap: 'wrap' as const,
-  },
-  statItem: {
-    backgroundColor: colors.bgSecondary,
-    padding: '12px 16px',
-    borderRadius: '8px',
-    border: `1px solid ${colors.border}`,
-  },
-  statValue: {
-    fontSize: '24px',
-    fontWeight: 700,
-    color: colors.accent,
-    display: 'block',
-  },
-  statLabel: {
-    fontSize: '12px',
-    color: colors.textMuted,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-  },
-  filterBar: {
-    display: 'flex',
-    gap: '8px',
-    marginBottom: '16px',
-  },
-  filterButton: {
-    padding: '6px 12px',
-    fontSize: '13px',
-    borderRadius: '6px',
-    border: `1px solid ${colors.border}`,
-    backgroundColor: 'transparent',
-    color: colors.textSecondary,
-    cursor: 'pointer',
-  },
-  filterButtonActive: {
-    backgroundColor: colors.accent,
-    color: colors.bgPrimary,
-    border: `1px solid ${colors.accent}`,
-  },
-  checkboxRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '16px',
-    fontSize: '13px',
-    color: colors.textSecondary,
-  },
-  checkbox: {
-    width: '16px',
-    height: '16px',
-    cursor: 'pointer',
-    accentColor: colors.accent,
-  },
-  frequentNote: {
-    fontSize: '12px',
-    color: colors.textMuted,
-    fontStyle: 'italic',
-  },
-  list: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '12px',
-  },
-  item: {
-    textAlign: 'left' as const,
-    padding: '16px',
-    backgroundColor: colors.bgSecondary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '8px',
-    cursor: 'pointer',
-    transition: 'border-color 0.15s',
-    width: '100%',
-  },
-  itemHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '12px',
-    marginBottom: '8px',
-  },
-  itemTitle: {
-    fontSize: '16px',
-    fontWeight: 600,
-    color: colors.textPrimary,
-  },
-  badge: {
-    fontSize: '11px',
-    fontWeight: 600,
-    color: colors.bgPrimary,
-    padding: '2px 8px',
-    borderRadius: '999px',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-  },
-  badgeSystem: {
-    backgroundColor: colors.accent,
-  },
-  badgeAction: {
-    backgroundColor: colors.accentSecondary,
-  },
-  badgeTemplate: {
-    backgroundColor: colors.accentTertiary,
-  },
-  itemMeta: {
-    fontSize: '12px',
-    color: colors.textMuted,
-    display: 'flex',
-    gap: '16px',
-    flexWrap: 'wrap' as const,
-  },
-  metaValue: {
-    color: colors.textSecondary,
-    fontWeight: 500,
-  },
-  itemSummary: {
-    fontSize: '13px',
-    color: colors.textSecondary,
-    marginTop: '8px',
-    lineHeight: 1.5,
-  },
-  empty: {
-    padding: '24px',
-    textAlign: 'center' as const,
-    color: colors.textMuted,
-    backgroundColor: colors.bgSecondary,
-    borderRadius: '8px',
-    border: `1px solid ${colors.border}`,
-  },
-};
-
 interface ConfluxesIndexProps {
   confluxPages: PageIndexEntry[];
   onNavigate: (pageId: string) => void;
+  /** Whether narrative history chunks are still loading */
+  narrativeHistoryLoading?: boolean;
 }
 
 type FilterType = 'all' | 'system' | 'action' | 'template';
@@ -196,6 +35,7 @@ type FilterType = 'all' | 'system' | 'action' | 'template';
 export default function ConfluxesIndex({
   confluxPages,
   onNavigate,
+  narrativeHistoryLoading = false,
 }: ConfluxesIndexProps) {
   const [filter, setFilter] = useState<FilterType>('all');
   const [showFrequent, setShowFrequent] = useState(false);
@@ -260,58 +100,74 @@ export default function ConfluxesIndex({
       .flatMap(p => p.linkedEntities)
   ).size;
 
-  const getBadgeStyle = (sourceType: string) => {
+  const getBadgeClassName = (sourceType: string) => {
     switch (sourceType) {
-      case 'system': return { ...styles.badge, ...styles.badgeSystem };
-      case 'action': return { ...styles.badge, ...styles.badgeAction };
-      case 'template': return { ...styles.badge, ...styles.badgeTemplate };
+      case 'system': return styles.badgeSystem;
+      case 'action': return styles.badgeAction;
+      case 'template': return styles.badgeTemplate;
       default: return styles.badge;
     }
   };
 
-  if (totalConfluxes === 0) {
+  // Show loading state while narrative history chunks are loading
+  if (narrativeHistoryLoading) {
     return (
-      <div style={styles.container}>
-        <h1 style={styles.heading}>Confluxes</h1>
-        <p style={styles.description}>
+      <div className={styles.container}>
+        <h1 className={styles.heading}>Confluxes</h1>
+        <p className={styles.description}>
           Confluxes are the recurring forces and phenomena that shape entity fates in this world.
         </p>
-        <div style={styles.empty}>No confluxes detected. Run a simulation to generate narrative history.</div>
+        <div className={styles.loading}>
+          <div className={styles.loadingSpinner} />
+          <div>Loading narrative history...</div>
+          <div className={styles.loadingHint}>
+            Conflux data depends on complete narrative history. Please wait while the data loads.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (totalConfluxes === 0) {
+    return (
+      <div className={styles.container}>
+        <h1 className={styles.heading}>Confluxes</h1>
+        <p className={styles.description}>
+          Confluxes are the recurring forces and phenomena that shape entity fates in this world.
+        </p>
+        <div className={styles.empty}>No confluxes detected. Run a simulation to generate narrative history.</div>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.heading}>Confluxes</h1>
-      <p style={styles.description}>
+    <div className={styles.container}>
+      <h1 className={styles.heading}>Confluxes</h1>
+      <p className={styles.description}>
         Confluxes are the rare forces and phenomena that shape entity fates in this world.
         Sorted by rarity - the most unusual manifestations appear first.
       </p>
 
-      <div style={styles.statsBar}>
-        <div style={styles.statItem}>
-          <span style={styles.statValue}>{filtered.length}</span>
-          <span style={styles.statLabel}>Rare Confluxes</span>
+      <div className={styles.statsBar}>
+        <div className={styles.statItem}>
+          <span className={styles.statValue}>{filtered.length}</span>
+          <span className={styles.statLabel}>Rare Confluxes</span>
         </div>
-        <div style={styles.statItem}>
-          <span style={styles.statValue}>{totalConfluxes}</span>
-          <span style={styles.statLabel}>Total</span>
+        <div className={styles.statItem}>
+          <span className={styles.statValue}>{totalConfluxes}</span>
+          <span className={styles.statLabel}>Total</span>
         </div>
-        <div style={styles.statItem}>
-          <span style={styles.statValue}>{totalTouched}</span>
-          <span style={styles.statLabel}>Entities Touched</span>
+        <div className={styles.statItem}>
+          <span className={styles.statValue}>{totalTouched}</span>
+          <span className={styles.statLabel}>Entities Touched</span>
         </div>
       </div>
 
-      <div style={styles.filterBar}>
+      <div className={styles.filterBar}>
         {(['all', 'system', 'action', 'template'] as FilterType[]).map((f) => (
           <button
             key={f}
-            style={{
-              ...styles.filterButton,
-              ...(filter === f ? styles.filterButtonActive : {}),
-            }}
+            className={filter === f ? styles.filterButtonActive : styles.filterButton}
             onClick={() => setFilter(f)}
           >
             {f === 'all' ? 'All' : getSourceTypeLabel(f) + 's'}
@@ -319,47 +175,47 @@ export default function ConfluxesIndex({
         ))}
       </div>
 
-      <div style={styles.checkboxRow}>
+      <div className={styles.checkboxRow}>
         <input
           type="checkbox"
           id="showFrequent"
           checked={showFrequent}
           onChange={(e) => setShowFrequent(e.target.checked)}
-          style={styles.checkbox}
+          className={styles.checkbox}
         />
         <label htmlFor="showFrequent">
           Show frequent confluxes
           {!showFrequent && hiddenCount > 0 && (
-            <span style={styles.frequentNote}> ({hiddenCount} hidden)</span>
+            <span className={styles.frequentNote}> ({hiddenCount} hidden)</span>
           )}
         </label>
       </div>
 
-      <div style={styles.list}>
+      <div className={styles.list}>
         {filtered.map((page) => {
           const conflux = page.conflux!;
           return (
             <button
               key={page.id}
-              style={styles.item}
+              className={styles.item}
               onClick={() => onNavigate(page.id)}
             >
-              <div style={styles.itemHeader}>
-                <span style={styles.itemTitle}>{page.title}</span>
-                <span style={getBadgeStyle(conflux.sourceType)}>
+              <div className={styles.itemHeader}>
+                <span className={styles.itemTitle}>{page.title}</span>
+                <span className={getBadgeClassName(conflux.sourceType)}>
                   {getSourceTypeLabel(conflux.sourceType)}
                 </span>
               </div>
-              <div style={styles.itemMeta}>
+              <div className={styles.itemMeta}>
                 <span>
-                  <span style={styles.metaValue}>{conflux.manifestations}</span> manifestations
+                  <span className={styles.metaValue}>{conflux.manifestations}</span> manifestations
                 </span>
                 <span>
-                  <span style={styles.metaValue}>{conflux.touchedCount}</span> entities touched
+                  <span className={styles.metaValue}>{conflux.touchedCount}</span> entities touched
                 </span>
               </div>
               {page.summary && (
-                <div style={styles.itemSummary}>{page.summary}</div>
+                <div className={styles.itemSummary}>{page.summary}</div>
               )}
             </button>
           );

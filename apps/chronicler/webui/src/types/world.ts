@@ -81,6 +81,9 @@ export interface LoreData {
   records: LoreRecord[];
 }
 
+/** Image aspect ratio classification */
+export type ImageAspect = 'portrait' | 'landscape' | 'square';
+
 export interface EntityImage {
   entityId: string;
   entityName: string;
@@ -92,6 +95,12 @@ export interface EntityImage {
   thumbPath?: string;
   /** Optimized full-size path (WebP) - for lightbox view */
   fullPath?: string;
+  /** Image width in pixels */
+  width?: number;
+  /** Image height in pixels */
+  height?: number;
+  /** Aspect ratio classification: portrait (<0.9), square (0.9-1.1), landscape (>1.1) */
+  aspect?: ImageAspect;
 }
 
 export interface ImageMetadata {
@@ -276,6 +285,12 @@ export interface WikiImage {
   entityId: string;
   path: string;
   caption?: string;
+  /** Image width in pixels */
+  width?: number;
+  /** Image height in pixels */
+  height?: number;
+  /** Aspect ratio classification for display */
+  aspect?: ImageAspect;
 }
 
 export interface WikiCategory {

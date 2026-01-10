@@ -151,6 +151,26 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange 
         </div>
       </div>
 
+      {/* Species Constraint */}
+      <div className="illuminator-card">
+        <div className="illuminator-card-header">
+          <h2 className="illuminator-card-title">Species Constraint</h2>
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+          Rule for what species can appear in generated images. This is added as a SPECIES REQUIREMENT
+          at the top of image prompts to ensure all depicted figures match your world's inhabitants.
+        </p>
+        <div className="illuminator-form-group">
+          <LocalTextArea
+            value={worldContext.speciesConstraint || ''}
+            onChange={(value) => updateField('speciesConstraint', value)}
+            placeholder="e.g., All depicted figures must be penguins or orcas. No humans exist in this world."
+            className="illuminator-input"
+            style={TONE_TEXTAREA_STYLE}
+          />
+        </div>
+      </div>
+
       {/* Canon Facts */}
       <div className="illuminator-card">
         <div className="illuminator-card-header">

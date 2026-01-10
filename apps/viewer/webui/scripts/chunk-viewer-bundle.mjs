@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
-import { dirname, join, resolve, basename, extname } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 
 const DEFAULT_INPUT = 'dist/bundles/default/bundle.json';
 const DEFAULT_TARGET_BYTES = 500_000;
@@ -33,6 +34,14 @@ function cloneBundle(bundle) {
     return structuredClone(bundle);
   }
   return JSON.parse(JSON.stringify(bundle));
+}
+
+/**
+ * Generate a short content hash for cache busting.
+ * Uses first 8 chars of SHA-256 hex digest.
+ */
+function contentHash(data) {
+  return createHash('sha256').update(data).digest('hex').slice(0, 8);
 }
 
 /**
@@ -169,6 +178,13 @@ async function main() {
   // Apply image optimizations if manifest exists
   const imagesOptimized = await applyImageOptimizations(coreBundle, outputDir);
 
+  // Generate core bundle with content hash in filename
+  const coreJson = JSON.stringify(coreBundle);
+  const coreHash = contentHash(coreJson);
+  const coreFilename = `bundle.core.${coreHash}.json`;
+  await writeFile(join(outputDir, coreFilename), coreJson, 'utf8');
+
+  // Process narrative history chunks with content hashes
   const chunks = chunkNarrativeHistory(narrativeHistory, targetBytes);
   const chunkDir = join(outputDir, 'chunks');
   await mkdir(chunkDir, { recursive: true });
@@ -180,10 +196,11 @@ async function main() {
   for (let index = 0; index < chunks.length; index += 1) {
     const chunk = chunks[index];
     const suffix = String(index).padStart(width, '0');
-    const filename = `narrativeHistory-${suffix}.json`;
+    const payload = JSON.stringify(chunk.items);
+    const chunkHash = contentHash(payload);
+    const filename = `narrativeHistory-${suffix}.${chunkHash}.json`;
     const relativePath = `chunks/${filename}`;
     const chunkPath = join(chunkDir, filename);
-    const payload = JSON.stringify(chunk.items);
     await writeFile(chunkPath, payload, 'utf8');
     totalChunkBytes += chunk.bytes;
     files.push({
@@ -195,11 +212,12 @@ async function main() {
     });
   }
 
+  // Manifest uses no-store caching, contains hashed filenames for cache-busted assets
   const manifest = {
     format: 'viewer-bundle-manifest',
-    version: 3, // v3: adds image optimization with thumbnails
+    version: 4, // v4: content-hashed filenames for immutable caching
     generatedAt: new Date().toISOString(),
-    core: 'bundle.core.json',
+    core: coreFilename,
     fallback: 'bundle.json',
     chunks: {
       narrativeHistory: {
@@ -215,16 +233,15 @@ async function main() {
     } : undefined,
   };
 
-  await writeFile(join(outputDir, 'bundle.core.json'), JSON.stringify(coreBundle), 'utf8');
   await writeFile(join(outputDir, 'bundle.manifest.json'), JSON.stringify(manifest), 'utf8');
 
   // Calculate size reduction from stripping enrichment debug data
   const originalSize = Buffer.byteLength(raw, 'utf8');
-  const coreSize = Buffer.byteLength(JSON.stringify(coreBundle), 'utf8');
+  const coreSize = Buffer.byteLength(coreJson, 'utf8');
 
   console.log(`Viewer bundle processed:`);
   console.log(`  - Original: ${(originalSize / 1024 / 1024).toFixed(2)} MB`);
-  console.log(`  - Core (stripped): ${(coreSize / 1024).toFixed(0)} KB`);
+  console.log(`  - Core: ${coreFilename} (${(coreSize / 1024).toFixed(0)} KB)`);
   console.log(`  - Narrative chunks: ${files.length} files, ${(totalChunkBytes / 1024 / 1024).toFixed(2)} MB`);
   console.log(`  - Enrichment debug data stripped (kept aliases only)`);
   if (imagesOptimized > 0) {

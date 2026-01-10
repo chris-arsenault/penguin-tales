@@ -1,9 +1,9 @@
 /* DiscoveryStory Component Styles */
 
 .discovery-story {
-  margin-top: 16px;
-  border: 2px solid rgb(217 119 6 / 40%);
-  border-radius: 8px;
+  margin-top: var(--spacing-xl);
+  border: 2px solid var(--color-bg-orange-border);
+  border-radius: var(--radius-lg);
   background: linear-gradient(135deg, rgb(217 119 6 / 5%) 0%, rgb(180 83 9 / 5%) 100%);
   overflow: hidden;
 }
@@ -11,90 +11,90 @@
 .discovery-story-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   background: linear-gradient(135deg, rgb(217 119 6 / 15%) 0%, rgb(180 83 9 / 15%) 100%);
   border-bottom: 1px solid rgb(217 119 6 / 20%);
 }
 
 .discovery-story-icon {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   line-height: 1;
 }
 
 .discovery-story-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #fdba74;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-orange-300);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .discovery-story-meta {
-  padding: 10px 12px;
-  background: rgb(30 58 95 / 40%);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-bg-blue-40);
   border-bottom: 1px solid rgb(217 119 6 / 15%);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--spacing-sm);
 }
 
 .discovery-story-meta-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-xs);
 }
 
 .discovery-story-meta-label {
-  color: #fdba74;
-  font-weight: 600;
+  color: var(--color-orange-300);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   min-width: 100px;
 }
 
 .discovery-story-meta-value {
-  color: #fed7aa;
-  font-weight: 500;
-  font-family: monospace;
+  color: var(--color-orange-200);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-mono);
 }
 
 .discovery-story-explorer-link {
   background: none;
   border: none;
   padding: 0;
-  color: #fed7aa;
-  font-weight: 600;
-  font-family: monospace;
+  color: var(--color-orange-200);
+  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-mono);
   text-decoration: underline;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color var(--transition-normal);
 }
 
 .discovery-story-explorer-link:hover {
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 .discovery-story-type-badge {
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 600;
+  padding: 2px var(--spacing-md);
+  border-radius: var(--radius-2xl);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
 }
 
 .discovery-story-type-pressure {
-  background: rgb(239 68 68 / 20%);
-  border: 1px solid rgb(239 68 68 / 40%);
-  color: #fca5a5;
+  background: var(--color-bg-red-20);
+  border: 1px solid var(--color-bg-red-border);
+  color: var(--color-red-300);
 }
 
 .discovery-story-type-chain {
-  background: rgb(139 92 246 / 20%);
-  border: 1px solid rgb(139 92 246 / 40%);
-  color: #c4b5fd;
+  background: var(--color-bg-purple-20);
+  border: 1px solid var(--color-bg-purple-border);
+  color: var(--color-purple-300);
 }
 
 .discovery-story-section {
@@ -109,12 +109,12 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   background: rgb(217 119 6 / 5%);
   border: none;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--transition-normal);
   text-align: left;
 }
 
@@ -123,28 +123,28 @@
 }
 
 .discovery-story-section-icon {
-  color: #fdba74;
-  font-size: 10px;
+  color: var(--color-orange-300);
+  font-size: var(--font-size-2xs);
   width: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .discovery-story-section-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #fdba74;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-orange-300);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .discovery-story-section-content {
-  padding: 12px;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 13px;
-  line-height: 1.7;
-  color: #fed7aa;
+  padding: var(--spacing-lg);
+  font-family: var(--font-serif);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-loose);
+  color: var(--color-orange-200);
   font-style: italic;
-  background: rgb(10 25 41 / 80%);
+  background: var(--color-bg-deep-80);
 }
 
 /* Modal Mode */
@@ -155,8 +155,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2500;
-  padding: 20px;
+  z-index: var(--z-modal-overlay);
+  padding: var(--spacing-2xl);
 }
 
 .discovery-story-modal-content {
@@ -164,37 +164,37 @@
   width: 100%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 50%);
-  background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%);
+  box-shadow: var(--shadow-2xl);
+  background: var(--gradient-bg-header);
 }
 
 .discovery-story-footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 16px 12px;
+  padding: var(--spacing-xl) var(--spacing-lg);
   border-top: 1px solid rgb(217 119 6 / 20%);
   background: rgb(217 119 6 / 5%);
 }
 
 .discovery-story-close {
-  padding: 8px 24px;
+  padding: var(--spacing-md) var(--spacing-3xl);
   background: linear-gradient(135deg, rgb(217 119 6 / 30%) 0%, rgb(180 83 9 / 30%) 100%);
   border: 1px solid rgb(217 119 6 / 50%);
-  border-radius: 6px;
-  color: #fdba74;
-  font-size: 13px;
-  font-weight: 600;
+  border-radius: var(--radius-md);
+  color: var(--color-orange-300);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-normal);
 }
 
 .discovery-story-close:hover {
   background: linear-gradient(135deg, rgb(217 119 6 / 40%) 0%, rgb(180 83 9 / 40%) 100%);
   border-color: rgb(217 119 6 / 70%);
-  color: #fff;
+  color: var(--color-text-primary);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgb(0 0 0 / 30%);
+  box-shadow: var(--shadow-md);
 }

@@ -206,6 +206,19 @@ const IMAGE_EXTENSION_BY_TYPE = {
   'image/gif': 'gif',
   'image/svg+xml': 'svg',
 };
+const EXPORT_CANCEL_ERROR_NAME = 'ExportCanceledError';
+
+function createExportCanceledError() {
+  const error = new Error('Export canceled');
+  error.name = EXPORT_CANCEL_ERROR_NAME;
+  return error;
+}
+
+function throwIfExportCanceled(shouldCancel) {
+  if (shouldCancel && shouldCancel()) {
+    throw createExportCanceledError();
+  }
+}
 
 function mimeTypeToExtension(mimeType) {
   if (!mimeType) return 'bin';
@@ -260,8 +273,16 @@ function collectReferencedImageIds(worldData, chronicles, staticPages) {
   return ids;
 }
 
-async function buildBundleImageAssets({ projectId, worldData, chronicles, staticPages }) {
+async function buildBundleImageAssets({
+  projectId,
+  worldData,
+  chronicles,
+  staticPages,
+  shouldCancel,
+  onProgress,
+}) {
   const imageIds = collectReferencedImageIds(worldData, chronicles, staticPages);
+  const totalImages = imageIds.size;
   if (imageIds.size === 0) {
     return { imageData: null, images: null, imageFiles: [] };
   }
@@ -278,14 +299,27 @@ async function buildBundleImageAssets({ projectId, worldData, chronicles, static
   const imageFiles = [];
   const images = {};
   const usedNames = new Map();
+  let processed = 0;
+
+  if (onProgress) {
+    onProgress({ phase: 'images', processed, total: totalImages });
+  }
 
   for (const imageId of imageIds) {
+    throwIfExportCanceled(shouldCancel);
     let record = imageById.get(imageId);
     if (!record) {
       record = await getImageMetadata(imageId);
     }
     const blob = await getImageBlob(imageId);
-    if (!blob) continue;
+    throwIfExportCanceled(shouldCancel);
+    processed += 1;
+    if (!blob) {
+      if (onProgress) {
+        onProgress({ phase: 'images', processed, total: totalImages });
+      }
+      continue;
+    }
 
     const ext = mimeTypeToExtension(record?.mimeType || blob.type);
     const baseName = sanitizeFileName(imageId, `image-${imageResults.length + 1}`);
@@ -316,6 +350,9 @@ async function buildBundleImageAssets({ projectId, worldData, chronicles, static
     }
 
     imageResults.push(imageEntry);
+    if (onProgress) {
+      onProgress({ phase: 'images', processed, total: totalImages });
+    }
   }
 
   if (imageResults.length === 0) {
@@ -438,6 +475,8 @@ export default function App() {
   const [slots, setSlots] = useState({});
   const [activeSlotIndex, setActiveSlotIndex] = useState(0);
   const [exportModalSlotIndex, setExportModalSlotIndex] = useState(null);
+  const [exportBundleStatus, setExportBundleStatus] = useState({ state: 'idle', detail: '' });
+  const exportCancelRef = useRef(false);
   const exportModalMouseDown = useRef(false);
   const simulationOwnerRef = useRef(null);
   // Track whether we're loading from a saved slot (to skip auto-save to scratch)
@@ -518,11 +557,14 @@ export default function App() {
   }, [activeTab]);
 
   const openExportModal = useCallback((slotIndex) => {
+    exportCancelRef.current = false;
+    setExportBundleStatus({ state: 'idle', detail: '' });
     setExportModalSlotIndex(slotIndex);
   }, []);
 
   const closeExportModal = useCallback(() => {
     setExportModalSlotIndex(null);
+    setExportBundleStatus({ state: 'idle', detail: '' });
   }, []);
 
   const handleExportModalMouseDown = useCallback((e) => {
@@ -530,9 +572,16 @@ export default function App() {
   }, []);
 
   const handleExportModalClick = useCallback((e) => {
+    if (exportBundleStatus.state === 'working') return;
     if (exportModalMouseDown.current && e.target === e.currentTarget) {
       closeExportModal();
     }
+  }, [closeExportModal, exportBundleStatus.state]);
+
+  const handleCancelExportBundle = useCallback(() => {
+    exportCancelRef.current = true;
+    setExportBundleStatus({ state: 'idle', detail: '' });
+    closeExportModal();
   }, [closeExportModal]);
 
   useEffect(() => {
@@ -1289,6 +1338,10 @@ export default function App() {
       return;
     }
 
+    const shouldCancel = () => exportCancelRef.current;
+    exportCancelRef.current = false;
+    setExportBundleStatus({ state: 'working', detail: 'Gathering run data...' });
+
     try {
       const simulationRunId = worldData?.metadata?.simulationRunId;
       const [loreData, staticPagesRaw, chroniclesRaw] = await Promise.all([
@@ -1299,6 +1352,8 @@ export default function App() {
           : getCompletedChroniclesForProject(currentProject.id),
       ]);
 
+      throwIfExportCanceled(shouldCancel);
+
       const staticPages = (staticPagesRaw || []).filter((page) => page.status === 'published');
       const chronicles = chroniclesRaw || [];
       const { imageData, images, imageFiles } = await buildBundleImageAssets({
@@ -1306,7 +1361,21 @@ export default function App() {
         worldData,
         chronicles,
         staticPages,
+        shouldCancel,
+        onProgress: ({ phase, processed, total }) => {
+          if (phase !== 'images') return;
+          setExportBundleStatus((prev) => (
+            prev.state === 'working'
+              ? { ...prev, detail: `Collecting images (${processed}/${total})...` }
+              : prev
+          ));
+        },
       });
+
+      throwIfExportCanceled(shouldCancel);
+      setExportBundleStatus((prev) => (
+        prev.state === 'working' ? { ...prev, detail: 'Packaging bundle...' } : prev
+      ));
 
       const exportTitle = slot.title || (slotIndex === 0 ? 'Scratch' : `Slot ${slotIndex}`);
       const safeBase = buildExportBase(exportTitle, `slot-${slotIndex}`);
@@ -1344,17 +1413,32 @@ export default function App() {
       }
 
       const zipBlob = await zip.generateAsync({ type: 'blob' });
+      throwIfExportCanceled(shouldCancel);
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
       link.download = `${safeBase || `slot-${slotIndex}`}.canonry-bundle.zip`;
       link.click();
       URL.revokeObjectURL(url);
+      closeExportModal();
     } catch (err) {
+      if (err?.name === EXPORT_CANCEL_ERROR_NAME) {
+        return;
+      }
       console.error('Failed to export bundle:', err);
       alert(err.message || 'Failed to export bundle');
+    } finally {
+      exportCancelRef.current = false;
+      setExportBundleStatus({ state: 'idle', detail: '' });
     }
-  }, [currentProject?.id, currentProject?.name, slots, activeSlotIndex, archivistData?.worldData]);
+  }, [
+    activeSlotIndex,
+    archivistData?.worldData,
+    closeExportModal,
+    currentProject?.id,
+    currentProject?.name,
+    slots,
+  ]);
 
   const handleExportSlot = useCallback((slotIndex) => {
     const slot = slots[slotIndex];
@@ -1399,6 +1483,7 @@ export default function App() {
   const exportModalTitle = exportModalSlot
     ? exportModalSlot.title || (exportModalSlotIndex === 0 ? 'Scratch' : `Slot ${exportModalSlotIndex}`)
     : 'Slot';
+  const isExportingBundle = exportBundleStatus.state === 'working';
 
   // Extract naming data for Name Forge (keyed by culture ID)
   const namingData = useMemo(() => {
@@ -1828,36 +1913,57 @@ export default function App() {
           <div className="modal modal-simple">
             <div className="modal-header">
               <div className="modal-title">Export {exportModalTitle}</div>
-              <button className="btn-close" onClick={closeExportModal}>×</button>
+              {!isExportingBundle && (
+                <button className="btn-close" onClick={closeExportModal}>×</button>
+              )}
             </div>
             <div className="modal-body">
-              <div style={{ color: colors.textSecondary, marginBottom: spacing.md }}>
-                Choose the export format for this run slot.
-              </div>
-              <div style={{ fontSize: typography.sizeSm, color: colors.textMuted }}>
-                Viewer bundles include chronicles, static pages, and referenced images.
-              </div>
+              {isExportingBundle ? (
+                <div className="modal-status">
+                  <div className="modal-spinner" aria-hidden="true" />
+                  <div>
+                    <div className="modal-status-title">Building viewer bundle</div>
+                    <div className="modal-status-subtitle">
+                      {exportBundleStatus.detail || 'This can take a few minutes for large image sets.'}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ color: colors.textSecondary, marginBottom: spacing.md }}>
+                    Choose the export format for this run slot.
+                  </div>
+                  <div style={{ fontSize: typography.sizeSm, color: colors.textMuted }}>
+                    Viewer bundles include chronicles, static pages, and referenced images.
+                  </div>
+                </>
+              )}
             </div>
             <div className="modal-actions">
-              <button className="btn-sm" onClick={closeExportModal}>Cancel</button>
-              <button
-                className="btn-sm"
-                onClick={() => {
-                  handleExportSlotDownload(exportModalSlotIndex);
-                  closeExportModal();
-                }}
-              >
-                Standard Export
-              </button>
-              <button
-                className="btn-sm btn-sm-primary"
-                onClick={() => {
-                  handleExportBundle(exportModalSlotIndex);
-                  closeExportModal();
-                }}
-              >
-                Viewer Bundle
-              </button>
+              {isExportingBundle ? (
+                <button className="btn-sm" onClick={handleCancelExportBundle}>Cancel Export</button>
+              ) : (
+                <>
+                  <button className="btn-sm" onClick={closeExportModal}>Cancel</button>
+                  <button
+                    className="btn-sm"
+                    onClick={() => {
+                      handleExportSlotDownload(exportModalSlotIndex);
+                      closeExportModal();
+                    }}
+                  >
+                    Standard Export
+                  </button>
+                  <button
+                    className="btn-sm btn-sm-primary"
+                    onClick={() => {
+                      handleExportBundle(exportModalSlotIndex);
+                    }}
+                  >
+                    Viewer Bundle
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

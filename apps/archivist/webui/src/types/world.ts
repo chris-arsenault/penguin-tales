@@ -98,12 +98,21 @@ export interface LoreData {
   records: (DescriptionLore | RelationshipBackstoryLore | EraNarrativeLore | ChainLinkLore | DiscoveryEventLore)[];
 }
 
+/** Image aspect ratio classification */
+export type ImageAspect = 'portrait' | 'landscape' | 'square';
+
 export interface EntityImage {
   entityId: string;
   entityName: string;
   entityKind: string;
   prompt: string;
   localPath: string;
+  /** Image width in pixels */
+  width?: number;
+  /** Image height in pixels */
+  height?: number;
+  /** Aspect ratio classification: portrait (<0.9), square (0.9-1.1), landscape (>1.1) */
+  aspect?: ImageAspect;
 }
 
 export interface ImageMetadata {

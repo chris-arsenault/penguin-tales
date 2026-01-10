@@ -43,6 +43,7 @@ export default function ChroniclerHost({
   staticPages,
   requestedPageId,
   onRequestedPageConsumed,
+  narrativeHistoryLoading,
 }) {
   return (
     <div style={styles.container}>
@@ -57,6 +58,7 @@ export default function ChroniclerHost({
           staticPages={staticPages}
           requestedPageId={requestedPageId}
           onRequestedPageConsumed={onRequestedPageConsumed}
+          narrativeHistoryLoading={narrativeHistoryLoading}
         />
       </Suspense>
     </div>

@@ -7,6 +7,7 @@
  * Accepts world data as props from the canonry shell.
  */
 
+import './styles/variables.css';
 import WikiExplorer from './components/WikiExplorer.tsx';
 import type { ChronicleRecord } from './lib/chronicleStorage.ts';
 import type { StaticPage } from './lib/staticPageStorage.ts';
@@ -24,6 +25,8 @@ export interface ChroniclerRemoteProps {
   requestedPageId?: string | null;
   /** Callback to signal that the requested page has been consumed */
   onRequestedPageConsumed?: () => void;
+  /** Whether narrative history chunks are still loading (affects confluxes, timelines) */
+  narrativeHistoryLoading?: boolean;
 }
 
 export default function ChroniclerRemote({
@@ -36,6 +39,7 @@ export default function ChroniclerRemote({
   staticPages,
   requestedPageId,
   onRequestedPageConsumed,
+  narrativeHistoryLoading = false,
 }: ChroniclerRemoteProps) {
   if (!worldData) {
     return (
@@ -73,6 +77,7 @@ export default function ChroniclerRemote({
       staticPages={staticPages}
       requestedPageId={requestedPageId}
       onRequestedPageConsumed={onRequestedPageConsumed}
+      narrativeHistoryLoading={narrativeHistoryLoading}
     />
   );
 }

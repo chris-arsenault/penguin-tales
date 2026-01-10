@@ -23,7 +23,7 @@ import type {
 } from '../lib/enrichmentTypes';
 import { applyEnrichmentResult } from '../lib/enrichmentTypes';
 import type { WorkerConfig, WorkerOutbound } from '../workers/enrichment.worker';
-import { createWorkerPool, type WorkerHandle } from '../lib/workerFactory';
+import { createWorkerPool, resetWorkerPool, type WorkerHandle } from '../lib/workerFactory';
 
 export interface EnrichedEntity {
   id: string;
@@ -71,6 +71,7 @@ export interface UseEnrichmentQueueReturn {
 // Cost weights for workload estimation
 const TEXT_TASK_WEIGHT = 1;
 const IMAGE_TASK_WEIGHT = 10;
+const MAX_AUTO_RECONNECT_ATTEMPTS = 1;
 
 interface WorkerState {
   worker: WorkerHandle;
@@ -149,6 +150,9 @@ export function useEnrichmentQueue(
   const numWorkersRef = useRef<number>(4);
   const projectIdRef = useRef<string | undefined>(projectId);
   const simulationRunIdRef = useRef<string | undefined>(simulationRunId);
+  const reconnectInProgressRef = useRef(false);
+  const autoReconnectAttemptsRef = useRef<Map<string, number>>(new Map());
+  const pendingAutoRetryRef = useRef<Set<string>>(new Set());
 
   // Keep projectId ref in sync
   useEffect(() => {
@@ -265,6 +269,9 @@ export function useEnrichmentQueue(
             workerState.currentTaskId = null;
           }
 
+          autoReconnectAttemptsRef.current.delete(result.id);
+          pendingAutoRetryRef.current.delete(result.id);
+
           // Clean up task-worker mapping
           taskWorkerMapRef.current.delete(result.id);
 
@@ -321,12 +328,19 @@ export function useEnrichmentQueue(
           );
 
           if (message.error?.includes('Worker not initialized')) {
-            if (workerState) {
-              workerState.isReady = false;
-            }
-            const config = configRef.current;
-            if (config) {
-              initializeRef.current?.(config);
+            const attempts = autoReconnectAttemptsRef.current.get(message.taskId) || 0;
+            if (attempts < MAX_AUTO_RECONNECT_ATTEMPTS) {
+              autoReconnectAttemptsRef.current.set(message.taskId, attempts + 1);
+              pendingAutoRetryRef.current.add(message.taskId);
+              if (workerState) {
+                workerState.isReady = false;
+              }
+              const config = configRef.current;
+              if (config && !reconnectInProgressRef.current) {
+                reconnectInProgressRef.current = true;
+                resetWorkerPool();
+                initializeRef.current?.(config);
+              }
             }
           }
 
@@ -418,6 +432,20 @@ export function useEnrichmentQueue(
 
         workersRef.current.push(workerState);
         // Note: createWorker already sends init message
+      }
+
+      const queuedItems = queueRef.current.filter((item) => item.status === 'queued');
+      for (const item of queuedItems) {
+        const leastBusyWorker = findLeastBusyWorker(workersRef.current, queueRef.current);
+        if (leastBusyWorker) {
+          taskWorkerMapRef.current.set(item.id, leastBusyWorker.workerId);
+          leastBusyWorker.pendingTaskIds.add(item.id);
+        } else {
+          taskWorkerMapRef.current.set(item.id, 0);
+          if (workersRef.current[0]) {
+            workersRef.current[0].pendingTaskIds.add(item.id);
+          }
+        }
       }
     },
     [handleMessage]
@@ -534,6 +562,11 @@ export function useEnrichmentQueue(
       if (leastBusyWorker) {
         taskWorkerMapRef.current.set(itemId, leastBusyWorker.workerId);
         leastBusyWorker.pendingTaskIds.add(itemId);
+      } else {
+        taskWorkerMapRef.current.set(itemId, 0);
+        if (workersRef.current[0]) {
+          workersRef.current[0].pendingTaskIds.add(itemId);
+        }
       }
 
       return prev.map((i) =>
@@ -549,6 +582,20 @@ export function useEnrichmentQueue(
       );
     });
   }, []);
+
+  useEffect(() => {
+    if (!isWorkerReady) return;
+
+    if (pendingAutoRetryRef.current.size > 0) {
+      const taskIds = Array.from(pendingAutoRetryRef.current);
+      pendingAutoRetryRef.current.clear();
+      for (const taskId of taskIds) {
+        retry(taskId);
+      }
+    }
+
+    reconnectInProgressRef.current = false;
+  }, [isWorkerReady, retry]);
 
   // Clear completed items
   const clearCompleted = useCallback(() => {
