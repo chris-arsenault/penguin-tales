@@ -193,6 +193,8 @@ async function executeV2GenerationStep(
     const selectedEntityIds = existingChronicle?.selectedEntityIds ?? focus?.selectedEntityIds ?? [];
     const selectedEventIds = existingChronicle?.selectedEventIds ?? focus?.selectedEventIds ?? [];
     const selectedRelationshipIds = existingChronicle?.selectedRelationshipIds ?? focus?.selectedRelationshipIds ?? [];
+    // Prefer the context used to build the prompt so stored focal era matches generation.
+    const temporalContext = chronicleContext.temporalContext ?? existingChronicle?.temporalContext;
 
     await createChronicle(chronicleId, {
       projectId: task.projectId,
@@ -207,6 +209,7 @@ async function executeV2GenerationStep(
       selectedEventIds,
       selectedRelationshipIds,
       entrypointId: existingChronicle?.entrypointId,
+      temporalContext,
       assembledContent: result.text,
       selectionSummary: {
         entityCount: selection.entities.length,
@@ -724,7 +727,7 @@ For each image, choose one type:
 1. **Entity Reference** (type: "entity_ref") - Use when a specific entity is prominently featured
    - Best for: Introductions, key moments focused on a single entity
 
-2. **Scene Prompt** (type: "prompt_request") - Use for scenes involving multiple entities or environments
+2. **Prompt Request** (type: "prompt_request") - Use for scenes involving multiple entities or environments
    - Best for: Multi-entity scenes, locations, action moments, atmospheric shots
    - REQUIRED: Include involvedEntityIds with at least one entity that appears in the scene
 

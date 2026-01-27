@@ -15,6 +15,15 @@ export interface ChronicleRoleAssignment {
   isPrimary: boolean;
 }
 
+export interface ChronicleTemporalContext {
+  focalEra?: { id: string; name: string; summary?: string };
+  chronicleTickRange?: [number, number];
+  temporalScope?: string;
+  isMultiEra?: boolean;
+  touchedEraIds?: string[];
+  temporalDescription?: string;
+}
+
 export interface ChronicleSeedData {
   narrativeStyleId: string;
   narrativeStyleName?: string;
@@ -23,6 +32,7 @@ export interface ChronicleSeedData {
   roleAssignments: ChronicleRoleAssignment[];
   selectedEventIds: string[];
   selectedRelationshipIds: string[];
+  temporalContext?: ChronicleTemporalContext;
 }
 
 interface ChronicleSeedViewerProps {
@@ -88,6 +98,70 @@ export default function ChronicleSeedViewer({
               </div>
             ))}
           </div>
+        )}
+      </div>
+
+      {/* Temporal Context */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Temporal Context</div>
+        {!seed.temporalContext ? (
+          <div className={styles.emptyState}>Not set</div>
+        ) : (
+          <>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>Focal Era:</span>
+              <span className={styles.fieldValue}>
+                {seed.temporalContext.focalEra?.name || 'Unknown'}
+              </span>
+            </div>
+            {seed.temporalContext.focalEra?.summary && (
+              <div className={styles.field}>
+                <span className={styles.fieldLabel}>Era Summary:</span>
+                <span className={styles.fieldValue}>
+                  {seed.temporalContext.focalEra.summary}
+                </span>
+              </div>
+            )}
+            {seed.temporalContext.temporalDescription && (
+              <div className={styles.field}>
+                <span className={styles.fieldLabel}>Scope:</span>
+                <span className={styles.fieldValue}>
+                  {seed.temporalContext.temporalDescription}
+                </span>
+              </div>
+            )}
+            {seed.temporalContext.chronicleTickRange && (
+              <div className={styles.field}>
+                <span className={styles.fieldLabel}>Ticks:</span>
+                <span className={styles.fieldValue}>
+                  {seed.temporalContext.chronicleTickRange[0]}–
+                  {seed.temporalContext.chronicleTickRange[1]}
+                </span>
+              </div>
+            )}
+            {typeof seed.temporalContext.isMultiEra === 'boolean' && (
+              <div className={styles.field}>
+                <span className={styles.fieldLabel}>Multi-era:</span>
+                <span className={styles.fieldValue}>
+                  {seed.temporalContext.isMultiEra ? 'Yes' : 'No'}
+                </span>
+              </div>
+            )}
+            {seed.temporalContext.touchedEraIds?.length ? (
+              <div>
+                <div className={styles.fieldLabel} style={{ marginBottom: '4px' }}>
+                  Touched Eras:
+                </div>
+                <div className={styles.idList}>
+                  {seed.temporalContext.touchedEraIds.map((id) => (
+                    <span key={id} className={styles.idTag}>
+                      {id}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
 

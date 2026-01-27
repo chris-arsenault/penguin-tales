@@ -335,6 +335,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 interface WizardContextValue {
   state: WizardState;
   dispatch: React.Dispatch<WizardAction>;
+  /** Current simulation run for usage stats */
+  simulationRunId: string;
 
   /**
    * Mapping from entity kinds to their categories.
@@ -409,9 +411,11 @@ interface WizardProviderProps {
   entityKinds: EntityKindDefinition[];
   /** Era definitions with tick ranges for temporal alignment (optional - temporal features disabled if not provided) */
   eras?: EraTemporalInfo[];
+  /** Simulation run id for usage stats */
+  simulationRunId: string;
 }
 
-export function WizardProvider({ children, entityKinds, eras = [] }: WizardProviderProps) {
+export function WizardProvider({ children, entityKinds, eras = [], simulationRunId }: WizardProviderProps) {
   const [state, dispatch] = useReducer(wizardReducer, initialState);
 
   // Build kind-to-category mapping
@@ -438,7 +442,12 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
     return computeFocalEra(allRelevantEvents, eras) || null;
   }, [eras, allRelevantEvents]);
 
-  // Compute temporal context from selected events, using override if set
+  // Compute effective focal era (respecting override)
+  const effectiveFocalEraId = useMemo(() => {
+    return state.focalEraOverride || detectedFocalEra?.id || eras[0]?.id || '';
+  }, [state.focalEraOverride, detectedFocalEra, eras]);
+
+  // Compute temporal context from selected events, but align focal era to the dropdown choice
   const temporalContext = useMemo<ChronicleTemporalContext | null>(() => {
     if (eras.length === 0) return null;
 
@@ -447,21 +456,13 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
       e => state.selectedEventIds.has(e.id)
     );
 
-    const baseContext = computeTemporalContext(selectedEvents, eras, state.entryPoint || undefined);
-
-    // Apply override if set
-    if (state.focalEraOverride) {
-      const overrideEra = eras.find(e => e.id === state.focalEraOverride);
-      if (overrideEra) {
-        return {
-          ...baseContext,
-          focalEra: overrideEra,
-        };
-      }
-    }
-
-    return baseContext;
-  }, [eras, state.candidateEvents, state.selectedEventIds, state.entryPoint, state.focalEraOverride]);
+    return computeTemporalContext(
+      selectedEvents,
+      eras,
+      state.entryPoint || undefined,
+      effectiveFocalEraId
+    );
+  }, [eras, state.candidateEvents, state.selectedEventIds, state.entryPoint, effectiveFocalEraId]);
 
   // Navigation
   const nextStep = useCallback(() => {
@@ -557,11 +558,6 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
       kindToCategory
     );
   }, [state.entryPoint, state.candidates, state.candidateRelationships, state.candidateDistances, state.roleAssignments, kindToCategory]);
-
-  // Compute effective focal era (respecting override)
-  const effectiveFocalEraId = useMemo(() => {
-    return state.focalEraOverride || detectedFocalEra?.id || eras[0]?.id || '';
-  }, [state.focalEraOverride, detectedFocalEra, eras]);
 
   // Compute event metrics for selection
   const computeEventMetricsForSelection = useCallback(() => {
@@ -723,6 +719,7 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
   const value = useMemo<WizardContextValue>(() => ({
     state,
     dispatch,
+    simulationRunId,
     kindToCategory,
     nextStep,
     prevStep,
@@ -754,6 +751,7 @@ export function WizardProvider({ children, entityKinds, eras = [] }: WizardProvi
     initFromSeed,
   }), [
     state,
+    simulationRunId,
     kindToCategory,
     nextStep,
     prevStep,

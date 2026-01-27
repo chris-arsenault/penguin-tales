@@ -27,6 +27,7 @@ export interface ChronicleWizardProps {
   isOpen: boolean;
   onClose: () => void;
   onGenerate: (config: WizardGenerateConfig) => void;
+  simulationRunId: string;
 
   // Data from parent
   narrativeStyles: NarrativeStyle[];
@@ -86,6 +87,7 @@ interface InnerWizardProps {
   relationships: RelationshipContext[];
   events: NarrativeEventContext[];
   initialSeed?: ChronicleSeed;
+  simulationRunId: string;
 }
 
 function InnerWizard({
@@ -353,7 +355,11 @@ export default function ChronicleWizard(props: ChronicleWizardProps) {
   if (!props.isOpen) return null;
 
   return (
-    <WizardProvider entityKinds={props.entityKinds} eras={props.eras ?? []}>
+    <WizardProvider
+      entityKinds={props.entityKinds}
+      eras={props.eras ?? []}
+      simulationRunId={props.simulationRunId}
+    >
       <InnerWizard {...props} />
     </WizardProvider>
   );

@@ -143,6 +143,7 @@ export interface PageIndexEntry {
     roleAssignments?: ChronicleRoleAssignment[];
     selectedEventIds?: string[];
     selectedRelationshipIds?: string[];
+    temporalContext?: ChronicleTemporalContext;
   };
   // For entity pages
   entityKind?: string;
@@ -209,6 +210,23 @@ export interface ChronicleRoleAssignment {
   isPrimary: boolean;
 }
 
+export interface ChronicleTemporalContext {
+  focalEra?: {
+    id: string;
+    name: string;
+    summary?: string;
+    order?: number;
+    startTick?: number;
+    endTick?: number;
+    duration?: number;
+  };
+  chronicleTickRange?: [number, number];
+  temporalScope?: string;
+  isMultiEra?: boolean;
+  touchedEraIds?: string[];
+  temporalDescription?: string;
+}
+
 export interface WikiPage {
   id: string;
   slug: string;
@@ -222,6 +240,7 @@ export interface WikiPage {
     roleAssignments?: ChronicleRoleAssignment[];
     selectedEventIds?: string[];
     selectedRelationshipIds?: string[];
+    temporalContext?: ChronicleTemporalContext;
   };
   static?: {
     pageId: string;
@@ -257,6 +276,7 @@ export interface WikiSectionImage {
   /** Character index where anchorText was found (fallback if text changes) */
   anchorIndex?: number;
   size: WikiImageSize;
+  justification?: 'left' | 'right';
   caption?: string;
 }
 

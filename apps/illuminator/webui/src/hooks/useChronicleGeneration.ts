@@ -19,7 +19,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { NarrativeStyle } from '@canonry/world-schema';
-import type { ChronicleGenerationContext } from '../lib/chronicleTypes';
+import type { ChronicleGenerationContext, ChronicleTemporalContext } from '../lib/chronicleTypes';
 import type { QueueItem, EnrichmentType, ChronicleStep, AcceptedChronicle } from '../lib/enrichmentTypes';
 import {
   getChroniclesForSimulation,
@@ -76,6 +76,7 @@ export interface ChronicleMetadata {
   selectedEventIds: string[];
   selectedRelationshipIds: string[];
   entrypointId?: string;
+  temporalContext?: ChronicleTemporalContext | null;
 }
 
 export interface UseChronicleGenerationReturn {

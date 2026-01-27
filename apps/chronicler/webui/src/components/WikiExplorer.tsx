@@ -337,7 +337,8 @@ export default function WikiExplorer({
   // Get current page
   const isChronicleIndex = currentPageId === 'chronicles'
     || currentPageId === 'chronicles-story'
-    || currentPageId === 'chronicles-document';
+    || currentPageId === 'chronicles-document'
+    || currentPageId?.startsWith('chronicles-type-');
 
   const isPagesIndex = currentPageId === 'pages';
 
@@ -535,10 +536,12 @@ export default function WikiExplorer({
               chronicles={chroniclePages}
               filter={
                 currentPageId === 'chronicles-story'
-                  ? 'story'
+                  ? { kind: 'format', format: 'story' }
                   : currentPageId === 'chronicles-document'
-                  ? 'document'
-                  : 'all'
+                  ? { kind: 'format', format: 'document' }
+                  : currentPageId?.startsWith('chronicles-type-')
+                  ? { kind: 'type', typeId: currentPageId.replace('chronicles-type-', '') }
+                  : { kind: 'all' }
               }
               onNavigate={handleNavigate}
               entityIndex={entityIndex}

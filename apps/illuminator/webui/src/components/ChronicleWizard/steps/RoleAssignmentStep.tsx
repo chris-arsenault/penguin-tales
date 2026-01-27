@@ -48,6 +48,7 @@ export default function RoleAssignmentStep() {
     removeRoleAssignment,
     togglePrimary,
     computeMetrics,
+    simulationRunId,
   } = useWizard();
 
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
@@ -62,16 +63,15 @@ export default function RoleAssignmentStep() {
 
   // Load usage stats on mount
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const simId = urlParams.get('simulationRunId') || urlParams.get('runId');
-    if (simId) {
-      getEntityUsageStats(simId).then(stats => {
-        setUsageStats(stats);
-      }).catch(() => {
-        // Silently fail - just use empty stats
-      });
+    if (!simulationRunId) {
+      throw new Error('[Chronicle Wizard] simulationRunId is required to load entity usage stats.');
     }
-  }, []);
+    getEntityUsageStats(simulationRunId).then(stats => {
+      setUsageStats(stats);
+    }).catch((err) => {
+      console.error('[Chronicle Wizard] Failed to load entity usage stats:', err);
+    });
+  }, [simulationRunId]);
 
   // Compute metrics when candidates or usage stats change
   useEffect(() => {

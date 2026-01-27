@@ -1,175 +1,63 @@
-# Lore Weave - Procedural World Generation Framework
+# Penguin Tales
 
-A complete framework for generating and visualizing rich, interconnected world histories through procedural templates, simulation systems, and interactive graph exploration.
+> Procedural worldbuilding suite for simulation, lore, and exploration.
 
-Generate complex narrative-driven worlds through a hybrid approach of growth templates and simulation systems, configured entirely in JSON.
+Penguin Tales is the monorepo for the Canonry toolset. Each app and package has its own README with setup, usage, and API details.
 
----
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial-purple.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org/)
 
-## Projects
+## Table of Contents
 
-This monorepo contains the following applications:
+- [Requirements](#requirements)
+- [Quick Start](#quick-start)
+- [Apps](#apps)
+- [Packages](#packages)
+- [Docs](#docs)
+- [License](#license)
 
-### [apps/lore-weave/](./apps/lore-weave/) - World Generation Framework
+## Requirements
 
-Core procedural generation engine that creates knowledge graphs of entities with complex relationships. Domains are defined entirely in JSON configuration files.
-
-**Features:**
-- Template-based entity creation with cluster batching
-- Simulation systems for emergent relationships
-- Declarative JSON configuration for domains
-- Historical eras with pressure dynamics
-- Culture-aware entity placement and naming
-
-### [apps/name-forge/](./apps/name-forge/) - Procedural Name Generation
-
-Domain-aware name generation system with phonological rules, grammars, and Markov chains.
-The current naming system shows significant structural homogeneity across cultures that undermines cultural distinctiveness. While lexeme differentiation exists, the grammatical patterns are nearly identical, creating what linguists call "lexical substitution without morphosyntactic variation" - the hallmark of artificially generated names.
-
-### [apps/canonry/](./apps/canonry/) - Shell Application
-
-Module Federation shell that hosts all web UIs as micro-frontends.
-
-### [apps/cosmographer/](./apps/cosmographer/) - World Building Tool
-
-Visual editor for creating world seeds and semantic plane configurations.
-
-### [apps/coherence-engine/](./apps/coherence-engine/) - Narrative Coherence
-
-Ensures narrative consistency across generated content.
-
-### [apps/archivist/](./apps/archivist/) - History Browser
-
-Interface for exploring generated world histories.
-
----
-
-## Quick Start
-
-### Prerequisites
 - Node.js 18+
 - npm 9+
 
-### Installation
-```bash
-# Install all dependencies
-npm run install:all
+## Quick Start
 
-# Or install canonry stack specifically
-npm run install:canonry
-```
-
-### Run the Web UI
 ```bash
-# Start all micro-frontends with dev proxy
+npm install
 npm run canonry
 ```
 
-Then open http://localhost:5176/ to access the shell.
+Open `http://localhost:3000` for the dev proxy and the full suite.
 
-### Individual Commands
-```bash
-# Build framework library
-npm run build:framework
+Want to run a single tool instead? Jump to its README below.
 
-# Run framework tests
-npm run test:framework
+## Apps
 
-# Build world-schema package
-npm run build:world-schema
-```
+- [Canonry](./apps/canonry/README.md)
+- [Name Forge](./apps/name-forge/README.md)
+- [Cosmographer](./apps/cosmographer/README.md)
+- [Coherence Engine](./apps/coherence-engine/README.md)
+- [Lore Weave](./apps/lore-weave/README.md)
+- [Illuminator](./apps/illuminator/README.md)
+- [Archivist](./apps/archivist/README.md)
+- [Chronicler](./apps/chronicler/README.md)
+- [Viewer](./apps/viewer/README.md)
 
----
+## Packages
 
-## Key Concepts
+- [World Schema](./packages/world-schema/README.md)
+- [Canonry DSL](./packages/canonry-dsl/README.md)
+- [Canonry DSL v2](./packages/canonry-dsl-v2/README.md)
+- [Shared Components](./packages/shared-components/README.md)
 
-- **Entities**: NPCs, Locations, Factions, Rules, Abilities, and more
-- **Templates**: JSON-defined generators that create batches of related entities
-- **Systems**: Simulation rules that create relationships and modify entities
-- **Eras**: Time periods with different template weights and pressures
-- **Pressures**: Background forces that build up and trigger events
-- **Cultures**: Groups with distinct naming conventions and placement biases
+## Docs
 
----
-
-## Architecture
-
-```
-penguin-tales/                    # Repository root
-├── apps/
-│   ├── lore-weave/              # World generation framework
-│   │   ├── lib/                 # Core library
-│   │   └── webui/               # World explorer UI
-│   │
-│   ├── name-forge/              # Name generation framework
-│   │   ├── lib/                 # Core library
-│   │   └── webui/               # Name generation UI
-│   │
-│   ├── canonry/                 # Shell application
-│   │   └── webui/               # Module federation shell
-│   │
-│   ├── cosmographer/            # World building tool
-│   │   └── webui/               # Semantic plane editor
-│   │
-│   ├── coherence-engine/        # Narrative coherence
-│   │   └── webui/               # Coherence checker UI
-│   │
-│   └── archivist/               # History browser
-│       └── webui/               # Archive explorer UI
-│
-├── packages/
-│   ├── world-schema/            # Shared schema types
-│   └── shared-components/       # Shared UI components
-│
-└── infrastructure/              # Deployment configuration
-    └── terraform/               # AWS infrastructure
-```
-
----
-
-## Domain Configuration
-
-Worlds are defined through JSON configuration files:
-
-- **schema.json** - Entity kinds, relationship types, cultures
-- **templates.json** - Entity generation templates
-- **systems.json** - Simulation system configurations
-- **eras.json** - Historical era definitions
-- **pressures.json** - Dynamic pressure configurations
-- **actions.json** - Agent action definitions
-
-See the [Lore Weave documentation](./apps/lore-weave/README.md) for detailed configuration guides.
-
----
-
-## Coordinate Placement System
-
-Entities exist in a **region-based coordinate space** that supports both physical locations and abstract concepts. The framework provides culture-aware placement algorithms.
-
-See [COORDINATE_GRIDS.md](./COORDINATE_GRIDS.md) for detailed documentation.
-
----
-
-## Documentation
-
-- **[apps/lore-weave/README.md](./apps/lore-weave/README.md)** - Framework documentation
-- **[apps/name-forge/README.md](./apps/name-forge/README.md)** - Name generation guide
-- **[COORDINATE_GRIDS.md](./COORDINATE_GRIDS.md)** - Coordinate system reference
-- **[CLAUDE.md](./CLAUDE.md)** - Guide for Claude Code
-
----
-
-## Technologies
-
-- **TypeScript** - Type-safe development
-- **Node.js** - Runtime environment
-- **React 18** - UI framework
-- **Vite** - Build tool and dev server
-- **Module Federation** - Micro-frontend architecture
-- **Cytoscape.js** - Graph visualization
-
----
+- [AGENTS.md](./AGENTS.md)
+- [CLAUDE.md](./CLAUDE.md)
+- [SYSTEMS.md](./SYSTEMS.md)
 
 ## License
 
-[PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/) - Free for non-commercial use.
+[PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/) - free for non-commercial use.

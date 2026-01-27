@@ -209,6 +209,11 @@ export default function CohesionReportViewer({
   imageRefs = null,
   entityMap = null,
   onGenerateChronicleImage = null,
+  onResetChronicleImage = null,
+  onUpdateChronicleAnchorText = null,
+  onUpdateChronicleImageSize = null,
+  onUpdateChronicleImageJustification = null,
+  chronicleText = null,
   // Style library integration props
   styleLibrary = null,
   cultures = null,
@@ -519,6 +524,11 @@ export default function CohesionReportViewer({
                 imageRefs={imageRefs}
                 entities={entityMap}
                 onGenerateImage={onGenerateChronicleImage}
+                onResetImage={onResetChronicleImage}
+                onUpdateAnchorText={onUpdateChronicleAnchorText}
+                onUpdateSize={onUpdateChronicleImageSize}
+                onUpdateJustification={onUpdateChronicleImageJustification}
+                chronicleText={chronicleText || undefined}
                 isGenerating={isGenerating}
                 styleLibrary={styleLibrary}
                 cultures={cultures}

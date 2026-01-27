@@ -4,7 +4,7 @@
  * Renders the review screen for single-shot chronicle generation.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import CohesionReportViewer from './CohesionReportViewer';
 import ChronicleImagePanel from './ChronicleImagePanel';
 import { ExpandableSeedSection } from './ChronicleSeedViewer';
@@ -78,6 +78,10 @@ function RefinementOptionsPanel({
   onGenerateSummary,
   onGenerateImageRefs,
   onGenerateChronicleImage,
+  onResetChronicleImage,
+  onUpdateChronicleAnchorText,
+  onUpdateChronicleImageSize,
+  onUpdateChronicleImageJustification,
   isGenerating,
   refinements,
   entityMap,
@@ -238,6 +242,11 @@ function RefinementOptionsPanel({
               imageRefs={item.imageRefs}
               entities={entityMap}
               onGenerateImage={onGenerateChronicleImage}
+              onResetImage={onResetChronicleImage}
+              onUpdateAnchorText={onUpdateChronicleAnchorText}
+              onUpdateSize={onUpdateChronicleImageSize}
+              onUpdateJustification={onUpdateChronicleImageJustification}
+              chronicleText={item.assembledContent}
               isGenerating={isGenerating}
               styleLibrary={styleLibrary}
               cultures={cultures}
@@ -248,6 +257,134 @@ function RefinementOptionsPanel({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Temporal Context Editor (post-publish)
+// ============================================================================
+
+function TemporalContextEditor({
+  item,
+  eras,
+  onUpdateTemporalContext,
+  isGenerating,
+}) {
+  const availableEras = useMemo(() => {
+    if (eras && eras.length > 0) return eras;
+    return item.temporalContext?.allEras || [];
+  }, [eras, item.temporalContext?.allEras]);
+
+  const [selectedEraId, setSelectedEraId] = useState(
+    item.temporalContext?.focalEra?.id || availableEras[0]?.id || ''
+  );
+
+  useEffect(() => {
+    setSelectedEraId(item.temporalContext?.focalEra?.id || availableEras[0]?.id || '');
+  }, [item.temporalContext?.focalEra?.id, availableEras]);
+
+  const focalEra = item.temporalContext?.focalEra;
+  const tickRange = item.temporalContext?.chronicleTickRange;
+
+  return (
+    <div
+      style={{
+        marginTop: '20px',
+        padding: '16px',
+        background: 'var(--bg-secondary)',
+        borderRadius: '8px',
+        border: '1px solid var(--border-color)',
+      }}
+    >
+      <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>
+        Temporal Context
+      </div>
+      {availableEras.length === 0 ? (
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+          No eras available for this world.
+        </div>
+      ) : (
+        <>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              alignItems: 'center',
+            }}
+          >
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Focal Era
+            </div>
+            <select
+              value={selectedEraId}
+              onChange={(event) => setSelectedEraId(event.target.value)}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                fontSize: '12px',
+                minWidth: '200px',
+              }}
+            >
+              {availableEras.map((era) => (
+                <option key={era.id} value={era.id}>
+                  {era.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => onUpdateTemporalContext?.(selectedEraId)}
+              disabled={!selectedEraId || isGenerating}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                cursor: !selectedEraId || isGenerating ? 'not-allowed' : 'pointer',
+                opacity: !selectedEraId || isGenerating ? 0.6 : 1,
+              }}
+            >
+              Update Era
+            </button>
+          </div>
+          <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+            <div>
+              <span style={{ color: 'var(--text-muted)' }}>Current:</span>{' '}
+              {focalEra?.name || 'Not set'}
+            </div>
+            {focalEra?.summary && (
+              <div>
+                <span style={{ color: 'var(--text-muted)' }}>Era Summary:</span>{' '}
+                {focalEra.summary}
+              </div>
+            )}
+            {item.temporalContext?.temporalDescription && (
+              <div>
+                <span style={{ color: 'var(--text-muted)' }}>Temporal Scope:</span>{' '}
+                {item.temporalContext.temporalDescription}
+              </div>
+            )}
+            {tickRange && (
+              <div>
+                <span style={{ color: 'var(--text-muted)' }}>Tick Range:</span>{' '}
+                {tickRange[0]}–{tickRange[1]}
+              </div>
+            )}
+            {typeof item.temporalContext?.isMultiEra === 'boolean' && (
+              <div>
+                <span style={{ color: 'var(--text-muted)' }}>Multi-era:</span>{' '}
+                {item.temporalContext.isMultiEra ? 'Yes' : 'No'}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -271,6 +408,13 @@ export default function ChronicleReviewPanel({
   onGenerateImageRefs,
   onRevalidate,
   onGenerateChronicleImage,
+  onResetChronicleImage,
+  onUpdateChronicleAnchorText,
+  onUpdateChronicleTemporalContext,
+
+  // Image layout edits
+  onUpdateChronicleImageSize,
+  onUpdateChronicleImageJustification,
 
   // State
   isGenerating,
@@ -283,6 +427,7 @@ export default function ChronicleReviewPanel({
   entityGuidance,
   cultureIdentities,
   worldContext,
+  eras,
 }) {
   // Build entity map for ChronicleImagePanel (expects Map, not array)
   const entityMap = useMemo(() => {
@@ -382,6 +527,10 @@ export default function ChronicleReviewPanel({
           onGenerateSummary={onGenerateSummary}
           onGenerateImageRefs={onGenerateImageRefs}
           onGenerateChronicleImage={onGenerateChronicleImage}
+          onResetChronicleImage={onResetChronicleImage}
+          onUpdateChronicleAnchorText={onUpdateChronicleAnchorText}
+          onUpdateChronicleImageSize={onUpdateChronicleImageSize}
+          onUpdateChronicleImageJustification={onUpdateChronicleImageJustification}
           isGenerating={isGenerating}
           refinements={refinements}
           entityMap={entityMap}
@@ -430,6 +579,11 @@ export default function ChronicleReviewPanel({
             imageRefs={item.imageRefs}
             entityMap={entityMap}
             onGenerateChronicleImage={onGenerateChronicleImage}
+            onResetChronicleImage={onResetChronicleImage}
+            onUpdateChronicleAnchorText={onUpdateChronicleAnchorText}
+            onUpdateChronicleImageSize={onUpdateChronicleImageSize}
+            onUpdateChronicleImageJustification={onUpdateChronicleImageJustification}
+            chronicleText={item.assembledContent}
             styleLibrary={styleLibrary}
             cultures={cultures}
             cultureIdentities={cultureIdentities}
@@ -479,6 +633,34 @@ export default function ChronicleReviewPanel({
           wordCount={wordCount(item.finalContent)}
           onCopy={() => copyToClipboard(item.finalContent)}
         />
+        <TemporalContextEditor
+          item={item}
+          eras={eras}
+          onUpdateTemporalContext={onUpdateChronicleTemporalContext}
+          isGenerating={isGenerating}
+        />
+        {item.imageRefs && entityMap && (
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
+              Image Anchors
+            </div>
+            <ChronicleImagePanel
+              imageRefs={item.imageRefs}
+              entities={entityMap}
+              onGenerateImage={onGenerateChronicleImage}
+              onResetImage={onResetChronicleImage}
+              onUpdateAnchorText={onUpdateChronicleAnchorText}
+              onUpdateSize={onUpdateChronicleImageSize}
+              onUpdateJustification={onUpdateChronicleImageJustification}
+              isGenerating={isGenerating}
+              styleLibrary={styleLibrary}
+              cultures={cultures}
+              cultureIdentities={cultureIdentities}
+              worldContext={worldContext}
+              chronicleTitle={item.name}
+            />
+          </div>
+        )}
       </div>
     );
   }

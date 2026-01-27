@@ -703,7 +703,7 @@ export function buildChronicleImagePrompt(
 
   // World context
   const worldSection = world
-    ? `WORLD: ${world.name}${world.description ? ` - ${world.description}` : ''}${world.tone ? `\nTONE: ${world.tone}` : ''}`
+    ? `WORLD: ${world.name}${world.description ? ` - ${world.description}` : ''}`
     : '';
 
   // Involved entities visual identity

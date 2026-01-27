@@ -56,6 +56,7 @@ interface ChronicleImageRef {
   /** Character index where anchorText was found (fallback if text changes) */
   anchorIndex?: number;
   size: 'small' | 'medium' | 'large' | 'full-width';
+  justification?: 'left' | 'right';
   caption?: string;
   type: 'entity_ref' | 'prompt_request';
   entityId?: string;
@@ -287,6 +288,7 @@ export function buildPageIndex(
         roleAssignments: chronicle.roleAssignments,
         selectedEventIds: chronicle.selectedEventIds,
         selectedRelationshipIds: chronicle.selectedRelationshipIds,
+        temporalContext: chronicle.temporalContext,
       },
       linkedEntities: chronicle.selectedEntityIds,
       lastUpdated: chronicle.acceptedAt || chronicle.updatedAt,
@@ -689,6 +691,7 @@ function buildChroniclePageFromChronicle(
       roleAssignments: chronicle.roleAssignments,
       selectedEventIds: chronicle.selectedEventIds,
       selectedRelationshipIds: chronicle.selectedRelationshipIds,
+      temporalContext: chronicle.temporalContext,
     },
     content: {
       sections,
@@ -1088,6 +1091,7 @@ function attachImagesToSections(
       anchorText: ref.anchorText,
       anchorIndex: ref.anchorIndex,
       size: ref.size,
+      justification: ref.justification,
       caption: ref.caption,
     };
 

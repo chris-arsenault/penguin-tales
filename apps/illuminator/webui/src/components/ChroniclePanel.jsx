@@ -7,15 +7,16 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import ChronicleReviewPanel from './ChronicleReviewPanel';
-import EventsPanel from './EventsPanel';
 import { ChronicleWizard } from './ChronicleWizard';
 import { buildChronicleContext } from '../lib/chronicleContextBuilder';
 import { generateNameBank, extractCultureIds } from '../lib/chronicle/nameBank';
 import { useChronicleGeneration, deriveStatus } from '../hooks/useChronicleGeneration';
 import { buildChronicleImagePrompt } from '../lib/promptBuilders';
 import { resolveStyleSelection } from './StyleSelector';
+import { computeTemporalContext } from '../lib/chronicle/selectionWizard';
 import {
   updateChronicleImageRef,
+  updateChronicleTemporalContext,
   generateChronicleId,
   deriveTitleFromRoles,
   createChronicleShell,
@@ -23,19 +24,61 @@ import {
 
 const REFINEMENT_STEPS = new Set(['summary', 'image_refs']);
 
-// Content type definitions
-const CONTENT_TYPES = [
-  { id: 'chronicles', label: 'Chronicles', description: 'Generate long-form narrative content' },
-  { id: 'events', label: 'Events', description: 'View narrative events from simulation' },
-];
-
 // Badge colors for chronicle-first display
 const FOCUS_TYPE_COLORS = {
   single: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6', border: 'rgba(59, 130, 246, 0.3)' },
   ensemble: { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7', border: 'rgba(168, 85, 247, 0.3)' },
-  relationship: { bg: 'rgba(236, 72, 153, 0.15)', text: '#ec4899', border: 'rgba(236, 72, 153, 0.3)' },
-  event: { bg: 'rgba(249, 115, 22, 0.15)', text: '#f97316', border: 'rgba(249, 115, 22, 0.3)' },
 };
+
+const SORT_OPTIONS = [
+  { value: 'created_desc', label: 'Newest created' },
+  { value: 'created_asc', label: 'Oldest created' },
+  { value: 'length_desc', label: 'Longest' },
+  { value: 'length_asc', label: 'Shortest' },
+  { value: 'type_asc', label: 'Type A-Z' },
+  { value: 'type_desc', label: 'Type Z-A' },
+  { value: 'era_asc', label: 'Era (earliest)' },
+  { value: 'era_desc', label: 'Era (latest)' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'not_started', label: 'Not started' },
+  { value: 'generating', label: 'Generating' },
+  { value: 'assembly_ready', label: 'Assembly ready' },
+  { value: 'editing', label: 'Editing' },
+  { value: 'validating', label: 'Validating' },
+  { value: 'validation_ready', label: 'Review' },
+  { value: 'failed', label: 'Failed' },
+  { value: 'complete', label: 'Complete' },
+];
+
+const FOCUS_OPTIONS = [
+  { value: 'all', label: 'All focuses' },
+  { value: 'single', label: 'Single' },
+  { value: 'ensemble', label: 'Ensemble' },
+];
+
+function buildTemporalDescription(focalEra, tickRange, scope, isMultiEra, eraCount) {
+  const duration = tickRange[1] - tickRange[0];
+  const scopeDescriptions = {
+    moment: 'a brief moment',
+    episode: 'a short episode',
+    arc: 'an extended arc',
+    saga: 'an epic saga',
+  };
+  const scopeText = scopeDescriptions[scope] || 'a span of time';
+
+  if (isMultiEra) {
+    return `${scopeText} spanning ${eraCount} eras, centered on the ${focalEra.name}`;
+  }
+
+  if (duration === 0) {
+    return `a single moment during the ${focalEra.name}`;
+  }
+
+  return `${scopeText} during the ${focalEra.name} (${duration} ticks)`;
+}
 
 function ChronicleItemCard({ item, isSelected, onClick }) {
   const getStatusLabel = () => {
@@ -72,7 +115,7 @@ function ChronicleItemCard({ item, isSelected, onClick }) {
   const badges = useMemo(() => {
     const b = [];
 
-    // Focus type badge (single/ensemble/relationship/event)
+    // Focus type badge (single/ensemble)
     if (item.focusType) {
       const colors = FOCUS_TYPE_COLORS[item.focusType] || FOCUS_TYPE_COLORS.single;
       b.push({ label: item.focusType, colors });
@@ -208,22 +251,17 @@ export default function ChroniclePanel({
   entityGuidance,
   cultureIdentities,
 }) {
-  // Load persisted state from localStorage
-  const [activeType, setActiveType] = useState(() => {
-    const saved = localStorage.getItem('illuminator:chronicle:activeType');
-    const allowed = new Set(CONTENT_TYPES.map((type) => type.id));
-    if (saved && allowed.has(saved)) return saved;
-    return 'chronicles';
-  });
   const [selectedItemId, setSelectedItemId] = useState(() => {
     const saved = localStorage.getItem('illuminator:chronicle:selectedItemId');
     return saved || null;
   });
-
-  // Persist state changes to localStorage
-  useEffect(() => {
-    localStorage.setItem('illuminator:chronicle:activeType', activeType);
-  }, [activeType]);
+  const [groupByType, setGroupByType] = useState(false);
+  const [sortMode, setSortMode] = useState('created_desc');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [focusFilter, setFocusFilter] = useState('all');
+  const [entitySearchQuery, setEntitySearchQuery] = useState('');
+  const [entitySearchSelectedId, setEntitySearchSelectedId] = useState(null);
+  const [showEntitySuggestions, setShowEntitySuggestions] = useState(false);
 
   useEffect(() => {
     if (selectedItemId) {
@@ -269,10 +307,24 @@ export default function ChroniclePanel({
     return new Map(entities.map((e) => [e.id, e]));
   }, [entities]);
 
-  const eventMap = useMemo(() => {
-    if (!worldData?.narrativeHistory) return new Map();
-    return new Map(worldData.narrativeHistory.map((e) => [e.id, e]));
-  }, [worldData]);
+  const entitySuggestions = useMemo(() => {
+    const query = entitySearchQuery.trim().toLowerCase();
+    if (!query || !entities?.length) return [];
+    return entities
+      .filter((entity) => entity.name?.toLowerCase().includes(query))
+      .slice(0, 8);
+  }, [entities, entitySearchQuery]);
+
+  const narrativeStyleNameMap = useMemo(() => {
+    const map = new Map();
+    const styles = styleLibrary?.narrativeStyles || [];
+    for (const style of styles) {
+      if (style?.id) {
+        map.set(style.id, style.name || style.id);
+      }
+    }
+    return map;
+  }, [styleLibrary?.narrativeStyles]);
 
   // Helper to get status considering both IndexedDB and queue state
   const getEffectiveStatus = useCallback((chronicleId, chronicle) => {
@@ -313,14 +365,10 @@ export default function ChroniclePanel({
 
     // Get all chronicles from storage
     const allChronicles = Array.from(chronicles.values());
-
-    // All chronicles shown in the chronicles tab
-    const filteredChronicles = activeType === 'chronicles' ? allChronicles : [];
-
     // Sort by most recent first
-    filteredChronicles.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    allChronicles.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
-    for (const chronicle of filteredChronicles) {
+    for (const chronicle of allChronicles) {
       // Derive display name from title or role assignments
       const displayName = chronicle.title ||
         (chronicle.roleAssignments?.length > 0
@@ -353,6 +401,7 @@ export default function ChroniclePanel({
         selectedEntityIds: chronicle.selectedEntityIds,
         selectedEventIds: chronicle.selectedEventIds,
         selectedRelationshipIds: chronicle.selectedRelationshipIds,
+        temporalContext: chronicle.temporalContext,
 
         // Pipeline data
         assembledContent: chronicle.assembledContent,
@@ -382,7 +431,106 @@ export default function ChroniclePanel({
     }
 
     return items;
-  }, [activeType, chronicles, getEffectiveStatus]);
+  }, [chronicles, getEffectiveStatus]);
+
+  const getChronicleTypeLabel = useCallback((item) => {
+    if (item?.narrativeStyle?.name) return item.narrativeStyle.name;
+    if (item?.narrativeStyleId) {
+      return narrativeStyleNameMap.get(item.narrativeStyleId) || item.narrativeStyleId;
+    }
+    return 'Unknown Type';
+  }, [narrativeStyleNameMap]);
+
+  const filteredChronicleItems = useMemo(() => {
+    const query = entitySearchQuery.trim().toLowerCase();
+    let items = chronicleItems;
+
+    if (statusFilter !== 'all') {
+      items = items.filter((item) => item.status === statusFilter);
+    }
+
+    if (focusFilter !== 'all') {
+      items = items.filter((item) => item.focusType === focusFilter);
+    }
+
+    if (entitySearchSelectedId) {
+      items = items.filter((item) => (item.selectedEntityIds || []).includes(entitySearchSelectedId));
+    } else if (query) {
+      items = items.filter((item) =>
+        (item.roleAssignments || []).some((role) =>
+          role.entityName?.toLowerCase().includes(query)
+        )
+      );
+    }
+
+    const getLength = (item) => {
+      const text = item.finalContent || item.assembledContent || '';
+      if (!text) return 0;
+      return text.trim().split(/\s+/).filter(Boolean).length;
+    };
+
+    const getEraOrder = (item) => {
+      const focalEra = item.temporalContext?.focalEra;
+      if (!focalEra) return Number.MAX_SAFE_INTEGER;
+      if (typeof focalEra.order === 'number') return focalEra.order;
+      if (typeof focalEra.startTick === 'number') return focalEra.startTick;
+      return Number.MAX_SAFE_INTEGER;
+    };
+
+    const getEraName = (item) => item.temporalContext?.focalEra?.name || '';
+
+    const sorted = [...items].sort((a, b) => {
+      switch (sortMode) {
+        case 'created_asc':
+          return (a.createdAt || 0) - (b.createdAt || 0);
+        case 'created_desc':
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        case 'length_asc':
+          return getLength(a) - getLength(b);
+        case 'length_desc':
+          return getLength(b) - getLength(a);
+        case 'type_desc':
+          return getChronicleTypeLabel(b).localeCompare(getChronicleTypeLabel(a));
+        case 'era_asc': {
+          const orderA = getEraOrder(a);
+          const orderB = getEraOrder(b);
+          if (orderA !== orderB) return orderA - orderB;
+          return getEraName(a).localeCompare(getEraName(b));
+        }
+        case 'era_desc': {
+          const orderA = getEraOrder(a);
+          const orderB = getEraOrder(b);
+          if (orderA !== orderB) return orderB - orderA;
+          return getEraName(b).localeCompare(getEraName(a));
+        }
+        case 'type_asc':
+        default:
+          return getChronicleTypeLabel(a).localeCompare(getChronicleTypeLabel(b));
+      }
+    });
+
+    return sorted;
+  }, [
+    chronicleItems,
+    entitySearchQuery,
+    entitySearchSelectedId,
+    focusFilter,
+    getChronicleTypeLabel,
+    sortMode,
+    statusFilter,
+  ]);
+
+  const groupedChronicleItems = useMemo(() => {
+    if (!groupByType) return null;
+    const groups = new Map();
+    for (const item of filteredChronicleItems) {
+      const label = getChronicleTypeLabel(item);
+      if (!groups.has(label)) groups.set(label, []);
+      groups.get(label).push(item);
+    }
+    const labels = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b));
+    return labels.map((label) => ({ label, items: groups.get(label) }));
+  }, [filteredChronicleItems, getChronicleTypeLabel, groupByType]);
 
   // Get selected item
   const selectedItem = useMemo(() => {
@@ -755,6 +903,7 @@ export default function ChroniclePanel({
       selectedEventIds: wizardConfig.selectedEventIds,
       selectedRelationshipIds: wizardConfig.selectedRelationshipIds,
       entrypointId: wizardConfig.entryPointId,
+      temporalContext: wizardConfig.temporalContext,
     };
 
     console.log('[Chronicle Wizard] Generated chronicle:', {
@@ -781,6 +930,7 @@ export default function ChroniclePanel({
         selectedEventIds: wizardConfig.selectedEventIds,
         selectedRelationshipIds: wizardConfig.selectedRelationshipIds,
         entrypointId: wizardConfig.entryPointId,
+        temporalContext: wizardConfig.temporalContext,
       });
       // Refresh to show the new shell record
       await refresh();
@@ -793,8 +943,6 @@ export default function ChroniclePanel({
 
     // Select the newly generated chronicle by its chronicleId
     setSelectedItemId(chronicleId);
-    setActiveType('chronicles');
-
     // Close the wizard
     setShowWizard(false);
   }, [worldData, worldContext, styleLibrary, generateV2, simulationRunId, refresh, entityGuidance]);
@@ -831,6 +979,106 @@ export default function ChroniclePanel({
       ]);
     },
     [selectedItem, onEnqueue, refresh]
+  );
+
+  const handleResetChronicleImage = useCallback(
+    (ref) => {
+      if (!selectedItem?.chronicleId) return;
+      updateChronicleImageRef(selectedItem.chronicleId, ref.refId, {
+        status: 'pending',
+        error: '',
+        generatedImageId: '',
+      }).then(() => refresh());
+    },
+    [selectedItem, refresh]
+  );
+
+  const handleUpdateChronicleAnchorText = useCallback(
+    (ref, anchorText) => {
+      if (!selectedItem?.chronicleId) return;
+      updateChronicleImageRef(selectedItem.chronicleId, ref.refId, {
+        anchorText,
+      }).then(() => refresh());
+    },
+    [selectedItem, refresh]
+  );
+
+  const handleUpdateChronicleImageSize = useCallback(
+    (ref, size) => {
+      if (!selectedItem?.chronicleId) return;
+      const updates = { size };
+      if (size === 'full-width') {
+        updates.justification = null;
+      }
+      updateChronicleImageRef(selectedItem.chronicleId, ref.refId, updates).then(() => refresh());
+    },
+    [selectedItem, refresh]
+  );
+
+  const handleUpdateChronicleImageJustification = useCallback(
+    (ref, justification) => {
+      if (!selectedItem?.chronicleId) return;
+      updateChronicleImageRef(selectedItem.chronicleId, ref.refId, {
+        justification,
+      }).then(() => refresh());
+    },
+    [selectedItem, refresh]
+  );
+
+  const handleUpdateChronicleTemporalContext = useCallback(
+    (focalEraId) => {
+      if (!selectedItem?.chronicleId || !focalEraId) return;
+
+      const availableEras = wizardEras.length > 0
+        ? wizardEras
+        : (selectedItem.temporalContext?.allEras || []);
+      if (availableEras.length === 0) return;
+
+      const focalEra = availableEras.find((era) => era.id === focalEraId);
+      if (!focalEra) return;
+
+      const selectedEventIdSet = new Set(selectedItem.selectedEventIds || []);
+      const selectedEvents = wizardEvents.filter((event) => selectedEventIdSet.has(event.id));
+
+      const entrypointEntity = selectedItem.entrypointId
+        ? entities?.find((entity) => entity.id === selectedItem.entrypointId)
+        : undefined;
+      const entryPoint = entrypointEntity
+        ? { createdAt: entrypointEntity.createdAt ?? 0 }
+        : undefined;
+
+      let nextContext = availableEras.length > 0
+        ? computeTemporalContext(selectedEvents, availableEras, entryPoint)
+        : selectedItem.temporalContext;
+
+      if (!nextContext) {
+        nextContext = {
+          focalEra,
+          allEras: availableEras,
+          chronicleTickRange: [0, 0],
+          temporalScope: 'moment',
+          isMultiEra: false,
+          touchedEraIds: [],
+          temporalDescription: buildTemporalDescription(focalEra, [0, 0], 'moment', false, 1),
+        };
+      }
+
+      nextContext = {
+        ...nextContext,
+        focalEra,
+        allEras: availableEras,
+        temporalDescription: buildTemporalDescription(
+          focalEra,
+          nextContext.chronicleTickRange,
+          nextContext.temporalScope,
+          nextContext.isMultiEra,
+          nextContext.touchedEraIds?.length || 0
+        ),
+      };
+
+      updateChronicleTemporalContext(selectedItem.chronicleId, nextContext).then(() => refresh());
+    },
+    [selectedItem, wizardEras, wizardEvents, entities, refresh]
   );
 
   // Track completed chronicle image tasks and update chronicle records
@@ -898,10 +1146,6 @@ export default function ChroniclePanel({
     return byStatus;
   }, [chronicleItems]);
 
-  const activeTypeLabel = useMemo(() => {
-    return 'chronicle';
-  }, []);
-
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
@@ -942,76 +1186,183 @@ export default function ChroniclePanel({
         </div>
       </div>
 
-      {/* Content type tabs */}
+      {/* Sort / Filter / Group Bar */}
       <div
         style={{
           display: 'flex',
+          flexWrap: 'wrap',
+          gap: '12px',
+          alignItems: 'center',
+          padding: '10px 16px',
           borderBottom: '1px solid var(--border-color)',
           background: 'var(--bg-primary)',
         }}
       >
-        {CONTENT_TYPES.map((type) => (
-          <button
-            key={type.id}
-            onClick={() => {
-              setActiveType(type.id);
-              setSelectedItemId(null);
-            }}
-            style={{
-              padding: '12px 20px',
-              border: 'none',
-              background: activeType === type.id ? 'var(--bg-secondary)' : 'transparent',
-              borderBottom:
-                activeType === type.id
-                  ? '2px solid var(--accent-primary)'
-                  : '2px solid transparent',
-              color: activeType === type.id ? 'var(--text-primary)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: activeType === type.id ? 600 : 400,
-            }}
+        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+          <input
+            type="checkbox"
+            checked={groupByType}
+            onChange={(e) => setGroupByType(e.target.checked)}
+          />
+          Group by type
+        </label>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Sort:</span>
+          <select
+            className="illuminator-select"
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value)}
+            style={{ width: 'auto', minWidth: '150px', fontSize: '12px', padding: '4px 6px' }}
           >
-            {type.label}
-          </button>
-        ))}
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Status:</span>
+          <select
+            className="illuminator-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ width: 'auto', minWidth: '140px', fontSize: '12px', padding: '4px 6px' }}
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Focus:</span>
+          <select
+            className="illuminator-select"
+            value={focusFilter}
+            onChange={(e) => setFocusFilter(e.target.value)}
+            style={{ width: 'auto', minWidth: '120px', fontSize: '12px', padding: '4px 6px' }}
+          >
+            {FOCUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ position: 'relative', minWidth: '220px', flex: 1 }}>
+          <input
+            className="illuminator-input"
+            placeholder="Search cast by entity..."
+            value={entitySearchQuery}
+            onChange={(e) => {
+              setEntitySearchQuery(e.target.value);
+              setEntitySearchSelectedId(null);
+            }}
+            onFocus={() => setShowEntitySuggestions(true)}
+            onBlur={() => setTimeout(() => setShowEntitySuggestions(false), 100)}
+            style={{ width: '100%', fontSize: '12px', padding: '6px 8px' }}
+          />
+          {showEntitySuggestions && entitySuggestions.length > 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 4px)',
+                left: 0,
+                right: 0,
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                zIndex: 10,
+                maxHeight: '180px',
+                overflowY: 'auto',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              }}
+            >
+              {entitySuggestions.map((entity) => (
+                <div
+                  key={entity.id}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setEntitySearchQuery(entity.name || '');
+                    setEntitySearchSelectedId(entity.id);
+                    setShowEntitySuggestions(false);
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <span style={{ color: 'var(--text-primary)' }}>{entity.name}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{entity.kind}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main content area */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Events tab - full width panel */}
-        {activeType === 'events' ? (
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <EventsPanel worldData={worldData} entityMap={entityMap} />
-          </div>
-        ) : (
-          <>
-            {/* Left panel: Item list */}
-            <div
-              style={{
-                width: '300px',
-                borderRight: '1px solid var(--border-color)',
-                overflow: 'auto',
-                padding: '16px',
-              }}
-            >
-              {chronicleItems.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                  <div style={{ fontSize: '14px' }}>No items available</div>
-                  <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                    Run a simulation to populate world data.
-                  </div>
+        {/* Left panel: Item list */}
+        <div
+          style={{
+            width: '300px',
+            borderRight: '1px solid var(--border-color)',
+            overflow: 'auto',
+            padding: '16px',
+          }}
+        >
+          {filteredChronicleItems.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '14px' }}>No chronicles match your filters</div>
+              <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                Adjust filters or clear search to see more.
+              </div>
+            </div>
+          ) : groupByType && groupedChronicleItems ? (
+            groupedChronicleItems.map((group) => (
+              <div key={group.label} style={{ marginBottom: '12px' }}>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: 'var(--text-muted)',
+                    marginBottom: '6px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span>{group.label}</span>
+                  <span style={{ fontSize: '10px' }}>{group.items.length}</span>
                 </div>
-              ) : (
-                chronicleItems.map((item) => (
+                {group.items.map((item) => (
                   <ChronicleItemCard
                     key={item.id}
                     item={item}
                     isSelected={item.id === selectedItemId}
                     onClick={() => setSelectedItemId(item.id)}
                   />
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            ))
+          ) : (
+            filteredChronicleItems.map((item) => (
+              <ChronicleItemCard
+                key={item.id}
+                item={item}
+                isSelected={item.id === selectedItemId}
+                onClick={() => setSelectedItemId(item.id)}
+              />
+            ))
+          )}
+        </div>
 
         {/* Right panel: Selected item detail */}
         <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
@@ -1114,6 +1465,11 @@ export default function ChroniclePanel({
                   onGenerateImageRefs={handleGenerateImageRefs}
                   onRevalidate={handleRevalidate}
                   onGenerateChronicleImage={handleGenerateChronicleImage}
+                  onResetChronicleImage={handleResetChronicleImage}
+                  onUpdateChronicleAnchorText={handleUpdateChronicleAnchorText}
+                  onUpdateChronicleImageSize={handleUpdateChronicleImageSize}
+                  onUpdateChronicleImageJustification={handleUpdateChronicleImageJustification}
+                  onUpdateChronicleTemporalContext={handleUpdateChronicleTemporalContext}
                   isGenerating={isGenerating}
                   refinements={refinementState}
                   entities={entities}
@@ -1122,13 +1478,12 @@ export default function ChroniclePanel({
                   entityGuidance={entityGuidance}
                   cultureIdentities={cultureIdentities}
                   worldContext={worldContext}
+                  eras={wizardEras}
                 />
               )}
             </>
           )}
         </div>
-      </>
-    )}
       </div>
 
       {/* Restart confirmation modal */}
@@ -1212,6 +1567,7 @@ export default function ChroniclePanel({
         entityKinds={worldData?.schema?.entityKinds || []}
         eras={wizardEras}
         initialSeed={wizardSeed}
+        simulationRunId={simulationRunId}
       />
 
       <style>{`

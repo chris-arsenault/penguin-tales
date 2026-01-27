@@ -23,7 +23,7 @@ import styles from './WikiPage.module.css';
  * Check if image size is a float (small/medium) vs block (large/full-width)
  */
 function isFloatImage(size: WikiSectionImage['size']): boolean {
-  return size === 'small' || size === 'medium';
+  return size === 'small' || size === 'medium' || size === 'large';
 }
 
 /**
@@ -31,17 +31,23 @@ function isFloatImage(size: WikiSectionImage['size']): boolean {
  * Float images (small/medium): thumb frame + size width
  * Block images (large/full-width): centered block style
  */
-function getImageClassName(size: WikiSectionImage['size'], position: 'left' | 'right' = 'right'): string {
+function getImageClassName(size: WikiSectionImage['size'], position: 'left' | 'right' = 'left'): string {
   const isFloat = isFloatImage(size);
 
   if (isFloat) {
     const thumbClass = position === 'left' ? styles.imageThumbLeft : styles.imageThumbRight;
-    const sizeClass = size === 'small' ? styles.imageSmall : styles.imageMedium;
+    const sizeClass = size === 'small'
+      ? styles.imageSmall
+      : size === 'medium'
+      ? styles.imageMedium
+      : styles.imageLarge;
     return `${thumbClass} ${sizeClass}`;
   }
 
   // Block images
-  return size === 'full-width' ? styles.imageFullWidth : styles.imageLarge;
+  if (size === 'full-width') return styles.imageFullWidth;
+  const alignClass = position === 'right' ? styles.imageLargeRight : styles.imageLargeLeft;
+  return `${styles.imageLarge} ${alignClass}`;
 }
 
 /**
@@ -137,7 +143,7 @@ function ChronicleImage({
     };
   }, [image.imageId, imageData, imageLoader]);
 
-  const imageClassName = getImageClassName(image.size);
+  const imageClassName = getImageClassName(image.size, image.justification || 'left');
 
   if (loading) {
     return (
@@ -697,13 +703,20 @@ export default function WikiPageView({
     caption,
     fallbackTitle,
     fallbackSummary,
+    suppressSummaryFallback,
+    captionOnly,
   }: {
     entityId?: string;
     imageId?: string;
     caption?: string;
     fallbackTitle?: string;
     fallbackSummary?: string;
+    suppressSummaryFallback?: boolean;
+    captionOnly?: boolean;
   }) => {
+    if (captionOnly) {
+      return { title: caption || '', summary: '' };
+    }
     let resolvedEntityId = entityId;
     if (!resolvedEntityId && imageId && imageData?.results) {
       const match = imageData.results.find(result => result.imageId === imageId);
@@ -724,7 +737,11 @@ export default function WikiPageView({
       title = fallbackTitle || caption || page.title;
     }
     if (!summary) {
-      summary = fallbackSummary || page.content.summary || caption || '';
+      if (suppressSummaryFallback) {
+        summary = fallbackSummary || caption || '';
+      } else {
+        summary = fallbackSummary || page.content.summary || caption || '';
+      }
     }
 
     return { title, summary };
@@ -736,6 +753,8 @@ export default function WikiPageView({
     caption?: string;
     fallbackTitle?: string;
     fallbackSummary?: string;
+    suppressSummaryFallback?: boolean;
+    captionOnly?: boolean;
   }) => {
     if (!imageUrl) return;
     const { title, summary } = resolveImageDetails(info);
@@ -761,6 +780,8 @@ export default function WikiPageView({
       entityId: image.entityId,
       imageId: image.imageId,
       caption: image.caption,
+      suppressSummaryFallback: image.type === 'chronicle_image',
+      captionOnly: image.type === 'chronicle_image',
     });
   }, [openImageModal, imageLoader]);
 
@@ -782,6 +803,7 @@ export default function WikiPageView({
       roleAssignments: chronicle.roleAssignments || [],
       selectedEventIds: chronicle.selectedEventIds || [],
       selectedRelationshipIds: chronicle.selectedRelationshipIds || [],
+      temporalContext: chronicle.temporalContext,
     };
   }, [page, entityIndex]);
 
@@ -1057,72 +1079,71 @@ export default function WikiPageView({
             </div>
           )}
 
-          {/* Sections */}
-          {page.content.sections.map(section => (
-            <div key={section.id} id={section.id} className={styles.section}>
-              <h2 className={styles.sectionHeading}>{section.heading}</h2>
-              {section.heading === 'Timeline' && page.timelineEvents && page.timelineEvents.length > 0 ? (
-                <>
-                  {/* Prominence Timeline graph - shows prominence changes over time */}
-                  <ProminenceTimeline
-                    events={page.timelineEvents}
-                    entityId={page.id}
-                    prominenceScale={prominenceScale}
-                  />
-                  {/* Entity Timeline table - shows discrete events (excluding prominence-only) */}
-                  <EntityTimeline
-                    events={page.timelineEvents}
-                    entityId={page.id}
-                    entityIndex={entityIndex}
-                    onNavigate={handleEntityClick}
-                    onHoverEnter={handleEntityHoverEnter}
-                    onHoverLeave={handleEntityHoverLeave}
-                  />
-                </>
-              ) : (
-                <SectionWithImages
-                  section={section}
-                  imageData={imageData}
-                  imageLoader={imageLoader}
-                  entityNameMap={entityNameMap}
-                  aliasMap={aliasMap}
-                  linkableNames={linkableNames}
+        {chronicleLinks.length > 0 && (
+          <div className={styles.chronicles}>
+            <div className={styles.chroniclesTitle}>
+              Chronicles ({chronicleLinks.length})
+            </div>
+            {chronicleLinks.slice(0, 20).map(link => (
+              <button
+                key={link.id}
+                className={styles.chronicleItem}
+                onClick={() => onNavigate(link.id)}
+              >
+                <span>{link.title}</span>
+                {link.chronicle?.format && (
+                  <span className={styles.chronicleMeta}>
+                    {link.chronicle.format === 'document' ? 'Document' : 'Story'}
+                  </span>
+                )}
+              </button>
+            ))}
+            {chronicleLinks.length > 20 && (
+              <div className={styles.moreText}>
+                ...and {chronicleLinks.length - 20} more
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Sections */}
+        {page.content.sections.map(section => (
+          <div key={section.id} id={section.id} className={styles.section}>
+            <h2 className={styles.sectionHeading}>{section.heading}</h2>
+            {section.heading === 'Timeline' && page.timelineEvents && page.timelineEvents.length > 0 ? (
+              <>
+                {/* Prominence Timeline graph - shows prominence changes over time */}
+                <ProminenceTimeline
+                  events={page.timelineEvents}
+                  entityId={page.id}
+                  prominenceScale={prominenceScale}
+                />
+                {/* Entity Timeline table - shows discrete events (excluding prominence-only) */}
+                <EntityTimeline
+                  events={page.timelineEvents}
+                  entityId={page.id}
+                  entityIndex={entityIndex}
                   onNavigate={handleEntityClick}
                   onHoverEnter={handleEntityHoverEnter}
                   onHoverLeave={handleEntityHoverLeave}
-                  onImageOpen={handleInlineImageOpen}
                 />
-              )}
-            </div>
-          ))}
-
-          {/* Chronicles */}
-          {chronicleLinks.length > 0 && (
-            <div className={styles.chronicles}>
-              <div className={styles.chroniclesTitle}>
-                Chronicles ({chronicleLinks.length})
-              </div>
-              {chronicleLinks.slice(0, 20).map(link => (
-                <button
-                  key={link.id}
-                  className={styles.chronicleItem}
-                  onClick={() => onNavigate(link.id)}
-                >
-                  <span>{link.title}</span>
-                  {link.chronicle?.format && (
-                    <span className={styles.chronicleMeta}>
-                      {link.chronicle.format === 'document' ? 'Document' : 'Story'}
-                    </span>
-                  )}
-                </button>
-              ))}
-              {chronicleLinks.length > 20 && (
-                <div className={styles.moreText}>
-                  ...and {chronicleLinks.length - 20} more
-                </div>
-              )}
-            </div>
-          )}
+              </>
+            ) : (
+              <SectionWithImages
+                section={section}
+                imageData={imageData}
+                imageLoader={imageLoader}
+                entityNameMap={entityNameMap}
+                aliasMap={aliasMap}
+                linkableNames={linkableNames}
+                onNavigate={handleEntityClick}
+                onHoverEnter={handleEntityHoverEnter}
+                onHoverLeave={handleEntityHoverLeave}
+                onImageOpen={handleInlineImageOpen}
+              />
+            )}
+          </div>
+        ))}
 
           {/* Backlinks */}
           {backlinks.length > 0 && (

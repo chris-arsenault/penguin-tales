@@ -342,7 +342,8 @@ export function computeFocalEra(
 export function computeTemporalContext(
   events: NarrativeEventContext[],
   eras: EraTemporalInfo[],
-  entryPoint?: EntityContext
+  entryPoint?: EntityContext,
+  focalEraOverrideId?: string | null
 ): ChronicleTemporalContext {
   // Compute tick range from events
   let minTick = Infinity;
@@ -376,8 +377,11 @@ export function computeTemporalContext(
   const isMultiEra = touchedEraIds.size > 1;
   const temporalScope = computeTemporalScope(chronicleTickRange, isMultiEra);
 
-  // Compute focal era
-  const focalEra = computeFocalEra(events, eras) || eras[0];
+  // Compute focal era (use override if provided)
+  const overrideEra = focalEraOverrideId
+    ? eras.find(e => e.id === focalEraOverrideId)
+    : undefined;
+  const focalEra = overrideEra || computeFocalEra(events, eras) || eras[0];
 
   // Build temporal description
   const temporalDescription = buildTemporalDescription(

@@ -11,7 +11,7 @@
  * - Uses the same image generation pipeline as entity images
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useImageUrl } from '../hooks/useImageUrl';
 import StyleSelector, { resolveStyleSelection, CULTURE_DEFAULT_ID } from './StyleSelector';
 import { buildChronicleImagePrompt } from '../lib/promptBuilders';
@@ -66,6 +66,16 @@ interface ChronicleImagePanelProps {
   entities: Map<string, EntityContext>;
   /** Callback to generate an image - receives the ref and the built prompt */
   onGenerateImage?: (ref: PromptRequestRef, prompt: string, styleInfo: StyleInfo) => void;
+  /** Callback to reset a failed image ref back to pending */
+  onResetImage?: (ref: PromptRequestRef) => void;
+  /** Callback to update anchor text for a ref */
+  onUpdateAnchorText?: (ref: EntityImageRef | PromptRequestRef, anchorText: string) => void;
+  /** Callback to update size for a ref */
+  onUpdateSize?: (ref: EntityImageRef | PromptRequestRef, size: ChronicleImageRefs['refs'][number]['size']) => void;
+  /** Callback to update justification for a ref */
+  onUpdateJustification?: (ref: EntityImageRef | PromptRequestRef, justification: 'left' | 'right') => void;
+  /** Full chronicle text for anchor validation */
+  chronicleText?: string;
   isGenerating?: boolean;
   /** Style library for style selection */
   styleLibrary?: StyleLibrary;
@@ -100,11 +110,135 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 
 // Default entity kind for visual identity filtering (general scene images)
 const DEFAULT_VISUAL_IDENTITY_KIND = 'scene';
+const JUSTIFY_SIZES = new Set(['small', 'medium', 'large']);
 
-function EntityImageRefCard({ imageRef, entity }: { imageRef: EntityImageRef; entity: EntityContext | undefined }) {
+function AnchorTextEditor({
+  anchorText,
+  onSave,
+  disabled = false,
+  previewLength = 40,
+}: {
+  anchorText: string;
+  onSave?: (next: string) => void;
+  disabled?: boolean;
+  previewLength?: number;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(anchorText);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setDraft(anchorText);
+    }
+  }, [anchorText, isEditing]);
+
+  const preview = anchorText.length > previewLength
+    ? `${anchorText.slice(0, previewLength)}...`
+    : anchorText;
+
+  if (!onSave) {
+    return (
+      <div
+        style={{
+          fontSize: '11px',
+          color: 'var(--text-muted)',
+          marginTop: '4px',
+          fontStyle: 'italic',
+        }}
+      >
+        Anchor: &quot;{preview}&quot;
+      </div>
+    );
+  }
+
+  if (!isEditing) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+          Anchor: &quot;{preview}&quot;
+        </span>
+        <button
+          type="button"
+          className="illuminator-button-small"
+          onClick={() => setIsEditing(true)}
+          disabled={disabled}
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
+
+  const handleSave = () => {
+    const next = draft.trim();
+    if (!next) return;
+    if (next !== anchorText) {
+      onSave(next);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setDraft(anchorText);
+    setIsEditing(false);
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Anchor:</span>
+      <input
+        className="illuminator-input"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        style={{ minWidth: '200px', flex: 1, fontSize: '11px', padding: '4px 6px' }}
+        disabled={disabled}
+      />
+      <button
+        type="button"
+        className="illuminator-button-small"
+        onClick={handleSave}
+        disabled={disabled || !draft.trim()}
+      >
+        Save
+      </button>
+      <button
+        type="button"
+        className="illuminator-button-small"
+        onClick={handleCancel}
+        disabled={disabled}
+      >
+        Cancel
+      </button>
+    </div>
+  );
+}
+
+function EntityImageRefCard({
+  imageRef,
+  entity,
+  onUpdateAnchorText,
+  onUpdateSize,
+  onUpdateJustification,
+  chronicleText,
+  isGenerating,
+}: {
+  imageRef: EntityImageRef;
+  entity: EntityContext | undefined;
+  onUpdateAnchorText?: (next: string) => void;
+  onUpdateSize?: (size: EntityImageRef['size']) => void;
+  onUpdateJustification?: (justification: 'left' | 'right') => void;
+  chronicleText?: string;
+  isGenerating?: boolean;
+}) {
   const imageId = entity?.enrichment?.image?.imageId;
   const { url, loading } = useImageUrl(imageId);
   const hasImage = Boolean(imageId);
+  const isJustifiable = JUSTIFY_SIZES.has(imageRef.size);
+  const anchorMissing = Boolean(
+    chronicleText &&
+    imageRef.anchorText &&
+    !chronicleText.includes(imageRef.anchorText)
+  );
 
   return (
     <div
@@ -185,16 +319,54 @@ function EntityImageRefCard({ imageRef, entity }: { imageRef: EntityImageRef; en
           </div>
         )}
 
-        <div
-          style={{
-            fontSize: '11px',
-            color: 'var(--text-muted)',
-            marginTop: '4px',
-            fontStyle: 'italic',
-          }}
-        >
-          Anchor: &quot;{imageRef.anchorText.slice(0, 40)}{imageRef.anchorText.length > 40 ? '...' : ''}&quot;
-        </div>
+        <AnchorTextEditor
+          anchorText={imageRef.anchorText}
+          onSave={onUpdateAnchorText}
+          disabled={isGenerating}
+        />
+        {anchorMissing && (
+          <div
+            style={{
+              fontSize: '11px',
+              color: '#ef4444',
+              marginTop: '4px',
+            }}
+          >
+            Anchor text not found in chronicle
+          </div>
+        )}
+
+        {onUpdateSize && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Size:</span>
+            <select
+              className="illuminator-select"
+              value={imageRef.size}
+              onChange={(e) => onUpdateSize(e.target.value as EntityImageRef['size'])}
+              disabled={isGenerating}
+              style={{ width: 'auto', minWidth: '120px', fontSize: '11px', padding: '4px 6px' }}
+            >
+              {Object.entries(SIZE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            {isJustifiable && onUpdateJustification && (
+              <>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Justify:</span>
+                <select
+                  className="illuminator-select"
+                  value={imageRef.justification || 'left'}
+                  onChange={(e) => onUpdateJustification(e.target.value as 'left' | 'right')}
+                  disabled={isGenerating}
+                  style={{ width: 'auto', minWidth: '90px', fontSize: '11px', padding: '4px 6px' }}
+                >
+                  <option value="left">Left</option>
+                  <option value="right">Right</option>
+                </select>
+              </>
+            )}
+          </div>
+        )}
 
         {imageRef.caption && (
           <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -225,17 +397,35 @@ function EntityImageRefCard({ imageRef, entity }: { imageRef: EntityImageRef; en
 function PromptRequestCard({
   imageRef,
   onGenerate,
+  onReset,
+  onUpdateAnchorText,
+  onUpdateSize,
+  onUpdateJustification,
+  chronicleText,
   isGenerating,
   entities,
 }: {
   imageRef: PromptRequestRef;
   onGenerate?: () => void;
+  onReset?: () => void;
+  onUpdateAnchorText?: (next: string) => void;
+  onUpdateSize?: (size: PromptRequestRef['size']) => void;
+  onUpdateJustification?: (justification: 'left' | 'right') => void;
+  chronicleText?: string;
   isGenerating?: boolean;
   entities?: Map<string, EntityContext>;
 }) {
   const { url, loading } = useImageUrl(imageRef.generatedImageId);
   const statusColor = STATUS_COLORS[imageRef.status] || STATUS_COLORS.pending;
   const canGenerate = imageRef.status === 'pending' && !isGenerating;
+  const canRegenerate = imageRef.status === 'complete' && !isGenerating;
+  const canReset = imageRef.status === 'failed' && !isGenerating;
+  const isJustifiable = JUSTIFY_SIZES.has(imageRef.size);
+  const anchorMissing = Boolean(
+    chronicleText &&
+    imageRef.anchorText &&
+    !chronicleText.includes(imageRef.anchorText)
+  );
 
   // Resolve involved entity names
   const involvedEntityNames = imageRef.involvedEntityIds
@@ -335,15 +525,54 @@ function PromptRequestCard({
           {imageRef.sceneDescription.length > 120 ? '...' : ''}
         </div>
 
-        <div
-          style={{
-            fontSize: '11px',
-            color: 'var(--text-muted)',
-            fontStyle: 'italic',
-          }}
-        >
-          Anchor: &quot;{imageRef.anchorText.slice(0, 40)}{imageRef.anchorText.length > 40 ? '...' : ''}&quot;
-        </div>
+        <AnchorTextEditor
+          anchorText={imageRef.anchorText}
+          onSave={onUpdateAnchorText}
+          disabled={isGenerating}
+        />
+        {anchorMissing && (
+          <div
+            style={{
+              fontSize: '11px',
+              color: '#ef4444',
+              marginTop: '4px',
+            }}
+          >
+            Anchor text not found in chronicle
+          </div>
+        )}
+
+        {onUpdateSize && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Size:</span>
+            <select
+              className="illuminator-select"
+              value={imageRef.size}
+              onChange={(e) => onUpdateSize(e.target.value as PromptRequestRef['size'])}
+              disabled={isGenerating}
+              style={{ width: 'auto', minWidth: '120px', fontSize: '11px', padding: '4px 6px' }}
+            >
+              {Object.entries(SIZE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            {isJustifiable && onUpdateJustification && (
+              <>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Justify:</span>
+                <select
+                  className="illuminator-select"
+                  value={imageRef.justification || 'left'}
+                  onChange={(e) => onUpdateJustification(e.target.value as 'left' | 'right')}
+                  disabled={isGenerating}
+                  style={{ width: 'auto', minWidth: '90px', fontSize: '11px', padding: '4px 6px' }}
+                >
+                  <option value="left">Left</option>
+                  <option value="right">Right</option>
+                </select>
+              </>
+            )}
+          </div>
+        )}
 
         {involvedEntityNames && involvedEntityNames.length > 0 && (
           <div
@@ -414,6 +643,42 @@ function PromptRequestCard({
             Generate Image
           </button>
         )}
+        {canRegenerate && onGenerate && (
+          <button
+            onClick={onGenerate}
+            style={{
+              marginTop: '8px',
+              padding: '6px 12px',
+              fontSize: '11px',
+              background: 'var(--accent-primary)',
+              border: 'none',
+              borderRadius: '4px',
+              color: 'white',
+              cursor: 'pointer',
+              fontWeight: 500,
+            }}
+          >
+            Regenerate Image
+          </button>
+        )}
+        {canReset && onReset && (
+          <button
+            onClick={onReset}
+            style={{
+              marginTop: '8px',
+              padding: '6px 12px',
+              fontSize: '11px',
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '4px',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontWeight: 500,
+            }}
+          >
+            Reset
+          </button>
+        )}
       </div>
     </div>
   );
@@ -423,6 +688,11 @@ export default function ChronicleImagePanel({
   imageRefs,
   entities,
   onGenerateImage,
+  onResetImage,
+  onUpdateAnchorText,
+  onUpdateSize,
+  onUpdateJustification,
+  chronicleText,
   isGenerating = false,
   styleLibrary,
   styleSelection: externalStyleSelection,
@@ -731,6 +1001,11 @@ export default function ChronicleImagePanel({
                 key={ref.refId}
                 imageRef={ref}
                 entity={entities.get(ref.entityId)}
+                onUpdateAnchorText={onUpdateAnchorText ? (next) => onUpdateAnchorText(ref, next) : undefined}
+                onUpdateSize={onUpdateSize ? (size) => onUpdateSize(ref, size) : undefined}
+                onUpdateJustification={onUpdateJustification ? (justification) => onUpdateJustification(ref, justification) : undefined}
+                chronicleText={chronicleText}
+                isGenerating={isGenerating}
               />
             ))}
           </div>
@@ -758,6 +1033,11 @@ export default function ChronicleImagePanel({
                 key={ref.refId}
                 imageRef={ref}
                 onGenerate={() => handleGenerateImage(ref)}
+                onReset={onResetImage ? () => onResetImage(ref) : undefined}
+                onUpdateAnchorText={onUpdateAnchorText ? (next) => onUpdateAnchorText(ref, next) : undefined}
+                onUpdateSize={onUpdateSize ? (size) => onUpdateSize(ref, size) : undefined}
+                onUpdateJustification={onUpdateJustification ? (justification) => onUpdateJustification(ref, justification) : undefined}
+                chronicleText={chronicleText}
                 isGenerating={isGenerating}
                 entities={entities}
               />

@@ -74,6 +74,58 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
   },
 
   // ===========================
+  // PAIR compositions
+  // ===========================
+  {
+    id: 'pair-mentor-student',
+    name: 'Pair: Mentor & Student',
+    description: 'Teaching moment between master and apprentice',
+    promptFragment:
+      'two figures in teaching dynamic, mentor demonstrating or guiding, student observing or mimicking, height or posture difference suggesting experience gap, supportive body language, focused attention, knowledge transfer moment',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pair-back-to-back',
+    name: 'Pair: Back to Back',
+    description: 'Allied stance with mutual trust or shared threat',
+    promptFragment:
+      'two figures standing back to back, defensive alliance, outward-facing vigilance, shoulders touching, weapons or hands ready, surrounded implication, unified silhouette',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pair-side-by-side',
+    name: 'Pair: Side by Side',
+    description: 'Aligned stance with unified direction',
+    promptFragment:
+      'two figures standing side by side, aligned stance, shared direction, cooperative energy, parallel posture, supportive proximity, balanced framing, unified presence',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pair-negotiation',
+    name: 'Pair: Negotiation',
+    description: 'Formal exchange or deal-making between two parties',
+    promptFragment:
+      'two figures across from each other, negotiation stance, table or barrier between them, guarded postures, strategic eye contact, formal composition, balanced framing',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pair-embrace',
+    name: 'Pair: Embrace',
+    description: 'Intimate moment of connection between two figures',
+    promptFragment:
+      'two figures embracing, arms wrapped around each other, emotional closeness, soft lighting, heads together or on shoulder, tender body language, intimate framing',
+    targetCategory: 'character',
+  },
+  {
+    id: 'pair-heated-discussion',
+    name: 'Pair: Heated Discussion',
+    description: 'Tense verbal confrontation between two figures',
+    promptFragment:
+      'two figures facing each other, heated argument, aggressive body language, leaning forward, pointing gestures, tight framing, tension in negative space, eye contact',
+    targetCategory: 'character',
+  },
+
+  // ===========================
   // POSE compositions
   // ===========================
   {

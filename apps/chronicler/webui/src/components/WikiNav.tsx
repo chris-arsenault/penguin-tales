@@ -51,6 +51,7 @@ export default function WikiNav({
   // Collapsible section state (confluxes and huddles default to collapsed)
   const [confluxesExpanded, setConfluxesExpanded] = useState(false);
   const [huddlesExpanded, setHuddlesExpanded] = useState(false);
+  const [showChronicleTypes, setShowChronicleTypes] = useState(false);
 
   // Get top categories for quick access
   const topCategories = categories
@@ -69,6 +70,31 @@ export default function WikiNav({
   const chroniclePages = chronicles.filter((page) => page.chronicle);
   const storyChronicles = chroniclePages.filter((page) => page.chronicle?.format === 'story');
   const documentChronicles = chroniclePages.filter((page) => page.chronicle?.format === 'document');
+
+  const formatChronicleSubtype = (typeId: string) => {
+    return typeId
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  };
+
+  const chronicleTypeGroups = chroniclePages.reduce((groups, page) => {
+    const typeId = page.chronicle?.narrativeStyleId || 'unknown';
+    if (!groups.has(typeId)) {
+      groups.set(typeId, []);
+    }
+    groups.get(typeId)?.push(page);
+    return groups;
+  }, new Map<string, WikiPage[]>());
+
+  const sortedChronicleTypeGroups = Array.from(chronicleTypeGroups.entries())
+    .map(([typeId, pages]) => ({
+      typeId,
+      label: typeId === 'unknown' ? 'Unknown Type' : formatChronicleSubtype(typeId),
+      pages,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   return (
     <div className={styles.container}>
@@ -110,7 +136,17 @@ export default function WikiNav({
 
       {chroniclePages.length > 0 && (
         <div className={styles.section}>
-          <div className={styles.sectionTitle}>Chronicles</div>
+          <div className={styles.sectionTitleRow}>
+            <span className={styles.sectionTitleLabel}>Chronicles</span>
+            <label className={styles.sectionToggle}>
+              <input
+                type="checkbox"
+                checked={showChronicleTypes}
+                onChange={(event) => setShowChronicleTypes(event.target.checked)}
+              />
+              Types
+            </label>
+          </div>
           <button
             className={currentPageId === 'chronicles' ? styles.navItemActive : styles.navItem}
             onClick={() => onNavigate('chronicles')}
@@ -118,23 +154,42 @@ export default function WikiNav({
             All Chronicles
             <span className={currentPageId === 'chronicles' ? styles.badgeActive : styles.badge}>({chroniclePages.length})</span>
           </button>
-          {storyChronicles.length > 0 && (
-            <button
-              className={currentPageId === 'chronicles-story' ? styles.navItemActive : styles.navItem}
-              onClick={() => onNavigate('chronicles-story')}
-            >
-              Stories
-              <span className={currentPageId === 'chronicles-story' ? styles.badgeActive : styles.badge}>({storyChronicles.length})</span>
-            </button>
-          )}
-          {documentChronicles.length > 0 && (
-            <button
-              className={currentPageId === 'chronicles-document' ? styles.navItemActive : styles.navItem}
-              onClick={() => onNavigate('chronicles-document')}
-            >
-              Documents
-              <span className={currentPageId === 'chronicles-document' ? styles.badgeActive : styles.badge}>({documentChronicles.length})</span>
-            </button>
+          {showChronicleTypes ? (
+            sortedChronicleTypeGroups.map((group) => {
+              const targetId = `chronicles-type-${group.typeId}`;
+              const isActive = currentPageId === targetId;
+              return (
+                <button
+                  key={group.typeId}
+                  className={isActive ? styles.navItemActive : styles.navItem}
+                  onClick={() => onNavigate(targetId)}
+                >
+                  {group.label}
+                  <span className={isActive ? styles.badgeActive : styles.badge}>({group.pages.length})</span>
+                </button>
+              );
+            })
+          ) : (
+            <>
+              {storyChronicles.length > 0 && (
+                <button
+                  className={currentPageId === 'chronicles-story' ? styles.navItemActive : styles.navItem}
+                  onClick={() => onNavigate('chronicles-story')}
+                >
+                  Stories
+                  <span className={currentPageId === 'chronicles-story' ? styles.badgeActive : styles.badge}>({storyChronicles.length})</span>
+                </button>
+              )}
+              {documentChronicles.length > 0 && (
+                <button
+                  className={currentPageId === 'chronicles-document' ? styles.navItemActive : styles.navItem}
+                  onClick={() => onNavigate('chronicles-document')}
+                >
+                  Documents
+                  <span className={currentPageId === 'chronicles-document' ? styles.badgeActive : styles.badge}>({documentChronicles.length})</span>
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

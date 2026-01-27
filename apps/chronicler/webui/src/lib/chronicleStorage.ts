@@ -41,6 +41,15 @@ export interface ChronicleRecord {
   selectedEntityIds: string[];
   selectedEventIds: string[];
   selectedRelationshipIds: string[];
+  temporalContext?: {
+    focalEra?: { id: string; name: string; summary?: string };
+    chronicleTickRange?: [number, number];
+    temporalScope?: string;
+    isMultiEra?: boolean;
+    touchedEraIds?: string[];
+    temporalDescription?: string;
+    [key: string]: unknown;
+  };
 
   // Content
   assembledContent?: string;
@@ -54,6 +63,7 @@ export interface ChronicleRecord {
       anchorText: string;
       anchorIndex?: number;
       size: 'small' | 'medium' | 'large' | 'full-width';
+      justification?: 'left' | 'right';
       caption?: string;
       type: 'entity_ref' | 'prompt_request';
       entityId?: string;

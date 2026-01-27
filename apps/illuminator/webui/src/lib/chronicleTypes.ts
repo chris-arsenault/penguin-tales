@@ -272,7 +272,7 @@ export interface NarrativeEventContext {
 // Chronicle Focus - Defines what the chronicle is about (chronicle-first)
 // =============================================================================
 
-export type ChronicleFocusType = 'single' | 'ensemble' | 'relationship' | 'event';
+export type ChronicleFocusType = 'single' | 'ensemble';
 
 export interface ChronicleFocus {
   /** What type of chronicle is this? */
@@ -372,6 +372,8 @@ interface BaseChronicleImageRef {
   anchorIndex?: number;
   /** Display size hint */
   size: ChronicleImageSize;
+  /** Float justification for small/medium images */
+  justification?: 'left' | 'right';
   /** Optional caption for the image */
   caption?: string;
 }

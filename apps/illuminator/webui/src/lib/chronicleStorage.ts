@@ -13,6 +13,7 @@ import type {
   ChronicleStatus,
   ChronicleImageRefs,
   CohesionReport,
+  ChronicleTemporalContext,
 } from './chronicleTypes';
 import type { ChronicleStep } from './enrichmentTypes';
 import type { NarrativeStyle } from '@canonry/world-schema';
@@ -64,6 +65,9 @@ export interface ChronicleRecord {
 
   /** Selected relationship IDs (src:dst:kind format) */
   selectedRelationshipIds: string[];
+
+  /** Temporal context including focal era */
+  temporalContext?: ChronicleTemporalContext;
 
   // ========================================================================
   // Mechanical metadata (used for graph traversal, not identity)
@@ -218,6 +222,7 @@ export interface ChronicleShellMetadata {
   selectedEntityIds: string[];
   selectedEventIds: string[];
   selectedRelationshipIds: string[];
+  temporalContext?: ChronicleTemporalContext;
 
   // Mechanical (optional)
   entrypointId?: string;
@@ -251,6 +256,7 @@ export async function createChronicleShell(
     selectedEntityIds: metadata.selectedEntityIds,
     selectedEventIds: metadata.selectedEventIds,
     selectedRelationshipIds: metadata.selectedRelationshipIds,
+    temporalContext: metadata.temporalContext,
 
     // Mechanical
     entrypointId: metadata.entrypointId,
@@ -293,6 +299,7 @@ export interface ChronicleMetadata {
   selectedEntityIds: string[];
   selectedEventIds: string[];
   selectedRelationshipIds: string[];
+  temporalContext?: ChronicleTemporalContext;
 
   // Mechanical (optional)
   entrypointId?: string;
@@ -334,6 +341,7 @@ export async function createChronicle(
     selectedEntityIds: metadata.selectedEntityIds,
     selectedEventIds: metadata.selectedEventIds,
     selectedRelationshipIds: metadata.selectedRelationshipIds,
+    temporalContext: metadata.temporalContext,
 
     // Mechanical
     entrypointId: metadata.entrypointId,
@@ -634,6 +642,11 @@ export async function updateChronicleImageRef(
     status?: 'pending' | 'generating' | 'complete' | 'failed';
     generatedImageId?: string;
     error?: string;
+    anchorText?: string;
+    anchorIndex?: number;
+    caption?: string;
+    size?: 'small' | 'medium' | 'large' | 'full-width';
+    justification?: 'left' | 'right' | null;
   }
 ): Promise<void> {
   const db = await openChronicleDb();
@@ -661,15 +674,50 @@ export async function updateChronicleImageRef(
       }
 
       const ref = record.imageRefs.refs[refIndex];
-      if (ref.type !== 'prompt_request') {
+      const wantsPromptUpdates =
+        updates.status !== undefined || updates.generatedImageId !== undefined || updates.error !== undefined;
+
+      if (wantsPromptUpdates && ref.type !== 'prompt_request') {
         reject(new Error(`Image ref ${refId} is not a prompt request`));
         return;
       }
 
-      // Apply updates
-      if (updates.status !== undefined) ref.status = updates.status;
-      if (updates.generatedImageId !== undefined) ref.generatedImageId = updates.generatedImageId;
-      if (updates.error !== undefined) ref.error = updates.error;
+      // Apply base updates
+      if (updates.anchorText !== undefined) {
+        ref.anchorText = updates.anchorText;
+        if (updates.anchorIndex === undefined) {
+          ref.anchorIndex = undefined;
+        }
+      }
+      if (updates.anchorIndex !== undefined) ref.anchorIndex = updates.anchorIndex;
+      if (updates.caption !== undefined) ref.caption = updates.caption;
+      if (updates.size !== undefined) ref.size = updates.size;
+      if (updates.justification !== undefined) {
+        if (updates.justification) {
+          ref.justification = updates.justification;
+        } else {
+          delete ref.justification;
+        }
+      }
+
+      // Apply prompt request updates
+      if (ref.type === 'prompt_request') {
+        if (updates.status !== undefined) ref.status = updates.status;
+        if (updates.generatedImageId !== undefined) {
+          if (updates.generatedImageId) {
+            ref.generatedImageId = updates.generatedImageId;
+          } else {
+            delete ref.generatedImageId;
+          }
+        }
+        if (updates.error !== undefined) {
+          if (updates.error) {
+            ref.error = updates.error;
+          } else {
+            delete ref.error;
+          }
+        }
+      }
 
       record.updatedAt = Date.now();
 
@@ -678,6 +726,42 @@ export async function updateChronicleImageRef(
 
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle image ref'));
+  });
+}
+
+/**
+ * Update chronicle temporal context (e.g., post-publish corrections)
+ */
+export async function updateChronicleTemporalContext(
+  chronicleId: string,
+  temporalContext: ChronicleTemporalContext | undefined | null
+): Promise<void> {
+  const db = await openChronicleDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as ChronicleRecord | undefined;
+      if (!record) {
+        reject(new Error(`Chronicle ${chronicleId} not found`));
+        return;
+      }
+
+      if (temporalContext) {
+        record.temporalContext = temporalContext;
+      } else {
+        delete record.temporalContext;
+      }
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle temporal context'));
   });
 }
 
