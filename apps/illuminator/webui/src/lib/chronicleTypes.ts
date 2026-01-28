@@ -298,21 +298,23 @@ export interface ChronicleFocus {
 }
 
 /**
- * Canon fact with metadata for perspective synthesis.
- * Core facts are always included but presented through different facets.
+ * Canon fact with relevance metadata for perspective synthesis.
+ * All facts are world truths - relevance metadata guides what gets
+ * foregrounded for a given entity constellation.
  */
 export interface CanonFactWithMetadata {
   id: string;
   text: string;
+  /** Cultures this fact is especially relevant to. Use "*" for universal. */
   relevantCultures: string[];
+  /** Entity kinds this fact is especially relevant to. Use "*" for universal. */
   relevantKinds: string[];
+  /** Thematic tags this fact relates to (e.g., "trade", "conflict", "magic") */
   relevantTags: string[];
+  /** Relationship kinds this fact relates to (e.g., "enemy", "trade_partner") */
   relevantRelationships: string[];
+  /** Base priority 0-1. Higher = more likely to be foregrounded. */
   basePriority: number;
-  /** Core facts are always included - the question is HOW they manifest */
-  isCore: boolean;
-  /** Culture/theme-specific interpretations of this fact */
-  facetHints?: Record<string, string>;
 }
 
 /**

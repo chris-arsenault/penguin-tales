@@ -184,7 +184,7 @@ async function executeV2GenerationStep(
         canonFacts: perspectiveResult.facetedFacts,
       };
 
-      console.log(`[Worker] Perspective synthesis complete: ${perspectiveResult.facetedFacts.length} faceted facts, ${perspectiveResult.synthesis.coreFacets.length} core facets, ${perspectiveResult.synthesis.suggestedMotifs.length} motifs`);
+      console.log(`[Worker] Perspective synthesis complete: ${perspectiveResult.facetedFacts.length} faceted facts, ${perspectiveResult.synthesis.suggestedMotifs.length} motifs`);
     } catch (err) {
       // Per user requirement: if LLM fails, stop the process
       const errorMessage = err instanceof Error ? err.message : String(err);

@@ -17,27 +17,22 @@ import { runTextCall } from './llmTextCall';
 // =============================================================================
 
 /**
- * Canon fact with metadata for perspective synthesis.
- * Core facts are always included but presented through different facets.
+ * Canon fact with relevance metadata for perspective synthesis.
+ * All facts are world truths - relevance metadata guides what gets
+ * foregrounded for a given entity constellation.
  */
 export interface CanonFactWithMetadata {
   id: string;
   text: string;
 
-  // Relevance boosters
+  // Relevance signals
   relevantCultures: string[]; // ["nightshelf", "aurora_stack", "*"]
   relevantKinds: string[]; // ["artifact", "npc", "*"]
   relevantTags: string[]; // ["trade", "conflict", "magic"]
   relevantRelationships: string[]; // ["ally", "rival", "trade_partner"]
 
-  // Base priority (0-1)
+  // Base priority (0-1) - higher = more likely to be foregrounded
   basePriority: number;
-
-  // Core facts are always included - the question is HOW they manifest
-  isCore: boolean;
-
-  // Culture/theme-specific interpretations of this fact
-  facetHints?: Record<string, string>;
 }
 
 /**
@@ -74,7 +69,7 @@ export interface ScoredFact {
 }
 
 /**
- * How a core fact manifests for this specific constellation
+ * A fact selected and interpreted for this constellation
  */
 export interface FactFacet {
   factId: string;
@@ -85,10 +80,12 @@ export interface FactFacet {
  * Output of perspective synthesis
  */
 export interface PerspectiveSynthesis {
-  brief: string; // 150-200 words of perspective guidance
-  coreFacets: FactFacet[]; // How core truths manifest for this constellation
-  contextualFacts: string[]; // Non-core facts relevant to this constellation
-  suggestedMotifs: string[]; // 2-3 short phrases for recurring themes
+  /** 150-200 words of perspective guidance for this chronicle */
+  brief: string;
+  /** Selected facts with their faceted interpretations for this constellation */
+  facets: FactFacet[];
+  /** 2-3 short phrases that might echo through this chronicle */
+  suggestedMotifs: string[];
 }
 
 /**
@@ -118,106 +115,64 @@ export interface PerspectiveSynthesisResult {
 }
 
 // =============================================================================
-// Fact Analysis
+// Fact Scoring
 // =============================================================================
 
 /**
- * Separate core facts from contextual facts and score contextual ones
+ * Score all facts based on relevance to the entity constellation.
+ * Higher scores = more relevant to this constellation.
  */
-export function analyzeFacts(
+export function scoreFacts(
   facts: CanonFactWithMetadata[],
   constellation: EntityConstellation
-): { coreFacts: CanonFactWithMetadata[]; contextualFacts: ScoredFact[] } {
-  const coreFacts: CanonFactWithMetadata[] = [];
-  const contextualFacts: ScoredFact[] = [];
+): ScoredFact[] {
+  return facts.map((fact) => {
+    let score = fact.basePriority;
 
-  for (const fact of facts) {
-    if (fact.isCore) {
-      coreFacts.push(fact);
-    } else {
-      // Score contextual facts for relevance
-      let score = fact.basePriority;
-
-      // Culture boost
-      if (
-        fact.relevantCultures.includes('*') ||
-        fact.relevantCultures.some((c) => constellation.cultures[c])
-      ) {
-        score += 0.2;
-      }
-
-      // Kind boost
-      if (
-        fact.relevantKinds.includes('*') ||
-        fact.relevantKinds.some((k) => constellation.kinds[k])
-      ) {
-        score += 0.15;
-      }
-
-      // Tag boost
-      const matchingTags = fact.relevantTags.filter((t) =>
-        constellation.prominentTags.includes(t)
-      );
-      score += matchingTags.length * 0.1;
-
-      // Relationship boost
-      const matchingRels = fact.relevantRelationships.filter(
-        (r) => constellation.relationshipKinds[r]
-      );
-      score += matchingRels.length * 0.1;
-
-      // Conflict/trade boost
-      if (
-        fact.relevantTags.includes('conflict') ||
-        fact.relevantRelationships.includes('enemy')
-      ) {
-        if (constellation.hasConflict) {
-          score += 0.1;
-        }
-      }
-      if (
-        fact.relevantTags.includes('trade') ||
-        fact.relevantRelationships.includes('trade_partner')
-      ) {
-        if (constellation.hasTrade) {
-          score += 0.1;
-        }
-      }
-
-      contextualFacts.push({ fact, score });
+    // Culture boost
+    if (
+      fact.relevantCultures.includes('*') ||
+      fact.relevantCultures.some((c) => constellation.cultures[c])
+    ) {
+      score += 0.2;
     }
-  }
 
-  // Sort contextual facts by score
-  contextualFacts.sort((a, b) => b.score - a.score);
+    // Kind boost
+    if (
+      fact.relevantKinds.includes('*') ||
+      fact.relevantKinds.some((k) => constellation.kinds[k])
+    ) {
+      score += 0.15;
+    }
 
-  return { coreFacts, contextualFacts };
-}
+    // Tag boost
+    const matchingTags = fact.relevantTags.filter((t) =>
+      constellation.prominentTags.includes(t)
+    );
+    score += matchingTags.length * 0.1;
 
-/**
- * Select the best facet hint for a core fact based on constellation
- */
-export function selectFacetHint(
-  fact: CanonFactWithMetadata,
-  constellation: EntityConstellation
-): string | undefined {
-  if (!fact.facetHints) return undefined;
+    // Relationship boost
+    const matchingRels = fact.relevantRelationships.filter(
+      (r) => constellation.relationshipKinds[r]
+    );
+    score += matchingRels.length * 0.1;
 
-  // Priority: dominant culture > relationship theme > first available
-  if (constellation.dominantCulture && fact.facetHints[constellation.dominantCulture]) {
-    return fact.facetHints[constellation.dominantCulture];
-  }
-  if (constellation.hasConflict && fact.facetHints['conflict']) {
-    return fact.facetHints['conflict'];
-  }
-  if (constellation.hasTrade && fact.facetHints['trade']) {
-    return fact.facetHints['trade'];
-  }
-  if (constellation.hasFamilial && fact.facetHints['family']) {
-    return fact.facetHints['family'];
-  }
+    // Conflict/trade/family boost
+    if (
+      fact.relevantTags.includes('conflict') ||
+      fact.relevantRelationships.includes('enemy')
+    ) {
+      if (constellation.hasConflict) score += 0.1;
+    }
+    if (
+      fact.relevantTags.includes('trade') ||
+      fact.relevantRelationships.includes('trade_partner')
+    ) {
+      if (constellation.hasTrade) score += 0.1;
+    }
 
-  return undefined;
+    return { fact, score };
+  }).sort((a, b) => b.score - a.score);
 }
 
 // =============================================================================
@@ -268,23 +223,18 @@ export function assembleTone(
 
 const SYSTEM_PROMPT = `You are a perspective consultant for a fantasy chronicle series. Your job is to help each chronicle feel like a distinct window into the same world - not a different world, but a different FACET of the same truths.
 
-The world has core truths that are ALWAYS present - like "the ice remembers." These truths should never be excluded, but they should MANIFEST DIFFERENTLY depending on who the chronicle is about:
-- For miners: the ice remembers the heat of ancient fires
-- For diplomats: the ice remembers every broken promise
-- For raiders: the ice remembers the blood
+World facts should manifest DIFFERENTLY depending on who the chronicle is about:
+- For miners: "the ice remembers" might mean the heat of ancient fires
+- For diplomats: it might mean every broken promise frozen in the walls
+- For raiders: it might mean the blood of past hunts
 
-You are choosing HOW the world's truths appear to these specific characters, not WHETHER they appear.
+You are choosing WHICH facts to foreground and HOW they manifest for these specific characters.
 
 IMPORTANT: Output ONLY valid JSON. No markdown, no explanation, no commentary.`;
 
-interface FactAnalysis {
-  coreFacts: CanonFactWithMetadata[];
-  contextualFacts: ScoredFact[];
-}
-
 function buildUserPrompt(
   input: PerspectiveSynthesisInput,
-  factAnalysis: FactAnalysis
+  scoredFacts: ScoredFact[]
 ): string {
   const { constellation, entities, focalEra, toneFragments } = input;
 
@@ -296,17 +246,8 @@ function buildUserPrompt(
     )
     .join('\n');
 
-  // Format core facts with their facet hints
-  const coreFactsDisplay = factAnalysis.coreFacts
-    .map((f) => {
-      const hint = selectFacetHint(f, constellation);
-      return `- ${f.id}: "${f.text}"${hint ? `\n  Suggested facet for this constellation: "${hint}"` : ''}`;
-    })
-    .join('\n');
-
-  // Format contextual facts with scores
-  const contextualFactsDisplay = factAnalysis.contextualFacts
-    .slice(0, 6) // Top 6 contextual facts
+  // Format facts with relevance scores
+  const factsDisplay = scoredFacts
     .map((sf) => `[${sf.score.toFixed(2)}] ${sf.fact.id}: ${sf.fact.text}`)
     .join('\n');
 
@@ -322,35 +263,29 @@ Relationship dynamics: ${constellation.hasConflict ? 'conflict present' : ''} ${
 ENTITIES IN THIS CHRONICLE:
 ${entitySummaries}
 
-CORE WORLD TRUTHS (always present, but manifest differently):
-${coreFactsDisplay}
-
-CONTEXTUAL FACTS (include if relevant):
-${contextualFactsDisplay || '(none scored highly)'}
+WORLD FACTS (with relevance scores for this constellation):
+${factsDisplay}
 
 CORE TONE:
 ${toneFragments.core}
 
 ---
 
-Based on this specific chronicle's focus, provide a JSON object with:
+Based on this constellation, provide a JSON object with:
 
-1. "brief": A perspective brief (150-200 words) describing what lens this chronicle should view the world through. What concerns, fears, or preoccupations would these specific entities have? How do the core truths manifest for THEM specifically?
+1. "brief": A perspective brief (150-200 words) describing what lens this chronicle should view the world through. What concerns, fears, or preoccupations would these specific entities have? How do the world's truths manifest for THEM specifically?
 
-2. "coreFacets": For EACH core fact, describe how it manifests for this constellation. Use or adapt the suggested facet, or write your own interpretation that fits these entities.
+2. "facets": Select 4-6 facts most relevant to this constellation. For each, provide a faceted interpretation - how this truth manifests or is experienced by THESE specific entities. The interpretation should feel natural to their culture, role, and circumstances.
 
-3. "contextualFactIds": Which of the contextual facts (0-3) should be foregrounded for this story.
-
-4. "suggestedMotifs": 2-3 short phrases that might echo through this chronicle. These should feel natural to the entities involved and reflect how they experience the world's truths.
+3. "suggestedMotifs": 2-3 short phrases that might echo through this chronicle. These should feel natural to the entities involved - the way THEY would express the world's truths.
 
 Output format:
 {
   "brief": "...",
-  "coreFacets": [
-    {"factId": "ice-remembers", "interpretation": "The ice remembers every blade forged..."},
-    {"factId": "berg-nature", "interpretation": "The Berg's impossible scale means..."}
+  "facets": [
+    {"factId": "ice-remembers", "interpretation": "For these miners, the ice remembers the heat..."},
+    {"factId": "flipper-accord", "interpretation": "The trade agreement weighs on them as..."}
   ],
-  "contextualFactIds": ["orca-raiders", "flipper-accord"],
   "suggestedMotifs": ["phrase one", "phrase two"]
 }`;
 }
@@ -365,14 +300,14 @@ export async function synthesizePerspective(
 ): Promise<PerspectiveSynthesisResult> {
   const { constellation, factsWithMetadata, toneFragments } = input;
 
-  // Analyze facts: separate core from contextual
-  const factAnalysis = analyzeFacts(factsWithMetadata, constellation);
+  // Score all facts by relevance to constellation
+  const scoredFacts = scoreFacts(factsWithMetadata, constellation);
 
-  // Assemble tone
+  // Assemble tone from fragments
   const assembledTone = assembleTone(toneFragments, constellation);
 
   // Build prompt
-  const userPrompt = buildUserPrompt(input, factAnalysis);
+  const userPrompt = buildUserPrompt(input, scoredFacts);
 
   // Make LLM call
   const callResult = await runTextCall({
@@ -381,36 +316,29 @@ export async function synthesizePerspective(
     callConfig,
     systemPrompt: SYSTEM_PROMPT,
     prompt: userPrompt,
-    temperature: 0.7, // Allow some variation
+    temperature: 0.7, // Allow variation
   });
 
   // Parse response
   let synthesis: PerspectiveSynthesis;
   try {
     const text = callResult.result.text.trim();
-    // Try to extract JSON from the response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('No JSON object found in response');
     }
     const parsed = JSON.parse(jsonMatch[0]);
 
-    // Validate and normalize structure
     if (!parsed.brief) {
       throw new Error('Missing brief in synthesis');
     }
 
-    // Normalize coreFacets
-    const coreFacets: FactFacet[] = Array.isArray(parsed.coreFacets)
-      ? parsed.coreFacets.map((f: { factId?: string; interpretation?: string }) => ({
+    // Normalize facets
+    const facets: FactFacet[] = Array.isArray(parsed.facets)
+      ? parsed.facets.map((f: { factId?: string; interpretation?: string }) => ({
           factId: f.factId || '',
           interpretation: f.interpretation || '',
         }))
-      : [];
-
-    // Normalize contextualFacts (from contextualFactIds)
-    const contextualFacts: string[] = Array.isArray(parsed.contextualFactIds)
-      ? parsed.contextualFactIds.filter((id: unknown): id is string => typeof id === 'string')
       : [];
 
     // Normalize suggestedMotifs
@@ -420,48 +348,27 @@ export async function synthesizePerspective(
 
     synthesis = {
       brief: parsed.brief,
-      coreFacets,
-      contextualFacts,
+      facets,
       suggestedMotifs,
     };
   } catch (err) {
-    // LLM failed to produce valid JSON - throw error per user requirement
     throw new Error(
       `Perspective synthesis failed to produce valid output: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 
-  // Build faceted facts for generation:
-  // 1. Core facts with their faceted interpretations
-  // 2. Contextual facts that were selected
-  const facetedFacts: string[] = [];
-
-  // Add core facts with faceted interpretations
-  const coreFactMap = new Map(factAnalysis.coreFacts.map((f) => [f.id, f]));
-  for (const facet of synthesis.coreFacets) {
-    const coreFact = coreFactMap.get(facet.factId);
-    if (coreFact) {
-      // Include both the base fact and the faceted interpretation
-      facetedFacts.push(`${coreFact.text} [For this chronicle: ${facet.interpretation}]`);
-    }
-  }
-
-  // Add any core facts that weren't given facets (use base text)
-  for (const coreFact of factAnalysis.coreFacts) {
-    const hasFacet = synthesis.coreFacets.some((f) => f.factId === coreFact.id);
-    if (!hasFacet) {
-      facetedFacts.push(coreFact.text);
-    }
-  }
-
-  // Add selected contextual facts
-  const contextualFactMap = new Map(factAnalysis.contextualFacts.map((sf) => [sf.fact.id, sf.fact]));
-  for (const factId of synthesis.contextualFacts) {
-    const contextFact = contextualFactMap.get(factId);
-    if (contextFact) {
-      facetedFacts.push(contextFact.text);
-    }
-  }
+  // Build faceted facts for generation
+  // Each selected fact gets its faceted interpretation
+  const factMap = new Map(factsWithMetadata.map((f) => [f.id, f]));
+  const facetedFacts: string[] = synthesis.facets
+    .filter((f) => f.factId && f.interpretation)
+    .map((f) => {
+      const baseFact = factMap.get(f.factId);
+      if (baseFact) {
+        return `${baseFact.text} [For this chronicle: ${f.interpretation}]`;
+      }
+      return f.interpretation;
+    });
 
   return {
     synthesis,
