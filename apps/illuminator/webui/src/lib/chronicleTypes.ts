@@ -298,7 +298,8 @@ export interface ChronicleFocus {
 }
 
 /**
- * Canon fact with metadata for relevance scoring in perspective synthesis
+ * Canon fact with metadata for perspective synthesis.
+ * Core facts are always included but presented through different facets.
  */
 export interface CanonFactWithMetadata {
   id: string;
@@ -308,7 +309,10 @@ export interface CanonFactWithMetadata {
   relevantTags: string[];
   relevantRelationships: string[];
   basePriority: number;
+  /** Core facts are always included - the question is HOW they manifest */
   isCore: boolean;
+  /** Culture/theme-specific interpretations of this fact */
+  facetHints?: Record<string, string>;
 }
 
 /**

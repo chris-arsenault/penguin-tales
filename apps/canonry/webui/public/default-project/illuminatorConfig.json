@@ -68,11 +68,19 @@
         "id": "ice-remembers",
         "text": "The Berg's ice remembers. Ancient events leave literal impressions - frozen scenes, echo-sounds, emotional residue. The deeper you go, the older the memories.",
         "relevantCultures": ["*"],
-        "relevantKinds": ["artifact", "location", "era", "occurrence"],
-        "relevantTags": ["ancient", "historical", "memory"],
+        "relevantKinds": ["*"],
+        "relevantTags": [],
         "relevantRelationships": [],
-        "basePriority": 0.4,
-        "isCore": false
+        "basePriority": 1.0,
+        "isCore": true,
+        "facetHints": {
+          "nightshelf": "The ice remembers the heat - every fire lit, every forge struck, every warmth stolen from the deep.",
+          "aurora_stack": "The ice remembers the light - every promise made under the auroras, every oath sworn and broken.",
+          "orca": "The ice remembers the blood - every hunt, every raid, every offering to the dead god.",
+          "trade": "The ice remembers every bargain, every debt unpaid, every hand that shook and later held a blade.",
+          "conflict": "The ice remembers the fallen - their last breaths frozen in the walls, their screams still echoing.",
+          "family": "The ice remembers lineage - ancestors watch from the frozen depths, their judgments preserved forever."
+        }
       },
       {
         "id": "no-escape",

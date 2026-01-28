@@ -180,11 +180,11 @@ async function executeV2GenerationStep(
         ...chronicleContext,
         // Replace tone with assembled tone + perspective brief
         tone: perspectiveResult.assembledTone + '\n\nPERSPECTIVE FOR THIS CHRONICLE:\n' + perspectiveResult.synthesis.brief,
-        // Replace facts with prioritized facts
-        canonFacts: perspectiveResult.prioritizedFacts,
+        // Replace facts with faceted facts (core truths with interpretations + contextual)
+        canonFacts: perspectiveResult.facetedFacts,
       };
 
-      console.log(`[Worker] Perspective synthesis complete: ${perspectiveResult.prioritizedFacts.length} facts, ${perspectiveResult.synthesis.suggestedMotifs.length} motifs`);
+      console.log(`[Worker] Perspective synthesis complete: ${perspectiveResult.facetedFacts.length} faceted facts, ${perspectiveResult.synthesis.coreFacets.length} core facets, ${perspectiveResult.synthesis.suggestedMotifs.length} motifs`);
     } catch (err) {
       // Per user requirement: if LLM fails, stop the process
       const errorMessage = err instanceof Error ? err.message : String(err);
