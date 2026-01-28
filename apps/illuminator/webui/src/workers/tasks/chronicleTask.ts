@@ -147,8 +147,19 @@ async function executeV2GenerationStep(
   const chronicleId = task.chronicleId;
   console.log(`[Worker] V2 generation for chronicle=${chronicleId}, style="${narrativeStyle.name}", model=${callConfig.model}`);
 
-  // Perspective synthesis: if toneFragments and canonFactsWithMetadata are present,
-  // synthesize a focused perspective for this chronicle
+  // ==========================================================================
+  // PERSPECTIVE SYNTHESIS (PRIMARY PATH)
+  // ==========================================================================
+  // When toneFragments and canonFactsWithMetadata are present, this is the
+  // primary code path. The deprecated tone/canonFacts fields are only used
+  // as fallback when perspective synthesis is not configured.
+  //
+  // Perspective synthesis:
+  // 1. Analyzes entity constellation (culture mix, kind focus, themes)
+  // 2. LLM selects relevant facts and provides faceted interpretations
+  // 3. Assembles tone from fragments based on constellation
+  // 4. Replaces the deprecated tone/canonFacts with synthesized versions
+  // ==========================================================================
   let perspectiveResult: PerspectiveSynthesisResult | undefined;
   let perspectiveRecord: PerspectiveSynthesisRecord | undefined;
   let constellation: EntityConstellation | undefined;

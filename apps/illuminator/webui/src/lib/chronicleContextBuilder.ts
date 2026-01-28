@@ -79,9 +79,18 @@ interface WorldData {
 interface WorldContext {
   name: string;
   description: string;
+
+  /**
+   * @deprecated Use canonFactsWithMetadata instead. Fallback only.
+   */
   canonFacts: string[];
+
+  /**
+   * @deprecated Use toneFragments instead. Fallback only.
+   */
   tone: string;
-  // Optional fragmented world context for perspective synthesis
+
+  // PRIMARY: Structured world context for perspective synthesis
   toneFragments?: ToneFragments;
   canonFactsWithMetadata?: CanonFactWithMetadata[];
 }

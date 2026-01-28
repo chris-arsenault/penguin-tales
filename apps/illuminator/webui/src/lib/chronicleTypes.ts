@@ -352,10 +352,21 @@ export interface ChronicleGenerationContext {
   // World context (user-defined)
   worldName: string;
   worldDescription: string;
+
+  /**
+   * @deprecated Use canonFactsWithMetadata instead. This flat array is only
+   * used as fallback when perspective synthesis is not configured.
+   */
   canonFacts: string[];
+
+  /**
+   * @deprecated Use toneFragments instead. This flat string is only used
+   * as fallback when perspective synthesis is not configured.
+   */
   tone: string;
 
-  // Optional fragmented world context for perspective synthesis
+  // PRIMARY: Structured world context for perspective synthesis
+  // When both are present, perspective synthesis runs and replaces tone/canonFacts
   toneFragments?: ToneFragments;
   canonFactsWithMetadata?: CanonFactWithMetadata[];
 

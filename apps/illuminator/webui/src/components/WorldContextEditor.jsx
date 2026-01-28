@@ -505,14 +505,26 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange 
         </div>
       </div>
 
-      {/* Canon Facts */}
-      <div className="illuminator-card">
+      {/* DEPRECATED: Canon Facts */}
+      <div className="illuminator-card" style={{ opacity: 0.7, border: '1px dashed var(--warning-color)' }}>
         <div className="illuminator-card-header">
-          <h2 className="illuminator-card-title">Canon Facts</h2>
+          <h2 className="illuminator-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              fontSize: '10px',
+              padding: '2px 6px',
+              background: 'var(--warning-color)',
+              color: 'white',
+              borderRadius: '4px',
+              fontWeight: 600,
+            }}>
+              DEPRECATED
+            </span>
+            Canon Facts (Legacy)
+          </h2>
         </div>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Established facts about your world that must not be contradicted in generated content.
-          These help ensure consistency across all enriched entities.
+          <strong>Use "Facts with Metadata" below instead.</strong> This flat list is only used as
+          fallback when perspective synthesis is not configured.
         </p>
         <EditableList
           items={worldContext.canonFacts || []}
@@ -521,13 +533,26 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange 
         />
       </div>
 
-      {/* Tone */}
-      <div className="illuminator-card">
+      {/* DEPRECATED: Tone */}
+      <div className="illuminator-card" style={{ opacity: 0.7, border: '1px dashed var(--warning-color)' }}>
         <div className="illuminator-card-header">
-          <h2 className="illuminator-card-title">Tone & Style (Legacy)</h2>
+          <h2 className="illuminator-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              fontSize: '10px',
+              padding: '2px 6px',
+              background: 'var(--warning-color)',
+              color: 'white',
+              borderRadius: '4px',
+              fontWeight: 600,
+            }}>
+              DEPRECATED
+            </span>
+            Tone & Style (Legacy)
+          </h2>
         </div>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Flat tone string used when perspective synthesis is disabled.
+          <strong>Use "Tone Fragments" below instead.</strong> This flat string is only used as
+          fallback when perspective synthesis is not configured.
         </p>
         <div className="illuminator-form-group">
           <LocalTextArea
