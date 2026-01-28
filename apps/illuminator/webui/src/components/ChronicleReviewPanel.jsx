@@ -10,6 +10,165 @@ import ChronicleImagePanel from './ChronicleImagePanel';
 import { ExpandableSeedSection } from './ChronicleSeedViewer';
 
 // ============================================================================
+// Perspective Synthesis Viewer
+// ============================================================================
+
+function PerspectiveSynthesisViewer({ synthesis }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!synthesis) return null;
+
+  const formatCost = (cost) => `$${cost.toFixed(4)}`;
+  const formatTimestamp = (ts) => new Date(ts).toLocaleString();
+
+  return (
+    <div
+      style={{
+        marginBottom: '16px',
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          padding: '12px 16px',
+          background: 'var(--bg-tertiary)',
+          borderBottom: isExpanded ? '1px solid var(--border-color)' : 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          cursor: 'pointer',
+        }}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+          {isExpanded ? '▼' : '▶'}
+        </span>
+        <span style={{ fontSize: '13px', fontWeight: 500 }}>
+          Perspective Synthesis
+        </span>
+        <span
+          style={{
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            marginLeft: 'auto',
+          }}
+        >
+          {synthesis.facets?.length || 0} facets • {synthesis.suggestedMotifs?.length || 0} motifs • {formatCost(synthesis.actualCost)}
+        </span>
+      </div>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div style={{ padding: '16px' }}>
+          {/* Constellation Summary */}
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '4px' }}>
+              CONSTELLATION
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              {synthesis.constellationSummary}
+            </div>
+          </div>
+
+          {/* Brief */}
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '4px' }}>
+              PERSPECTIVE BRIEF
+            </div>
+            <div
+              style={{
+                fontSize: '12px',
+                lineHeight: 1.6,
+                color: 'var(--text-primary)',
+                padding: '12px',
+                background: 'var(--bg-tertiary)',
+                borderRadius: '6px',
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {synthesis.brief}
+            </div>
+          </div>
+
+          {/* Facets */}
+          {synthesis.facets && synthesis.facets.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                FACETED FACTS ({synthesis.facets.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {synthesis.facets.map((facet, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: '10px 12px',
+                      background: 'var(--bg-tertiary)',
+                      borderRadius: '6px',
+                      borderLeft: '3px solid var(--accent-color)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        fontFamily: 'monospace',
+                        color: 'var(--accent-color)',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      {facet.factId}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      {facet.interpretation}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Suggested Motifs */}
+          {synthesis.suggestedMotifs && synthesis.suggestedMotifs.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                SUGGESTED MOTIFS
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {synthesis.suggestedMotifs.map((motif, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      padding: '4px 10px',
+                      background: 'var(--bg-tertiary)',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      color: 'var(--text-secondary)',
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    "{motif}"
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Metadata */}
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            <span>Model: {synthesis.model}</span>
+            <span>Tokens: {synthesis.inputTokens} in / {synthesis.outputTokens} out</span>
+            <span>Generated: {formatTimestamp(synthesis.generatedAt)}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // Assembled Content Viewer
 // ============================================================================
 
@@ -540,6 +699,11 @@ export default function ChronicleReviewPanel({
           worldContext={worldContext}
         />
 
+        {/* Perspective Synthesis (if used) */}
+        {item.perspectiveSynthesis && (
+          <PerspectiveSynthesisViewer synthesis={item.perspectiveSynthesis} />
+        )}
+
         {/* Generation Context (expandable) */}
         <ExpandableSeedSection seed={seedData} defaultExpanded={false} />
 
@@ -562,6 +726,11 @@ export default function ChronicleReviewPanel({
   if (item.status === 'validation_ready') {
     return (
       <div>
+        {/* Perspective Synthesis (if used) */}
+        {item.perspectiveSynthesis && (
+          <PerspectiveSynthesisViewer synthesis={item.perspectiveSynthesis} />
+        )}
+
         {item.cohesionReport && (
           <CohesionReportViewer
             report={item.cohesionReport}

@@ -326,6 +326,28 @@ export interface ToneFragments {
   kindOverlays: Record<string, string | undefined>;
 }
 
+/**
+ * Perspective synthesis result stored with chronicle
+ */
+export interface PerspectiveSynthesisRecord {
+  /** When synthesis was performed */
+  generatedAt: number;
+  /** Model used */
+  model: string;
+  /** The perspective brief */
+  brief: string;
+  /** Selected facts with faceted interpretations */
+  facets: Array<{ factId: string; interpretation: string }>;
+  /** Suggested motifs */
+  suggestedMotifs: string[];
+  /** Constellation summary that drove the synthesis */
+  constellationSummary: string;
+  /** Cost info */
+  inputTokens: number;
+  outputTokens: number;
+  actualCost: number;
+}
+
 export interface ChronicleGenerationContext {
   // World context (user-defined)
   worldName: string;

@@ -14,6 +14,7 @@ import type {
   ChronicleImageRefs,
   CohesionReport,
   ChronicleTemporalContext,
+  PerspectiveSynthesisRecord,
 } from './chronicleTypes';
 import type { ChronicleStep } from './enrichmentTypes';
 import type { NarrativeStyle } from '@canonry/world-schema';
@@ -96,6 +97,9 @@ export interface ChronicleRecord {
   // Content
   assembledContent?: string;
   assembledAt?: number;
+
+  // Perspective synthesis (if used)
+  perspectiveSynthesis?: PerspectiveSynthesisRecord;
 
   // Cohesion validation
   cohesionReport?: CohesionReport;
@@ -311,6 +315,7 @@ export interface ChronicleMetadata {
     eventCount: number;
     relationshipCount: number;
   };
+  perspectiveSynthesis?: PerspectiveSynthesisRecord;
   cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number };
 }
 
@@ -348,6 +353,7 @@ export async function createChronicle(
 
     // Generation result
     selectionSummary: metadata.selectionSummary,
+    perspectiveSynthesis: metadata.perspectiveSynthesis,
     status: 'assembly_ready',
     assembledContent: metadata.assembledContent,
     assembledAt: Date.now(),

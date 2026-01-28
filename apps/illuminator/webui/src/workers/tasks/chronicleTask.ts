@@ -11,11 +11,12 @@ import type {
   PromptRequestRef,
   ChronicleImageSize,
 } from '../../lib/chronicleTypes';
-import { analyzeConstellation } from '../../lib/constellationAnalyzer';
+import { analyzeConstellation, type EntityConstellation } from '../../lib/constellationAnalyzer';
 import {
   synthesizePerspective,
   type PerspectiveSynthesisResult,
 } from '../../lib/perspectiveSynthesizer';
+import type { PerspectiveSynthesisRecord } from '../../lib/chronicleTypes';
 import {
   createChronicle,
   updateChronicleCohesion,
@@ -149,12 +150,15 @@ async function executeV2GenerationStep(
   // Perspective synthesis: if toneFragments and canonFactsWithMetadata are present,
   // synthesize a focused perspective for this chronicle
   let perspectiveResult: PerspectiveSynthesisResult | undefined;
+  let perspectiveRecord: PerspectiveSynthesisRecord | undefined;
+  let constellation: EntityConstellation | undefined;
+
   if (chronicleContext.toneFragments && chronicleContext.canonFactsWithMetadata) {
     console.log('[Worker] Running perspective synthesis...');
     const perspectiveConfig = getCallConfig(config, 'perspective.synthesis');
 
     // Analyze entity constellation
-    const constellation = analyzeConstellation({
+    constellation = analyzeConstellation({
       entities: chronicleContext.entities,
       relationships: chronicleContext.relationships,
       events: chronicleContext.events,
@@ -174,6 +178,19 @@ async function executeV2GenerationStep(
         llmClient,
         perspectiveConfig
       );
+
+      // Build record for storage
+      perspectiveRecord = {
+        generatedAt: Date.now(),
+        model: perspectiveConfig.model,
+        brief: perspectiveResult.synthesis.brief,
+        facets: perspectiveResult.synthesis.facets,
+        suggestedMotifs: perspectiveResult.synthesis.suggestedMotifs,
+        constellationSummary: constellation.focusSummary,
+        inputTokens: perspectiveResult.usage.inputTokens,
+        outputTokens: perspectiveResult.usage.outputTokens,
+        actualCost: perspectiveResult.usage.actualCost,
+      };
 
       // Update context with synthesized perspective
       chronicleContext = {
@@ -269,6 +286,7 @@ async function executeV2GenerationStep(
         eventCount: selection.events.length,
         relationshipCount: selection.relationships.length,
       },
+      perspectiveSynthesis: perspectiveRecord,
       cost,
     });
     console.log(`[Worker] Chronicle saved: ${chronicleId}`);
