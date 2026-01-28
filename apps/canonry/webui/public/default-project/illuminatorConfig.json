@@ -26,7 +26,7 @@
       {
         "id": "penguin-sapience",
         "text": "Penguins evolved sapience through exposure to aurora-light over millennia. They possess flipper-dexterity comparable to human hands and stand upright habitually.",
-        "relevantCultures": ["aurora_stack", "nightshelf"],
+        "relevantCultures": ["aurora-stack", "nightshelf"],
         "relevantKinds": ["npc"],
         "relevantTags": [],
         "relevantRelationships": [],
@@ -35,7 +35,7 @@
       {
         "id": "two-civilizations",
         "text": "Two penguin civilizations exist: the Aurora Stack (surface dwellers who worship the sky-lights) and the Nightshelf (tunnel dwellers who mine fire from the berg's volcanic core).",
-        "relevantCultures": ["aurora_stack", "nightshelf"],
+        "relevantCultures": ["aurora-stack", "nightshelf"],
         "relevantKinds": ["faction", "location"],
         "relevantTags": [],
         "relevantRelationships": [],
@@ -80,7 +80,7 @@
       {
         "id": "flipper-accord",
         "text": "The two colonies maintain an uneasy peace through the Flipper Accord - a trade agreement where surface aurora-crystals exchange for deep fire-cores. Neither can survive without the other's resource.",
-        "relevantCultures": ["aurora_stack", "nightshelf"],
+        "relevantCultures": ["aurora-stack", "nightshelf"],
         "relevantKinds": ["faction"],
         "relevantTags": ["trade", "politics", "diplomacy"],
         "relevantRelationships": ["trade_partner", "ally"],
@@ -89,6 +89,7 @@
       {
         "id": "no-humans",
         "text": "All sapient beings in this world are penguins or orcas. Humans do not exist and have never existed on The Berg.",
+        "type": "generation_constraint",
         "relevantCultures": ["*"],
         "relevantKinds": ["*"],
         "relevantTags": [],
@@ -99,27 +100,14 @@
     "tone": "Dark, war-weary fantasy in the tradition of Malazan Book of the Fallen, Brent Weeks, and the Powder Mage trilogy. History is written by survivors who remember the cost. Tragedy happens without ceremony - important figures die in half-sentences, battles end mid-action, and not everything resolves.\n\nSTYLE PRINCIPLES:\n- Specificity over abstraction: Not 'a weapon' but 'a fire-core hammer with a cracked head.' Not 'he felt sad' but 'his flippers wouldn't stop shaking.'\n- Show through action and object, not introspection: Characters reveal themselves by what they do, carry, avoid, or destroy - not by what they 'realize' or 'understand.'\n- Subtext over statement: Let implications land. If someone betrayed their colony, don't say they feel guilty - mention they haven't visited the memorial.\n- Uncomfortable details: Include the ugly, inconvenient, or unresolved. A hero's hands might be scarred from something shameful. A victory might cost more than it was worth.\n- Trust the reader: Don't explain metaphors. Don't summarize lessons. End on images, not morals.\n\nSYNTACTIC POETRY:\nAim for the compressed power of 'First in; last out; for the last time.' Sentences that carry weight through rhythm and omission. Not fragmented violence, but poetic compression - where what's left unsaid hits harder than what's spoken. Semicolons can do the work of paragraphs. Repetition with variation creates resonance.\n\nBITTER CAMARADERIE:\nThis is essential. Grimness alone is exhausting. Include:\n- Dark humor between allies - jokes that wouldn't be funny if you hadn't been there\n- Loyalty that persists despite betrayal, stupidity, or failure\n- Small kindnesses in terrible contexts - sharing rations, remembering names, carrying someone's token\n- Soldiers/workers who mock the causes they'll die for\n- The way people become family through shared suffering, not shared values\n- Irony that isn't cruel - the bitter laugh, not the sneer\n- Heroic sacrifice that EARNS its weight - not cheap martyrdom, but the moment someone trades their life for something they actually loved. Make it cost. Make it matter.\n\nSTRUCTURAL VARIETY:\n- Not every entity needs a death beat. Some are alive. Some mysteries stay mysteries.\n- Some endings are mid-action, unresolved. Some are quiet. Some are bitter-funny.\n- Vary the emotional shape: tragedy, irony, stubborn hope, grim humor, unearned survival.\n\nCLOSING VARIETY:\n- DO NOT default to 'the ice remembers' or cosmic-witness endings. This has become a crutch.\n- Vary how stories end: mid-action cut, dark joke, unanswered question, quiet image, bitter irony, someone walking away, a door closing, work resuming.\n- Not every ending needs a character alone contemplating loss. Some end with two people arguing. Some end with laughter that isn't comfortable. Some end with someone starting something new.\n- The last line should feel surprising, not inevitable. If you can predict it from the first paragraph, rewrite it.\n\nAVOID THESE AI TELLS:\n- Balance words: yet, however, still, ultimately, in the end, nevertheless\n- Introspection clichés: 'couldn't help but feel,' 'realized that,' 'in that moment,' 'understood that'\n- Polite diction: gentle, quiet, subtle, bittersweet, meaningful, profound\n- Vague sensory: warm, soft, heavy silence, cool breeze (anchor these to specifics or cut them)\n- Flat metaphors: light=hope, darkness=fear, storms=turmoil (find stranger, more specific images)\n- Clean resolutions: Not everything works out. Some things stay broken.\n- Time-skipping without texture: Don't write 'days passed' - either skip entirely or make the waiting hurt\n- RELENTLESS GRIMNESS: If everything is dark, nothing is. Leaven tragedy with dark humor, bitter irony, or stubborn human connection.\n\nDescriptions should read as if written by a war-chronicle keeper or a faction historian with biases, blind spots, and something to prove.",
     "speciesConstraint": "All depicted figures must be penguins or orcas. No humans exist in this world. When showing inhabitants, settlers, merchants, or any living beings, they must be explicitly identified as penguin or orca species.",
     "toneFragments": {
-      "core": "Dark, war-weary fantasy. History is written by survivors who remember the cost. Tragedy happens without ceremony - important figures die in half-sentences, battles end mid-action.\n\nSTYLE PRINCIPLES:\n- Specificity over abstraction: Not 'a weapon' but 'a fire-core hammer with a cracked head.'\n- Show through action and object, not introspection: Characters reveal themselves by what they do, carry, avoid.\n- Subtext over statement: Let implications land. If someone betrayed their colony, mention they haven't visited the memorial.\n- Uncomfortable details: Include the ugly or unresolved. A hero's hands might be scarred from something shameful.\n- Trust the reader: Don't explain metaphors. End on images, not morals.\n\nSYNTACTIC POETRY:\nCompressed power through rhythm and omission. 'First in; last out; for the last time.' Semicolons do the work of paragraphs. What's unsaid hits harder than what's spoken.\n\nBITTER CAMARADERIE:\nGrimness alone is exhausting. Include dark humor between allies, loyalty despite failure, small kindnesses in terrible contexts. Soldiers who mock the causes they'll die for. Irony that isn't cruel - the bitter laugh, not the sneer.\n\nCLOSING VARIETY:\nNot every ending needs contemplation. Vary: mid-action cut, dark joke, unanswered question, quiet image, bitter irony, someone starting something new.\n\nAVOID:\nBalance words (yet, however, ultimately). Introspection clichés ('realized that,' 'in that moment'). Polite diction (gentle, bittersweet, profound). Clean resolutions. Relentless grimness without humor.",
-      "cultureOverlays": {
-        "nightshelf": "Underground textures: sound echoes differently, the smell of mineral and fire-core, constant awareness of weight above. Secrets are currency - silence speaks louder than words. Fire is survival, not metaphor; when characters share fire-core warmth, it costs them something real. The darkness isn't absence but presence. Nightshelf characters notice light as intrusion, not relief. Speech is elliptical, coded, full of proverbs that sound simple but contain warnings.",
-        "aurora_stack": "Vertical perspectives: height as status, the weight of sky, how light changes with position. Formality masks negotiation - consensus is performance. Characters speak in layers: the words, the tone, the position they speak from. Crystal and ice are infrastructure, not wonder; the Stack has lived with aurora-light so long it's tools, not magic. Cold is baseline, not threat. Addresses use constellation-charts and cycles, not plain names and dates.",
-        "orca": "Predator logic: everything is territory, resource, or threat. Pack bonds are absolute - betraying pod is worse than death. Violence is honest; diplomacy is weakness performed. Water is home; land is hunting ground. The dead god isn't mythology but destination - every raid serves the waking. Names change with deeds. Speech is blunt, ritualistic, hunt-metaphors: 'pods' not families, 'waters' not territories, 'kills' not victories.",
-        "mixed": "Translation failures: what one culture considers courtesy, another reads as insult. Trade requires trust no one fully extends. Characters code-switch - different selves for different audiences. The Flipper Accord is a scar everyone picks at. Neither side believes the other understands the cost. Third spaces (trading posts, neutral ground) have their own rules that satisfy no one. Every exchange carries debt that compounds differently on each side."
-      },
-      "kindOverlays": {
-        "character": "Bodies carry history: scars, habits, how someone holds themselves. What they reach for under stress. Who they mention without naming. The gap between reputation and person - someone remembers them differently than they remember themselves. Physical tics as emotional tells. What they carry that they don't need. The chair no one else sits in.",
-        "place": "Locations have moods, not just features. Who built this and who uses it now - the layers. What sound fills the silence. Where people gather vs where they avoid. The unofficial names. What happened here that no one talks about. One visceral sensory detail anchors everything: a smell, a texture underfoot, the kind of cold that makes your beak ache.",
-        "object": "Artifacts earn their weight through use, not description. Start with a physical detail that tells a story: a notch in the blade, a stain that won't come out. Who held it last. What it costs to carry. Why someone refuses to touch it. Objects have wakes - they change what's near them. The scratch that no one explains. Power measured in what it's taken, not what it gives.",
-        "event": "History is what survivors choose to remember. The official version vs what actually happened. Who benefits from this telling. The detail everyone includes that wasn't actually important. The crucial thing no one mentions. Name the dead or the cost - history is paid for. One visceral detail: the smell, the sound, the thing someone dropped and never picked up.",
-        "mixed": "Multiple focuses require weaving, not listing. Find the thread that connects: a character defined by a place, an object that caused an event, a location shaped by who died there. Each element should illuminate another. The transitions matter - what makes someone think of that place when they see this object."
-      }
+      "core": "Dark, war-weary fantasy. History is written by survivors who remember the cost. Tragedy happens without ceremony - important figures die in half-sentences, battles end mid-action.\n\nSTYLE PRINCIPLES:\n- Specificity over abstraction: Not 'a weapon' but 'a fire-core hammer with a cracked head.'\n- Show through action and object, not introspection: Characters reveal themselves by what they do, carry, avoid.\n- Subtext over statement: Let implications land. If someone betrayed their colony, mention they haven't visited the memorial.\n- Uncomfortable details: Include the ugly or unresolved. A hero's hands might be scarred from something shameful.\n- Trust the reader: Don't explain metaphors. End on images, not morals.\n\nSYNTACTIC POETRY:\nCompressed power through rhythm and omission. 'First in; last out; for the last time.' Semicolons do the work of paragraphs. What's unsaid hits harder than what's spoken.\n\nBITTER CAMARADERIE:\nGrimness alone is exhausting. Include dark humor between allies, loyalty despite failure, small kindnesses in terrible contexts. Soldiers who mock the causes they'll die for. Irony that isn't cruel - the bitter laugh, not the sneer.\n\nCLOSING VARIETY:\nNot every ending needs contemplation. Vary: mid-action cut, dark joke, unanswered question, quiet image, bitter irony, someone starting something new.\n\nMULTIPLE ENTITY FOCUSES:\nWhen a chronicle involves multiple entity types, weave rather than list. Find the thread that connects: a character defined by a place, an object that caused an event, a location shaped by who died there. Each element should illuminate another. The transitions matter.\n\nAVOID:\nBalance words (yet, however, ultimately). Introspection clichés ('realized that,' 'in that moment'). Polite diction (gentle, bittersweet, profound). Clean resolutions. Relentless grimness without humor."
     }
   },
   "entityGuidance": {
     "npc": {
       "focus": "Reveal personality through concrete details: what they carry, wear, or refuse to touch. Physical tics, scars, or habits that tell a story. What they've lost or what they're protecting. How others react to them (fear, respect, pity, avoidance). No one is purely good or evil - everyone has costs, compromises, or things they won't talk about. Include one uncomfortable or unglamorous detail: a coward's streak, a cruel habit, an old shame. Characters should feel like they existed before this moment and will continue after it.",
       "relationshipUse": "ONE [strong] relationship that truly defines or shaped them. Not a catalog of connections - the description should be ABOUT the entity, not a tour of their relationships.",
-      "proseHint": "Focus on gesture, tic, or signature object. Show how others remember them, mourn them, or joke about them. Someone carries their token. Someone still curses their name fondly. Someone refuses to sit in their chair.",
+      "proseHint": "Bodies carry history: scars, habits, how someone holds themselves. What they reach for under stress. Who they mention without naming. The gap between reputation and person - someone remembers them differently than they remember themselves. Physical tics as emotional tells. What they carry that they don't need. Focus on gesture, tic, or signature object. Show how others remember them, mourn them, or joke about them. Someone carries their token. Someone still curses their name fondly. The chair no one else sits in.",
       "visualThesis": {
         "domain": "You design characters for a fighting game roster or anime ensemble cast. Each character must be INSTANTLY RECOGNIZABLE from silhouette alone - like Overwatch heroes or League of Legends champions. The visual thesis is the ONE THING that makes this character's shape unique in the roster.",
         "focus": "SHAPE ELEMENTS (prioritize structural over gestural):\n- Structural gear: oversized weapons, distinctive hats, floating objects, massive armor\n- Profile extensions: mounted equipment, carried tools, backpacks, capes\n- Body modifications: scars, missing limbs, unusual proportions, asymmetry\n- Clothing: robes, cloaks, armor plates, harnesses - what they WEAR changes silhouette",
@@ -136,7 +124,7 @@
     "location": {
       "focus": "Anchor in ONE specific sensory detail first - a smell, a sound, a texture underfoot. Not 'cold' but 'the kind of cold that makes your beak ache.' Show what HAPPENED here: scars, stains, cracks that were never repaired, repairs made with wrong materials. Who controls it NOW vs who BUILT it - layers of history in one place. Not every location is haunted or dangerous. Some are just tired. Some are beloved despite being ugly.",
       "relationshipUse": "Show how people USE this place - the regulars, the rituals, the unwritten rules. Include one detail of stubborn life: graffiti, offerings, someone's initials carved where they shouldn't be. What joke do locals tell about this place? What do they refuse to call it by its official name?",
-      "proseHint": "Anchor in one visceral sensory detail. Show what it costs to be there. What joke do locals tell about this place?",
+      "proseHint": "Locations have moods, not just features. Who built this and who uses it now - the layers. What sound fills the silence. Where people gather vs where they avoid. The unofficial names. What happened here that no one talks about. Anchor in one visceral sensory detail: a smell, a texture underfoot, the kind of cold that makes your beak ache. Show what it costs to be there. What joke do locals tell about this place?",
       "visualThesis": {
         "domain": "You design environments for a video game or animated film. The visual thesis is what makes THIS location visually distinct from other places. Think iconic game levels - each has a defining visual landmark or spatial quality.",
         "focus": "ENVIRONMENT ELEMENTS:\n- Structures: towers, bridges, walls, platforms, monuments\n- Natural formations: cliffs, caves, crystals, ice formations, chasms\n- Spatial qualities: vast open, claustrophobic tunnels, vertical spires, layered depths\n- Lighting character: aurora-lit, shadow-shrouded, fire-warmed, crystal-refracted",
@@ -170,7 +158,7 @@
     "occurrence": {
       "focus": "Focus on what was LOST, BROKEN, or CHANGED FOREVER - not lessons learned. Name the dead or the cost. History is paid for. Capture one visceral detail - the smell, the sound, the thing someone dropped and never picked up. Don't explain significance - let the facts do the work. Not every event is tragedy. Some are darkly comic. Some are just exhausting.",
       "relationshipUse": "Show how survivors remember it - the dark jokes they tell, the things they won't discuss. Include one detail of stubborn loyalty or absurd kindness amid chaos. Someone carried someone else. Someone went back. Someone still flinches at a certain sound.",
-      "proseHint": "Show how survivors remember it - the dark jokes they tell, the things they won't discuss. Someone still flinches at a certain sound.",
+      "proseHint": "History is what survivors choose to remember. The official version vs what actually happened. Who benefits from this telling. The detail everyone includes that wasn't actually important. The crucial thing no one mentions. Name the dead or the cost - history is paid for. Show how survivors remember it - the dark jokes they tell, the things they won't discuss. One visceral detail: the smell, the sound, the thing someone dropped and never picked up. Someone still flinches at a certain sound.",
       "visualThesis": {
         "domain": "You design key frames for historical moments in an animated film or graphic novel. The visual thesis captures the PIVOTAL MOMENT - the single frame that would represent this event in a history book.",
         "focus": "EVENT COMPOSITION ELEMENTS:\n- Action: the central dramatic gesture or movement\n- Stakes: visual tension showing what's at risk\n- Scale: intimate confrontation vs epic battlefield vs cosmic phenomenon\n- Aftermath indicators: smoke, debris, fallen figures, changed landscape",
@@ -187,7 +175,7 @@
     "era": {
       "focus": "Eras are defined by what they cost, not what they achieved. Name the central tension that couldn't be resolved - the thing everyone argued about, the wound that wouldn't close. Don't frame eras as 'dark' or 'golden' - show the texture. Golden ages have rot beneath. Dark ages have stubborn hope. Some eras are remembered fondly by exactly the wrong people.",
       "relationshipUse": "What did people hold onto? A song, a ritual, a grudge, a joke that stopped being funny. Show the absurdity of endurance - the things people did to stay sane, the dark humor that got them through. Include one detail of connection that persisted: a trade that continued despite war, a friendship across enemy lines, a tradition no one remembers the origin of.",
-      "proseHint": "Show the absurdity of endurance - what people did to stay sane, the dark humor that got them through. A trade that continued despite war.",
+      "proseHint": "Show the absurdity of endurance - what people did to stay sane, the dark humor that got them through. A trade that continued despite war. A friendship across enemy lines. A tradition no one remembers the origin of.",
       "visualThesis": {
         "domain": "You design chapter headers and era illustrations for a history book or fantasy chronicle. The visual thesis captures the SPIRIT OF THE AGE - what single symbolic image represents this time period?",
         "focus": "ERA VISUALIZATION ELEMENTS:\n- Symbolic landscapes: rising/setting suns, storms gathering, seasons changing\n- Architectural states: cities rising, ruins crumbling, monuments being built\n- Atmospheric conditions: golden age light, dark age shadows, transitional twilight\n- Emblematic objects: crowns, weapons, tools, symbols of the era's defining activity",
@@ -204,7 +192,7 @@
     "artifact": {
       "focus": "Focus on what it HAS DONE, not just what it IS. Start with a physical detail that tells a story - a notch in the blade, a stain that won't come out, a crack that appeared after a specific use. Artifacts earn their legends. What did this object DO that made it famous? Name a death, a victory, a betrayal. Include the cost - powerful things demand something. What has this artifact taken from its wielders? Show the weight of history: who held it last, who refuses to touch it, what happens to those who carry it too long.",
       "relationshipUse": "If it's lost, show why no one has retrieved it. If it's held, show why no one has stolen it. The relationships around an artifact reveal its true nature.",
-      "proseHint": "Show the weight of history - who held it last, who refuses to touch it. The cost of wielding it.",
+      "proseHint": "Artifacts earn their weight through use, not description. Start with a physical detail that tells a story: a notch in the blade, a stain that won't come out. Who held it last. What it costs to carry. Why someone refuses to touch it. Objects have wakes - they change what's near them. The scratch that no one explains. Power measured in what it's taken, not what it gives.",
       "visualThesis": {
         "domain": "You design legendary items for a fantasy RPG or video game. The visual thesis captures what makes THIS artifact instantly recognizable - its defining visual feature.",
         "focus": "ARTIFACT ELEMENTS:\n- Form: sword, staff, orb, tome, crown, amulet, ring, gauntlet\n- Material: crystal, ice, bone, gold, shadow-metal, aurora-glass\n- Enchantment effects: glowing runes, emanating light, floating particles, frost crystals\n- Signs of age/power: weathering, cracks, embedded gems, inscriptions",
@@ -306,30 +294,33 @@
     "descriptive": {
       "aurora-stack": {
         "VALUES": "Harmony, patience, collective welfare over individual glory. They believe the aurora judges all actions and that pride invites the cold.",
-        "SPEECH": "Formal, measured, rich with astronomical metaphors. They speak of 'cycles' not 'time,' 'alignments' not 'agreements.' Elders are addressed by their position in family constellation-charts.",
+        "SPEECH": "Formal, measured, rich with astronomical metaphors. They speak of 'cycles' not 'time,' 'alignments' not 'agreements.' Elders are addressed by their position in family constellation-charts. Characters speak in layers: the words, the tone, the position they speak from.",
         "GOVERNANCE": "Council of Luminaries elected by demonstration - candidates must manifest aurora-magic publicly. Decisions require consensus under a clear aurora; clouded skies postpone all votes.",
         "OUTSIDER_VIEW": "To the Nightshelf: naive sky-gazers who'd freeze without fire they can't make. To the orcas: soft prey clustered in obvious towers.",
         "SELF_VIEW": "Chosen inheritors of the aurora's gift, maintaining civilization against the deep cold. They believe the Nightshelf lost their way by going underground.",
         "FEARS": "Being cut off from the aurora (clouds, cave-ins, blindness). Loss of the Accord and the fire-cores they need. The orcas learning to climb.",
-        "TABOOS": "Waste of aurora-light, speaking of the dead god, entering the deep tunnels, accepting orca gifts."
+        "TABOOS": "Waste of aurora-light, speaking of the dead god, entering the deep tunnels, accepting orca gifts.",
+        "PROSE_STYLE": "Vertical perspectives: height as status, the weight of sky, how light changes with position. Formality masks negotiation - consensus is performance. Crystal and ice are infrastructure, not wonder; the Stack has lived with aurora-light so long it's tools, not magic. Cold is baseline, not threat."
       },
       "nightshelf": {
-        "VALUES": "Self-reliance, cleverness, secrets kept. They believe knowledge hoarded is power preserved - share only what you must.",
+        "VALUES": "Self-reliance, cleverness, secrets kept. They believe knowledge hoarded is power preserved - share only what you must. Secrets are currency - silence speaks louder than words.",
         "SPEECH": "Elliptical, coded, full of double meanings. They speak in proverbs that sound simple but contain warnings. Silence is respected more than speech.",
         "GOVERNANCE": "Shadow Parliament of guild-masters meeting in rotating locations. True power lies with the Fire Keepers who control the volcanic cores.",
         "OUTSIDER_VIEW": "To the Aurora Stack: paranoid diggers who forgot the sky. To the orcas: dangerous prey that fights dirty and vanishes.",
         "SELF_VIEW": "Survivors who found warmth when the surface offered only cold. They believe they understand the berg's true nature while surface-dwellers see only the skin.",
         "FEARS": "Fire going out. Tunnels collapsing. Surface-dwellers learning their secrets. The ice remembering something they buried.",
-        "TABOOS": "Revealing tunnel routes to outsiders, wasting fire, speaking your true name above ground, looking directly at aurora-light."
+        "TABOOS": "Revealing tunnel routes to outsiders, wasting fire, speaking your true name above ground, looking directly at aurora-light.",
+        "PROSE_STYLE": "Underground textures: sound echoes differently, the smell of mineral and fire-core, constant awareness of weight above. Fire is survival, not metaphor; when characters share fire-core warmth, it costs them something real. The darkness isn't absence but presence. Nightshelf characters notice light as intrusion, not relief."
       },
       "orca": {
-        "VALUES": "Strength proven, kills counted, the pack above all. Individual glory is meaningless unless the pack witnesses it.",
+        "VALUES": "Strength proven, kills counted, the pack above all. Individual glory is meaningless unless the pack witnesses it. Pack bonds are absolute - betraying pod is worse than death.",
         "SPEECH": "Blunt, ritualistic, peppered with hunt-metaphors. They speak of 'pods' not families, 'waters' not territories, 'kills' not victories. Names change with deeds.",
         "GOVERNANCE": "Matriarchal pods led by the oldest female. Inter-pod conflicts resolved by ritual combat or competitive raiding. The High Matriarch commands only when all pods hunt together.",
         "OUTSIDER_VIEW": "To the penguins: walking meat that built interesting structures. Some are worth keeping alive for information or ritual purposes.",
-        "SELF_VIEW": "Apex predators fulfilling their nature. They believe the dead god will wake when enough blood feeds the deep, and then the endless sea will yield new hunting grounds.",
+        "SELF_VIEW": "Apex predators fulfilling their nature. They believe the dead god will wake when enough blood feeds the deep, and then the endless sea will yield new hunting grounds. The dead god isn't mythology but destination - every raid serves the waking.",
         "FEARS": "The dead god never waking. Being cast out from the pod. Dying on land, away from water.",
-        "TABOOS": "Abandoning a pod-mate in battle, eating dead god's flesh (though some heretics do), letting prey dictate terms."
+        "TABOOS": "Abandoning a pod-mate in battle, eating dead god's flesh (though some heretics do), letting prey dictate terms.",
+        "PROSE_STYLE": "Predator logic: everything is territory, resource, or threat. Violence is honest; diplomacy is weakness performed. Water is home; land is hunting ground."
       },
       "world": {
         "VALUES": "The Berg has no values - only physics that feel like intentions. The cold preserves. The ice remembers. The aurora judges.",
@@ -338,7 +329,18 @@
         "OUTSIDER_VIEW": "To all who live on it: the only world that exists. To whatever watches from the deep: unknown.",
         "SELF_VIEW": "The Berg may not be aware it exists. Or it may be aware of nothing else.",
         "FEARS": "If The Berg fears, it fears melting. Or perhaps it fears waking.",
-        "TABOOS": "Some say drilling too deep angers the ice. Some say this is superstition. The Nightshelf stopped drilling at a certain point and won't say why."
+        "TABOOS": "Some say drilling too deep angers the ice. Some say this is superstition. The Nightshelf stopped drilling at a certain point and won't say why.",
+        "PROSE_STYLE": "The Berg itself as character - weather with intention, ice with memory, cold that thinks."
+      },
+      "mixed": {
+        "VALUES": "Competing value systems create friction. What one culture considers virtue, another sees as weakness or threat.",
+        "SPEECH": "Translation failures abound. Code-switching is survival - different selves for different audiences.",
+        "GOVERNANCE": "The Flipper Accord is the only shared governance, and it satisfies no one fully.",
+        "OUTSIDER_VIEW": "Each side believes the other doesn't understand the cost. Neither is entirely wrong.",
+        "SELF_VIEW": "Third spaces (trading posts, neutral ground) develop their own identities that belong to neither culture.",
+        "FEARS": "The Accord breaking. Being caught between cultures with loyalty to neither. Children who don't fit anywhere.",
+        "TABOOS": "Vary by which culture is watching. The safest path is often silence.",
+        "PROSE_STYLE": "Translation failures: what one culture considers courtesy, another reads as insult. Trade requires trust no one fully extends. The Flipper Accord is a scar everyone picks at. Every exchange carries debt that compounds differently on each side."
       }
     },
     "visualKeysByKind": {

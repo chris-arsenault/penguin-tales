@@ -98,7 +98,32 @@ export interface ChronicleRecord {
   assembledContent?: string;
   assembledAt?: number;
 
-  // Perspective synthesis (if used)
+  // Generation prompts (stored for debugging/export - the ACTUAL prompts sent)
+  generationSystemPrompt?: string;
+  generationUserPrompt?: string;
+  /** Temperature used for the most recent generation */
+  generationTemperature?: number;
+  /** Prior generation versions (chronicle regeneration history) */
+  generationHistory?: ChronicleGenerationVersion[];
+
+  // Generation context snapshot (stored for export - what was actually used)
+  // This is the FINAL context after perspective synthesis, not the original input
+  generationContext?: {
+    worldName: string;
+    worldDescription: string;
+    /** The actual tone sent to LLM (post-perspective: assembled + brief + motifs) */
+    tone: string;
+    /** The actual facts sent to LLM (post-perspective: faceted facts) */
+    canonFacts: string[];
+    /** Name bank for invented characters */
+    nameBank?: Record<string, string[]>;
+    /** Synthesized narrative voice from perspective synthesis */
+    narrativeVoice?: Record<string, string>;
+    /** Per-entity writing directives from perspective synthesis */
+    entityDirectives?: Array<{ entityId: string; entityName: string; directive: string }>;
+  };
+
+  // Perspective synthesis (required for all new chronicles)
   perspectiveSynthesis?: PerspectiveSynthesisRecord;
 
   // Cohesion validation
@@ -132,6 +157,21 @@ export interface ChronicleRecord {
   model: string;
   createdAt: number;
   updatedAt: number;
+}
+
+/**
+ * Stored snapshot of a chronicle generation version.
+ */
+export interface ChronicleGenerationVersion {
+  versionId: string;
+  generatedAt: number;
+  content: string;
+  wordCount: number;
+  model: string;
+  temperature?: number;
+  systemPrompt: string;
+  userPrompt: string;
+  cost?: { estimated: number; actual: number; inputTokens: number; outputTokens: number };
 }
 
 // ============================================================================
@@ -297,6 +337,11 @@ export interface ChronicleMetadata {
   // Chronicle identity
   title?: string;
   format: ChronicleFormat;
+
+  // Generation prompts (the ACTUAL prompts sent to LLM - canonical source of truth)
+  generationSystemPrompt?: string;
+  generationUserPrompt?: string;
+  generationTemperature?: number;
   narrativeStyleId: string;
   narrativeStyle?: NarrativeStyle;
   roleAssignments: ChronicleRoleAssignment[];
@@ -354,6 +399,9 @@ export async function createChronicle(
     // Generation result
     selectionSummary: metadata.selectionSummary,
     perspectiveSynthesis: metadata.perspectiveSynthesis,
+    generationSystemPrompt: metadata.generationSystemPrompt,
+    generationUserPrompt: metadata.generationUserPrompt,
+    generationTemperature: metadata.generationTemperature,
     status: 'assembly_ready',
     assembledContent: metadata.assembledContent,
     assembledAt: Date.now(),
@@ -417,6 +465,106 @@ export async function updateChronicleAssembly(
 
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle assembly'));
+  });
+}
+
+function countWords(text: string | undefined): number {
+  if (!text) return 0;
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function buildGenerationVersion(record: ChronicleRecord): ChronicleGenerationVersion | null {
+  const content = record.finalContent || record.assembledContent || '';
+  if (!content) return null;
+
+  return {
+    versionId: `version_${record.assembledAt || record.createdAt}`,
+    generatedAt: record.assembledAt || record.createdAt,
+    content,
+    wordCount: countWords(content),
+    model: record.model || 'unknown',
+    temperature: record.generationTemperature,
+    systemPrompt:
+      record.generationSystemPrompt ||
+      '(prompt not stored - chronicle generated before prompt storage was implemented)',
+    userPrompt:
+      record.generationUserPrompt ||
+      '(prompt not stored - chronicle generated before prompt storage was implemented)',
+  };
+}
+
+/**
+ * Replace chronicle assembled content via temperature regeneration.
+ * Preserves prior version in generationHistory and clears refinements.
+ */
+export async function regenerateChronicleAssembly(
+  chronicleId: string,
+  updates: {
+    assembledContent: string;
+    systemPrompt: string;
+    userPrompt: string;
+    model: string;
+    temperature?: number;
+    cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number };
+  }
+): Promise<void> {
+  const db = await openChronicleDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as ChronicleRecord | undefined;
+      if (!record) {
+        reject(new Error(`Chronicle ${chronicleId} not found`));
+        return;
+      }
+      if (record.status === 'complete' || record.finalContent) {
+        reject(new Error(`Chronicle ${chronicleId} is already accepted`));
+        return;
+      }
+
+      const historyVersion = buildGenerationVersion(record);
+      if (historyVersion) {
+        record.generationHistory = [...(record.generationHistory || []), historyVersion];
+      }
+
+      record.assembledContent = updates.assembledContent;
+      record.assembledAt = Date.now();
+      record.status = 'assembly_ready';
+      record.generationSystemPrompt = updates.systemPrompt;
+      record.generationUserPrompt = updates.userPrompt;
+      record.generationTemperature = updates.temperature;
+
+      record.failureStep = undefined;
+      record.failureReason = undefined;
+      record.failedAt = undefined;
+      record.cohesionReport = undefined;
+      record.validatedAt = undefined;
+      record.summary = undefined;
+      record.summaryGeneratedAt = undefined;
+      record.summaryModel = undefined;
+      record.imageRefs = undefined;
+      record.imageRefsGeneratedAt = undefined;
+      record.imageRefsModel = undefined;
+      record.validationStale = false;
+      record.editVersion = 0;
+      record.editedAt = undefined;
+
+      record.totalEstimatedCost += updates.cost.estimated;
+      record.totalActualCost += updates.cost.actual;
+      record.totalInputTokens += updates.cost.inputTokens;
+      record.totalOutputTokens += updates.cost.outputTokens;
+      record.model = updates.model;
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to regenerate chronicle assembly'));
   });
 }
 

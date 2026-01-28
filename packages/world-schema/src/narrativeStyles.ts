@@ -83,6 +83,13 @@ export interface StoryNarrativeStyle {
 
   /** Pacing - word count and scene count ranges */
   pacing: PacingConfig;
+
+  /**
+   * LLM temperature for chronicle generation (0.0-1.0).
+   * Higher values produce more creative/varied output.
+   * If not set, falls back to the hardcoded step default (0.7 for generation).
+   */
+  temperature?: number;
 }
 
 export const DEFAULT_NARRATIVE_STYLES: StoryNarrativeStyle[] = [
@@ -460,6 +467,8 @@ AVOID: Plot mechanics. Explaining what images mean. Rushing to conclusion. Gener
       totalWordCount: { min: 1000, max: 1400 },
       sceneCount: { min: 3, max: 4 },
     },
+
+    temperature: 0.85,
   },
 
   // ============================================================================

@@ -182,6 +182,8 @@ export interface EnrichmentTaskBase {
   entityLockedSummaryText?: string;
   /** Narrative hint to guide description generation (always used as prompt input when present) */
   entityNarrativeHintText?: string;
+  /** Optional temperature override for chronicle generation/regeneration */
+  chronicleTemperature?: number;
   /** Elements to avoid in visual thesis (overused motifs, from project config) */
   visualAvoid?: string;
   /** Per-kind domain instructions for visual thesis (required for description tasks) */
@@ -224,6 +226,7 @@ export type QueueItem = EnrichmentTaskPayload & {
  */
 export type ChronicleStep =
   | 'generate_v2'  // Single-shot generation
+  | 'regenerate_temperature' // Re-run chronicle generation with prior prompts
   | 'validate'
   | 'edit'
   | 'summary'

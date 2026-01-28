@@ -79,6 +79,18 @@ function FactMetadataCard({ fact, onUpdate, onRemove }) {
           style={{
             fontSize: '10px',
             padding: '2px 6px',
+            background: fact.type === 'generation_constraint' ? 'var(--warning-bg, #4a3f00)' : 'var(--bg-secondary)',
+            borderRadius: '4px',
+            color: fact.type === 'generation_constraint' ? 'var(--warning, #ffc107)' : 'var(--text-muted)',
+          }}
+          title={fact.type === 'generation_constraint' ? 'Meta-instruction (always verbatim)' : 'World truth (faceted by perspective)'}
+        >
+          {fact.type === 'generation_constraint' ? 'constraint' : 'truth'}
+        </span>
+        <span
+          style={{
+            fontSize: '10px',
+            padding: '2px 6px',
             background: 'var(--bg-secondary)',
             borderRadius: '4px',
             color: 'var(--text-muted)',
@@ -181,7 +193,21 @@ function FactMetadataCard({ fact, onUpdate, onRemove }) {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: '10px' }}>
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                Fact Type
+              </label>
+              <select
+                value={fact.type || 'world_truth'}
+                onChange={(e) => updateField('type', e.target.value)}
+                className="illuminator-input"
+                style={{ fontSize: '12px' }}
+              >
+                <option value="world_truth">World Truth (faceted by perspective)</option>
+                <option value="generation_constraint">Generation Constraint (always verbatim)</option>
+              </select>
+            </div>
             <div>
               <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
                 Base Priority (0-1)
@@ -195,6 +221,8 @@ function FactMetadataCard({ fact, onUpdate, onRemove }) {
                 onChange={(e) => updateField('basePriority', parseFloat(e.target.value) || 0.5)}
                 className="illuminator-input"
                 style={{ fontSize: '12px' }}
+                disabled={fact.type === 'generation_constraint'}
+                title={fact.type === 'generation_constraint' ? 'Priority not used for constraints' : ''}
               />
             </div>
           </div>
@@ -265,6 +293,333 @@ function FactsWithMetadataEditor({ facts, onChange }) {
 }
 
 // ============================================================================
+// World Dynamics Editor
+// ============================================================================
+
+function WorldDynamicCard({ dynamic, onUpdate, onRemove, eras }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [newOverrideEraId, setNewOverrideEraId] = useState('');
+
+  const updateField = (field, value) => {
+    onUpdate({ ...dynamic, [field]: value });
+  };
+
+  const formatArray = (arr) => (arr || []).filter((s) => s !== '*').join(', ');
+  const parseArray = (str) => {
+    const items = str.split(',').map((s) => s.trim()).filter(Boolean);
+    return items.length === 0 ? [] : items;
+  };
+
+  return (
+    <div
+      style={{
+        background: 'var(--bg-tertiary)',
+        borderRadius: '6px',
+        border: '1px solid var(--border-color)',
+        marginBottom: '8px',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '10px 12px',
+          cursor: 'pointer',
+        }}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+          {isExpanded ? '▼' : '▶'}
+        </span>
+        <span
+          style={{
+            fontSize: '11px',
+            fontFamily: 'monospace',
+            color: 'var(--accent-color)',
+            minWidth: '120px',
+          }}
+        >
+          {dynamic.id}
+        </span>
+        <span
+          style={{
+            flex: 1,
+            fontSize: '12px',
+            color: 'var(--text-secondary)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {dynamic.text}
+        </span>
+        {dynamic.cultures?.length > 0 && dynamic.cultures[0] !== '*' && (
+          <span
+            style={{
+              fontSize: '10px',
+              padding: '2px 6px',
+              background: 'var(--bg-secondary)',
+              borderRadius: '4px',
+              color: 'var(--text-muted)',
+            }}
+          >
+            {dynamic.cultures.length} culture{dynamic.cultures.length !== 1 ? 's' : ''}
+          </span>
+        )}
+        {dynamic.kinds?.length > 0 && dynamic.kinds[0] !== '*' && (
+          <span
+            style={{
+              fontSize: '10px',
+              padding: '2px 6px',
+              background: 'var(--bg-secondary)',
+              borderRadius: '4px',
+              color: 'var(--text-muted)',
+            }}
+          >
+            {dynamic.kinds.length} kind{dynamic.kinds.length !== 1 ? 's' : ''}
+          </span>
+        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--danger)',
+            cursor: 'pointer',
+            padding: '2px 6px',
+            fontSize: '14px',
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Expanded Details */}
+      {isExpanded && (
+        <div
+          style={{
+            padding: '12px',
+            borderTop: '1px solid var(--border-color)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+          }}
+        >
+          <div>
+            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+              Dynamic Statement
+            </label>
+            <LocalTextArea
+              value={dynamic.text || ''}
+              onChange={(value) => updateField('text', value)}
+              className="illuminator-input"
+              style={COMPACT_TEXTAREA_STYLE}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                Relevant Cultures (comma-separated, empty = always)
+              </label>
+              <input
+                type="text"
+                value={formatArray(dynamic.cultures)}
+                onChange={(e) => updateField('cultures', parseArray(e.target.value))}
+                className="illuminator-input"
+                style={{ fontSize: '12px' }}
+                placeholder="e.g., nightshelf, aurora_stack"
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                Relevant Kinds (comma-separated, empty = always)
+              </label>
+              <input
+                type="text"
+                value={formatArray(dynamic.kinds)}
+                onChange={(e) => updateField('kinds', parseArray(e.target.value))}
+                className="illuminator-input"
+                style={{ fontSize: '12px' }}
+                placeholder="e.g., artifact, npc"
+              />
+            </div>
+          </div>
+
+          {/* Era Overrides */}
+          {eras && eras.length > 0 && (
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                Era Overrides (optional — adjust this dynamic for specific eras)
+              </label>
+              {Object.entries(dynamic.eraOverrides || {}).map(([eraId, override]) => {
+                const eraName = eras.find((e) => e.id === eraId)?.name || eraId;
+                return (
+                  <div
+                    key={eraId}
+                    style={{
+                      background: 'var(--bg-secondary)',
+                      borderRadius: '4px',
+                      padding: '8px 10px',
+                      marginBottom: '6px',
+                      border: '1px solid var(--border-color)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--accent-color)' }}>
+                        {eraName}
+                      </span>
+                      <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+                        <input
+                          type="checkbox"
+                          checked={override.replace}
+                          onChange={(e) => {
+                            const newOverrides = { ...dynamic.eraOverrides };
+                            newOverrides[eraId] = { ...override, replace: e.target.checked };
+                            updateField('eraOverrides', newOverrides);
+                          }}
+                        />
+                        Replace (instead of append)
+                      </label>
+                      <button
+                        onClick={() => {
+                          const newOverrides = { ...dynamic.eraOverrides };
+                          delete newOverrides[eraId];
+                          updateField('eraOverrides', Object.keys(newOverrides).length > 0 ? newOverrides : undefined);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--danger)',
+                          cursor: 'pointer',
+                          padding: '2px 6px',
+                          fontSize: '13px',
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <LocalTextArea
+                      value={override.text || ''}
+                      onChange={(value) => {
+                        const newOverrides = { ...dynamic.eraOverrides };
+                        newOverrides[eraId] = { ...override, text: value };
+                        updateField('eraOverrides', newOverrides);
+                      }}
+                      className="illuminator-input"
+                      style={{ ...COMPACT_TEXTAREA_STYLE, minHeight: '40px' }}
+                      placeholder={override.replace ? 'Replacement text for this era...' : 'Additional context for this era (appended)...'}
+                    />
+                  </div>
+                );
+              })}
+              {/* Add new era override */}
+              {(() => {
+                const existingEraIds = new Set(Object.keys(dynamic.eraOverrides || {}));
+                const availableEras = eras.filter((e) => !existingEraIds.has(e.id));
+                if (availableEras.length === 0) return null;
+                return (
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                    <select
+                      value={newOverrideEraId}
+                      onChange={(e) => setNewOverrideEraId(e.target.value)}
+                      className="illuminator-input"
+                      style={{ flex: 1, fontSize: '12px' }}
+                    >
+                      <option value="">Select era...</option>
+                      {availableEras.map((era) => (
+                        <option key={era.id} value={era.id}>{era.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        if (!newOverrideEraId) return;
+                        const newOverrides = { ...(dynamic.eraOverrides || {}), [newOverrideEraId]: { text: '', replace: false } };
+                        updateField('eraOverrides', newOverrides);
+                        setNewOverrideEraId('');
+                      }}
+                      className="illuminator-button illuminator-button-secondary"
+                      disabled={!newOverrideEraId}
+                      style={{ fontSize: '12px' }}
+                    >
+                      Add Override
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WorldDynamicsEditor({ dynamics, onChange, eras }) {
+  const [newDynamicId, setNewDynamicId] = useState('');
+
+  const handleAddDynamic = () => {
+    if (!newDynamicId.trim()) return;
+    const newDynamic = {
+      id: newDynamicId.trim().toLowerCase().replace(/\s+/g, '-'),
+      text: '',
+      cultures: [],
+      kinds: [],
+    };
+    onChange([...dynamics, newDynamic]);
+    setNewDynamicId('');
+  };
+
+  const handleUpdateDynamic = (index, updated) => {
+    const newDynamics = [...dynamics];
+    newDynamics[index] = updated;
+    onChange(newDynamics);
+  };
+
+  const handleRemoveDynamic = (index) => {
+    onChange(dynamics.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div>
+      {dynamics.map((dynamic, index) => (
+        <WorldDynamicCard
+          key={dynamic.id || index}
+          dynamic={dynamic}
+          onUpdate={(updated) => handleUpdateDynamic(index, updated)}
+          onRemove={() => handleRemoveDynamic(index)}
+          eras={eras}
+        />
+      ))}
+      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+        <input
+          type="text"
+          value={newDynamicId}
+          onChange={(e) => setNewDynamicId(e.target.value)}
+          placeholder="new-dynamic-id"
+          className="illuminator-input"
+          style={{ flex: 1, fontSize: '12px' }}
+          onKeyDown={(e) => e.key === 'Enter' && handleAddDynamic()}
+        />
+        <button
+          onClick={handleAddDynamic}
+          className="illuminator-button illuminator-button-secondary"
+          disabled={!newDynamicId.trim()}
+        >
+          Add Dynamic
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // Tone Fragments Editor
 // ============================================================================
 
@@ -272,19 +627,6 @@ function ToneFragmentsEditor({ fragments, onChange }) {
   const updateField = (field, value) => {
     onChange({ ...fragments, [field]: value });
   };
-
-  const updateOverlay = (type, key, value) => {
-    const overlays = { ...(fragments[type] || {}) };
-    if (value.trim()) {
-      overlays[key] = value;
-    } else {
-      delete overlays[key];
-    }
-    updateField(type, overlays);
-  };
-
-  const cultureOverlays = fragments?.cultureOverlays || {};
-  const kindOverlays = fragments?.kindOverlays || {};
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -298,54 +640,23 @@ function ToneFragmentsEditor({ fragments, onChange }) {
           onChange={(value) => updateField('core', value)}
           placeholder="Core style principles that apply to all chronicles..."
           className="illuminator-input"
-          style={{ minHeight: '120px', resize: 'vertical', fontSize: '12px' }}
+          style={{ minHeight: '200px', resize: 'vertical', fontSize: '12px' }}
         />
       </div>
 
-      {/* Culture Overlays */}
-      <div>
-        <label style={{ fontSize: '12px', fontWeight: 500, display: 'block', marginBottom: '6px' }}>
-          Culture Overlays (added when culture dominates)
-        </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {['nightshelf', 'aurora_stack', 'orca', 'mixed'].map((culture) => (
-            <div key={culture}>
-              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
-                {culture}
-              </label>
-              <LocalTextArea
-                value={cultureOverlays[culture] || ''}
-                onChange={(value) => updateOverlay('cultureOverlays', culture, value)}
-                placeholder={`Tone adjustments for ${culture}-focused chronicles...`}
-                className="illuminator-input"
-                style={COMPACT_TEXTAREA_STYLE}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Kind Overlays */}
-      <div>
-        <label style={{ fontSize: '12px', fontWeight: 500, display: 'block', marginBottom: '6px' }}>
-          Kind Overlays (added based on entity focus)
-        </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {['character', 'place', 'object', 'event', 'mixed'].map((kind) => (
-            <div key={kind}>
-              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
-                {kind}
-              </label>
-              <LocalTextArea
-                value={kindOverlays[kind] || ''}
-                onChange={(value) => updateOverlay('kindOverlays', kind, value)}
-                placeholder={`Tone adjustments for ${kind}-focused chronicles...`}
-                className="illuminator-input"
-                style={COMPACT_TEXTAREA_STYLE}
-              />
-            </div>
-          ))}
-        </div>
+      {/* Note about where other guidance lives */}
+      <div style={{
+        fontSize: '11px',
+        color: 'var(--text-muted)',
+        padding: '10px',
+        background: 'var(--bg-tertiary)',
+        borderRadius: '4px',
+        border: '1px solid var(--border-color)'
+      }}>
+        <strong>Note:</strong> Culture-specific prose guidance is now in{' '}
+        <em>Identity → Descriptive → PROSE_STYLE</em>.{' '}
+        Entity kind prose guidance is in <em>Guidance → [kind] → proseHint</em>.{' '}
+        These are automatically assembled during perspective synthesis based on the chronicle's entity constellation.
       </div>
     </div>
   );
@@ -426,7 +737,7 @@ function EditableList({ items, onChange, placeholder }) {
   );
 }
 
-export default function WorldContextEditor({ worldContext, onWorldContextChange }) {
+export default function WorldContextEditor({ worldContext, onWorldContextChange, eras }) {
   const updateField = useCallback(
     (field, value) => {
       onWorldContextChange({ [field]: value });
@@ -505,67 +816,7 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange 
         </div>
       </div>
 
-      {/* DEPRECATED: Canon Facts */}
-      <div className="illuminator-card" style={{ opacity: 0.7, border: '1px dashed var(--warning-color)' }}>
-        <div className="illuminator-card-header">
-          <h2 className="illuminator-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{
-              fontSize: '10px',
-              padding: '2px 6px',
-              background: 'var(--warning-color)',
-              color: 'white',
-              borderRadius: '4px',
-              fontWeight: 600,
-            }}>
-              DEPRECATED
-            </span>
-            Canon Facts (Legacy)
-          </h2>
-        </div>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          <strong>Use "Facts with Metadata" below instead.</strong> This flat list is only used as
-          fallback when perspective synthesis is not configured.
-        </p>
-        <EditableList
-          items={worldContext.canonFacts || []}
-          onChange={(items) => updateField('canonFacts', items)}
-          placeholder="Add a canon fact..."
-        />
-      </div>
-
-      {/* DEPRECATED: Tone */}
-      <div className="illuminator-card" style={{ opacity: 0.7, border: '1px dashed var(--warning-color)' }}>
-        <div className="illuminator-card-header">
-          <h2 className="illuminator-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{
-              fontSize: '10px',
-              padding: '2px 6px',
-              background: 'var(--warning-color)',
-              color: 'white',
-              borderRadius: '4px',
-              fontWeight: 600,
-            }}>
-              DEPRECATED
-            </span>
-            Tone & Style (Legacy)
-          </h2>
-        </div>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          <strong>Use "Tone Fragments" below instead.</strong> This flat string is only used as
-          fallback when perspective synthesis is not configured.
-        </p>
-        <div className="illuminator-form-group">
-          <LocalTextArea
-            value={worldContext.tone || ''}
-            onChange={(value) => updateField('tone', value)}
-            placeholder="e.g., Evocative and mythic, with hints of mystery. Focus on sensory details and emotional weight rather than dry facts..."
-            className="illuminator-input"
-            style={TONE_TEXTAREA_STYLE}
-          />
-        </div>
-      </div>
-
-      {/* Perspective Synthesis Section */}
+      {/* World Context Configuration */}
       <div
         style={{
           marginTop: '24px',
@@ -575,11 +826,11 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange 
       >
         <div style={{ marginBottom: '16px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>
-            Perspective Synthesis Configuration
+            Chronicle Generation
           </h2>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            When both tone fragments and facts with metadata are configured, chronicles
-            use LLM-assisted perspective synthesis to create focused, faceted views of the world.
+            Tone and facts for chronicle generation. Chronicles use perspective synthesis
+            to create focused, faceted views based on each chronicle's entity constellation.
           </p>
         </div>
 
@@ -596,6 +847,23 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange 
           <FactsWithMetadataEditor
             facts={worldContext.canonFactsWithMetadata || []}
             onChange={(facts) => updateField('canonFactsWithMetadata', facts)}
+          />
+        </div>
+
+        {/* World Dynamics */}
+        <div className="illuminator-card">
+          <div className="illuminator-card-header">
+            <h2 className="illuminator-card-title">World Dynamics</h2>
+          </div>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            Higher-level narrative context about inter-group forces and behaviors.
+            These statements describe macro-level dynamics that individual relationships are expressions of.
+            Optionally filter by culture or entity kind so they only appear in relevant chronicles.
+          </p>
+          <WorldDynamicsEditor
+            dynamics={worldContext.worldDynamics || []}
+            onChange={(dynamics) => updateField('worldDynamics', dynamics)}
+            eras={eras}
           />
         </div>
 

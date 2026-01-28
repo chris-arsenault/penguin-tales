@@ -54,6 +54,13 @@ export interface DocumentNarrativeStyle {
   pacing: {
     wordCount: { min: number; max: number };
   };
+
+  /**
+   * LLM temperature for chronicle generation (0.0-1.0).
+   * Higher values produce more creative/varied output.
+   * If not set, falls back to the hardcoded step default (0.7 for generation).
+   */
+  temperature?: number;
 }
 
 // =============================================================================

@@ -24,8 +24,7 @@ import type {
 } from '@canonry/world-schema';
 import type { V2SelectionResult } from './types';
 
-// Cultural identity type for descriptive identity per culture
-type CulturalDescriptiveIdentity = Record<string, Record<string, string>>;
+import type { EntityDirective } from '../../perspectiveSynthesizer';
 
 // =============================================================================
 // Entity Formatting
@@ -107,6 +106,7 @@ function buildWorldSection(context: ChronicleGenerationContext): string {
   if (context.canonFacts && context.canonFacts.length > 0) {
     lines.push('');
     lines.push('Canon Facts:');
+    lines.push('(Facts marked with [FACET: ...] include a lens specific to this chronicle. Prioritize the facet - it shows how the universal truth applies to these particular entities and circumstances. The base fact provides context; the facet is your guide.)');
     for (const fact of context.canonFacts) {
       lines.push(`- ${fact}`);
     }
@@ -213,61 +213,36 @@ function buildWorldTimeline(eras: EraTemporalInfo[], focalEraId: string): string
 }
 
 /**
- * Build the cultural identities section.
- * Provides cultural context (VALUES, SPEECH, FEARS, TABOOS, etc.) for each culture
- * that appears in the chronicle's entities. Also includes name bank for each culture.
+ * Build the name bank section.
+ * Provides culture-appropriate names for invented characters.
+ * This is practical data, not prose guidance.
  */
-function buildCulturalIdentitiesSection(
-  culturalIdentities: CulturalDescriptiveIdentity | undefined,
-  entities: EntityContext[],
-  nameBank: Record<string, string[]> | undefined
+function buildNameBankSection(
+  nameBank: Record<string, string[]> | undefined,
+  entities: EntityContext[]
 ): string {
-  // Get unique cultures from the chronicle's entities
+  if (!nameBank || Object.keys(nameBank).length === 0) {
+    return '';
+  }
+
   const entityCultures = new Set(
     entities.map(e => e.culture).filter((c): c is string => Boolean(c))
   );
 
-  const hasIdentities = culturalIdentities && Object.keys(culturalIdentities).length > 0;
-  const hasNames = nameBank && Object.keys(nameBank).length > 0;
+  const lines: string[] = ['# Name Bank'];
+  lines.push('Culture-appropriate names for invented characters:');
 
-  if (entityCultures.size === 0 && !hasNames) {
-    return '';
-  }
-
-  const lines: string[] = ['# Cultural Identities'];
-  lines.push('How different cultures think, speak, and behave:');
-
-  // Include cultures from entities
+  // Cultures from entities first
   for (const cultureId of entityCultures) {
-    lines.push('');
-    lines.push(`## ${cultureId}`);
-
-    // Identity fields
-    if (hasIdentities) {
-      const identity = culturalIdentities[cultureId];
-      if (identity) {
-        for (const [key, value] of Object.entries(identity)) {
-          if (value && value.trim()) {
-            lines.push(`- ${key}: ${value}`);
-          }
-        }
-      }
-    }
-
-    // Name bank for this culture
-    if (hasNames && nameBank[cultureId] && nameBank[cultureId].length > 0) {
-      lines.push(`- Available Names: ${nameBank[cultureId].join(', ')}`);
+    if (nameBank[cultureId] && nameBank[cultureId].length > 0) {
+      lines.push(`- ${cultureId}: ${nameBank[cultureId].join(', ')}`);
     }
   }
 
-  // Include any cultures in name bank not already listed
-  if (hasNames) {
-    for (const [cultureId, names] of Object.entries(nameBank)) {
-      if (!entityCultures.has(cultureId) && names.length > 0) {
-        lines.push('');
-        lines.push(`## ${cultureId}`);
-        lines.push(`- Available Names: ${names.join(', ')}`);
-      }
+  // Any additional cultures in name bank
+  for (const [cultureId, names] of Object.entries(nameBank)) {
+    if (!entityCultures.has(cultureId) && names.length > 0) {
+      lines.push(`- ${cultureId}: ${names.join(', ')}`);
     }
   }
 
@@ -275,39 +250,44 @@ function buildCulturalIdentitiesSection(
 }
 
 /**
- * Build the prose hints section.
- * Provides per-kind guidance for how to portray different entity types in narrative prose.
- * Only includes hints for kinds present in the chronicle's entities.
+ * Build the narrative voice section.
+ * Renders the synthesized voice from perspective synthesis as key-value pairs.
  */
-function buildProseHintsSection(
-  proseHints: Record<string, string> | undefined,
-  entities: EntityContext[]
+function buildNarrativeVoiceSection(
+  narrativeVoice: Record<string, string> | undefined
 ): string {
-  if (!proseHints || Object.keys(proseHints).length === 0) {
+  if (!narrativeVoice || Object.keys(narrativeVoice).length === 0) {
     return '';
   }
 
-  // Get unique entity kinds from the chronicle's entities
-  const entityKinds = new Set(entities.map(e => e.kind));
-
-  // Filter hints to only include kinds present in this chronicle
-  const relevantHints: [string, string][] = [];
-  for (const [kind, hint] of Object.entries(proseHints)) {
-    if (entityKinds.has(kind) && hint.trim()) {
-      relevantHints.push([kind, hint]);
-    }
-  }
-
-  if (relevantHints.length === 0) {
-    return '';
-  }
-
-  const lines: string[] = ['# Entity Portrayal Guidelines'];
-  lines.push('When writing about different types of entities, follow these guidelines:');
+  const lines: string[] = ['# Narrative Voice'];
+  lines.push('Synthesized prose guidance for this chronicle:');
   lines.push('');
 
-  for (const [kind, hint] of relevantHints) {
-    lines.push(`**${kind}**: ${hint}`);
+  for (const [key, value] of Object.entries(narrativeVoice)) {
+    lines.push(`**${key}**: ${value}`);
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Build the entity directives section.
+ * Renders per-entity writing directives from perspective synthesis.
+ */
+function buildEntityDirectivesSection(
+  entityDirectives: EntityDirective[] | undefined
+): string {
+  if (!entityDirectives || entityDirectives.length === 0) {
+    return '';
+  }
+
+  const lines: string[] = ['# Entity Writing Directives'];
+  lines.push('Specific guidance for writing each entity — interpret creatively, don\'t reproduce this language directly:');
+  lines.push('');
+
+  for (const directive of entityDirectives) {
+    lines.push(`**${directive.entityName}**: ${directive.directive}`);
   }
 
   return lines.join('\n');
@@ -440,23 +420,25 @@ function buildUnifiedStyleSection(
  * 1. TASK - Word count, scene count, requirements
  * 2. NARRATIVE STRUCTURE - Scene progression and emotional beats
  * 3. EVENT USAGE - How to incorporate world events
- * 4. ENTITY PORTRAYAL - Per-kind guidelines
- * 5. WRITING STYLE - World tone + prose instructions
+ * 4. NARRATIVE VOICE - Synthesized prose guidance
+ * 5. ENTITY WRITING DIRECTIVES - Per-entity guidance
+ * 6. WRITING STYLE - World tone + prose instructions
  *
  * WORLD DATA (what to write about):
- * 6. CAST - Narrative roles + characters
- * 7. WORLD - Setting context
- * 8. CULTURAL IDENTITIES - How cultures behave + name bank
- * 9. HISTORICAL CONTEXT - Era, timeline, temporal scope
- * 10. RELATIONSHIPS - Connections between characters
- * 11. EVENTS - What happened in the world
+ * 7. CAST - Narrative roles + characters
+ * 8. WORLD - Setting context
+ * 9. NAME BANK - Culture-appropriate names
+ * 10. HISTORICAL CONTEXT - Era, timeline, temporal scope
+ * 11. RELATIONSHIPS - Connections between characters
+ * 12. EVENTS - What happened in the world
  */
 function buildStoryPrompt(
   context: ChronicleGenerationContext,
   selection: V2SelectionResult,
   primaryEntityIds: Set<string>,
-  culturalIdentitiesSection: string,
-  proseHintsSection: string,
+  narrativeVoiceSection: string,
+  entityDirectivesSection: string,
+  nameBankSection: string,
   style: StoryNarrativeStyle
 ): string {
   const pacing = style.pacing;
@@ -475,7 +457,7 @@ Requirements:
 - Assign the provided characters to the narrative roles defined below
 - Follow the plot structure and scene progression
 - Incorporate the listed events naturally into the narrative
-- Characters should speak and act according to their cultural identity
+- Follow the Entity Writing Directives for each character's speech and behavior
 - Write directly with no section headers or meta-commentary`;
 
   // 2. NARRATIVE STRUCTURE
@@ -484,25 +466,27 @@ Requirements:
   // 3. EVENT USAGE
   const eventSection = buildEventUsageSection(style);
 
-  // 4. ENTITY PORTRAYAL (proseHintsSection passed in)
+  // 4. NARRATIVE VOICE (synthesized, replaces raw cultural identities)
 
-  // 5. WRITING STYLE
+  // 5. ENTITY WRITING DIRECTIVES (synthesized, replaces raw prose hints)
+
+  // 6. WRITING STYLE
   const styleSection = buildUnifiedStyleSection(context.tone, style);
 
   // === WORLD DATA ===
 
-  // 6. CAST (unified roles + characters)
+  // 7. CAST (unified roles + characters)
   const castSection = buildUnifiedCastSection(selection, primaryEntityIds, style);
 
-  // 7. WORLD (setting context only, no style)
+  // 8. WORLD (setting context only, no style)
   const worldSection = buildWorldSection(context);
 
-  // 8. CULTURAL IDENTITIES (passed in, includes name bank)
+  // 9. NAME BANK (practical data)
 
-  // 9. HISTORICAL CONTEXT
+  // 10. HISTORICAL CONTEXT
   const temporalSection = buildTemporalSection(context.temporalContext);
 
-  // 10 & 11. RELATIONSHIPS + EVENTS
+  // 11 & 12. RELATIONSHIPS + EVENTS
   const dataSection = buildDataSection(selection);
 
   // Combine sections in order: TASK DATA then WORLD DATA
@@ -511,12 +495,13 @@ Requirements:
     taskSection,
     structureSection,
     eventSection,
-    proseHintsSection,
+    narrativeVoiceSection,
+    entityDirectivesSection,
     styleSection,
     // WORLD DATA
     castSection,
     worldSection,
-    culturalIdentitiesSection,
+    nameBankSection,
     temporalSection,
     dataSection,
   ].filter(Boolean);
@@ -713,21 +698,23 @@ function buildUnifiedDocumentCastSection(
  * 1. TASK - Word count, requirements
  * 2. DOCUMENT INSTRUCTIONS - Structure, voice, tone guidance
  * 3. EVENT USAGE - How to incorporate world events
- * 4. ENTITY PORTRAYAL - Per-kind guidelines
+ * 4. NARRATIVE VOICE - Synthesized prose guidance
+ * 5. ENTITY WRITING DIRECTIVES - Per-entity guidance
  *
  * WORLD DATA (what to write about):
- * 5. CAST - Document roles + characters
- * 6. WORLD - Setting context
- * 7. CULTURAL IDENTITIES - How cultures behave + name bank
- * 8. HISTORICAL CONTEXT - Era, timeline
- * 9. RELATIONSHIPS + EVENTS - Data section
+ * 6. CAST - Document roles + characters
+ * 7. WORLD - Setting context
+ * 8. NAME BANK - Culture-appropriate names
+ * 9. HISTORICAL CONTEXT - Era, timeline
+ * 10. RELATIONSHIPS + EVENTS - Data section
  */
 function buildDocumentPrompt(
   context: ChronicleGenerationContext,
   selection: V2SelectionResult,
   primaryEntityIds: Set<string>,
-  culturalIdentitiesSection: string,
-  proseHintsSection: string,
+  narrativeVoiceSection: string,
+  entityDirectivesSection: string,
+  nameBankSection: string,
   style: DocumentNarrativeStyle
 ): string {
   const wordCount = getDocumentWordCount(style);
@@ -743,7 +730,7 @@ Requirements:
 - Follow the document structure and voice guidance below
 - Assign the provided characters to the document roles defined below
 - Incorporate the listed events naturally as context or content
-- Characters should speak and act according to their cultural identity
+- Follow the Entity Writing Directives for each character's speech and behavior
 - Ground the document in the historical era and timeline provided
 - Make the document feel authentic - as if it exists within the world
 - Write the document directly with no meta-commentary`;
@@ -754,22 +741,24 @@ Requirements:
   // 3. EVENT USAGE
   const eventSection = buildDocumentEventUsageSection(style);
 
-  // 4. ENTITY PORTRAYAL (proseHintsSection passed in)
+  // 4. NARRATIVE VOICE (synthesized)
+
+  // 5. ENTITY WRITING DIRECTIVES (synthesized)
 
   // === WORLD DATA ===
 
-  // 5. CAST (unified roles + characters)
+  // 6. CAST (unified roles + characters)
   const castSection = buildUnifiedDocumentCastSection(selection, primaryEntityIds, style);
 
-  // 6. WORLD (setting context)
+  // 7. WORLD (setting context)
   const worldSection = buildWorldSection(context);
 
-  // 7. CULTURAL IDENTITIES (passed in, includes name bank)
+  // 8. NAME BANK (practical data)
 
-  // 8. HISTORICAL CONTEXT
+  // 9. HISTORICAL CONTEXT
   const temporalSection = buildTemporalSection(context.temporalContext);
 
-  // 9. RELATIONSHIPS + EVENTS
+  // 10. RELATIONSHIPS + EVENTS
   const dataSection = buildDataSection(selection);
 
   // Combine sections in order: TASK DATA then WORLD DATA
@@ -778,11 +767,12 @@ Requirements:
     taskSection,
     instructionsSection,
     eventSection,
-    proseHintsSection,
+    narrativeVoiceSection,
+    entityDirectivesSection,
     // WORLD DATA
     castSection,
     worldSection,
-    culturalIdentitiesSection,
+    nameBankSection,
     temporalSection,
     dataSection,
   ].filter(Boolean);
@@ -803,20 +793,18 @@ export function buildV2Prompt(
   selection: V2SelectionResult
 ): string {
   const primaryEntityIds = new Set(context.focus?.primaryEntityIds || []);
-  const culturalIdentitiesSection = buildCulturalIdentitiesSection(
-    context.culturalIdentities,
-    selection.entities,
-    context.nameBank
-  );
-  const proseHintsSection = buildProseHintsSection(context.proseHints, selection.entities);
+  const narrativeVoiceSection = buildNarrativeVoiceSection(context.narrativeVoice);
+  const entityDirectivesSection = buildEntityDirectivesSection(context.entityDirectives);
+  const nameBankSection = buildNameBankSection(context.nameBank, selection.entities);
 
   if (style.format === 'story') {
     return buildStoryPrompt(
       context,
       selection,
       primaryEntityIds,
-      culturalIdentitiesSection,
-      proseHintsSection,
+      narrativeVoiceSection,
+      entityDirectivesSection,
+      nameBankSection,
       style as StoryNarrativeStyle
     );
   } else {
@@ -824,8 +812,9 @@ export function buildV2Prompt(
       context,
       selection,
       primaryEntityIds,
-      culturalIdentitiesSection,
-      proseHintsSection,
+      narrativeVoiceSection,
+      entityDirectivesSection,
+      nameBankSection,
       style as DocumentNarrativeStyle
     );
   }
@@ -856,19 +845,19 @@ TASK DATA (how to write it):
 - Task: Word count, scene count, requirements
 - Narrative Structure: Scene progression and emotional beats - THIS IS PRIMARY
 - Event Usage: How to incorporate world events
-- Entity Portrayal: Per-kind guidelines from the world
+- Narrative Voice: Synthesized prose guidance blending cultural and stylistic elements
+- Entity Writing Directives: Per-entity guidance for speech, behavior, and portrayal
 - Writing Style: World tone sets the backdrop; Prose instructions are specific to this story type
 
 WORLD DATA (what to write about):
 - Cast: Narrative roles to fill, then characters to fill them
 - World: Setting name, description, canon facts
-- Cultural Identities: How each culture thinks, speaks, acts
-  - Name Bank: Culture-appropriate names for invented characters
+- Name Bank: Culture-appropriate names for invented characters
 - Historical Context: Current era and world timeline
 - Relationships: Connections between characters
 - Events: What happened in the world
 
-Hierarchy: Narrative Structure and Prose instructions define THIS story. World tone and Entity Portrayal provide the ambient style everything sits within. When both apply, story-specific guidance takes precedence.`;
+Hierarchy: Narrative Structure and Prose instructions define THIS story. Narrative Voice and Entity Directives are pre-synthesized guidance — follow their intent closely, but express them in your own voice. Writing Style provides the ambient tone everything sits within.`;
   } else {
     return `You are writing an in-universe document. Your prompt contains:
 
@@ -876,18 +865,18 @@ TASK DATA (how to write it):
 - Task: Word count, requirements
 - Document Instructions: Structure, voice, tone, what to include/avoid - THIS IS PRIMARY
 - Event Usage: How to incorporate world events
-- Entity Portrayal: Per-kind guidelines from the world
+- Narrative Voice: Synthesized prose guidance blending cultural and stylistic elements
+- Entity Writing Directives: Per-entity guidance for speech, behavior, and portrayal
 
 WORLD DATA (what to write about):
 - Cast: Document roles to fill, then characters to fill them
 - World: Setting name, description, canon facts
-- Cultural Identities: How each culture thinks, speaks, acts
-  - Name Bank: Culture-appropriate names for invented characters
+- Name Bank: Culture-appropriate names for invented characters
 - Historical Context: Current era and world timeline
 - Relationships: Connections between characters
 - Events: What happened in the world
 
-Hierarchy: Document Instructions define THIS document's structure and voice. Entity Portrayal and Cultural Identities provide the world context everything sits within. When both apply, document-specific guidance takes precedence.
+Hierarchy: Document Instructions define THIS document's structure and voice. Narrative Voice and Entity Directives are pre-synthesized guidance — follow their intent closely, but express them in your own voice.
 
 Write authentically as if the document exists within the world. No meta-commentary.`;
   }

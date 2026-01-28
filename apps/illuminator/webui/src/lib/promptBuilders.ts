@@ -48,14 +48,49 @@ export interface DescriptiveInfo {
 }
 
 /**
- * World-level context - minimal, essential information
+ * Tone fragments - composable tone guidance
+ */
+export interface ToneFragments {
+  core: string;
+  cultureOverlays?: Record<string, string>;
+  kindOverlays?: Record<string, string>;
+}
+
+/**
+ * Canon fact with metadata
+ */
+export interface CanonFactWithMetadata {
+  id: string;
+  text: string;
+  type?: 'world_truth' | 'generation_constraint';
+  basePriority: number;
+  cultureTags?: string[];
+  themeTags?: string[];
+}
+
+/**
+ * World-level context - structured for perspective synthesis
  */
 export interface WorldContext {
-  name: string;                 // World name
-  description: string;          // Genre/setting brief (1-2 sentences)
-  canonFacts: string[];         // Facts that must not be contradicted
-  tone?: string;                // "dark fantasy", "whimsical", "gritty realism"
-  speciesConstraint?: string;   // Species rule for image generation (e.g., "All figures must be penguins or orcas")
+  name: string;                              // World name
+  description: string;                       // Genre/setting brief (1-2 sentences)
+  toneFragments: ToneFragments;              // Composable tone guidance
+  canonFactsWithMetadata: CanonFactWithMetadata[];  // Facts with relevance metadata
+  speciesConstraint?: string;                // Species rule for image generation
+}
+
+/**
+ * Get flat tone string from structured context
+ */
+export function getTone(ctx: WorldContext): string {
+  return ctx.toneFragments?.core || '';
+}
+
+/**
+ * Get flat canon facts array from structured context
+ */
+export function getCanonFacts(ctx: WorldContext): string[] {
+  return (ctx.canonFactsWithMetadata || []).map(f => f.text);
 }
 
 /**
@@ -394,10 +429,10 @@ export function buildDescriptionPromptFromGuidance(
     `WORLD: ${worldContext.description}`,
     '',
     'TONE & STYLE:',
-    worldContext.tone || '',
+    getTone(worldContext),
     '',
     'CANON FACTS (never contradict):',
-    (worldContext.canonFacts || []).map(f => `- ${f}`).join('\n'),
+    getCanonFacts(worldContext).map(f => `- ${f}`).join('\n'),
     '',
     '---',
     '',

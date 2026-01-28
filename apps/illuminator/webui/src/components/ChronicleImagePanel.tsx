@@ -11,7 +11,7 @@
  * - Uses the same image generation pipeline as entity images
  */
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useImageUrl } from '../hooks/useImageUrl';
 import StyleSelector, { resolveStyleSelection, CULTURE_DEFAULT_ID } from './StyleSelector';
 import { buildChronicleImagePrompt } from '../lib/promptBuilders';
@@ -51,7 +51,7 @@ interface StyleLibrary {
 interface WorldContext {
   name?: string;
   description?: string;
-  tone?: string;
+  toneFragments?: { core: string };
 }
 
 interface CultureIdentities {
@@ -111,6 +111,40 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 // Default entity kind for visual identity filtering (general scene images)
 const DEFAULT_VISUAL_IDENTITY_KIND = 'scene';
 const JUSTIFY_SIZES = new Set(['small', 'medium', 'large']);
+
+function useLazyImageUrl(imageId: string | null | undefined) {
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (isVisible) return;
+    const node = containerRef.current;
+    if (!node) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [isVisible]);
+
+  const { url, loading, error, metadata } = useImageUrl(isVisible ? imageId : null);
+
+  return { containerRef, url, loading, error, metadata, isVisible };
+}
 
 function AnchorTextEditor({
   anchorText,
@@ -231,7 +265,7 @@ function EntityImageRefCard({
   isGenerating?: boolean;
 }) {
   const imageId = entity?.enrichment?.image?.imageId;
-  const { url, loading } = useImageUrl(imageId);
+  const { containerRef, url, loading, isVisible } = useLazyImageUrl(imageId);
   const hasImage = Boolean(imageId);
   const isJustifiable = JUSTIFY_SIZES.has(imageRef.size);
   const anchorMissing = Boolean(
@@ -239,6 +273,7 @@ function EntityImageRefCard({
     imageRef.anchorText &&
     !chronicleText.includes(imageRef.anchorText)
   );
+  const deferThumbnail = hasImage && !isVisible;
 
   return (
     <div
@@ -253,6 +288,7 @@ function EntityImageRefCard({
     >
       {/* Thumbnail */}
       <div
+        ref={containerRef}
         style={{
           width: '60px',
           height: '60px',
@@ -271,11 +307,12 @@ function EntityImageRefCard({
           <img
             src={url}
             alt={entity?.name || 'Entity image'}
+            loading="lazy"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
           <span style={{ fontSize: '20px', color: 'var(--text-muted)' }}>
-            {hasImage ? '?' : '—'}
+            {deferThumbnail ? '...' : (hasImage ? '?' : '—')}
           </span>
         )}
       </div>
@@ -415,7 +452,7 @@ function PromptRequestCard({
   isGenerating?: boolean;
   entities?: Map<string, EntityContext>;
 }) {
-  const { url, loading } = useImageUrl(imageRef.generatedImageId);
+  const { containerRef, url, loading, isVisible } = useLazyImageUrl(imageRef.generatedImageId);
   const statusColor = STATUS_COLORS[imageRef.status] || STATUS_COLORS.pending;
   const canGenerate = imageRef.status === 'pending' && !isGenerating;
   const canRegenerate = imageRef.status === 'complete' && !isGenerating;
@@ -426,6 +463,7 @@ function PromptRequestCard({
     imageRef.anchorText &&
     !chronicleText.includes(imageRef.anchorText)
   );
+  const deferThumbnail = Boolean(imageRef.generatedImageId) && !isVisible;
 
   // Resolve involved entity names
   const involvedEntityNames = imageRef.involvedEntityIds
@@ -445,6 +483,7 @@ function PromptRequestCard({
     >
       {/* Thumbnail/Placeholder */}
       <div
+        ref={containerRef}
         style={{
           width: '60px',
           height: '60px',
@@ -463,11 +502,12 @@ function PromptRequestCard({
           <img
             src={url}
             alt="Generated image"
+            loading="lazy"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
           <span style={{ fontSize: '20px', color: 'var(--text-muted)' }}>
-            {imageRef.status === 'generating' ? '...' : '🖼️'}
+            {deferThumbnail || imageRef.status === 'generating' ? '...' : '🖼️'}
           </span>
         )}
       </div>
@@ -835,7 +875,7 @@ export default function ChronicleImagePanel({
         world: worldContext ? {
           name: worldContext.name || 'Unknown World',
           description: worldContext.description,
-          tone: worldContext.tone,
+          tone: worldContext.toneFragments?.core,
         } : undefined,
         involvedEntities,
       },

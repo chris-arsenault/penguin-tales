@@ -21,8 +21,10 @@ import {
   deriveTitleFromRoles,
   createChronicleShell,
 } from '../lib/chronicleStorage';
+import { downloadChronicleExport } from '../lib/chronicleExport';
 
 const REFINEMENT_STEPS = new Set(['summary', 'image_refs']);
+const NAV_PAGE_SIZE = 10;
 
 // Badge colors for chronicle-first display
 const FOCUS_TYPE_COLORS = {
@@ -262,6 +264,9 @@ export default function ChroniclePanel({
   const [entitySearchQuery, setEntitySearchQuery] = useState('');
   const [entitySearchSelectedId, setEntitySearchSelectedId] = useState(null);
   const [showEntitySuggestions, setShowEntitySuggestions] = useState(false);
+  const [navVisibleCount, setNavVisibleCount] = useState(NAV_PAGE_SIZE);
+  const navListRef = useRef(null);
+  const navLoadMoreRef = useRef(null);
 
   useEffect(() => {
     if (selectedItemId) {
@@ -295,7 +300,9 @@ export default function ChroniclePanel({
     generateSummary,
     generateImageRefs,
     revalidateChronicle,
+    regenerateWithTemperature,
     acceptChronicle,
+    cancelChronicle,
     restartChronicle,
     isGenerating,
     refresh,
@@ -342,6 +349,7 @@ export default function ChroniclePanel({
           case 'validate': return 'validating';
           case 'edit': return 'editing';
           case 'generate_v2': return 'generating';
+          case 'regenerate_temperature': return 'generating';
           default: return deriveStatus(chronicle);
         }
       }
@@ -350,6 +358,7 @@ export default function ChroniclePanel({
           case 'edit': return 'editing';
           case 'validate': return 'validating';
           case 'generate_v2': return 'generating';
+          case 'regenerate_temperature': return 'generating';
           default: return deriveStatus(chronicle);
         }
       }
@@ -410,9 +419,14 @@ export default function ChroniclePanel({
         failureStep: chronicle.failureStep,
         failureReason: chronicle.failureReason,
         editVersion: chronicle.editVersion ?? 0,
+        generationSystemPrompt: chronicle.generationSystemPrompt,
+        generationUserPrompt: chronicle.generationUserPrompt,
+        generationTemperature: chronicle.generationTemperature,
+        generationHistory: chronicle.generationHistory,
 
         // V2-specific
         selectionSummary: chronicle.selectionSummary,
+        perspectiveSynthesis: chronicle.perspectiveSynthesis,
 
         // Refinement fields
         summary: chronicle.summary,
@@ -520,17 +534,72 @@ export default function ChroniclePanel({
     statusFilter,
   ]);
 
+  useEffect(() => {
+    setNavVisibleCount(NAV_PAGE_SIZE);
+  }, [statusFilter, focusFilter, entitySearchQuery, entitySearchSelectedId, sortMode, groupByType, simulationRunId]);
+
+  const selectedNavIndex = useMemo(
+    () => filteredChronicleItems.findIndex((item) => item.id === selectedItemId),
+    [filteredChronicleItems, selectedItemId]
+  );
+
+  useEffect(() => {
+    if (selectedNavIndex >= 0 && selectedNavIndex + 1 > navVisibleCount) {
+      const nextCount = Math.min(
+        filteredChronicleItems.length,
+        Math.ceil((selectedNavIndex + 1) / NAV_PAGE_SIZE) * NAV_PAGE_SIZE
+      );
+      if (nextCount !== navVisibleCount) {
+        setNavVisibleCount(nextCount);
+      }
+    }
+  }, [selectedNavIndex, navVisibleCount, filteredChronicleItems.length]);
+
+  useEffect(() => {
+    if (filteredChronicleItems.length > 0 && navVisibleCount > filteredChronicleItems.length) {
+      setNavVisibleCount(filteredChronicleItems.length);
+    }
+  }, [filteredChronicleItems.length, navVisibleCount]);
+
+  useEffect(() => {
+    const container = navListRef.current;
+    const sentinel = navLoadMoreRef.current;
+    if (!container || !sentinel) return;
+    if (navVisibleCount >= filteredChronicleItems.length) return;
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setNavVisibleCount((prev) =>
+            Math.min(prev + NAV_PAGE_SIZE, filteredChronicleItems.length)
+          );
+        }
+      },
+      { root: container, rootMargin: '120px', threshold: 0.1 }
+    );
+
+    observer.observe(sentinel);
+
+    return () => observer.disconnect();
+  }, [navVisibleCount, filteredChronicleItems.length]);
+
+  const visibleChronicleItems = useMemo(() => {
+    if (navVisibleCount >= filteredChronicleItems.length) return filteredChronicleItems;
+    return filteredChronicleItems.slice(0, navVisibleCount);
+  }, [filteredChronicleItems, navVisibleCount]);
+
   const groupedChronicleItems = useMemo(() => {
     if (!groupByType) return null;
     const groups = new Map();
-    for (const item of filteredChronicleItems) {
+    for (const item of visibleChronicleItems) {
       const label = getChronicleTypeLabel(item);
       if (!groups.has(label)) groups.set(label, []);
       groups.get(label).push(item);
     }
     const labels = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b));
     return labels.map((label) => ({ label, items: groups.get(label) }));
-  }, [filteredChronicleItems, getChronicleTypeLabel, groupByType]);
+  }, [visibleChronicleItems, getChronicleTypeLabel, groupByType]);
 
   // Get selected item
   const selectedItem = useMemo(() => {
@@ -609,14 +678,18 @@ export default function ChroniclePanel({
     if (!selectedItem || !worldData || !selectedNarrativeStyle) return null;
 
     try {
+      // Validate required world context for perspective synthesis
+      if (!worldContext?.toneFragments || !worldContext?.canonFactsWithMetadata) {
+        console.error('World context missing toneFragments or canonFactsWithMetadata');
+        return null;
+      }
+
       const wc = {
         name: worldContext?.name || 'The World',
         description: worldContext?.description || '',
-        canonFacts: worldContext?.canonFacts || [],
-        tone: worldContext?.tone || '',
-        // Optional fragmented world context for perspective synthesis
-        toneFragments: worldContext?.toneFragments,
-        canonFactsWithMetadata: worldContext?.canonFactsWithMetadata,
+        // Required for perspective synthesis
+        toneFragments: worldContext.toneFragments,
+        canonFactsWithMetadata: worldContext.canonFactsWithMetadata,
       };
 
       // Extract prose hints from entity guidance (if available)
@@ -670,6 +743,12 @@ export default function ChroniclePanel({
     if (!selectedItem || !generationContext) return;
     generateImageRefs(selectedItem.chronicleId, generationContext);
   }, [selectedItem, generationContext, generateImageRefs]);
+
+  const handleRegenerateWithTemperature = useCallback((temperature) => {
+    if (!selectedItem) return;
+    const clamped = Math.min(1, Math.max(0, Number(temperature)));
+    regenerateWithTemperature(selectedItem.chronicleId, clamped);
+  }, [selectedItem, regenerateWithTemperature]);
 
   const handleRevalidate = useCallback(() => {
     if (!selectedItem || !generationContext) return;
@@ -848,15 +927,16 @@ export default function ChroniclePanel({
       entrypointId: wizardConfig.entryPointId, // Mechanical only, not identity
     };
 
-    // Build world context
+    // Build world context (requires structured fields for perspective synthesis)
+    if (!worldContext?.toneFragments || !worldContext?.canonFactsWithMetadata) {
+      console.error('[Chronicle Wizard] Missing toneFragments or canonFactsWithMetadata');
+      return;
+    }
     const wc = {
       name: worldContext?.name || 'The World',
       description: worldContext?.description || '',
-      canonFacts: worldContext?.canonFacts || [],
-      tone: worldContext?.tone || '',
-      // Optional fragmented world context for perspective synthesis
-      toneFragments: worldContext?.toneFragments,
-      canonFactsWithMetadata: worldContext?.canonFactsWithMetadata,
+      toneFragments: worldContext.toneFragments,
+      canonFactsWithMetadata: worldContext.canonFactsWithMetadata,
     };
 
     // Generate name bank for invented characters
@@ -1087,6 +1167,24 @@ export default function ChroniclePanel({
     [selectedItem, wizardEras, wizardEvents, entities, refresh]
   );
 
+  // Handle export of completed chronicle
+  // Uses ONLY stored data from the chronicle record - no reconstruction
+  const handleExport = useCallback(() => {
+    if (!selectedItem) {
+      console.error('[Chronicle] Cannot export: no chronicle selected');
+      return;
+    }
+
+    // Get the full chronicle record from storage
+    const chronicle = chronicles.get(selectedItem.chronicleId);
+    if (!chronicle) {
+      console.error('[Chronicle] Cannot export: chronicle not found in storage');
+      return;
+    }
+
+    downloadChronicleExport(chronicle);
+  }, [selectedItem, chronicles]);
+
   // Track completed chronicle image tasks and update chronicle records
   const processedChronicleImageTasksRef = useRef(new Set());
   useEffect(() => {
@@ -1316,6 +1414,7 @@ export default function ChroniclePanel({
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Left panel: Item list */}
         <div
+          ref={navListRef}
           style={{
             width: '300px',
             borderRight: '1px solid var(--border-color)',
@@ -1359,7 +1458,7 @@ export default function ChroniclePanel({
               </div>
             ))
           ) : (
-            filteredChronicleItems.map((item) => (
+            visibleChronicleItems.map((item) => (
               <ChronicleItemCard
                 key={item.id}
                 item={item}
@@ -1367,6 +1466,19 @@ export default function ChroniclePanel({
                 onClick={() => setSelectedItemId(item.id)}
               />
             ))
+          )}
+          {navVisibleCount < filteredChronicleItems.length && (
+            <div
+              ref={navLoadMoreRef}
+              style={{
+                padding: '8px',
+                textAlign: 'center',
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+              }}
+            >
+              Loading more...
+            </div>
           )}
         </div>
 
@@ -1428,6 +1540,13 @@ export default function ChroniclePanel({
                   <div style={{ color: 'var(--text-muted)' }}>
                     <p>Generation in progress. This typically takes 30-60 seconds.</p>
                   </div>
+                  <button
+                    onClick={() => cancelChronicle(selectedItem.chronicleId)}
+                    className="illuminator-button"
+                    style={{ marginTop: '16px', padding: '8px 16px', fontSize: '13px', color: 'var(--text-secondary)' }}
+                  >
+                    Cancel
+                  </button>
                 </div>
               )}
 
@@ -1470,12 +1589,14 @@ export default function ChroniclePanel({
                   onGenerateSummary={handleGenerateSummary}
                   onGenerateImageRefs={handleGenerateImageRefs}
                   onRevalidate={handleRevalidate}
+                  onRegenerateWithTemperature={handleRegenerateWithTemperature}
                   onGenerateChronicleImage={handleGenerateChronicleImage}
                   onResetChronicleImage={handleResetChronicleImage}
                   onUpdateChronicleAnchorText={handleUpdateChronicleAnchorText}
                   onUpdateChronicleImageSize={handleUpdateChronicleImageSize}
                   onUpdateChronicleImageJustification={handleUpdateChronicleImageJustification}
                   onUpdateChronicleTemporalContext={handleUpdateChronicleTemporalContext}
+                  onExport={handleExport}
                   isGenerating={isGenerating}
                   refinements={refinementState}
                   entities={entities}

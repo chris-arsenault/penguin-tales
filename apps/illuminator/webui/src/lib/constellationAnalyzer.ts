@@ -45,9 +45,6 @@ export interface EntityConstellation {
 
   // Relationships
   relationshipKinds: Record<string, number>;
-  hasConflict: boolean;
-  hasTrade: boolean;
-  hasFamilial: boolean;
 
   // Temporal
   focalEraId: string | null;
@@ -65,50 +62,6 @@ export interface EntityConstellation {
 // Helper Functions
 // =============================================================================
 
-/**
- * Relationship kinds that indicate conflict
- */
-const CONFLICT_RELATIONSHIP_KINDS = new Set([
-  'enemy',
-  'rival',
-  'antagonist',
-  'opponent',
-  'nemesis',
-  'adversary',
-  'conflict',
-  'war',
-  'feud',
-]);
-
-/**
- * Relationship kinds that indicate trade/commerce
- */
-const TRADE_RELATIONSHIP_KINDS = new Set([
-  'trade_partner',
-  'trading_partner',
-  'merchant',
-  'supplier',
-  'customer',
-  'commerce',
-  'trade',
-  'business',
-]);
-
-/**
- * Relationship kinds that indicate family/lineage
- */
-const FAMILIAL_RELATIONSHIP_KINDS = new Set([
-  'parent',
-  'child',
-  'sibling',
-  'family',
-  'ancestor',
-  'descendant',
-  'spouse',
-  'kin',
-  'lineage',
-  'heir',
-]);
 
 /**
  * Compute kind focus from kind distribution
@@ -153,8 +106,7 @@ function buildFocusSummary(
   topCulture: string | null,
   kindFocus: KindFocus,
   prominentTags: string[],
-  hasConflict: boolean,
-  hasTrade: boolean
+  relationshipKinds: Record<string, number>
 ): string {
   const parts: string[] = [];
 
@@ -172,13 +124,10 @@ function buildFocusSummary(
     parts.push(`${kindFocus}-centered`);
   }
 
-  // Relationship dynamics
-  if (hasConflict && hasTrade) {
-    parts.push('with conflict and trade');
-  } else if (hasConflict) {
-    parts.push('with conflict');
-  } else if (hasTrade) {
-    parts.push('with trade');
+  // Relationship kinds
+  const relKinds = Object.keys(relationshipKinds);
+  if (relKinds.length > 0) {
+    parts.push(`relationships: ${relKinds.slice(0, 3).join(', ')}`);
   }
 
   // Tags
@@ -315,22 +264,8 @@ export function analyzeConstellation(
   // ==========================================================================
 
   const relationshipKinds: Record<string, number> = {};
-  let hasConflict = false;
-  let hasTrade = false;
-  let hasFamilial = false;
-
   for (const r of relationships) {
     relationshipKinds[r.kind] = (relationshipKinds[r.kind] || 0) + 1;
-
-    if (CONFLICT_RELATIONSHIP_KINDS.has(r.kind.toLowerCase())) {
-      hasConflict = true;
-    }
-    if (TRADE_RELATIONSHIP_KINDS.has(r.kind.toLowerCase())) {
-      hasTrade = true;
-    }
-    if (FAMILIAL_RELATIONSHIP_KINDS.has(r.kind.toLowerCase())) {
-      hasFamilial = true;
-    }
   }
 
   // ==========================================================================
@@ -359,8 +294,7 @@ export function analyzeConstellation(
     topCulture,
     kindFocus,
     prominentTags,
-    hasConflict,
-    hasTrade
+    relationshipKinds
   );
 
   // ==========================================================================
@@ -377,9 +311,6 @@ export function analyzeConstellation(
     tagFrequency,
     prominentTags,
     relationshipKinds,
-    hasConflict,
-    hasTrade,
-    hasFamilial,
     focalEraId,
     eraSpan,
     coordinateCentroid,

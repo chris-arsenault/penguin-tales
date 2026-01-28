@@ -3,7 +3,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import type { WikiPage, HardState } from '../types/world.ts';
+import type { WikiPage } from '../types/world.ts';
 import styles from './ChronicleIndex.module.css';
 
 interface ChronicleIndexProps {
@@ -13,7 +13,6 @@ interface ChronicleIndexProps {
     | { kind: 'format'; format: 'story' | 'document' }
     | { kind: 'type'; typeId: string };
   onNavigate: (pageId: string) => void;
-  entityIndex: Map<string, HardState>;
 }
 
 const SORT_OPTIONS = [
@@ -34,7 +33,6 @@ export default function ChronicleIndex({
   chronicles,
   filter,
   onNavigate,
-  entityIndex,
 }: ChronicleIndexProps) {
   const [sortMode, setSortMode] = useState('era_asc');
 

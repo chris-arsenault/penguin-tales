@@ -544,7 +544,6 @@ export default function WikiExplorer({
                   : { kind: 'all' }
               }
               onNavigate={handleNavigate}
-              entityIndex={entityIndex}
             />
           ) : isPagesIndex ? (
             <PagesIndex

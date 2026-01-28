@@ -25,6 +25,7 @@ import {
   getChroniclesForSimulation,
   deleteChronicle as deleteChronicleInDb,
   acceptChronicle as acceptChronicleInDb,
+  updateChronicleFailure,
   type ChronicleRecord,
 } from '../lib/chronicleStorage';
 
@@ -91,6 +92,7 @@ export interface UseChronicleGenerationReturn {
   generateSummary: (chronicleId: string, context: ChronicleGenerationContext) => void;
   generateImageRefs: (chronicleId: string, context: ChronicleGenerationContext) => void;
   revalidateChronicle: (chronicleId: string, context: ChronicleGenerationContext) => void;
+  regenerateWithTemperature: (chronicleId: string, temperature: number) => void;
   acceptChronicle: (chronicleId: string) => Promise<AcceptedChronicle | null>;
   restartChronicle: (chronicleId: string) => Promise<void>;
 
@@ -117,6 +119,7 @@ export function useChronicleGeneration(
     chronicleStep?: ChronicleStep;
     chronicleId?: string;
     chronicleMetadata?: ChronicleMetadata;
+    chronicleTemperature?: number;
   }>) => void
 ): UseChronicleGenerationReturn {
   // Chronicles loaded from IndexedDB, keyed by chronicleId (chronicle-first)
@@ -404,6 +407,59 @@ export function useChronicleGeneration(
     [chronicles, onEnqueue, buildEntityRef]
   );
 
+  const regenerateWithTemperature = useCallback(
+    (chronicleId: string, temperature: number) => {
+      const chronicle = chronicles.get(chronicleId);
+      if (!chronicle) {
+        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
+        return;
+      }
+      if (chronicle.finalContent || chronicle.status === 'complete') {
+        console.error('[Chronicle] Temperature regeneration is only available before acceptance');
+        return;
+      }
+      if (!chronicle.generationSystemPrompt || !chronicle.generationUserPrompt) {
+        console.error('[Chronicle] Stored prompts missing; cannot regenerate');
+        return;
+      }
+
+      const primaryRole = chronicle.roleAssignments?.find((r) => r.isPrimary) || chronicle.roleAssignments?.[0];
+      const entity = primaryRole
+        ? {
+            id: primaryRole.entityId,
+            name: primaryRole.entityName,
+            kind: primaryRole.entityKind,
+            subtype: '',
+            prominence: 'recognized',
+            culture: '',
+            status: 'active',
+            description: '',
+            tags: {},
+          }
+        : {
+            id: chronicleId,
+            name: chronicle.title || 'Chronicle',
+            kind: 'chronicle',
+            subtype: '',
+            prominence: 'recognized',
+            culture: '',
+            status: 'active',
+            description: '',
+            tags: {},
+          };
+
+      onEnqueue([{
+        entity,
+        type: 'entityChronicle' as EnrichmentType,
+        prompt: '',
+        chronicleStep: 'regenerate_temperature',
+        chronicleId,
+        chronicleTemperature: temperature,
+      }]);
+    },
+    [chronicles, onEnqueue]
+  );
+
   const revalidateChronicle = useCallback(
     (chronicleId: string, context: ChronicleGenerationContext) => {
       const chronicle = chronicles.get(chronicleId);
@@ -473,6 +529,20 @@ export function useChronicleGeneration(
   }, [chronicles, loadChronicles]);
 
   // -------------------------------------------------------------------------
+  // Cancel a stuck chronicle (force into failed state)
+  // -------------------------------------------------------------------------
+
+  const cancelChronicle = useCallback(async (chronicleId: string) => {
+    try {
+      await updateChronicleFailure(chronicleId, 'generate_v2', 'Cancelled by user');
+      console.log(`[Chronicle] Cancelled chronicle ${chronicleId}`);
+      await loadChronicles();
+    } catch (err) {
+      console.error('[Chronicle] Failed to cancel chronicle:', err);
+    }
+  }, [loadChronicles]);
+
+  // -------------------------------------------------------------------------
   // Restart chronicle (delete and reset)
   // -------------------------------------------------------------------------
 
@@ -511,7 +581,9 @@ export function useChronicleGeneration(
     generateSummary,
     generateImageRefs,
     revalidateChronicle,
+    regenerateWithTemperature,
     acceptChronicle,
+    cancelChronicle,
     restartChronicle,
     isGenerating,
     refresh,

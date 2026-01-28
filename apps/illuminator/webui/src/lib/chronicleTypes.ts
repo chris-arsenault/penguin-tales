@@ -269,6 +269,33 @@ export interface NarrativeEventContext {
 }
 
 // =============================================================================
+// World Dynamics - Higher-level narrative context statements
+// =============================================================================
+
+/**
+ * A world dynamic statement with optional relevance filters.
+ * Describes macro-level forces and tensions (e.g., inter-culture conflicts,
+ * entity-kind behaviors) that individual relationships are expressions of.
+ */
+/** Per-era override for a world dynamic statement. */
+export interface WorldDynamicEraOverride {
+  text: string;
+  /** If true, replaces the base text entirely. If false, appends to base text. */
+  replace: boolean;
+}
+
+export interface WorldDynamic {
+  id: string;
+  text: string;
+  /** Only include when these cultures are present in the chronicle. Empty or ['*'] = always. */
+  cultures?: string[];
+  /** Only include when these entity kinds are present in the chronicle. Empty or ['*'] = always. */
+  kinds?: string[];
+  /** Per-era text overrides. Key = era ID. Applied when the chronicle's focal era matches. */
+  eraOverrides?: Record<string, WorldDynamicEraOverride>;
+}
+
+// =============================================================================
 // Chronicle Focus - Defines what the chronicle is about (chronicle-first)
 // =============================================================================
 
@@ -298,13 +325,33 @@ export interface ChronicleFocus {
 }
 
 /**
+ * Fact type determines how the fact is used in generation.
+ *
+ * - "world_truth": In-universe facts that characters experience/know.
+ *   These go through perspective synthesis and get faceted interpretations.
+ *   Example: "The Berg's ice remembers ancient events."
+ *
+ * - "generation_constraint": Meta-instructions to correct LLM tendencies.
+ *   Characters wouldn't know these as facts - they just ARE.
+ *   Always included verbatim, never faceted.
+ *   Example: "All sapient beings are penguins or orcas. No humans exist."
+ */
+export type FactType = 'world_truth' | 'generation_constraint';
+
+/**
  * Canon fact with relevance metadata for perspective synthesis.
- * All facts are world truths - relevance metadata guides what gets
- * foregrounded for a given entity constellation.
  */
 export interface CanonFactWithMetadata {
   id: string;
   text: string;
+
+  /**
+   * How this fact is used. Defaults to "world_truth" if not specified.
+   * - world_truth: Faceted by perspective synthesis
+   * - generation_constraint: Always included verbatim
+   */
+  type?: FactType;
+
   /** Cultures this fact is especially relevant to. Use "*" for universal. */
   relevantCultures: string[];
   /** Entity kinds this fact is especially relevant to. Use "*" for universal. */
@@ -318,12 +365,10 @@ export interface CanonFactWithMetadata {
 }
 
 /**
- * Tone fragments for composable tone assembly
+ * Tone fragments for composable tone assembly.
  */
 export interface ToneFragments {
   core: string;
-  cultureOverlays: Record<string, string | undefined>;
-  kindOverlays: Record<string, string | undefined>;
 }
 
 /**
@@ -334,14 +379,52 @@ export interface PerspectiveSynthesisRecord {
   generatedAt: number;
   /** Model used */
   model: string;
+
+  // === OUTPUT (LLM response) ===
   /** The perspective brief */
   brief: string;
   /** Selected facts with faceted interpretations */
   facets: Array<{ factId: string; interpretation: string }>;
   /** Suggested motifs */
   suggestedMotifs: string[];
+  /** Synthesized narrative voice blending cultural traits + narrative style */
+  narrativeVoice: Record<string, string>;
+  /** Per-entity writing directives pre-applying cultural traits + prose hints */
+  entityDirectives: Array<{ entityId: string; entityName: string; directive: string }>;
+
+  // === INPUT (what was sent to LLM) ===
   /** Constellation summary that drove the synthesis */
   constellationSummary: string;
+  /** Full constellation analysis */
+  constellation?: {
+    cultures: Record<string, number>;
+    kinds: Record<string, number>;
+    prominentTags: string[];
+    dominantCulture?: string;
+    cultureBalance: string;
+    relationshipKinds: Record<string, number>;
+  };
+  /** Core tone that was sent */
+  coreTone?: string;
+  /** Narrative style that weighted the synthesis */
+  narrativeStyleId?: string;
+  narrativeStyleName?: string;
+  /** All facts that were sent (with metadata) */
+  inputFacts?: Array<{
+    id: string;
+    text: string;
+    type?: 'world_truth' | 'generation_constraint';
+  }>;
+  /** Cultural identities that were sent (culture -> trait -> value) */
+  inputCulturalIdentities?: Record<string, Record<string, string>>;
+  /** Entity summaries that were sent */
+  inputEntities?: Array<{
+    name: string;
+    kind: string;
+    culture?: string;
+    summary?: string;
+  }>;
+
   /** Cost info */
   inputTokens: number;
   outputTokens: number;
@@ -354,21 +437,21 @@ export interface ChronicleGenerationContext {
   worldDescription: string;
 
   /**
-   * @deprecated Use canonFactsWithMetadata instead. This flat array is only
-   * used as fallback when perspective synthesis is not configured.
-   */
-  canonFacts: string[];
-
-  /**
-   * @deprecated Use toneFragments instead. This flat string is only used
-   * as fallback when perspective synthesis is not configured.
+   * The tone string used by the prompt builder.
+   * After perspective synthesis: contains assembled tone + brief + motifs.
    */
   tone: string;
 
-  // PRIMARY: Structured world context for perspective synthesis
-  // When both are present, perspective synthesis runs and replaces tone/canonFacts
-  toneFragments?: ToneFragments;
-  canonFactsWithMetadata?: CanonFactWithMetadata[];
+  /**
+   * The canon facts array used by the prompt builder.
+   * After perspective synthesis: contains faceted facts with interpretations.
+   */
+  canonFacts: string[];
+
+  // INPUT for perspective synthesis (required)
+  // These are used to generate the final tone/canonFacts above
+  toneFragments: ToneFragments;
+  canonFactsWithMetadata: CanonFactWithMetadata[];
 
   // Narrative style used for generation
   narrativeStyle: NarrativeStyle;
@@ -406,9 +489,28 @@ export interface ChronicleGenerationContext {
   /**
    * Cultural identities for cultures present in the world.
    * Provides VALUES, SPEECH, FEARS, TABOOS etc. per culture.
-   * Helps chronicles write culturally-authentic dialogue and behavior.
+   * Used as INPUT to perspective synthesis, not directly in generation prompt.
    */
   culturalIdentities?: Record<string, Record<string, string>>;
+
+  /**
+   * Synthesized narrative voice from perspective synthesis.
+   * Blends cultural traits + narrative style into prose-level guidance.
+   * LLM-chosen keys (e.g., VOICE, TENSION, WHAT_IS_UNSAID, PHYSICALITY).
+   */
+  narrativeVoice?: Record<string, string>;
+
+  /**
+   * Per-entity writing directives from perspective synthesis.
+   * Pre-applies cultural traits + prose hints into concrete writing guidance per entity.
+   */
+  entityDirectives?: Array<{ entityId: string; entityName: string; directive: string }>;
+
+  /**
+   * World dynamics — higher-level narrative context statements.
+   * Filtered by present cultures/kinds during perspective synthesis.
+   */
+  worldDynamics?: WorldDynamic[];
 }
 
 // =============================================================================

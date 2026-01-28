@@ -986,20 +986,23 @@ export default function StyleLibraryEditor({
             </span>
           </div>
           <div>
-            {isCustom && !confirmReset && (
+            {!confirmReset && (
               <button
                 onClick={() => setConfirmReset(true)}
                 className="illuminator-btn"
                 style={{ fontSize: '12px' }}
+                title={isCustom ? 'Reload defaults and discard custom styles' : 'Reload default styles'}
               >
-                Reset to Defaults
+                Reload Default Styles
               </button>
             )}
             {confirmReset && (
               <span style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Reset all styles?</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  {isCustom ? 'Reload defaults and discard custom styles?' : 'Reload default styles?'}
+                </span>
                 <button onClick={handleReset} className="illuminator-btn illuminator-btn-danger" style={{ fontSize: '12px' }}>
-                  Yes, Reset
+                  Yes, Reload
                 </button>
                 <button onClick={() => setConfirmReset(false)} className="illuminator-btn" style={{ fontSize: '12px' }}>
                   Cancel

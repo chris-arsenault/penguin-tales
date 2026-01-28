@@ -201,7 +201,7 @@ export default function LLMCallConfigPanel() {
     forceUpdate((n) => n + 1);
   }, []);
 
-  const categories = ['description', 'chronicle', 'image', 'palette'];
+  const categories = ['description', 'perspective', 'chronicle', 'image', 'palette'];
 
   return (
     <div className="illuminator-card llm-config-panel">

@@ -205,8 +205,10 @@ const mergePersistedResults = (entities, records) => {
 const DEFAULT_WORLD_CONTEXT = {
   name: '',
   description: '',
-  canonFacts: [],
-  tone: '',
+  // Structured fields - the canonical source of truth
+  toneFragments: { core: '' },
+  canonFactsWithMetadata: [],
+  worldDynamics: [],
 };
 
 // Fields in enrichment.text (summary/description are now on entity directly)
@@ -1302,6 +1304,7 @@ export default function IlluminatorRemote({
             <WorldContextEditor
               worldContext={worldContext}
               onWorldContextChange={updateWorldContext}
+              eras={eraTemporalInfo}
             />
           </div>
         )}

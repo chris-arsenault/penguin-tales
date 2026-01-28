@@ -25,6 +25,7 @@ import type {
   ChronicleTemporalContext,
   ToneFragments,
   CanonFactWithMetadata,
+  WorldDynamic,
 } from './chronicleTypes';
 
 interface WorldData {
@@ -80,19 +81,12 @@ interface WorldContext {
   name: string;
   description: string;
 
-  /**
-   * @deprecated Use canonFactsWithMetadata instead. Fallback only.
-   */
-  canonFacts: string[];
+  // Required for chronicle generation (perspective synthesis)
+  toneFragments: ToneFragments;
+  canonFactsWithMetadata: CanonFactWithMetadata[];
 
-  /**
-   * @deprecated Use toneFragments instead. Fallback only.
-   */
-  tone: string;
-
-  // PRIMARY: Structured world context for perspective synthesis
-  toneFragments?: ToneFragments;
-  canonFactsWithMetadata?: CanonFactWithMetadata[];
+  // World dynamics (optional narrative context statements)
+  worldDynamics?: WorldDynamic[];
 }
 
 /**
@@ -320,11 +314,12 @@ export function buildChronicleContext(
   return {
     worldName: worldContext.name || 'The World',
     worldDescription: worldContext.description || '',
-    canonFacts: worldContext.canonFacts || [],
-    tone: worldContext.tone || '',
+    // These will be populated by perspective synthesis
+    canonFacts: [],
+    tone: '',
     narrativeStyle,
 
-    // Optional fragmented world context for perspective synthesis
+    // Input for perspective synthesis (required)
     toneFragments: worldContext.toneFragments,
     canonFactsWithMetadata: worldContext.canonFactsWithMetadata,
 
@@ -346,6 +341,9 @@ export function buildChronicleContext(
 
     // Cultural identities for cultures (VALUES, SPEECH, FEARS, TABOOS, etc.)
     culturalIdentities,
+
+    // World dynamics (narrative context statements)
+    worldDynamics: worldContext.worldDynamics,
   };
 }
 

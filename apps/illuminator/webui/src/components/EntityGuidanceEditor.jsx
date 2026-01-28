@@ -347,11 +347,12 @@ export default function EntityGuidanceEditor({
 
   // Build live preview
   const preview = useMemo(() => {
+    // Derive flat values from structured fields for entity description prompts
     const wc = {
       name: worldContext?.name || '[World Name]',
       description: worldContext?.description || '[World description not set]',
-      canonFacts: worldContext?.canonFacts || [],
-      tone: worldContext?.tone || '',
+      toneFragments: worldContext?.toneFragments || { core: '' },
+      canonFactsWithMetadata: worldContext?.canonFactsWithMetadata || [],
     };
 
     const entityContext = buildEntityContext(

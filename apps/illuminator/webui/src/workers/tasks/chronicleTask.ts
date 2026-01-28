@@ -19,6 +19,8 @@ import {
 import type { PerspectiveSynthesisRecord } from '../../lib/chronicleTypes';
 import {
   createChronicle,
+  type ChronicleRecord,
+  regenerateChronicleAssembly,
   updateChronicleCohesion,
   updateChronicleEdit,
   updateChronicleSummary,
@@ -99,6 +101,10 @@ async function executeEntityChronicleTask(
     return executeEditStep(task, chronicleRecord, context);
   }
 
+  if (step === 'regenerate_temperature') {
+    return executeTemperatureRegenerationStep(task, chronicleRecord, context);
+  }
+
   if (step === 'summary') {
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for summary step' };
@@ -121,6 +127,113 @@ async function executeEntityChronicleTask(
   }
 
   return { success: false, error: `Unknown step: ${step}` };
+}
+
+/**
+ * Regenerate chronicle content with a temperature override (no perspective synthesis).
+ * Reuses stored prompts from the previous generation.
+ */
+async function executeTemperatureRegenerationStep(
+  task: WorkerTask,
+  chronicleRecord: ChronicleRecord,
+  context: TaskContext
+): Promise<TaskResult> {
+  const { config, llmClient, isAborted } = context;
+
+  if (!chronicleRecord) {
+    return { success: false, error: 'Chronicle record missing for regeneration' };
+  }
+
+  if (chronicleRecord.status === 'complete' || chronicleRecord.finalContent) {
+    return { success: false, error: 'Temperature regeneration is only available before acceptance' };
+  }
+
+  const systemPrompt = chronicleRecord.generationSystemPrompt;
+  const userPrompt = chronicleRecord.generationUserPrompt;
+  if (!systemPrompt || !userPrompt) {
+    return { success: false, error: 'Stored prompts missing; cannot regenerate this chronicle' };
+  }
+
+  const callConfig = getCallConfig(config, 'chronicle.generation');
+  const temperatureRaw = typeof task.chronicleTemperature === 'number'
+    ? task.chronicleTemperature
+    : (chronicleRecord.generationTemperature ?? chronicleRecord.narrativeStyle?.temperature ?? 0.7);
+  const temperature = Math.min(1, Math.max(0, temperatureRaw));
+
+  const styleMaxTokens = chronicleRecord.narrativeStyle
+    ? getMaxTokensFromStyle(chronicleRecord.narrativeStyle)
+    : undefined;
+
+  const generationCall = await runTextCall({
+    llmClient,
+    callType: 'chronicle.generation',
+    callConfig,
+    systemPrompt,
+    prompt: userPrompt,
+    temperature,
+    autoMaxTokens: styleMaxTokens,
+  });
+
+  const result = generationCall.result;
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted', debug: result.debug };
+  }
+
+  if (result.error || !result.text) {
+    return {
+      success: false,
+      error: `Temperature regeneration failed: ${result.error || 'No text returned'}`,
+      debug: result.debug,
+    };
+  }
+
+  try {
+    await regenerateChronicleAssembly(chronicleRecord.chronicleId, {
+      assembledContent: result.text,
+      systemPrompt,
+      userPrompt,
+      model: callConfig.model,
+      temperature,
+      cost: {
+        estimated: generationCall.estimate.estimatedCost,
+        actual: generationCall.usage.actualCost,
+        inputTokens: generationCall.usage.inputTokens,
+        outputTokens: generationCall.usage.outputTokens,
+      },
+    });
+  } catch (err) {
+    return { success: false, error: `Failed to save regenerated chronicle: ${err}` };
+  }
+
+  await saveCostRecordWithDefaults({
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    chronicleId: chronicleRecord.chronicleId,
+    type: 'chronicleV2',
+    model: callConfig.model,
+    estimatedCost: generationCall.estimate.estimatedCost,
+    actualCost: generationCall.usage.actualCost,
+    inputTokens: generationCall.usage.inputTokens,
+    outputTokens: generationCall.usage.outputTokens,
+  });
+
+  return {
+    success: true,
+    result: {
+      chronicleId: chronicleRecord.chronicleId,
+      generatedAt: Date.now(),
+      model: callConfig.model,
+      estimatedCost: generationCall.estimate.estimatedCost,
+      actualCost: generationCall.usage.actualCost,
+      inputTokens: generationCall.usage.inputTokens,
+      outputTokens: generationCall.usage.outputTokens,
+    },
+    debug: result.debug,
+  };
 }
 
 /**
@@ -148,23 +261,26 @@ async function executeV2GenerationStep(
   console.log(`[Worker] V2 generation for chronicle=${chronicleId}, style="${narrativeStyle.name}", model=${callConfig.model}`);
 
   // ==========================================================================
-  // PERSPECTIVE SYNTHESIS (PRIMARY PATH)
+  // PERSPECTIVE SYNTHESIS (REQUIRED)
   // ==========================================================================
-  // When toneFragments and canonFactsWithMetadata are present, this is the
-  // primary code path. The deprecated tone/canonFacts fields are only used
-  // as fallback when perspective synthesis is not configured.
-  //
-  // Perspective synthesis:
+  // Perspective synthesis is the ONLY code path. It:
   // 1. Analyzes entity constellation (culture mix, kind focus, themes)
   // 2. LLM selects relevant facts and provides faceted interpretations
   // 3. Assembles tone from fragments based on constellation
-  // 4. Replaces the deprecated tone/canonFacts with synthesized versions
+  // 4. Builds the final tone (assembled + brief + motifs) and facts for generation
   // ==========================================================================
-  let perspectiveResult: PerspectiveSynthesisResult | undefined;
-  let perspectiveRecord: PerspectiveSynthesisRecord | undefined;
-  let constellation: EntityConstellation | undefined;
+  if (!chronicleContext.toneFragments || !chronicleContext.canonFactsWithMetadata) {
+    return {
+      success: false,
+      error: 'Perspective synthesis requires toneFragments and canonFactsWithMetadata. Configure world context with structured tone and facts.',
+    };
+  }
 
-  if (chronicleContext.toneFragments && chronicleContext.canonFactsWithMetadata) {
+  let perspectiveResult: PerspectiveSynthesisResult;
+  let perspectiveRecord: PerspectiveSynthesisRecord;
+  let constellation: EntityConstellation;
+
+  {
     console.log('[Worker] Running perspective synthesis...');
     const perspectiveConfig = getCallConfig(config, 'perspective.synthesis');
 
@@ -185,31 +301,78 @@ async function executeV2GenerationStep(
           focalEra: chronicleContext.era,
           factsWithMetadata: chronicleContext.canonFactsWithMetadata,
           toneFragments: chronicleContext.toneFragments,
+          culturalIdentities: chronicleContext.culturalIdentities,
+          narrativeStyle, // Pass narrative style to weight perspective
+          proseHints: chronicleContext.proseHints, // Pass prose hints for entity directives
+          worldDynamics: chronicleContext.worldDynamics, // Higher-level narrative context
         },
         llmClient,
         perspectiveConfig
       );
 
-      // Build record for storage
+      // Build record for storage (includes both INPUT and OUTPUT for debugging)
       perspectiveRecord = {
         generatedAt: Date.now(),
         model: perspectiveConfig.model,
+
+        // OUTPUT (LLM response)
         brief: perspectiveResult.synthesis.brief,
         facets: perspectiveResult.synthesis.facets,
         suggestedMotifs: perspectiveResult.synthesis.suggestedMotifs,
+        narrativeVoice: perspectiveResult.synthesis.narrativeVoice,
+        entityDirectives: perspectiveResult.synthesis.entityDirectives,
+
+        // INPUT (what was sent to LLM)
         constellationSummary: constellation.focusSummary,
+        constellation: {
+          cultures: constellation.cultures,
+          kinds: constellation.kinds,
+          prominentTags: constellation.prominentTags,
+          dominantCulture: constellation.dominantCulture,
+          cultureBalance: constellation.cultureBalance,
+          relationshipKinds: constellation.relationshipKinds,
+        },
+        coreTone: chronicleContext.toneFragments?.core,
+        narrativeStyleId: narrativeStyle.id,
+        narrativeStyleName: narrativeStyle.name,
+        inputFacts: chronicleContext.canonFactsWithMetadata?.map((f) => ({
+          id: f.id,
+          text: f.text,
+          type: f.type,
+        })),
+        inputCulturalIdentities: chronicleContext.culturalIdentities,
+        inputEntities: chronicleContext.entities.slice(0, 15).map((e) => ({
+          name: e.name,
+          kind: e.kind,
+          culture: e.culture,
+          summary: e.summary,
+        })),
+
+        // Cost
         inputTokens: perspectiveResult.usage.inputTokens,
         outputTokens: perspectiveResult.usage.outputTokens,
         actualCost: perspectiveResult.usage.actualCost,
       };
 
+      // Build perspective section with brief and motifs
+      const motifSection = perspectiveResult.synthesis.suggestedMotifs.length > 0
+        ? `\n\nSUGGESTED MOTIFS (phrases that might echo through this chronicle):\n${perspectiveResult.synthesis.suggestedMotifs.map(m => `- "${m}"`).join('\n')}`
+        : '';
+
       // Update context with synthesized perspective
       chronicleContext = {
         ...chronicleContext,
-        // Replace tone with assembled tone + perspective brief
-        tone: perspectiveResult.assembledTone + '\n\nPERSPECTIVE FOR THIS CHRONICLE:\n' + perspectiveResult.synthesis.brief,
+        // Replace tone with assembled tone + perspective brief + motifs
+        tone:
+          perspectiveResult.assembledTone +
+          '\n\nPERSPECTIVE FOR THIS CHRONICLE:\n' +
+          perspectiveResult.synthesis.brief +
+          motifSection,
         // Replace facts with faceted facts (core truths with interpretations + contextual)
         canonFacts: perspectiveResult.facetedFacts,
+        // Add synthesized narrative voice and entity directives
+        narrativeVoice: perspectiveResult.synthesis.narrativeVoice,
+        entityDirectives: perspectiveResult.synthesis.entityDirectives,
       };
 
       console.log(`[Worker] Perspective synthesis complete: ${perspectiveResult.facetedFacts.length} faceted facts, ${perspectiveResult.synthesis.suggestedMotifs.length} motifs`);
@@ -229,15 +392,15 @@ async function executeV2GenerationStep(
   const prompt = buildV2Prompt(chronicleContext, narrativeStyle, selection);
   const styleMaxTokens = getMaxTokensFromStyle(narrativeStyle);
   const systemPrompt = getV2SystemPrompt(narrativeStyle);
-  const generationCall = await runTextCall({
-    llmClient,
-    callType: 'chronicle.generation',
-    callConfig,
-    systemPrompt,
-    prompt,
-    temperature: 0.7,
-    autoMaxTokens: styleMaxTokens,
-  });
+    const generationCall = await runTextCall({
+      llmClient,
+      callType: 'chronicle.generation',
+      callConfig,
+      systemPrompt,
+      prompt,
+      temperature: narrativeStyle.temperature ?? 0.7,
+      autoMaxTokens: styleMaxTokens,
+    });
   const result = generationCall.result;
 
   console.log(`[Worker] V2 prompt length: ${prompt.length} chars, maxTokens: ${generationCall.budget.totalMaxTokens}`);
@@ -257,13 +420,12 @@ async function executeV2GenerationStep(
   // Note: Wikilinks are NOT applied here - they are applied once at acceptance time
   // (in useChronicleGeneration.ts acceptChronicle) to avoid double-bracketing issues.
 
-  // Calculate cost (include perspective synthesis if performed)
-  const perspectiveCost = perspectiveResult?.usage || { inputTokens: 0, outputTokens: 0, actualCost: 0 };
+  // Calculate cost (always includes perspective synthesis)
   const cost = {
-    estimated: generationCall.estimate.estimatedCost + (perspectiveResult ? perspectiveCost.actualCost : 0),
-    actual: generationCall.usage.actualCost + perspectiveCost.actualCost,
-    inputTokens: generationCall.usage.inputTokens + perspectiveCost.inputTokens,
-    outputTokens: generationCall.usage.outputTokens + perspectiveCost.outputTokens,
+    estimated: generationCall.estimate.estimatedCost + perspectiveResult.usage.actualCost,
+    actual: generationCall.usage.actualCost + perspectiveResult.usage.actualCost,
+    inputTokens: generationCall.usage.inputTokens + perspectiveResult.usage.inputTokens,
+    outputTokens: generationCall.usage.outputTokens + perspectiveResult.usage.outputTokens,
   };
 
   // Save chronicle directly to assembled state (single-shot generation)
@@ -292,6 +454,21 @@ async function executeV2GenerationStep(
       entrypointId: existingChronicle?.entrypointId,
       temporalContext,
       assembledContent: result.text,
+      // Store the ACTUAL prompts sent to the LLM (canonical source of truth)
+      generationSystemPrompt: systemPrompt,
+      generationUserPrompt: prompt,
+      generationTemperature: narrativeStyle.temperature ?? 0.7,
+      // Store the generation context snapshot (post-perspective synthesis)
+      // This is what was actually used to build the prompt
+      generationContext: {
+        worldName: chronicleContext.worldName,
+        worldDescription: chronicleContext.worldDescription,
+        tone: chronicleContext.tone, // Final tone (assembled + brief + motifs)
+        canonFacts: chronicleContext.canonFacts, // Faceted facts
+        nameBank: chronicleContext.nameBank,
+        narrativeVoice: chronicleContext.narrativeVoice,
+        entityDirectives: chronicleContext.entityDirectives,
+      },
       selectionSummary: {
         entityCount: selection.entities.length,
         eventCount: selection.events.length,
@@ -305,24 +482,22 @@ async function executeV2GenerationStep(
     return { success: false, error: `Failed to save chronicle: ${err}` };
   }
 
-  // Record perspective synthesis cost if performed
-  if (perspectiveResult) {
-    const perspectiveConfig = getCallConfig(config, 'perspective.synthesis');
-    await saveCostRecordWithDefaults({
-      projectId: task.projectId,
-      simulationRunId: task.simulationRunId,
-      entityId: task.entityId,
-      entityName: task.entityName,
-      entityKind: task.entityKind,
-      chronicleId,
-      type: 'chroniclePerspective',
-      model: perspectiveConfig.model,
-      estimatedCost: perspectiveResult.usage.actualCost,
-      actualCost: perspectiveResult.usage.actualCost,
-      inputTokens: perspectiveResult.usage.inputTokens,
-      outputTokens: perspectiveResult.usage.outputTokens,
-    });
-  }
+  // Record perspective synthesis cost
+  const perspectiveConfig = getCallConfig(config, 'perspective.synthesis');
+  await saveCostRecordWithDefaults({
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    chronicleId,
+    type: 'chroniclePerspective',
+    model: perspectiveConfig.model,
+    estimatedCost: perspectiveResult.usage.actualCost,
+    actualCost: perspectiveResult.usage.actualCost,
+    inputTokens: perspectiveResult.usage.inputTokens,
+    outputTokens: perspectiveResult.usage.outputTokens,
+  });
 
   // Record generation cost
   await saveCostRecordWithDefaults({
@@ -716,6 +891,7 @@ function buildSummaryPrompt(content: string): string {
 
 Rules:
 - Title: A compelling, evocative title (3-8 words) that captures the essence of the chronicle
+- Do NOT start the title with "The". Open with a name, action, image, or phrase instead.
 - Summary: 2-4 sentences summarizing the key events and outcome
 - Keep both factual and faithful to the chronicle
 - Mention key entities in the summary
