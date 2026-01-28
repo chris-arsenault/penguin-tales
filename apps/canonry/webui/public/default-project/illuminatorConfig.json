@@ -13,8 +13,116 @@
       "The two colonies maintain an uneasy peace through the Flipper Accord - a trade agreement where surface aurora-crystals exchange for deep fire-cores. Neither can survive without the other's resource.",
       "All sapient beings in this world are penguins or orcas. Humans do not exist and have never existed on The Berg."
     ],
+    "canonFactsWithMetadata": [
+      {
+        "id": "berg-nature",
+        "text": "The Berg is a supernatural iceberg of impossible scale - large enough to contain mountains, caverns, and multiple civilizations. It drifts through an endless frozen sea under perpetual twilight.",
+        "relevantCultures": ["*"],
+        "relevantKinds": ["location", "era"],
+        "relevantTags": [],
+        "relevantRelationships": [],
+        "basePriority": 0.9,
+        "isCore": true
+      },
+      {
+        "id": "penguin-sapience",
+        "text": "Penguins evolved sapience through exposure to aurora-light over millennia. They possess flipper-dexterity comparable to human hands and stand upright habitually.",
+        "relevantCultures": ["aurora_stack", "nightshelf"],
+        "relevantKinds": ["npc"],
+        "relevantTags": [],
+        "relevantRelationships": [],
+        "basePriority": 0.7,
+        "isCore": true
+      },
+      {
+        "id": "two-civilizations",
+        "text": "Two penguin civilizations exist: the Aurora Stack (surface dwellers who worship the sky-lights) and the Nightshelf (tunnel dwellers who mine fire from the berg's volcanic core).",
+        "relevantCultures": ["aurora_stack", "nightshelf"],
+        "relevantKinds": ["faction", "location"],
+        "relevantTags": [],
+        "relevantRelationships": [],
+        "basePriority": 0.8,
+        "isCore": true
+      },
+      {
+        "id": "orca-raiders",
+        "text": "Orca pods are intelligent raiders from the surrounding sea. They worship a dead god whose corpse drifts somewhere in the deep, and conduct blood-rituals to wake it.",
+        "relevantCultures": ["orca"],
+        "relevantKinds": ["npc", "faction", "occurrence"],
+        "relevantTags": ["conflict", "raid", "religious"],
+        "relevantRelationships": ["enemy", "rival"],
+        "basePriority": 0.5,
+        "isCore": false
+      },
+      {
+        "id": "magic-sources",
+        "text": "Magic on The Berg draws from three sources: aurora-light (ice/crystal/divination), captured fire (forge/transformation/destruction), and pressure-depth (blood/force/communion with the deep).",
+        "relevantCultures": ["*"],
+        "relevantKinds": ["artifact", "ability", "rule"],
+        "relevantTags": ["magic", "ritual", "power"],
+        "relevantRelationships": [],
+        "basePriority": 0.6,
+        "isCore": false
+      },
+      {
+        "id": "ice-remembers",
+        "text": "The Berg's ice remembers. Ancient events leave literal impressions - frozen scenes, echo-sounds, emotional residue. The deeper you go, the older the memories.",
+        "relevantCultures": ["*"],
+        "relevantKinds": ["artifact", "location", "era", "occurrence"],
+        "relevantTags": ["ancient", "historical", "memory"],
+        "relevantRelationships": [],
+        "basePriority": 0.4,
+        "isCore": false
+      },
+      {
+        "id": "no-escape",
+        "text": "No penguin has ever successfully left The Berg and returned. The frozen sea is infinite in all directions. Some say The Berg is the only land that exists.",
+        "relevantCultures": ["*"],
+        "relevantKinds": ["location"],
+        "relevantTags": ["exploration", "edge", "horizon"],
+        "relevantRelationships": [],
+        "basePriority": 0.3,
+        "isCore": false
+      },
+      {
+        "id": "flipper-accord",
+        "text": "The two colonies maintain an uneasy peace through the Flipper Accord - a trade agreement where surface aurora-crystals exchange for deep fire-cores. Neither can survive without the other's resource.",
+        "relevantCultures": ["aurora_stack", "nightshelf"],
+        "relevantKinds": ["faction"],
+        "relevantTags": ["trade", "politics", "diplomacy"],
+        "relevantRelationships": ["trade_partner", "ally"],
+        "basePriority": 0.5,
+        "isCore": false
+      },
+      {
+        "id": "no-humans",
+        "text": "All sapient beings in this world are penguins or orcas. Humans do not exist and have never existed on The Berg.",
+        "relevantCultures": ["*"],
+        "relevantKinds": ["*"],
+        "relevantTags": [],
+        "relevantRelationships": [],
+        "basePriority": 0.9,
+        "isCore": true
+      }
+    ],
     "tone": "Dark, war-weary fantasy in the tradition of Malazan Book of the Fallen, Brent Weeks, and the Powder Mage trilogy. History is written by survivors who remember the cost. Tragedy happens without ceremony - important figures die in half-sentences, battles end mid-action, and not everything resolves.\n\nSTYLE PRINCIPLES:\n- Specificity over abstraction: Not 'a weapon' but 'a fire-core hammer with a cracked head.' Not 'he felt sad' but 'his flippers wouldn't stop shaking.'\n- Show through action and object, not introspection: Characters reveal themselves by what they do, carry, avoid, or destroy - not by what they 'realize' or 'understand.'\n- Subtext over statement: Let implications land. If someone betrayed their colony, don't say they feel guilty - mention they haven't visited the memorial.\n- Uncomfortable details: Include the ugly, inconvenient, or unresolved. A hero's hands might be scarred from something shameful. A victory might cost more than it was worth.\n- Trust the reader: Don't explain metaphors. Don't summarize lessons. End on images, not morals.\n\nSYNTACTIC POETRY:\nAim for the compressed power of 'First in; last out; for the last time.' Sentences that carry weight through rhythm and omission. Not fragmented violence, but poetic compression - where what's left unsaid hits harder than what's spoken. Semicolons can do the work of paragraphs. Repetition with variation creates resonance.\n\nBITTER CAMARADERIE:\nThis is essential. Grimness alone is exhausting. Include:\n- Dark humor between allies - jokes that wouldn't be funny if you hadn't been there\n- Loyalty that persists despite betrayal, stupidity, or failure\n- Small kindnesses in terrible contexts - sharing rations, remembering names, carrying someone's token\n- Soldiers/workers who mock the causes they'll die for\n- The way people become family through shared suffering, not shared values\n- Irony that isn't cruel - the bitter laugh, not the sneer\n- Heroic sacrifice that EARNS its weight - not cheap martyrdom, but the moment someone trades their life for something they actually loved. Make it cost. Make it matter.\n\nSTRUCTURAL VARIETY:\n- Not every entity needs a death beat. Some are alive. Some mysteries stay mysteries.\n- Some endings are mid-action, unresolved. Some are quiet. Some are bitter-funny.\n- Vary the emotional shape: tragedy, irony, stubborn hope, grim humor, unearned survival.\n\nCLOSING VARIETY:\n- DO NOT default to 'the ice remembers' or cosmic-witness endings. This has become a crutch.\n- Vary how stories end: mid-action cut, dark joke, unanswered question, quiet image, bitter irony, someone walking away, a door closing, work resuming.\n- Not every ending needs a character alone contemplating loss. Some end with two people arguing. Some end with laughter that isn't comfortable. Some end with someone starting something new.\n- The last line should feel surprising, not inevitable. If you can predict it from the first paragraph, rewrite it.\n\nAVOID THESE AI TELLS:\n- Balance words: yet, however, still, ultimately, in the end, nevertheless\n- Introspection clichés: 'couldn't help but feel,' 'realized that,' 'in that moment,' 'understood that'\n- Polite diction: gentle, quiet, subtle, bittersweet, meaningful, profound\n- Vague sensory: warm, soft, heavy silence, cool breeze (anchor these to specifics or cut them)\n- Flat metaphors: light=hope, darkness=fear, storms=turmoil (find stranger, more specific images)\n- Clean resolutions: Not everything works out. Some things stay broken.\n- Time-skipping without texture: Don't write 'days passed' - either skip entirely or make the waiting hurt\n- RELENTLESS GRIMNESS: If everything is dark, nothing is. Leaven tragedy with dark humor, bitter irony, or stubborn human connection.\n\nDescriptions should read as if written by a war-chronicle keeper or a faction historian with biases, blind spots, and something to prove.",
-    "speciesConstraint": "All depicted figures must be penguins or orcas. No humans exist in this world. When showing inhabitants, settlers, merchants, or any living beings, they must be explicitly identified as penguin or orca species."
+    "speciesConstraint": "All depicted figures must be penguins or orcas. No humans exist in this world. When showing inhabitants, settlers, merchants, or any living beings, they must be explicitly identified as penguin or orca species.",
+    "toneFragments": {
+      "core": "Dark, war-weary fantasy. History is written by survivors who remember the cost. Tragedy happens without ceremony - important figures die in half-sentences, battles end mid-action.\n\nSTYLE PRINCIPLES:\n- Specificity over abstraction: Not 'a weapon' but 'a fire-core hammer with a cracked head.'\n- Show through action and object, not introspection: Characters reveal themselves by what they do, carry, avoid.\n- Subtext over statement: Let implications land. If someone betrayed their colony, mention they haven't visited the memorial.\n- Uncomfortable details: Include the ugly or unresolved. A hero's hands might be scarred from something shameful.\n- Trust the reader: Don't explain metaphors. End on images, not morals.\n\nSYNTACTIC POETRY:\nCompressed power through rhythm and omission. 'First in; last out; for the last time.' Semicolons do the work of paragraphs. What's unsaid hits harder than what's spoken.\n\nBITTER CAMARADERIE:\nGrimness alone is exhausting. Include dark humor between allies, loyalty despite failure, small kindnesses in terrible contexts. Soldiers who mock the causes they'll die for. Irony that isn't cruel - the bitter laugh, not the sneer.\n\nCLOSING VARIETY:\nNot every ending needs contemplation. Vary: mid-action cut, dark joke, unanswered question, quiet image, bitter irony, someone starting something new.\n\nAVOID:\nBalance words (yet, however, ultimately). Introspection clichés ('realized that,' 'in that moment'). Polite diction (gentle, bittersweet, profound). Clean resolutions. Relentless grimness without humor.",
+      "cultureOverlays": {
+        "nightshelf": "Underground textures: sound echoes differently, the smell of mineral and fire-core, constant awareness of weight above. Secrets are currency - silence speaks louder than words. Fire is survival, not metaphor; when characters share fire-core warmth, it costs them something real. The darkness isn't absence but presence. Nightshelf characters notice light as intrusion, not relief. Speech is elliptical, coded, full of proverbs that sound simple but contain warnings.",
+        "aurora_stack": "Vertical perspectives: height as status, the weight of sky, how light changes with position. Formality masks negotiation - consensus is performance. Characters speak in layers: the words, the tone, the position they speak from. Crystal and ice are infrastructure, not wonder; the Stack has lived with aurora-light so long it's tools, not magic. Cold is baseline, not threat. Addresses use constellation-charts and cycles, not plain names and dates.",
+        "orca": "Predator logic: everything is territory, resource, or threat. Pack bonds are absolute - betraying pod is worse than death. Violence is honest; diplomacy is weakness performed. Water is home; land is hunting ground. The dead god isn't mythology but destination - every raid serves the waking. Names change with deeds. Speech is blunt, ritualistic, hunt-metaphors: 'pods' not families, 'waters' not territories, 'kills' not victories.",
+        "mixed": "Translation failures: what one culture considers courtesy, another reads as insult. Trade requires trust no one fully extends. Characters code-switch - different selves for different audiences. The Flipper Accord is a scar everyone picks at. Neither side believes the other understands the cost. Third spaces (trading posts, neutral ground) have their own rules that satisfy no one. Every exchange carries debt that compounds differently on each side."
+      },
+      "kindOverlays": {
+        "character": "Bodies carry history: scars, habits, how someone holds themselves. What they reach for under stress. Who they mention without naming. The gap between reputation and person - someone remembers them differently than they remember themselves. Physical tics as emotional tells. What they carry that they don't need. The chair no one else sits in.",
+        "place": "Locations have moods, not just features. Who built this and who uses it now - the layers. What sound fills the silence. Where people gather vs where they avoid. The unofficial names. What happened here that no one talks about. One visceral sensory detail anchors everything: a smell, a texture underfoot, the kind of cold that makes your beak ache.",
+        "object": "Artifacts earn their weight through use, not description. Start with a physical detail that tells a story: a notch in the blade, a stain that won't come out. Who held it last. What it costs to carry. Why someone refuses to touch it. Objects have wakes - they change what's near them. The scratch that no one explains. Power measured in what it's taken, not what it gives.",
+        "event": "History is what survivors choose to remember. The official version vs what actually happened. Who benefits from this telling. The detail everyone includes that wasn't actually important. The crucial thing no one mentions. Name the dead or the cost - history is paid for. One visceral detail: the smell, the sound, the thing someone dropped and never picked up.",
+        "mixed": "Multiple focuses require weaving, not listing. Find the thread that connects: a character defined by a place, an object that caused an event, a location shaped by who died there. Each element should illuminate another. The transitions matter - what makes someone think of that place when they see this object."
+      }
+    }
   },
   "entityGuidance": {
     "npc": {

@@ -14,6 +14,9 @@ export type LLMCallType =
   // Image Generation
   | 'image.promptFormatting'     // Claude reformats prompt for image model
 
+  // Perspective Synthesis
+  | 'perspective.synthesis'      // Synthesize world perspective from entity constellation
+
   // Chronicle Generation
   | 'chronicle.generation'       // Single-shot V2 generation
   | 'chronicle.edit'             // Edit pass
@@ -29,6 +32,7 @@ export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'description.visualThesis',
   'description.visualTraits',
   'image.promptFormatting',
+  'perspective.synthesis',
   'chronicle.generation',
   'chronicle.edit',
   'chronicle.validation',
@@ -37,7 +41,7 @@ export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'palette.expansion',
 ];
 
-export type LLMCallCategory = 'description' | 'image' | 'chronicle' | 'palette';
+export type LLMCallCategory = 'description' | 'image' | 'perspective' | 'chronicle' | 'palette';
 
 export interface LLMCallDefaults {
   model: string;
@@ -140,6 +144,17 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
     },
     recommendedModels: ['claude-haiku-4-5-20251001'],
   },
+  'perspective.synthesis': {
+    label: 'Perspective Synthesis',
+    description: 'Synthesizes a world perspective brief from entity constellation analysis',
+    category: 'perspective',
+    defaults: {
+      model: 'claude-sonnet-4-5-20250929',
+      thinkingBudget: 4096,
+      maxTokens: 1024,
+    },
+    recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
+  },
   'chronicle.generation': {
     label: 'Generation',
     description: 'Creates the initial chronicle narrative content',
@@ -211,6 +226,7 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
 export const CATEGORY_LABELS: Record<LLMCallCategory, string> = {
   description: 'Entity Descriptions',
   image: 'Image Generation',
+  perspective: 'Perspective Synthesis',
   chronicle: 'Chronicle Generation',
   palette: 'Trait Palette',
 };
@@ -218,6 +234,7 @@ export const CATEGORY_LABELS: Record<LLMCallCategory, string> = {
 export const CATEGORY_DESCRIPTIONS: Record<LLMCallCategory, string> = {
   description: 'Three-step chain for generating entity narrative and visual details',
   image: 'Preprocessing for image generation prompts',
+  perspective: 'Synthesize world perspective from entity constellation for chronicles',
   chronicle: 'Multi-step pipeline for long-form narrative documents',
   palette: 'AI-assisted curation of visual trait categories',
 };
@@ -227,6 +244,7 @@ export function getCallTypesByCategory(): Record<LLMCallCategory, LLMCallType[]>
   return {
     description: ['description.narrative', 'description.visualThesis', 'description.visualTraits'],
     image: ['image.promptFormatting'],
+    perspective: ['perspective.synthesis'],
     chronicle: ['chronicle.generation', 'chronicle.edit', 'chronicle.validation', 'chronicle.summary', 'chronicle.imageRefs'],
     palette: ['palette.expansion'],
   };

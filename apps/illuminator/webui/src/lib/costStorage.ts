@@ -19,6 +19,7 @@ export type CostType =
   | 'chronicleSummary'
   | 'chronicleImageRefs'
   | 'chronicleV2'          // Single-shot V2 pipeline generation
+  | 'chroniclePerspective' // Perspective synthesis for chronicle
   | 'paletteExpansion';    // Trait palette expansion/deduplication
 
 export interface CostRecord {

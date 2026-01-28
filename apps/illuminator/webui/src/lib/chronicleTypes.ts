@@ -297,12 +297,39 @@ export interface ChronicleFocus {
   selectedRelationshipIds: string[];
 }
 
+/**
+ * Canon fact with metadata for relevance scoring in perspective synthesis
+ */
+export interface CanonFactWithMetadata {
+  id: string;
+  text: string;
+  relevantCultures: string[];
+  relevantKinds: string[];
+  relevantTags: string[];
+  relevantRelationships: string[];
+  basePriority: number;
+  isCore: boolean;
+}
+
+/**
+ * Tone fragments for composable tone assembly
+ */
+export interface ToneFragments {
+  core: string;
+  cultureOverlays: Record<string, string | undefined>;
+  kindOverlays: Record<string, string | undefined>;
+}
+
 export interface ChronicleGenerationContext {
   // World context (user-defined)
   worldName: string;
   worldDescription: string;
   canonFacts: string[];
   tone: string;
+
+  // Optional fragmented world context for perspective synthesis
+  toneFragments?: ToneFragments;
+  canonFactsWithMetadata?: CanonFactWithMetadata[];
 
   // Narrative style used for generation
   narrativeStyle: NarrativeStyle;

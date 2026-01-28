@@ -614,6 +614,9 @@ export default function ChroniclePanel({
         description: worldContext?.description || '',
         canonFacts: worldContext?.canonFacts || [],
         tone: worldContext?.tone || '',
+        // Optional fragmented world context for perspective synthesis
+        toneFragments: worldContext?.toneFragments,
+        canonFactsWithMetadata: worldContext?.canonFactsWithMetadata,
       };
 
       // Extract prose hints from entity guidance (if available)
@@ -851,6 +854,9 @@ export default function ChroniclePanel({
       description: worldContext?.description || '',
       canonFacts: worldContext?.canonFacts || [],
       tone: worldContext?.tone || '',
+      // Optional fragmented world context for perspective synthesis
+      toneFragments: worldContext?.toneFragments,
+      canonFactsWithMetadata: worldContext?.canonFactsWithMetadata,
     };
 
     // Generate name bank for invented characters

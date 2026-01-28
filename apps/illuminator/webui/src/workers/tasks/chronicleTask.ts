@@ -11,6 +11,11 @@ import type {
   PromptRequestRef,
   ChronicleImageSize,
 } from '../../lib/chronicleTypes';
+import { analyzeConstellation } from '../../lib/constellationAnalyzer';
+import {
+  synthesizePerspective,
+  type PerspectiveSynthesisResult,
+} from '../../lib/perspectiveSynthesizer';
 import {
   createChronicle,
   updateChronicleCohesion,
@@ -126,7 +131,7 @@ async function executeV2GenerationStep(
   context: TaskContext
 ): Promise<TaskResult> {
   const { config, llmClient, isAborted } = context;
-  const chronicleContext = task.chronicleContext!;
+  let chronicleContext = task.chronicleContext!;
   const narrativeStyle = chronicleContext.narrativeStyle;
 
   if (!narrativeStyle) {
@@ -140,6 +145,53 @@ async function executeV2GenerationStep(
   const callConfig = getCallConfig(config, 'chronicle.generation');
   const chronicleId = task.chronicleId;
   console.log(`[Worker] V2 generation for chronicle=${chronicleId}, style="${narrativeStyle.name}", model=${callConfig.model}`);
+
+  // Perspective synthesis: if toneFragments and canonFactsWithMetadata are present,
+  // synthesize a focused perspective for this chronicle
+  let perspectiveResult: PerspectiveSynthesisResult | undefined;
+  if (chronicleContext.toneFragments && chronicleContext.canonFactsWithMetadata) {
+    console.log('[Worker] Running perspective synthesis...');
+    const perspectiveConfig = getCallConfig(config, 'perspective.synthesis');
+
+    // Analyze entity constellation
+    const constellation = analyzeConstellation({
+      entities: chronicleContext.entities,
+      relationships: chronicleContext.relationships,
+      events: chronicleContext.events,
+      focalEra: chronicleContext.era,
+    });
+    console.log(`[Worker] Constellation: ${constellation.focusSummary}`);
+
+    try {
+      perspectiveResult = await synthesizePerspective(
+        {
+          constellation,
+          entities: chronicleContext.entities,
+          focalEra: chronicleContext.era,
+          factsWithMetadata: chronicleContext.canonFactsWithMetadata,
+          toneFragments: chronicleContext.toneFragments,
+        },
+        llmClient,
+        perspectiveConfig
+      );
+
+      // Update context with synthesized perspective
+      chronicleContext = {
+        ...chronicleContext,
+        // Replace tone with assembled tone + perspective brief
+        tone: perspectiveResult.assembledTone + '\n\nPERSPECTIVE FOR THIS CHRONICLE:\n' + perspectiveResult.synthesis.brief,
+        // Replace facts with prioritized facts
+        canonFacts: perspectiveResult.prioritizedFacts,
+      };
+
+      console.log(`[Worker] Perspective synthesis complete: ${perspectiveResult.prioritizedFacts.length} facts, ${perspectiveResult.synthesis.suggestedMotifs.length} motifs`);
+    } catch (err) {
+      // Per user requirement: if LLM fails, stop the process
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error('[Worker] Perspective synthesis failed:', errorMessage);
+      return { success: false, error: `Perspective synthesis failed: ${errorMessage}` };
+    }
+  }
 
   // Simple entity/event selection from 2-hop neighborhood
   const selection = selectEntitiesV2(chronicleContext, DEFAULT_V2_CONFIG);
@@ -177,12 +229,13 @@ async function executeV2GenerationStep(
   // Note: Wikilinks are NOT applied here - they are applied once at acceptance time
   // (in useChronicleGeneration.ts acceptChronicle) to avoid double-bracketing issues.
 
-  // Calculate cost
+  // Calculate cost (include perspective synthesis if performed)
+  const perspectiveCost = perspectiveResult?.usage || { inputTokens: 0, outputTokens: 0, actualCost: 0 };
   const cost = {
-    estimated: generationCall.estimate.estimatedCost,
-    actual: generationCall.usage.actualCost,
-    inputTokens: generationCall.usage.inputTokens,
-    outputTokens: generationCall.usage.outputTokens,
+    estimated: generationCall.estimate.estimatedCost + (perspectiveResult ? perspectiveCost.actualCost : 0),
+    actual: generationCall.usage.actualCost + perspectiveCost.actualCost,
+    inputTokens: generationCall.usage.inputTokens + perspectiveCost.inputTokens,
+    outputTokens: generationCall.usage.outputTokens + perspectiveCost.outputTokens,
   };
 
   // Save chronicle directly to assembled state (single-shot generation)
@@ -223,7 +276,26 @@ async function executeV2GenerationStep(
     return { success: false, error: `Failed to save chronicle: ${err}` };
   }
 
-  // Record cost
+  // Record perspective synthesis cost if performed
+  if (perspectiveResult) {
+    const perspectiveConfig = getCallConfig(config, 'perspective.synthesis');
+    await saveCostRecordWithDefaults({
+      projectId: task.projectId,
+      simulationRunId: task.simulationRunId,
+      entityId: task.entityId,
+      entityName: task.entityName,
+      entityKind: task.entityKind,
+      chronicleId,
+      type: 'chroniclePerspective',
+      model: perspectiveConfig.model,
+      estimatedCost: perspectiveResult.usage.actualCost,
+      actualCost: perspectiveResult.usage.actualCost,
+      inputTokens: perspectiveResult.usage.inputTokens,
+      outputTokens: perspectiveResult.usage.outputTokens,
+    });
+  }
+
+  // Record generation cost
   await saveCostRecordWithDefaults({
     projectId: task.projectId,
     simulationRunId: task.simulationRunId,
@@ -233,10 +305,10 @@ async function executeV2GenerationStep(
     chronicleId,
     type: 'chronicleV2',
     model: callConfig.model,
-    estimatedCost: cost.estimated,
-    actualCost: cost.actual,
-    inputTokens: cost.inputTokens,
-    outputTokens: cost.outputTokens,
+    estimatedCost: generationCall.estimate.estimatedCost,
+    actualCost: generationCall.usage.actualCost,
+    inputTokens: generationCall.usage.inputTokens,
+    outputTokens: generationCall.usage.outputTokens,
   });
 
   return {

@@ -23,6 +23,8 @@ import type {
   EraContext,
   NarrativeEventContext,
   ChronicleTemporalContext,
+  ToneFragments,
+  CanonFactWithMetadata,
 } from './chronicleTypes';
 
 interface WorldData {
@@ -79,6 +81,9 @@ interface WorldContext {
   description: string;
   canonFacts: string[];
   tone: string;
+  // Optional fragmented world context for perspective synthesis
+  toneFragments?: ToneFragments;
+  canonFactsWithMetadata?: CanonFactWithMetadata[];
 }
 
 /**
@@ -309,6 +314,10 @@ export function buildChronicleContext(
     canonFacts: worldContext.canonFacts || [],
     tone: worldContext.tone || '',
     narrativeStyle,
+
+    // Optional fragmented world context for perspective synthesis
+    toneFragments: worldContext.toneFragments,
+    canonFactsWithMetadata: worldContext.canonFactsWithMetadata,
 
     // Chronicle focus (primary)
     focus,
