@@ -3,8 +3,8 @@
  *
  * Defines story-based narrative styles for chronicle generation.
  *
- * Design principle: Freeform text blocks over structured micro-fields.
- * The LLM works best with natural language guidance, not fragmented config.
+ * Design principle: Each style has a DISTINCT STRUCTURE, not just different adjectives.
+ * Structure, roles, and prose instructions must reinforce each other.
  */
 
 /**
@@ -86,147 +86,125 @@ export interface StoryNarrativeStyle {
 }
 
 export const DEFAULT_NARRATIVE_STYLES: StoryNarrativeStyle[] = [
-  // 1. EPIC DRAMA
+  // ============================================================================
+  // 1. EPIC DRAMA - Retrospective Chronicle Structure
+  // ============================================================================
   {
     id: 'epic-drama',
     name: 'Epic Drama',
-    description: 'Grand, sweeping narratives with world-shaking stakes and fateful confrontations',
-    tags: ['dramatic', 'high-stakes', 'grand'],
+    description: 'Grand narratives told as chronicle - we know how it ends, the question is how it came to this',
+    tags: ['dramatic', 'high-stakes', 'retrospective'],
     format: 'story',
 
-    narrativeInstructions: `Structure this as an epic historical drama with the weight of myth. The narrative should feel like a chronicle being told by future generations who already know how it ends.
+    narrativeInstructions: `STRUCTURE: RETROSPECTIVE CHRONICLE
+This story is told looking backward. The chronicler knows the outcome. The reader learns the ending before the beginning. Tension comes not from "what happens" but from "how did it come to this" and "what does the telling reveal."
 
-Scene Progression:
-1. THE OMEN: Begin in medias res or with an ominous portent. Establish the world through sensory details that convey both grandeur and fragility. Show the protagonist in their element, but seeds of conflict with the antagonist must already be visible. The witness observes. Include prophecy or sign, unease, dismissal by some. Open with subtle unease that builds toward dread by scene's end.
+=== SCENE 1: THE CHRONICLER'S FRAME ===
+Open in the present. The chronicler (witness role) prepares to record or recite. We learn immediately how it ended - who fell, what was lost, what changed. This is not a spoiler; it is the premise. The chronicler may be bitter, reverent, or conflicted about what they must tell.
 
-2. THE COUNCIL: Escalate the stakes. Introduce the antagonist not as simple villainy but as an equally valid worldview in collision with the protagonist. Show councils where fate is debated, alliances forged and broken. The catalyst may be revealed or debated. Every conversation carries subtext of what's unsaid. Build tension through debate, reach a fateful decision, then reveal the new tensions it creates.
+Establish: The outcome. The chronicler's relationship to events. The weight of recording.
+End with: The chronicler beginning to tell. "It began when..." or equivalent.
 
-3. THE CONFRONTATION: The confrontation between protagonist and antagonist should feel inevitable yet still surprising. Physical and ideological battles interweave. There must be a moment of apparent defeat before the turn. The cost of victory should be visible in the stakes. Begin with defiance, move through desperate struggle, and arrive at a costly outcome.
+=== SCENES 2-3: THE EVENTS (TOLD AS MEMORY) ===
+The chronicler recounts. These scenes are the past, but filtered through memory and purpose. The chronicler may:
+- Compress time ("Three seasons passed in preparation")
+- Editorialize ("What none of us understood then...")
+- Skip to significant moments rather than proceeding linearly
+- Show their bias in what they emphasize or omit
 
-4. THE AFTERMATH: Don't tie everything up. Show the new order taking shape while acknowledging what was lost. The witness must see the price named. End with an image that could become legend. Move from grief over what was lost, through acceptance, toward resolve for what comes next.`,
+Scene 2 should cover the RISE or GATHERING - the protagonist assembling power, allies, purpose. The antagonist's threat becoming clear.
 
-    proseInstructions: `Tone: weighty, fateful, grand, inevitable, mythic. Formal but not stiff.
+Scene 3 should cover the CRISIS and FALL - the confrontation, the cost, the moment everything changed. This is where the outcome we already know comes to pass.
 
-Dialogue: Formal, declarative. Characters speak as if their words will be remembered. Avoid modern idioms.
+=== SCENE 4: THE CHRONICLER'S CLOSE ===
+Return to present. The chronicler finishes. But now we see:
+- What the record will leave out (and why)
+- What the chronicler learned that cannot be written
+- The gap between history and truth
 
-Description: Sweeping and atmospheric. Landscapes reflect emotional states. Use long sentences for grandeur. Descriptions should evoke oil paintings - rich, saturated, composed.
+Do NOT end with a moral or lesson. End with the chronicler alone with what they know.`,
 
-Pacing: Deliberate pacing with moments of stillness before action. Let scenes breathe.
+    proseInstructions: `TONE: Elegiac, weighted, already-grieving. The narrator speaks from beyond the events.
 
-World Elements:
-- Locations are stages of history. Describe them as places where fate will be decided.
-- Objects of power symbolize what is at stake.
-- Rituals and customs root the grand events in lived tradition.
-- The era defines what kind of world will emerge from this crucible.
+DIALOGUE: Past dialogue is reported, not dramatized in full. "She said the alliance would hold" not extended conversation. The chronicler may quote key phrases that echo.
 
-Avoid: humor that undercuts tension, mundane details, anticlimactic resolutions, modern language.`,
+DESCRIPTION: Past scenes described with the vividness of memory - certain details hyper-clear, others vague. Present-frame scenes spare and immediate.
 
-    eventInstructions: 'These are the turning points of history. Each event should feel inevitable in retrospect, part of a grand design.',
+TECHNIQUE - THE WEIGHT OF KNOWING: The chronicler's voice carries knowledge of what's coming. Phrases like "the last time I would see..." or "none of us knew that..." used sparingly but pointedly.
+
+TECHNIQUE - COMPRESSION: Time moves at chronicle-pace. Years in a sentence, hours in a page. The story earns its length through significance, not duration.
+
+AVOID: Linear blow-by-blow narration. The chronicler explaining what events "meant." Happy endings that ignore the frame's grief.`,
+
+    eventInstructions: 'Events are what the chronicler chooses to record. Some are emphasized beyond their apparent importance; others are mentioned only in passing. The selection itself reveals the chronicler.',
 
     roles: [
-      { role: 'protagonist', count: { min: 1, max: 1 }, description: 'The central force - a hero, rising faction, awakening power, or transformative idea' },
-      { role: 'antagonist', count: { min: 1, max: 1 }, description: 'The opposing force - a villain, rival power, dying order, or threatening ideology' },
-      { role: 'catalyst', count: { min: 0, max: 1 }, description: 'What triggers the conflict - an artifact discovered, power awakened, or event occurred' },
-      { role: 'stakes', count: { min: 0, max: 2 }, description: 'What hangs in the balance - territories, traditions, treasures, or peoples' },
-      { role: 'witness', count: { min: 1, max: 2 }, description: 'Those who observe and will tell this tale to future generations' },
+      { role: 'chronicler', count: { min: 1, max: 1 }, description: 'The witness who survived to tell this - they frame everything, their bias shapes the tale' },
+      { role: 'protagonist', count: { min: 1, max: 1 }, description: 'The central figure of the chronicle - may be heroic, tragic, or ambiguous in the telling' },
+      { role: 'antagonist', count: { min: 1, max: 1 }, description: 'The opposing force - villain, rival power, or circumstance the chronicler must explain' },
+      { role: 'the-lost', count: { min: 0, max: 2 }, description: 'Those who did not survive - their absence haunts the chronicle' },
     ],
 
     pacing: {
-      totalWordCount: { min: 1800, max: 2500 },
-      sceneCount: { min: 4, max: 5 },
+      totalWordCount: { min: 1600, max: 2200 },
+      sceneCount: { min: 3, max: 4 },
     },
   },
 
-  // 2. ACTION ADVENTURE
+  // ============================================================================
+  // 2. ACTION ADVENTURE - Countdown Structure
+  // ============================================================================
   {
     id: 'action-adventure',
     name: 'Action Adventure',
-    description: 'Fast-paced, kinetic narratives driven by physical conflict, chases, and daring escapes',
-    tags: ['action', 'fast-paced', 'thrilling'],
+    description: 'Race against time - each scene marked by how long remains, tension from the ticking clock',
+    tags: ['action', 'countdown', 'urgent'],
     format: 'story',
 
-    narrativeInstructions: `This is pure kinetic storytelling. The reader should be breathless. Never let them settle. The setting isn't backdrop - it's obstacle and opportunity. Characters interact with their physical space constantly.
+    narrativeInstructions: `STRUCTURE: COUNTDOWN
+This story is organized by TIME REMAINING, not plot beats. Each scene heading includes a time marker. The deadline is real and its consequences are clear. The hero cannot do everything - they must choose.
 
-Scene Progression:
-1. COLD OPEN: Drop into action already happening. No setup, no backstory dump. The hero faces the threat immediately. The situation explains itself through urgent choices and physical details. The objective should be clear through context. Start with adrenaline, allow only the briefest relief before the next danger.
+=== SCENE 1: THE CLOCK STARTS ===
+[TIME MARKER: e.g., "Six hours until the tide rises"]
+Establish the deadline and its stakes in the first paragraph. What happens if they fail. The hero learns what must be done and how little time remains. The objective is clear. The obstacles become apparent.
 
-2. THE PURSUIT: Extended chase sequence. Each scene ends with a new complication. The hero survives one threat only to face another. Obstacles block the path at every turn. Include constant movement, near misses. Even dialogue happens while doing something else. Build tension through escalation until a narrow escape.
+The scene ends with the hero committing to a course - and the clock already eating into their margin.
 
-3. SHOWDOWN: The biggest, most desperate confrontation between the hero and the threat. Everything learned through the story becomes relevant. Include matched opponents, environment as weapon, decisive moment. The hero must use their wits and their body at their limits. Begin with the clash, move through desperate struggle, arrive at victory or defeat.
+=== SCENE 2: TIME BURNS ===
+[TIME MARKER: e.g., "Four hours remaining"]
+A complication costs precious time. The hero must choose between being thorough and being fast. Whatever they skip will matter later. Show the physical toll - exhaustion, injury, desperation creeping in.
 
-4. THE ESCAPE: Brief resolution. The dust settles. The hero gets away against odds, objective in hand or lost. Include closing window, improvisation, cost of escape. We see the cost on the hero's body and face. Move from desperation through ingenuity to hard-won relief.`,
+Dialogue happens while moving. No one stops to talk.
 
-    proseInstructions: `Tone: kinetic, urgent, visceral, breathless, sharp.
+=== SCENE 3: RUNNING OUT ===
+[TIME MARKER: e.g., "Forty minutes"]
+Desperation. Shortcuts taken. The hero does things they wouldn't do with more time. The obstacle that seemed manageable now seems impossible. Everything narrows to the immediate.
 
-Dialogue: Clipped, functional. Characters speak while doing. No speeches.
+=== SCENE 4: THE EDGE ===
+[TIME MARKER: e.g., "Three minutes" or "Too late"]
+The final push. Success or failure at the absolute limit. If success, it should be by seconds, by inches, by one last desperate choice. If failure, show what that costs.
 
-Description: Motion-focused. Short sentences. Active verbs. Sensory impact. We feel impacts, heat, cold, exhaustion.
+Either way, end with the hero's body and face showing what it took.`,
 
-Pacing: Never slow down for more than a paragraph. If exposition needed, deliver it while something is happening.
+    proseInstructions: `TONE: Breathless, urgent, kinetic. Sentences short when action peaks, longer only in brief moments of forced waiting.
 
-World Elements:
-- Locations are obstacle courses and arenas. What can be climbed, broken, used as cover?
-- Objects are tools and weapons. What can be grabbed, thrown, wielded?
+DIALOGUE: Clipped. Functional. People speak while doing. "Left!" not "Go to your left!" No speeches. Questions answered with actions.
 
-Avoid: long descriptions, internal monologue, philosophical reflection, scenes of people just talking.`,
+DESCRIPTION: Motion-focused. Active verbs. What can be climbed, broken, used. Sensory impact - heat, cold, impact, exhaustion. The environment is obstacle and tool.
 
-    eventInstructions: 'Chain these events into action sequences. Each event should force immediate reaction, not reflection.',
+TECHNIQUE - TIME PRESSURE IN PROSE: Refer to the deadline. "Two hours ago that would have been easy." "No time to check if it would hold." The clock haunts every decision.
 
-    roles: [
-      { role: 'hero', count: { min: 1, max: 2 }, description: 'The one who acts - daring, resourceful, driven' },
-      { role: 'threat', count: { min: 1, max: 1 }, description: 'What must be overcome - villain, hostile force, or dangerous power' },
-      { role: 'objective', count: { min: 0, max: 1 }, description: 'The goal of the chase - artifact sought, place to reach, person to save' },
-      { role: 'obstacle', count: { min: 0, max: 2 }, description: 'What blocks the path - treacherous terrain, rival, or wild power' },
-    ],
+TECHNIQUE - COST ON THE BODY: Show exhaustion accumulating. Hands shaking. Vision blurring. The hero running on fumes by Scene 3.
 
-    pacing: {
-      totalWordCount: { min: 1500, max: 2000 },
-      sceneCount: { min: 4, max: 6 },
-    },
-  },
+AVOID: Scenes where people stand and talk. Internal monologue. Reflection. Any sentence that starts with "He realized..."`,
 
-  // 3. ROMANCE
-  {
-    id: 'romance',
-    name: 'Romance',
-    description: 'Character-driven narratives centered on emotional bonds, longing, and connection',
-    tags: ['romantic', 'emotional', 'character-driven'],
-    format: 'story',
-
-    narrativeInstructions: `This is an intimate story about connection. The external world exists only to illuminate the internal journey of lover-a and lover-b finding each other.
-
-Scene Progression:
-1. THE MEETING: Must feel fated even when it appears accidental. Show what lover-a lacks that lover-b has, and vice versa. Their first impression should be incomplete, perhaps even wrong - but something catches. A detail they can't stop thinking about. Begin with curiosity, build to intrigue, end with each remembering the other.
-
-2. GROWING CLOSER: The heart of the story. Show lover-a and lover-b discovering each other through accumulating small moments. Vulnerability exchanged for vulnerability. Laughter that surprises them. Silences that feel comfortable. The sanctuary may offer them space to connect. Physical proximity becomes electric. Start guarded, move toward opening up, end with the fear of losing what they've found.
-
-3. THE OBSTACLE: What threatens them should feel real and earned. The obstacle - whether external force or internal barrier like fear, duty, or old wounds - should make us understand why lover-a and lover-b can't just be together, even as we ache for them to try. Begin with hope, move through dread, arrive at resignation or defiance.
-
-4. THE DECLARATION: The moment of truth. Lover-a or lover-b (or both) must risk rejection by speaking honestly. The response matters less than the courage of exposure. Even if things work out, there should be acknowledgment of what it cost to get here. Move from fear through the moment of exposure to the answer.`,
-
-    proseInstructions: `Tone: tender, yearning, intimate, bittersweet, hopeful.
-
-Dialogue: Subtext-heavy. What is not said matters. Silences speak.
-
-Description: Intimate focus. Body language, small gestures, what the eyes do. Romance lives in specifics - the exact shade of light, how someone's hand feels, the particular quality of a laugh. Avoid generic beauty - find what makes these specific people beautiful to each other.
-
-Pacing: Slow build. Let tension accumulate. Moments of stillness are powerful.
-
-World Elements:
-- Places where they meet, where they remember, where they cannot be together.
-- Objects that carry memory and meaning. Gifts, keepsakes, symbols.
-- Customs that constrain or enable connection. Marriage rites, courtship rules.
-- The era shapes what love is possible.
-
-Avoid: graphic content, rushed emotional development, love at first sight without complication, external plot overwhelming relationship.`,
-
-    eventInstructions: 'Events are catalysts for emotional change. What matters is how characters feel about what happens, not the events themselves.',
+    eventInstructions: 'Events are obstacles that cost time. Each one forces a choice: deal with it (lose time) or bypass it (face consequences later).',
 
     roles: [
-      { role: 'lover-a', count: { min: 1, max: 1 }, description: 'First romantic lead - heart of the connection' },
-      { role: 'lover-b', count: { min: 1, max: 1 }, description: 'Second romantic lead - the other half' },
-      { role: 'obstacle', count: { min: 0, max: 2 }, description: 'What keeps them apart - rival, tradition, faction loyalty, or duty' },
-      { role: 'sanctuary', count: { min: 0, max: 1 }, description: 'Where connection is possible - secret place, shared memory, neutral ground' },
+      { role: 'hero', count: { min: 1, max: 2 }, description: 'Racing the clock - defined by what they do, not what they think' },
+      { role: 'deadline', count: { min: 1, max: 1 }, description: 'The ticking clock - tide, ritual, collapse, arrival. Must be concrete and visible' },
+      { role: 'objective', count: { min: 1, max: 1 }, description: 'What must be reached, retrieved, stopped, or saved before time runs out' },
+      { role: 'obstacle', count: { min: 1, max: 2 }, description: 'What blocks the path and costs precious time to overcome' },
     ],
 
     pacing: {
@@ -235,46 +213,247 @@ Avoid: graphic content, rushed emotional development, love at first sight withou
     },
   },
 
-  // 4. SLICE OF LIFE
+  // ============================================================================
+  // 3. ROMANCE - Parallel Convergence Structure
+  // ============================================================================
+  {
+    id: 'romance',
+    name: 'Romance',
+    description: 'Two lives shown separately before they collide - the reader knows both before they know each other',
+    tags: ['romantic', 'dual-POV', 'convergence'],
+    format: 'story',
+
+    narrativeInstructions: `STRUCTURE: PARALLEL CONVERGENCE
+Two points of view, shown separately, then brought together. The reader understands both characters before they understand each other. The romance earns its weight because we've lived in both worlds.
+
+=== SCENE 1: LOVER-A ALONE ===
+Show Lover-A in their world, in a moment that reveals character. What do they do when no one important is watching? What do they lack? What do they want but won't admit?
+
+This is not backstory dump. This is a complete small scene - a morning, an encounter, a task - that lets us inhabit Lover-A before we see them through Lover-B's eyes.
+
+End with something unresolved. A want. A lack. A question they're not asking.
+
+=== SCENE 2: LOVER-B ALONE ===
+Same approach for Lover-B. Different world, different lack, different want.
+
+IMPORTANT: The two worlds should feel distinct. Different textures, different rhythms, different concerns. The reader should feel the distance between them.
+
+Optional: A near-miss. They almost cross paths but don't notice. The reader sees it; they don't.
+
+=== SCENE 3: THE MEETING ===
+Now they collide. But we see it differently than they do - we know what each one wants, what each one lacks, what each one isn't showing.
+
+The first impression should be incomplete. They don't see each other clearly. But something catches. A detail. A moment. Something to carry away.
+
+Show both perspectives within this scene, or choose one but let the reader supply the other from what we learned.
+
+=== SCENE 4: THE QUESTION ===
+After the meeting. Separate again, or together facing an obstacle. The question is not "will they get together" but "can they see each other truly?"
+
+End with a moment of vulnerability - offered or withheld. Not a declaration. A gesture. A silence that says something.`,
+
+    proseInstructions: `TONE: Intimate, observant, yearning. Different textures for each character's scenes.
+
+DIALOGUE: Heavy subtext. What's not said. Questions that are really statements. Statements that are really questions. Silences that speak.
+
+DESCRIPTION: Body language. Small gestures. What the eyes do. The particular quality of this specific person - not generic beauty but what makes them them.
+
+TECHNIQUE - DISTINCT TEXTURES: Lover-A's scenes and Lover-B's scenes should feel different. Word choice, sentence rhythm, what gets noticed. The reader should feel whose head they're in.
+
+TECHNIQUE - THE DETAIL THAT CATCHES: In the meeting scene, one specific detail should snag. Not "she was beautiful" but "the way she held her cup with both hands, like she was cold even in summer."
+
+AVOID: Love at first sight without complication. External plot overwhelming the relationship. Rushing emotional development. Telling us characters are compatible instead of showing it.`,
+
+    eventInstructions: 'Events are pretexts for emotional revelation. The plot exists to put pressure on hearts, not to resolve through action.',
+
+    roles: [
+      { role: 'lover-a', count: { min: 1, max: 1 }, description: 'First perspective - we live in their world before the meeting' },
+      { role: 'lover-b', count: { min: 1, max: 1 }, description: 'Second perspective - different world, different lack' },
+      { role: 'obstacle', count: { min: 0, max: 1 }, description: 'What makes connection difficult - not villain, but genuine barrier (duty, history, fear)' },
+      { role: 'catalyst', count: { min: 0, max: 1 }, description: 'What brings them into contact - place, event, person, circumstance' },
+    ],
+
+    pacing: {
+      totalWordCount: { min: 1400, max: 1800 },
+      sceneCount: { min: 4, max: 4 },
+    },
+  },
+
+  // ============================================================================
+  // 4. SLICE OF LIFE - Single Extended Scene Structure
+  // ============================================================================
   {
     id: 'slice-of-life',
     name: 'Slice of Life',
-    description: 'Quiet, intimate narratives finding meaning in everyday moments and small connections',
-    tags: ['quiet', 'intimate', 'contemplative'],
+    description: 'One continuous moment, no scene breaks - time unfolds without interruption',
+    tags: ['quiet', 'continuous', 'immersive'],
     format: 'story',
 
-    narrativeInstructions: `This is anti-plot storytelling. There is no crisis, no antagonist, no ticking clock. Instead, we witness the focal-point's life being lived - and in that witness, find meaning. The story follows a natural rhythm - a day, a season, a transition. Feeling builds through layered small moments, not dramatic events.
+    narrativeInstructions: `STRUCTURE: SINGLE EXTENDED SCENE
+No scene breaks. One continuous flow of time - an hour, a meal, a walk, a task. The story lives in presence, not plot. Nothing dramatic needs to happen. The extraordinary is found in the ordinary through quality of attention.
 
-Scene Progression:
-1. MORNING RITUAL: Begin with the focal-point waking or arriving. Establish the rhythm of their life against the backdrop of their world. Capture moments that would be elided in other stories: preparing food, walking familiar paths. Start in stillness, move gently toward awakening.
+=== THE CONTINUOUS SCENE ===
+Choose a bounded moment: a morning routine, a journey between two places, a meal prepared and eaten, a craft practiced.
 
-2. THE ENCOUNTER: When passing-through characters appear, there's no dramatic tension - just the genuine awkwardness and grace of people navigating proximity. Conversations wander. Silences are comfortable or uncomfortable. Nothing needs to be resolved. Begin in the focal-point's solitude, move into momentary connection, return to self.
+MOVEMENT 1 - ARRIVAL: The focal-point enters the moment. Waking, arriving, beginning. Establish the sensory world with precision. Temperature. Light quality. Sounds. What the body feels.
 
-3. THE WORK: The extraordinary in the ordinary. The focal-point doing their work well. The satisfaction of craft. The texture of routine. Pay attention to the specific knowledge they have about their world. Start with focus, enter the state of flow, arrive at quiet completion.
+MOVEMENT 2 - THE TEXTURE OF PRESENCE: The focal-point inhabits the moment. The specific knowledge of their work or place. The way their hands know what to do. Unhurried attention to process.
 
-4. EVENING REFLECTION: The story ends, it doesn't conclude. Perhaps the focal-point notices something has shifted - a small change that holds the seed of the next chapter, which we won't see. Or perhaps we simply leave them in a moment of peace. Move from winding down toward either peace or loneliness.`,
+MOVEMENT 3 - THE SMALL SHIFT: Something changes, but nothing dramatic. Weather shifts. A memory surfaces. Someone passes through. A bird calls. The focal-point notices something they hadn't noticed before.
 
-    proseInstructions: `Tone: quiet, observant, gentle, present, textured.
+MOVEMENT 4 - DEPARTURE: The moment ends naturally. The meal finished. The destination reached. The work complete. The focal-point carries something forward - not a lesson, just a feeling, a changed quality of attention.
 
-Dialogue: Natural, meandering. People talk about small things. Silences are comfortable.
+NO SCENE BREAKS. Time flows continuously. If you feel the urge to skip ahead, instead inhabit the time between.`,
 
-Description: Precise sensory detail. The exact quality of light. The smell of bread. Unhurried prose. Rich sensory detail. Present tense works well. Let the reader sink into the rhythm.
+    proseInstructions: `TONE: Present, attentive, unhurried, textured. No urgency.
 
-Pacing: Very slow. Let readers sink into moments. No rush.
+DIALOGUE: If dialogue occurs, it should be natural, meandering, about small things. Not exposition. Not conflict. Just people talking the way people talk when nothing needs to be decided.
 
-World Elements:
-- The kitchen, the workshop, the path walked daily. Intimate spaces.
-- Tools of daily life. The worn handle, the chipped cup.
-- Daily customs. How meals are taken. How neighbors greet.
+DESCRIPTION: Sensory precision. Not "a nice day" but the exact quality of light, the specific smell of bread, the particular way steam rises. Unhurried sentences that let the reader sink in. Present tense works well but is not required.
 
-Avoid: dramatic conflict, high stakes, life-changing events, rushing to resolution.`,
+TECHNIQUE - DURATION: Let things take the time they take. Describe the whole process of making tea. The walk across a room. The moments that other stories skip.
 
-    eventInstructions: 'These are background texture, not drivers. The story is not about events but about being present in a moment.',
+TECHNIQUE - LAYERED ATTENTION: The focal-point notices, then notices something within what they noticed, then notices their own noticing. Attention deepens rather than jumps.
+
+TECHNIQUE - EARNED SILENCE: Silence is not empty. When dialogue stops, we stay with the focal-point in the quiet. What does silence feel like in this moment?
+
+AVOID: Dramatic events. Conflict requiring resolution. Backstory dumps. Realizations. Character arcs. The story does not need to "go somewhere."`,
+
+    eventInstructions: 'Events are texture, not drivers. They happen in the background or memory. The moment being lived is not about events.',
 
     roles: [
-      { role: 'focal-point', count: { min: 1, max: 2 }, description: 'What we observe - a person going about their day, or a place and its rhythms' },
-      { role: 'passing-through', count: { min: 0, max: 3 }, description: 'Fleeting presences - strangers, objects changing hands, moments of connection' },
-      { role: 'backdrop', count: { min: 0, max: 1 }, description: 'The larger context - community, guild, or neighborhood that shapes daily life' },
+      { role: 'focal-point', count: { min: 1, max: 1 }, description: 'The consciousness we inhabit - person, place, or moment' },
+      { role: 'passing-through', count: { min: 0, max: 2 }, description: 'Brief presences - someone who shares the space temporarily' },
+      { role: 'the-moment', count: { min: 0, max: 1 }, description: 'The bounded time - the meal, the walk, the morning' },
+    ],
+
+    pacing: {
+      totalWordCount: { min: 800, max: 1200 },
+      sceneCount: { min: 1, max: 1 },
+    },
+  },
+
+  // ============================================================================
+  // 5. POLITICAL INTRIGUE - Mosaic/Multiple POV Structure
+  // ============================================================================
+  {
+    id: 'political-intrigue',
+    name: 'Political Intrigue',
+    description: 'Same event from multiple players - the reader assembles truth from contradictory accounts',
+    tags: ['political', 'multi-POV', 'layered'],
+    format: 'story',
+
+    narrativeInstructions: `STRUCTURE: MOSAIC - SAME EVENT, MULTIPLE PERSPECTIVES
+One significant event shown through different eyes. Each player saw different things, concluded different things, plans different things. The reader must assemble the truth from fragments - and realize that "truth" may not exist.
+
+=== SCENE 1: PLAYER-A'S VIEW ===
+The event as Player-A experienced it. What they saw. What they missed. What they concluded. What they plan now.
+
+Their account should feel complete and plausible. The reader should be tempted to believe this is the truth.
+
+=== SCENE 2: PLAYER-B'S VIEW ===
+The SAME EVENT as Player-B experienced it. Different position, different observations, different conclusions. Something Player-A was certain about should now be questionable. Something Player-A missed should be visible.
+
+The reader now holds two incompatible accounts.
+
+=== SCENE 3: THE PAWN'S VIEW (or PLAYER-C) ===
+Either a third player with their own agenda, OR the pawn - someone who was present but didn't know they were being used. Their view reveals something neither Player-A nor Player-B could see. Perhaps the "real" truth. Perhaps another layer of uncertainty.
+
+=== SCENE 4: AFTERMATH - POSITIONS SHIFT ===
+After the event. Show the consequences rippling out. Each player acting on their (possibly wrong) understanding. New alliances. New enmities. The reader sees collisions coming that the characters don't.
+
+Do NOT resolve who was "right." Let the mosaic stand.`,
+
+    proseInstructions: `TONE: Calculated, watchful, layered. Different players have different "voices" - sentence rhythms, what they notice, what they ignore.
+
+DIALOGUE: Every word chosen. What is NOT said. Implication. Courtesy that is threat. Agreement that is refusal. The reader must read between lines.
+
+DESCRIPTION: Each POV notices different things. Player-A might notice clothing and status markers. Player-B might notice exits and weapons. Player-C might notice who's nervous. These differences reveal character.
+
+TECHNIQUE - UNRELIABLE FRAGMENTS: Each account should feel true from inside. The reader must do the work of comparison. Do not tell the reader who is right.
+
+TECHNIQUE - THE DETAIL THAT CHANGES: One specific detail should appear in multiple accounts but be interpreted differently. A glance. A phrase. A gesture. Each player read it differently.
+
+TECHNIQUE - INVISIBLE ASSUMPTIONS: Each player has blind spots - things so obvious to them they don't mention them, but the absence is telling.
+
+AVOID: Omniscient resolution. Clear villains. Players who state their true motives. Simple truth waiting to be uncovered.`,
+
+    eventInstructions: 'Events have public interpretation and private meaning. The same event looks different to different players. Your job is to write that multiplicity.',
+
+    roles: [
+      { role: 'player-a', count: { min: 1, max: 1 }, description: 'First perspective on the event - their view should feel complete' },
+      { role: 'player-b', count: { min: 1, max: 1 }, description: 'Second perspective - contradicts or complicates Player-A' },
+      { role: 'player-c', count: { min: 0, max: 1 }, description: 'Third perspective or the pawn who reveals what others missed' },
+      { role: 'the-event', count: { min: 1, max: 1 }, description: 'The central occurrence everyone witnessed differently' },
+      { role: 'the-prize', count: { min: 0, max: 1 }, description: 'What is being contested - makes the stakes tangible' },
+    ],
+
+    pacing: {
+      totalWordCount: { min: 1600, max: 2200 },
+      sceneCount: { min: 4, max: 4 },
+    },
+  },
+
+  // ============================================================================
+  // 6. POETIC/LYRICAL - Circular Return Structure
+  // ============================================================================
+  {
+    id: 'poetic-lyrical',
+    name: 'Poetic/Lyrical',
+    description: 'Circular structure - the ending returns to the opening image, transformed by what came between',
+    tags: ['literary', 'circular', 'meditative'],
+    format: 'story',
+
+    narrativeInstructions: `STRUCTURE: CIRCULAR RETURN
+The story is a loop. The final scene returns to the opening image, but everything has changed. The structure itself carries meaning - time circles, understanding deepens, what seemed simple becomes complex.
+
+=== SCENE 1: THE IMAGE ===
+A single vivid image, described with full attention. This is the poem's secret heart. Concrete and specific - a particular light, a particular object, a particular quality of air.
+
+Do not explain what it means. The meaning is in the seeing.
+
+This scene should be SHORT - a paragraph or two of pure presence. End the scene while still in the image.
+
+=== SCENE 2: DEPARTURE ===
+Movement away. The consciousness begins to wander - through memory, through association, through what the image evokes. Time becomes fluid. Past and present may interweave.
+
+One image leads to another through hidden rhymes - color, texture, feeling, sound. The path is emotional logic, not narrative logic.
+
+The absence (if one is assigned) may hover here - what is longed for or lost.
+
+=== SCENE 3: THE ENCOUNTER ===
+A presence enters. Another consciousness, a visitor, a memory made vivid. Conversation is less about information than about rhythm - what's said, what's almost said, what remains silent.
+
+This is not plot. This is two presences sharing space, briefly.
+
+=== SCENE 4: THE RETURN ===
+Return to the opening image. Use SIMILAR OR IDENTICAL LANGUAGE from Scene 1, but now every word carries the weight of what came between.
+
+The image has not changed. The consciousness has.
+
+End IN the image, not after it. No explanation. No moral. Just the image, seen newly.`,
+
+    proseInstructions: `TONE: Luminous, precise, haunting. Every word chosen for sound as well as meaning.
+
+DIALOGUE: Sparse. When words come, they carry weight. Silences are as important as speech. What is not said.
+
+DESCRIPTION: Concrete details that open into abstraction. Synesthesia welcome - colors that sound, textures that taste. Find the exact word even if it takes the whole sentence to get there.
+
+TECHNIQUE - REPETITION WITH VARIATION: Key phrases, images, rhythms should echo. Not identical repetition but rhyme - the same shape with different content.
+
+TECHNIQUE - WHITE SPACE: Let scenes breathe. Short paragraphs. Space between movements. Trust silence.
+
+TECHNIQUE - THE RETURN: The final scene should quote or closely echo the opening. The reader should feel the loop close - same words, different weight.
+
+AVOID: Plot mechanics. Explaining what images mean. Rushing to conclusion. Generic "beautiful" language - find the strange, specific beauty.`,
+
+    eventInstructions: 'Events are prompts for meditation, not drivers. They exist to be contemplated, not resolved.',
+
+    roles: [
+      { role: 'consciousness', count: { min: 1, max: 1 }, description: 'The perceiving presence - we see through them, feel with them' },
+      { role: 'the-image', count: { min: 1, max: 1 }, description: 'The central image that opens and closes the loop - must be concrete and specific' },
+      { role: 'presence', count: { min: 0, max: 1 }, description: 'What enters awareness - visitor, memory, other consciousness' },
+      { role: 'absence', count: { min: 0, max: 1 }, description: 'What is longed for or lost - may never appear directly' },
     ],
 
     pacing: {
@@ -283,454 +462,466 @@ Avoid: dramatic conflict, high stakes, life-changing events, rushing to resoluti
     },
   },
 
-  // 5. POLITICAL INTRIGUE
-  {
-    id: 'political-intrigue',
-    name: 'Political Intrigue',
-    description: 'Complex webs of power, manipulation, secret alliances, and dangerous information',
-    tags: ['political', 'scheming', 'complex'],
-    format: 'story',
-
-    narrativeInstructions: `This is chess with people. The reader should feel the thrill of watching players maneuver against each other, always two moves ahead. We follow both the surface action (what players say, what appears to happen) and the hidden action (what they're really doing, what they actually want). The story advances through revelation - each new piece of information changes the board.
-
-Scene Progression:
-1. THE PUBLIC FACE: Formal occasions - councils, ceremonies, audiences - where players jockey for position through what's not said. The prize is visible but contested. Pawns may be present, unaware of their role. Watch body language. Note who stands where. Begin with composure, let masks slip slightly, end with recovery.
-
-2. THE PRIVATE MEETING: When masks come off, players negotiate directly. Everyone wants something. Threats are couched in courtesy. The secret may be leveraged or concealed. Alliances shift based on new information. Track who knows what. Start by circling, move through testing, arrive at deal or impasse.
-
-3. THE REVELATION: At some point, the hidden game becomes visible. The secret emerges, or a player's true agenda is exposed. The revelation should recontextualize everything - but feel fair. The clues were there. Build tension toward the moment of exposure, then show the scramble that follows.
-
-4. NEW POSITIONS: Recalculated alliances. Players make decisions based on what they know, which may be incomplete or manipulated. Pawns may realize they've been used. The prize has changed hands or meaning. As the dust settles, new tensions emerge.`,
-
-    proseInstructions: `Tone: calculating, tense, layered, dangerous, controlled.
-
-Dialogue: Every word chosen. Subtext everywhere. What is NOT said. Implication and inference.
-
-Description: Notice what others miss. Small tells. Glances exchanged. Hands fidgeting. Precise, observant prose. Characters notice telling details. Dialogue carries multiple meanings. The reader must pay attention.
-
-Pacing: Measured. Build tension through accumulation. Revelations should land.
-
-World Elements:
-- Halls of power. Secret meeting places. Where deals are made.
-- Symbols of office. Documents. Seals and signatures.
-- Protocols that constrain or enable maneuvering. Formal rules to exploit.
-- The political landscape of the era shapes what games are possible.
-
-Avoid: obvious villains, simple motivations, characters who say what they mean, neat resolutions.`,
-
-    eventInstructions: 'Events have public interpretations and private meanings. The same event looks different to different players.',
-
-    roles: [
-      { role: 'player', count: { min: 1, max: 3 }, description: 'Those maneuvering for advantage - schemers, factions, or ambitious powers' },
-      { role: 'prize', count: { min: 1, max: 2 }, description: 'What is being contested - law, territory, throne, or artifact of legitimacy' },
-      { role: 'pawn', count: { min: 0, max: 2 }, description: 'Manipulated pieces - people or groups used without knowing' },
-      { role: 'secret', count: { min: 0, max: 1 }, description: 'Hidden truth that could change everything - forbidden knowledge or damning evidence' },
-    ],
-
-    pacing: {
-      totalWordCount: { min: 1600, max: 2200 },
-      sceneCount: { min: 4, max: 5 },
-    },
-  },
-
-  // 6. POETIC/LYRICAL
-  {
-    id: 'poetic-lyrical',
-    name: 'Poetic/Lyrical',
-    description: 'Beautiful, atmospheric prose emphasizing language, imagery, and emotional resonance over plot',
-    tags: ['literary', 'atmospheric', 'beautiful'],
-    format: 'story',
-
-    narrativeInstructions: `This is prose poetry. Language itself is the experience. Plot exists only as a frame for imagery and emotion. The story does not advance through cause and effect, but through emotional logic. Time is fluid - past and present interweave. A memory can be more vivid than the present moment.
-
-Scene Progression:
-1. THE IMAGE: The consciousness encounters a vivid, specific image that will return transformed at the end. This image is the story's secret heart. It should be concrete (a particular light, a particular object) but resonant with unspoken meaning. Perhaps it evokes the absence - what is longed for or lost. Begin by paying close attention, end in mystery.
-
-2. MEDITATION: One image leads to another through hidden rhymes of color, texture, feeling. The consciousness wanders through memory or reflection. The reader follows a path they sense rather than see. Begin wandering, end in deepening understanding.
-
-3. THE ENCOUNTER: A presence enters the consciousness's awareness - mirror or contrast. Conversation is less about information than about rhythm and gap - what's said, what's almost said, what remains silent. The absence may hover between them. Begin with momentary closeness, end in the distance that remains.
-
-4. RETURN: The ending circles back to the opening image, but the consciousness has changed. The reader now sees what they couldn't see before. The image means something new while remaining what it always was. The absence is named or accepted. Move from recognition toward peace or sorrow.`,
-
-    proseInstructions: `Tone: luminous, haunting, delicate, resonant, precise.
-
-Dialogue: Sparse. Words carry weight. What is not said.
-
-Description: Precise, evocative imagery. Concrete details that open into abstraction. Synesthesia welcome. Sensory precision is everything. Find the exact word. Rhythm matters - read sentences aloud. White space is as important as text. Less is more. Trust the reader.
-
-Pacing: Slow. Very slow. Let images accumulate. Trust silence.
-
-World Elements:
-- Places are characters. Their moods, their light, their weather.
-- Objects hold time. What they have witnessed.
-- Rituals as poetry. The gestures that carry meaning beyond words.
-- The era as atmosphere. Not history but feeling.
-
-Example: "The light that morning had a quality she later could not name, though she tried—not golden, not gray, but something the color of almost-remembering, the way a word hovers before arriving."
-
-Avoid: explaining meaning, plot mechanics, rushed conclusions, clichéd images.`,
-
-    eventInstructions: 'Events are prompts for meditation, not drivers. What matters is the quality of attention paid to moments.',
-
-    roles: [
-      { role: 'consciousness', count: { min: 1, max: 1 }, description: 'The perceiving presence - a mind, a place with memory, or an age contemplating itself' },
-      { role: 'presence', count: { min: 0, max: 2 }, description: 'What enters awareness - visitors, objects that hold meaning, ideas made tangible' },
-      { role: 'absence', count: { min: 0, max: 1 }, description: 'What is longed for or lost - the departed, the forgotten, the time that was' },
-    ],
-
-    pacing: {
-      totalWordCount: { min: 1200, max: 1600 },
-      sceneCount: { min: 3, max: 4 },
-    },
-  },
-
-  // 7. DARK COMEDY
+  // ============================================================================
+  // 7. DARK COMEDY - Escalating Vignettes Structure
+  // ============================================================================
   {
     id: 'dark-comedy',
     name: 'Dark Comedy',
-    description: 'Humor found in grim situations, irony, absurdity, and the gap between expectation and reality',
-    tags: ['comedy', 'dark', 'ironic'],
+    description: 'Multiple small disasters that echo - the pattern is the joke, the system is the punchline',
+    tags: ['comedy', 'vignettes', 'absurdist'],
     format: 'story',
 
-    narrativeInstructions: `This is comedy built on suffering. The fool's world falls apart, and the falling apart is funny because it's also true. The template: each logical action, each sensible choice, somehow magnifies the disaster. The humor is in the inexorability. The system creates absurd constraints. The catalyst sets everything in motion. The victims suffer the collateral damage.
+    narrativeInstructions: `STRUCTURE: ESCALATING VIGNETTES
+Not one disaster but several, each complete, each echoing. The humor comes from pattern recognition - by the third disaster, the audience sees the shape and laughs at the inevitability. The system creates the absurdity; individuals just enact it.
 
-Scene Progression:
-1. THE SETUP: Establish a normal situation with a small problem. The fool is competent, perhaps even confident. They have a reasonable plan. The system's rules seem manageable. This normalcy must be believable for its destruction to be funny. Open with the fool's confidence, let the first crack appear, end with reassurance that nothing can go wrong.
+=== VIGNETTE 1: THE FIRST DISASTER ===
+A complete small story. Beginning, middle, end. The fool encounters a small problem. Their reasonable response makes it worse. The system's rules create absurd constraints. It resolves - badly, but contained.
 
-2. THE ESCALATION: The catalyst triggers something. The fool's reasonable response makes it worse. The system's rules create absurd constraints. Each new attempt at solution creates two new problems. Self-awareness grows even as the situation deteriorates. Dark observations about life emerge through gritted teeth. Begin with the fool's determination to fix things, move through dismay as problems multiply, end with denial that this is really happening.
+This should feel like it could be a standalone anecdote.
 
-3. THE CASCADE: Everything fails at once. Subplots collide. The system breaks down spectacularly. The fool faces impossible choices where every option is terrible. Victims accumulate. They may laugh, inappropriately, because what else can you do. Begin in panic as everything goes wrong, move through absurdity as connections become ridiculous, arrive at a strange calm of total surrender.
+=== VIGNETTE 2: THE ECHO ===
+A DIFFERENT disaster, but with structural rhymes. Same fool facing new problem? Different fool, same system? Same location, years apart?
 
-4. THE AFTERMATH: The smoke clears. Assess the damage to the fool and to the victims. There should be a rueful acceptance - things are terrible, but the fool has learned something, even if what they've learned is grim. A note of genuine humanity amidst the wreckage. Move from exhaustion through rueful acceptance, ending with the suggestion it will all happen again.`,
+The reader begins to see the pattern. Each logical action, each sensible choice, somehow magnifies the disaster. The humor is in the inexorability.
 
-    proseInstructions: `Tone: ironic, deadpan, absurd, rueful, dark.
+=== VIGNETTE 3: THE PATTERN COMPLETE ===
+A THIRD disaster. Now the pattern is undeniable. The audience is ahead of the characters - we see the trap before they walk into it. The comedy of anticipation.
 
-Dialogue: Characters speak sincerely. Humor from context not jokes. Understatement.
+This vignette may be shorter - the setup does less work because the pattern carries it.
 
-Description: Precise, clinical observation of disaster. The comedy of specificity. Deadpan delivery. The characters rarely acknowledge the absurdity directly - that's for the reader. Dark material treated with lightness, light material treated with weight.
+=== EPILOGUE: THE SYSTEM CONTINUES ===
+Brief. The disasters are past but the system remains. A new fool approaches, confident. The pattern will repeat. We know it. They don't.
 
-Pacing: Build momentum. Accelerate toward catastrophe. Brief pause before final beat.
+End with the system intact and another victim queuing up.`,
 
-World Elements:
-- Objects that malfunction, are misunderstood, or cause problems.
-- Rules and customs that create absurd situations. Bureaucracy. Protocol.
+    proseInstructions: `TONE: Deadpan, ironic, precise. The narrator observes disaster with clinical detachment. Characters speak sincerely; the comedy comes from context, not jokes.
 
-Avoid: winking at audience, jokes that break tone, unsympathetic characters, cruelty without consequence.`,
+DIALOGUE: Characters mean what they say. They're not being funny. They're being reasonable in unreasonable circumstances. "I followed procedure" is hilarious in context.
 
-    eventInstructions: 'Find the absurdity in these events. What reasonable action led to unreasonable results?',
+DESCRIPTION: Precise, specific observation of disaster. The comedy of small details - the exact form number, the specific policy that created this mess, the technical language for catastrophe.
+
+TECHNIQUE - STRUCTURAL RHYME: Vignettes should echo. Same phrases in different contexts. Same gestures with different outcomes. The repetition is the comedy.
+
+TECHNIQUE - THE REASONABLE RESPONSE: Every disaster starts with someone doing something sensible. The fool isn't stupid - they're trapped in a system that makes stupidity inevitable.
+
+TECHNIQUE - DEADPAN DELIVERY: Never wink at the audience. Never acknowledge the absurdity directly. The characters take everything seriously. The gap between their seriousness and the situation is the joke.
+
+AVOID: Jokes. Punchlines. Characters being funny on purpose. Cruelty without consequence. Unsympathetic fools. The fool must be us.`,
+
+    eventInstructions: 'Events are triggers for systemic failure. What reasonable action led to unreasonable results? Find the absurdity.',
 
     roles: [
-      { role: 'fool', count: { min: 1, max: 2 }, description: 'Making things worse while trying to help - person or bumbling institution' },
-      { role: 'system', count: { min: 0, max: 1 }, description: 'The absurd structure - bureaucracy, tradition, or rule that creates chaos' },
-      { role: 'catalyst', count: { min: 0, max: 1 }, description: 'What sets disaster in motion - cursed object, minor problem, simple request' },
-      { role: 'victim', count: { min: 0, max: 2 }, description: 'Caught in the crossfire - people, places, or institutions damaged by folly' },
+      { role: 'fool', count: { min: 1, max: 2 }, description: 'The reasonable person trapped in unreasonable circumstances - may be same fool across vignettes or different fools facing same system' },
+      { role: 'system', count: { min: 1, max: 1 }, description: 'The absurd structure - bureaucracy, tradition, protocol, or rule that creates the disasters' },
+      { role: 'catalyst', count: { min: 0, max: 1 }, description: 'What sets each disaster in motion - often something small, mundane, forgettable' },
+      { role: 'victim', count: { min: 0, max: 2 }, description: 'Collateral damage - those caught in the crossfire who did nothing wrong' },
     ],
 
     pacing: {
       totalWordCount: { min: 1400, max: 1800 },
-      sceneCount: { min: 4, max: 5 },
+      sceneCount: { min: 3, max: 4 },
     },
   },
 
-  // 8. HEROIC FANTASY
+  // ============================================================================
+  // 8. HEROIC FANTASY - Classic Three-Act Structure
+  // ============================================================================
   {
     id: 'heroic-fantasy',
     name: 'Heroic Fantasy',
-    description: "Classic hero's journey with clear good and evil, trials, and triumphant resolution",
-    tags: ['heroic', 'fantasy', 'triumphant'],
+    description: 'The classic hero\'s journey in explicit three-act form - departure, ordeal, return',
+    tags: ['heroic', 'three-act', 'mythic'],
     format: 'story',
 
-    narrativeInstructions: `This is mythic storytelling. The world is enchanted. Good and evil are real forces. The hero's journey transforms not just themselves but the world around them. The darkness threatens all that is good. The quest-object offers hope. The guide provides wisdom. Companions stand loyal.
+    narrativeInstructions: `STRUCTURE: CLASSIC THREE-ACT
+The hero's journey in its clearest form. Three distinct movements with clear breaks between them. This is mythic storytelling - good and evil are real, transformation is possible, the world can be saved.
 
-Scene Progression:
-1. THE CALL: The hero begins in their ordinary world, which is already touched by darkness or lacking something vital. The call to adventure disrupts their life - perhaps the guide appears with news, or the quest-object reveals itself. The hero may resist, but destiny is insistent. Begin in fragile peace, let urgency shatter it, end with the hero's commitment to act.
+=== ACT I: DEPARTURE (1-2 scenes) ===
+The hero in their ordinary world. Establish what they have to lose. The world is already touched by darkness or lacking something vital.
 
-2. THE TRIAL: Crossing into adventure should feel momentous. The hero leaves behind everything familiar. Companions appear - each representing virtues the hero will need. The guide may offer cryptic wisdom. Each challenge tests a specific aspect of the hero's character. The darkness's power becomes clear. Begin with determination, struggle through obstacles, arrive at triumph or hard-won lesson.
+THE CALL: Disruption arrives - the guide appears, the threat manifests, the quest-object reveals itself. The hero may resist ("I can't leave" / "I'm not ready" / "Choose someone else").
 
-3. THE DARK NIGHT: Failure is not just possible but necessary - through defeat, the hero learns what they truly need. The darkness seems triumphant. Perhaps a companion falls or the quest-object seems lost. The dark night of the soul comes before the dawn. Begin in defeat, descend through despair, end with a spark of renewed hope.
+THE THRESHOLD: The hero commits. They leave behind everything familiar. The ordinary world recedes. Mark this crossing clearly - a door that won't reopen, a shore that fades, a word that can't be unsaid.
 
-4. THE TRIUMPH: The final battle against the darkness is as much internal as external. The hero must use everything they've learned. The quest-object fulfills its purpose. Victory comes not from strength alone but from wisdom, from sacrifice, from becoming who they were meant to be. The hero returns changed. Begin with determination for the final confrontation, struggle at the limit of endurance, arrive at victory that transforms the world.`,
+=== ACT II: THE ORDEAL (2-3 scenes) ===
+The longest section. The hero faces trials that test specific virtues. Each challenge should test something different - courage, wisdom, sacrifice, trust.
 
-    proseInstructions: `Tone: heroic, inspiring, grand, hopeful, triumphant.
+COMPANIONS: Allies appear. Each represents something the hero will need. Their loyalty should be tested and proven.
 
-Dialogue: Stirring speeches. Loyal oaths. The language of legends.
+THE ABYSS: The darkest moment. Apparent defeat. Perhaps a companion falls. The quest seems lost. The hero must find something in themselves they didn't know was there.
 
-Description: Vivid, colorful. Good is beautiful, evil is terrible. Clear imagery. Wonder should infuse the prose. Magic is real and costs something. Describe the world as a hero would see it - full of portent and meaning.
+=== ACT III: RETURN (1 scene) ===
+The final confrontation. Internal and external battles converge. The hero uses everything learned. Victory comes not from strength alone but from transformation.
 
-Pacing: Build through trials to climax. Let the triumph resonate.
+THE NEW WORLD: Brief glimpse of what victory created. The hero is changed. The world is changed. End with the new order taking shape - not every detail resolved, but the shape clear.`,
 
-World Elements:
-- Legendary places. Dark fortresses. Sacred groves. The road between.
-- Weapons of power. Ancient relics. The tools of destiny.
-- Prophecies. Ancient rites. The customs of the wise.
-- An age of darkness giving way to light.
+    proseInstructions: `TONE: Heroic, stirring, grand. The language of legends. This story wants to be told around fires.
 
-Avoid: moral ambiguity, anticlimactic endings, cynicism, deconstructing the genre.`,
+DIALOGUE: Oaths and declarations. Characters speak as if their words will be remembered. Avoid modern idioms. "I will hold this passage" not "I've got this."
 
-    eventInstructions: 'These are the legendary deeds that will be sung. Each event is a test or a victory.',
+DESCRIPTION: Vivid, colorful. Good is beautiful (but not soft); evil is terrible (but not cartoonish). Magic costs something and means something. Landscapes carry moral weight.
+
+TECHNIQUE - THE THRESHOLD: Mark act breaks clearly. The hero crossing into adventure should feel momentous. Don't rush past transitions.
+
+TECHNIQUE - THE TRIAL: Each trial tests something specific. Name it (even if only to yourself). Courage. Trust. Sacrifice. The hero fails or succeeds based on virtue, not luck.
+
+TECHNIQUE - THE TRANSFORMATION: By Act III, the hero should be visibly different from Act I. Show it in how they move, speak, choose.
+
+AVOID: Irony. Deconstruction. Moral ambiguity. Anticlimactic endings. This is not the place to subvert the genre - play it straight.`,
+
+    eventInstructions: 'Events are trials and victories. Each is a step in the hero\'s transformation. Treat them as legendary deeds.',
 
     roles: [
-      { role: 'hero', count: { min: 1, max: 1 }, description: 'The chosen one - destined to confront the darkness' },
-      { role: 'darkness', count: { min: 1, max: 1 }, description: 'Evil to be vanquished - dark lord, corrupting power, or malevolent force' },
-      { role: 'quest-object', count: { min: 0, max: 1 }, description: 'What is sought or wielded - legendary artifact, awakening power, or sacred place' },
-      { role: 'guide', count: { min: 0, max: 1 }, description: 'Wisdom for the journey - mentor, ancient knowledge, or prophetic vision' },
-      { role: 'companion', count: { min: 0, max: 2 }, description: 'Those who stand with the hero - allies who may fall or triumph' },
+      { role: 'hero', count: { min: 1, max: 1 }, description: 'The chosen one - starts ordinary, becomes extraordinary' },
+      { role: 'darkness', count: { min: 1, max: 1 }, description: 'The evil to be vanquished - dark lord, corrupting power, or malevolent force' },
+      { role: 'guide', count: { min: 0, max: 1 }, description: 'Mentor figure who provides wisdom and/or the call' },
+      { role: 'companion', count: { min: 0, max: 2 }, description: 'Those who journey with the hero - may fall, may be saved' },
+      { role: 'quest-object', count: { min: 0, max: 1 }, description: 'What is sought - weapon, knowledge, place of power' },
     ],
 
     pacing: {
-      totalWordCount: { min: 1600, max: 2200 },
-      sceneCount: { min: 4, max: 5 },
+      totalWordCount: { min: 1800, max: 2400 },
+      sceneCount: { min: 4, max: 6 },
     },
   },
 
-  // 9. TRAGEDY
+  // ============================================================================
+  // 9. TRAGEDY - In Medias Res Structure
+  // ============================================================================
   {
     id: 'tragedy',
     name: 'Tragedy',
-    description: 'Stories of inevitable doom, fatal flaws, and the fall of great figures',
-    tags: ['tragic', 'inevitable', 'cathartic'],
+    description: 'Begin at the fall, then show how we got there - the ending is known, the tragedy is in the becoming',
+    tags: ['tragic', 'non-linear', 'inevitable'],
     format: 'story',
 
-    narrativeInstructions: `This is tragedy in the classical sense. The doomed is exceptional - their greatness is real. Their destruction is inevitable, not despite their virtues but because of them. We watch, knowing what they cannot know. The flaw works its way through everything. Enablers feed the destruction. The innocent suffer. The witness will remain to tell the tale.
+    narrativeInstructions: `STRUCTURE: IN MEDIAS RES - THE FALL FIRST
+We open at the moment of destruction. Then we go back to show how it came to this. The audience knows the ending; the doomed does not. Tragic irony pervades every scene.
 
-Scene Progression:
-1. AT THE HEIGHT: Show the doomed at their peak. Their power, their glory, their confidence. But show also the flaw - invisible to them, visible to us. Pride becomes hubris. Strength becomes inflexibility. Vision becomes blindness. Enablers praise what will destroy. Begin with admiration for the doomed's greatness, let unease creep in as the flaw becomes visible to the audience.
+=== SCENE 1: THE FALL (PRESENT) ===
+Open at the moment of destruction. The doomed is already falling - throne lost, battle turned, betrayal revealed. We see the cost before we understand it.
 
-2. THE TEMPTATION: An opportunity appears that the doomed cannot refuse. Taking it is completely in character - this is not a mistake, it's an expression of who they are. The flaw makes the choice feel right. The audience sees the trap that the doomed cannot. Begin with desire for what is offered, move through the fateful decision, end with the line crossed that cannot be uncrossed.
+This scene should be disorienting. We don't know these people yet. We don't know what led here. We only know it's terrible.
 
-3. THE FALL: Once the first step is taken, the rest follows inevitably. Each attempt to escape makes things worse. The doomed may begin to see, but too late. The innocent suffer for choices they did not make. Enablers scatter or double down. The isolation grows. Begin in denial that anything is truly wrong, struggle as the walls close in, arrive at desperation as options vanish.
+End the scene mid-fall. Do not resolve it.
 
-4. THE RECOGNITION: The moment of terrible clarity. The doomed finally sees what we have seen all along. They understand their flaw, their complicity in their own destruction. The witness remains to tell the tale. This recognition is devastating precisely because it comes too late. The ending should leave us with pity and fear. Something has been lost that cannot be recovered. Begin in blindness, break through to terrible sight, end in grief that may hold a kind of peace.`,
+=== SCENE 2: THE HEIGHT (PAST) ===
+Flash back to before. The doomed at their peak. Their power, their glory, their certainty. Show why they mattered. Show why this fall will be devastating.
 
-    proseInstructions: `Tone: inevitable, doomed, magnificent, terrible, cathartic.
+But also show THE FLAW. The thing that will destroy them is visible here, if you know to look. Pride that reads as confidence. Rigidity that reads as principle. The seed of destruction in the flower of success.
 
-Dialogue: Weight of fate. Words that will be remembered. Ironic foreshadowing. Elevated, formal language. Characters speak as if history is listening.
+=== SCENE 3: THE TEMPTATION (PAST) ===
+Still in the past, later. An opportunity appears. Taking it is completely in character - this is who the doomed IS. The flaw makes it feel right.
 
-Description: Beauty and terror. The grandeur of destruction. Imagery of falling, breaking.
+The audience knows where this leads. The doomed does not. Dramatic irony: every confident word is heartbreaking.
 
-Pacing: Deliberate build. No rushing the fall. Let each stage land.
+End with the line crossed that cannot be uncrossed.
 
-World Elements:
-- Thrones that will be empty. Halls that will burn. High places to fall from.
-- Symbols of power that will be lost. Crowns, swords, seals.
-- An era ending. What dies with the protagonist.
+=== SCENE 4: THE RECOGNITION (PRESENT) ===
+Return to the present. We've caught up to Scene 1 and pass it. The fall completes.
 
-Avoid: redemption arcs, last-minute saves, unearned hope, villains to blame.`,
+The moment of terrible clarity. The doomed finally sees what we have seen all along. They understand their flaw, their complicity, the shape of their own destruction.
 
-    eventInstructions: 'Each event is a step toward doom. The audience should see it coming before the characters do.',
+This recognition is devastating because it comes too late. End in that knowledge. Something has been lost that cannot be recovered.`,
+
+    proseInstructions: `TONE: Inevitable, magnificent, terrible. The weight of fate. Words that sound like eulogy even as events unfold.
+
+DIALOGUE: Characters speak as if history is listening. Formal, weighted. Past-tense scenes should include lines that land differently knowing the ending. "This peace will last" is unbearable when we've seen the war.
+
+DESCRIPTION: Beauty and destruction intertwined. The grandeur of what's falling. Imagery of height and fall, breaking, things that cannot be mended.
+
+TECHNIQUE - TRAGIC IRONY: Every scene in the past should contain lines that mean one thing to the character and another to the audience. Confidence that we know is misplaced. Promises we know will break.
+
+TECHNIQUE - THE FLAW VISIBLE: In Scene 2, the flaw must be present but not labeled. The audience should recognize it; the doomed cannot. Show, don't name.
+
+TECHNIQUE - THE RECOGNITION: This is the emotional climax. The doomed's face when they finally see. Spend time on this moment. Let it land.
+
+AVOID: Redemption arcs. Last-minute saves. Villains to blame. The tragedy is that the doomed did this to themselves.`,
+
+    eventInstructions: 'Events are steps toward doom. Each should feel inevitable in retrospect. The audience should see them coming before the characters do.',
 
     roles: [
-      { role: 'doomed', count: { min: 1, max: 1 }, description: 'What will fall - hero with fatal flaw, empire in decline, or ideal that cannot hold' },
-      { role: 'flaw', count: { min: 0, max: 1 }, description: 'The fatal weakness - hubris, corruption, cursed inheritance, or betrayed principle' },
-      { role: 'enabler', count: { min: 0, max: 2 }, description: 'Those who feed the destruction - sycophants, rivals, or circumstances' },
-      { role: 'innocent', count: { min: 0, max: 2 }, description: 'Destroyed in the fall - people, places, or hopes caught in the collapse' },
-      { role: 'witness', count: { min: 0, max: 1 }, description: 'Who remains to tell the tale and learn from the ruin' },
+      { role: 'doomed', count: { min: 1, max: 1 }, description: 'The great figure who will fall - their greatness and their flaw must both be real' },
+      { role: 'flaw', count: { min: 0, max: 1 }, description: 'The fatal weakness - hubris, rigidity, blind spot. May be embodied in a choice, belief, or relationship' },
+      { role: 'enabler', count: { min: 0, max: 1 }, description: 'Those who feed the destruction - sycophants, or simply those who don\'t say no' },
+      { role: 'witness', count: { min: 0, max: 1 }, description: 'Who survives to tell the tale, to carry the memory' },
     ],
 
     pacing: {
       totalWordCount: { min: 1600, max: 2200 },
-      sceneCount: { min: 4, max: 5 },
+      sceneCount: { min: 4, max: 4 },
     },
   },
 
-  // 10. MYSTERY/SUSPENSE
+  // ============================================================================
+  // 10. MYSTERY/SUSPENSE - Revelation Reframe Structure
+  // ============================================================================
   {
     id: 'mystery-suspense',
     name: 'Mystery/Suspense',
-    description: 'Stories built around secrets, investigation, and the revelation of hidden truths',
-    tags: ['mystery', 'suspense', 'revelation'],
+    description: 'Write the opening so it can be reread after the revelation - clues hidden in plain sight',
+    tags: ['mystery', 'revelation', 'rereadable'],
     format: 'story',
 
-    narrativeInstructions: `This is a puzzle story. The reader should be engaged in solving it alongside the investigator. Play fair - all clues should be available to the reader, even if their significance isn't immediately clear. The mystery demands answers. Suspects obscure the truth. The culprit hides in plain sight. Clues wait to be understood.
+    narrativeInstructions: `STRUCTURE: REVELATION THAT REFRAMES
+The truth, when revealed, should send the reader back to Scene 1 with new eyes. Write the opening knowing the ending - hide clues in plain sight, make innocent details secretly damning.
 
-Scene Progression:
-1. THE MYSTERY: Establish the question that needs answering. The mystery presents itself - something is wrong, hidden, unexplained. The investigator is drawn in by duty, curiosity, or personal connection. Set up the world of suspects and possibilities. Begin with curiosity about the mystery, end with the investigator's commitment to find the truth.
+=== SCENE 1: THE QUESTION ===
+Establish the mystery. Something is wrong, hidden, unexplained. The investigator is drawn in.
 
-2. THE INVESTIGATION: Each scene should yield new information that both advances and complicates the solution. Interview suspects whose accounts don't quite match. Discover clues that point in multiple directions. The mystery deepens even as pieces emerge. Follow leads that prove to be dead ends - but don't make them feel like wasted time. Begin with progress, move through confusion as contradictions mount, arrive at renewed determination.
+CRITICAL: Write this scene knowing the answer. Include:
+- At least one detail that seems innocent but is actually a clue
+- At least one statement that means something different than it appears
+- The culprit, if present, behaving in a way that's explicable NOW but damning LATER
 
-3. THE FALSE TRAIL: Plant at least one seemingly damning clue against the wrong suspect. It should be convincing enough that the reader considers them seriously, but on reflection, something should feel off. The culprit remains hidden. The misdirection should be clever, not cheap. Begin with certainty that the answer is found, end with creeping doubt.
+The reader should be able to return after Scene 4 and say "it was right there."
 
-4. THE REVELATION: The truth about the culprit should feel inevitable once revealed, even if surprising. It should reframe everything that came before - clues that seemed irrelevant become crucial, innocent details become damning. The mystery resolves but the solution should be findable by a careful reader, not obvious. Show the consequences of truth revealed. Justice may or may not be served. Move from confusion through the moment of clarity to the consequences that follow.`,
+=== SCENE 2: LAYER ONE ===
+First theory. Evidence that supports it. The investigator pursues a plausible but wrong explanation.
 
-    proseInstructions: `Tone: suspicious, tense, uncertain, curious, revelatory.
+This should feel like progress. The reader should be tempted to think they've solved it.
 
-Dialogue: Everyone has something to hide. Evasions. Slips. Careful word choice.
+=== SCENE 3: LAYER TWO ===
+The first theory breaks. New evidence doesn't fit. Something in Scene 1 or 2 meant something different than assumed.
 
-Description: Notice everything. What's out of place. What doesn't fit. Clues hidden in detail. Precise, observant prose. The reader should feel the satisfaction of pieces clicking into place.
+Doubt. Reexamination. The investigator (and reader) must reconsider everything.
 
-Pacing: Build tension through uncertainty. Revelation should pay off accumulated tension.
+=== SCENE 4: THE REVELATION ===
+The truth. Not just "whodunit" but WHY the clues in Scene 1 pointed there all along. The revelation should make the reader want to reread the opening.
 
-World Elements:
-- Where things happened. Where evidence might be found.
-- Objects as clues. What they reveal about their owners.
-- Customs that constrain or enable secrets. What is known, what is hidden.
+Show consequences. Justice may or may not be served. But truth is exposed.`,
 
-Avoid: cheating clues, deus ex machina solutions, obvious culprits, unmotivated reveals.`,
+    proseInstructions: `TONE: Suspicious, attentive, uneasy. The prose notices things - details that might matter, behaviors that might mean something.
 
-    eventInstructions: 'Events are clues. Each should have a surface meaning and a hidden meaning that becomes clear on revelation.',
+DIALOGUE: Everyone has something to hide. Listen for evasions, careful word choice, statements that are technically true but misleading.
+
+DESCRIPTION: Clues hidden in texture. The reader should be able to solve it, but not easily. Fair play - nothing hidden from the reader that the investigator could see.
+
+TECHNIQUE - THE PLANT AND PAYOFF: Every clue in Scene 1 must pay off in Scene 4. Every revelation in Scene 4 must have been planted in Scene 1-2. Map this explicitly before writing.
+
+TECHNIQUE - DOUBLE MEANING: Dialogue in Scene 1 should be writable with two meanings - the surface meaning for first-read, the true meaning for re-read. "I haven't seen her since yesterday" might be technically true but misleading.
+
+TECHNIQUE - THE INNOCENT DETAIL: The most damning clue should seem most innocent. A cup in the wrong place. A window that should have been closed. Something the reader's eye passes over.
+
+AVOID: Cheating. Clues the reader couldn't have noticed. Revelations that come from nowhere. Detectives who explain rather than demonstrate.`,
+
+    eventInstructions: 'Events are clues with surface meaning and hidden meaning. Write knowing both.',
 
     roles: [
-      { role: 'investigator', count: { min: 1, max: 1 }, description: 'The one seeking truth - detective, scholar, or curious outsider' },
-      { role: 'mystery', count: { min: 1, max: 1 }, description: 'What must be solved - artifact with hidden history, haunted place, or buried secret' },
-      { role: 'suspect', count: { min: 1, max: 3 }, description: 'Possible answers - people, factions, or beliefs that might be responsible' },
-      { role: 'culprit', count: { min: 1, max: 1 }, description: 'The true answer - should not be obvious until the revelation' },
-      { role: 'clue', count: { min: 0, max: 2 }, description: 'Evidence that illuminates - objects, places, or testimonies that reveal truth' },
+      { role: 'investigator', count: { min: 1, max: 1 }, description: 'The seeker of truth - we follow their attention, share their mistakes' },
+      { role: 'mystery', count: { min: 1, max: 1 }, description: 'What must be solved - crime, disappearance, inexplicable event' },
+      { role: 'suspect', count: { min: 1, max: 2 }, description: 'Plausible but wrong answers - red herrings that feel real' },
+      { role: 'culprit', count: { min: 1, max: 1 }, description: 'The true answer - present from the start, hidden in plain sight' },
     ],
 
     pacing: {
       totalWordCount: { min: 1500, max: 2000 },
-      sceneCount: { min: 4, max: 5 },
+      sceneCount: { min: 4, max: 4 },
     },
   },
 
-  // 11. TREASURE HUNT
+  // ============================================================================
+  // 11. TREASURE HUNT - Extended Quest Structure
+  // ============================================================================
   {
     id: 'treasure-hunt',
     name: 'Treasure Hunt',
-    description: 'Quest narratives driven by the pursuit of legendary artifacts, maps, and hidden treasures',
-    tags: ['artifact', 'quest', 'adventure', 'discovery'],
+    description: 'The journey is the story - multiple trials, each testing something different, building to discovery',
+    tags: ['quest', 'trials', 'adventure'],
     format: 'story',
 
-    narrativeInstructions: `This is a quest for a legendary object. The treasure itself is a character - its history, power, and mystery drive the narrative. The seeker pursues it with singular focus. The guardian protects it. Rivals compete. The resting-place holds its secrets.
+    narrativeInstructions: `STRUCTURE: QUEST WITH TRIALS
+More scenes than other styles. The journey matters as much as the destination. Each trial tests something different; the seeker is transformed by the seeking.
 
-Scene Progression:
-1. THE LEGEND: The treasure must be established as worth pursuing. Perhaps a rumor, a dying mentor's revelation, a fragment of map, or a vision. The seeker should have both personal and practical reasons to seek it. Establish what rivals or guardians stand in the way. Begin with wonder at what the treasure might be, end with determination to find it.
+=== SCENE 1: THE LEGEND ===
+The treasure must be established as worth pursuing. Not just valuable - meaningful. A rumor, a dying mentor's revelation, a fragment of map.
 
-2. THE TRAIL: Each scene brings the seeker closer while revealing more about the treasure's nature and history. Clues should be physical - inscriptions, old texts, previous seekers' remains. Rivals may appear or close in. The trail passes through varied locations toward the resting-place. Include at least one false lead or trap. Begin in pursuit, face setbacks that test resolve, arrive at breakthrough when the path becomes clear.
+Establish the seeker's motivation - both practical (what they'll gain) and personal (why THEY must seek this). Establish the rival or guardian if present.
 
-3. THE DISCOVERY: Finding the treasure in its resting-place should be a moment of awe and danger. The object should exceed or subvert expectations. The guardian may present a test or a terrible choice. The treasure's power should be demonstrated, not just described. Begin in anticipation as the seeker nears the goal, break into awe at the discovery, face the consequences of claiming it.
+End with departure. The ordinary world left behind.
 
-4. THE CHOICE: Possessing the treasure changes everything. Does the seeker keep it? Destroy it? Pass it on? The rival's fate may be sealed. The ending should honor the quest's difficulty while acknowledging what was sacrificed. Move from temptation at the treasure's power through the weight of the choice to resolution.`,
+=== SCENES 2-4: THE TRIALS ===
+Three distinct challenges on the path to the treasure. Each should:
+- Test a different virtue (wit, will, sacrifice, trust, humility)
+- Reveal something about the seeker's character
+- Change the seeker in some way
+- Bring them closer to (or seemingly further from) the goal
 
-    proseInstructions: `Tone: adventurous, mysterious, reverent, driven, atmospheric.
+At least one trial should involve the rival. At least one should require sacrifice - giving something up to continue.
 
-Dialogue: Mix of excitement and caution. Seekers speak of the artifact with awe. Rivals with hunger.
+Trials are not just obstacles; they're teachers.
 
-Description: Rich detail for the artifact and its resting place. Age and power should be tangible. The artifact should be described with reverent precision - its materials, markings, weight, the way it feels. Locations should feel ancient and layered with history.
+=== SCENE 5: THE THRESHOLD ===
+The final barrier. The resting-place revealed. The guardian's test (if there is one).
 
-Pacing: Build anticipation toward the discovery. The finding should be a peak moment.
+The treasure discovered. This should be a moment of awe - and possibly terror. The object should exceed or subvert expectations. Show its power, its cost, its weight.
 
-World Elements:
-- Sites along the quest. The final resting place should feel ancient and significant.
-- THE CENTRAL FOCUS: The artifact drives everything. Its history, power, and mystery.
-- Legends and taboos about the artifact. What cultures believe about it.
-- When the artifact was made or lost. The age that created it.
+=== SCENE 6: THE CHOICE ===
+Possessing the treasure changes everything. What will the seeker do?
 
-Avoid: trivializing the artifact, easy victories, anticlimactic discovery, unexplained convenience.`,
+Keep it? Destroy it? Pass it on? Use it and accept the cost?
 
-    eventInstructions: 'Events mark stages of the hunt - clues discovered, dangers overcome, rivals encountered.',
+The ending should honor the difficulty of the journey. The seeker is not who they were when they started.`,
+
+    proseInstructions: `TONE: Adventurous, reverent, driven. Wonder at the world's hidden places. Respect for the treasure's power.
+
+DIALOGUE: Seekers speak of the treasure with awe or hunger. Guardians speak in riddles or challenges. Rivals speak with competing claim.
+
+DESCRIPTION: Rich detail for the treasure and its resting-place. Age and power should be tangible. The artifact described with precision - materials, markings, weight, the way light interacts with it. Locations should feel ancient, layered, earned.
+
+TECHNIQUE - THE TRIAL'S LESSON: Each trial teaches something the seeker will need later. The connection may not be obvious until the final scenes.
+
+TECHNIQUE - THE WORTHY SEEKER: The journey should change the seeker. They should earn the treasure not through strength but through becoming someone capable of possessing it.
+
+TECHNIQUE - THE WEIGHT OF DISCOVERY: The moment of finding should be emotional peak. Spend time on it. The reader should feel the accumulated weight of the journey.
+
+AVOID: Easy victories. Luck over virtue. Anticlimactic discovery. Treasure that's just valuable rather than meaningful.`,
+
+    eventInstructions: 'Events are trials and revelations. Each advances the journey and tests the seeker.',
 
     roles: [
-      { role: 'treasure', count: { min: 1, max: 1 }, description: 'The artifact being sought - legendary, powerful, desired' },
-      { role: 'seeker', count: { min: 1, max: 2 }, description: 'Those who pursue the artifact - driven by need, greed, or duty' },
-      { role: 'guardian', count: { min: 0, max: 1 }, description: 'What protects the artifact - creature, trap, or curse' },
-      { role: 'rival', count: { min: 0, max: 1 }, description: 'Competing seeker with their own claim or need' },
-      { role: 'resting-place', count: { min: 0, max: 1 }, description: 'Where the artifact lies hidden - tomb, vault, or forgotten shrine' },
+      { role: 'treasure', count: { min: 1, max: 1 }, description: 'The artifact sought - not just valuable but meaningful, with history and power' },
+      { role: 'seeker', count: { min: 1, max: 2 }, description: 'Those who pursue - defined by why they seek and what they\'ll sacrifice' },
+      { role: 'guardian', count: { min: 0, max: 1 }, description: 'What protects the treasure - may be creature, trap, curse, or test' },
+      { role: 'rival', count: { min: 0, max: 1 }, description: 'Competing seeker - their presence raises stakes and reveals character' },
+      { role: 'resting-place', count: { min: 0, max: 1 }, description: 'Where the treasure waits - the final destination, earned' },
     ],
 
     pacing: {
-      totalWordCount: { min: 1600, max: 2200 },
-      sceneCount: { min: 4, max: 5 },
+      totalWordCount: { min: 1800, max: 2400 },
+      sceneCount: { min: 5, max: 6 },
     },
   },
 
-  // 12. HAUNTED RELIC
+  // ============================================================================
+  // 12. HAUNTED RELIC - Dual Timeline Structure
+  // ============================================================================
   {
     id: 'haunted-relic',
     name: 'Haunted Relic',
-    description: 'Horror narratives centered on cursed objects that bring doom to their possessors',
-    tags: ['artifact', 'horror', 'curse', 'supernatural'],
+    description: 'Alternating past and present - the curse\'s origin and its current manifestation intercut',
+    tags: ['horror', 'dual-timeline', 'curse'],
     format: 'story',
 
-    narrativeInstructions: `This is a horror story where the cursed-artifact is the antagonist. The curse unfolds slowly, inevitably. The victim suffers its effects. Previous-owners foreshadow the fate to come. The curse-source explains the malevolence.
+    narrativeInstructions: `STRUCTURE: DUAL TIMELINE
+Past and present given equal weight. The curse's origin and its current manifestation illuminate each other. Each timeline is incomplete alone; together they reveal the full horror.
 
-Scene Progression:
-1. THE ACQUISITION: The cursed-artifact comes into the victim's possession in a way that seems fortunate - inheritance, discovery, purchase, gift. There may be subtle warnings the victim ignores. The cursed-artifact should seem beautiful or valuable at first. Begin with pleasure at the acquisition, let unease creep in as something feels wrong.
+=== SCENE 1 (PRESENT): ACQUISITION ===
+The artifact comes into the victim's possession. It seems fortunate - inheritance, discovery, gift, purchase. Something feels slightly wrong but is easily dismissed.
 
-2. THE MANIFESTATION: Small wrongnesses accumulate. Dreams change. Relationships strain. Physical symptoms appear. The victim may not connect these to the cursed-artifact at first. When they do, they try rational explanations. Begin in confusion about what's happening, move through fear as the pattern becomes clear, end in denial that the cursed-artifact could be responsible.
+Establish the victim's normal life - what they have to lose.
 
-3. THE REVELATION: Investigation reveals the cursed-artifact's history - previous-owners and their fates. The curse-source may be discovered. The curse has rules that become clear through pattern. Perhaps there's a way to break it, but the cost is terrible. Begin with investigation into the cursed-artifact's past, move through horror as the truth emerges, arrive at despair when the victim understands their fate.
+=== SCENE 2 (PAST): ORIGIN ===
+How the curse was laid. Who was wronged. What made this object terrible.
 
-4. THE RECKONING: The curse reaches its peak. The victim must make an impossible choice - bear the curse, pass it on, or attempt a dangerous breaking. Whatever the outcome, there should be a sense that the cursed-artifact will find new victims. Move from desperation as time runs out, through whatever sacrifice is made, to the aftermath that shows the curse's continuation.`,
+This should be a complete mini-story - sympathetic or horrifying, but understandable. The curse has logic, even if it's terrible logic.
 
-    proseInstructions: `Tone: dread, creeping, wrong, inevitable, beautiful-terrible.
+=== SCENE 3 (PRESENT): MANIFESTATION ===
+The curse affecting the victim. Small wrongnesses accumulating - dreams, relationships, body. The pattern from Scene 2 beginning to repeat.
 
-Dialogue: Characters speak around the horror. Euphemisms. Denial. The artifact is discussed with nervous deflection.
+The victim may not yet connect this to the artifact.
 
-Description: Sensory wrongness. The artifact feels, sounds, smells slightly off. Cumulative unease. The artifact should feel wrong in subtle ways - too cold, too heavy, too present. Horror comes from accumulation of small details. The artifact's beauty makes its corruption more terrible.
+=== SCENE 4 (PAST): THE CYCLE ===
+A previous owner. Their fate. The pattern that the victim is now entering.
 
-Pacing: Slow build. Small details accumulate. Horror should creep, not jump.
+Now the reader sees the full shape: origin, previous victim, current victim. The repetition is the horror.
 
-World Elements:
-- THE ANTAGONIST: The artifact has presence, history, and malevolent purpose.
-- Superstitions and warnings about cursed objects. Ritual protections that fail.
-- When the curse was laid. What wrong created this doom.
+=== SCENE 5 (PRESENT): RECKONING ===
+The victim understands. They've seen (or learned) the pattern from the past. They know what's coming.
 
-Avoid: jump scares, gore without meaning, easy cures, heroes who don't suffer.`,
+Choice: bear it, pass it on, attempt to break it. Whatever the outcome, the artifact survives. The cycle will continue.`,
 
-    eventInstructions: 'Events are manifestations of the curse - deaths, madness, destruction. Each should escalate.',
+    proseInstructions: `TONE: Creeping dread, wrong, beautiful-terrible. Past scenes may have different texture than present (more formal? more vivid?).
+
+DIALOGUE: Present-day characters talk around the horror - euphemism, denial, nervous deflection. Past characters may be more direct; they're already lost.
+
+DESCRIPTION: Sensory wrongness. The artifact feels, sounds, smells slightly off. Cumulative unease. The horror is in accumulation of small details, not sudden shocks.
+
+TECHNIQUE - TIMELINE RHYME: Past and present scenes should echo. Same phrases in different mouths. Same gestures across centuries. Same doomed hope.
+
+TECHNIQUE - THE PATTERN: By Scene 4, the reader should be able to predict Scene 5. The inevitability is the horror.
+
+TECHNIQUE - BEAUTIFUL TERRIBLE: The artifact should be beautiful or valuable. Its appeal makes the curse worse. We understand why people keep taking it.
+
+AVOID: Jump scares. Gore without meaning. Easy cures. Heroes who don't suffer. The curse must cost.`,
+
+    eventInstructions: 'Events are manifestations of the curse across time. Past events foreshadow; present events echo.',
 
     roles: [
-      { role: 'cursed-artifact', count: { min: 1, max: 1 }, description: 'The object bearing the curse - beautiful and terrible' },
-      { role: 'victim', count: { min: 1, max: 2 }, description: 'Current possessor suffering the curse effects' },
-      { role: 'previous-owner', count: { min: 0, max: 2 }, description: 'Past victims whose fates foreshadow the present' },
-      { role: 'curse-source', count: { min: 0, max: 1 }, description: 'Origin of the curse - wronged spirit, dark magic, or malevolent power' },
+      { role: 'artifact', count: { min: 1, max: 1 }, description: 'The cursed object - beautiful and terrible, its appeal is part of the trap' },
+      { role: 'victim', count: { min: 1, max: 1 }, description: 'Present-day possessor - we watch them enter the pattern' },
+      { role: 'origin', count: { min: 0, max: 1 }, description: 'Who or what created the curse - the wronged, the sacrifice, the malevolence' },
+      { role: 'previous-owner', count: { min: 1, max: 2 }, description: 'Past victims whose fate foreshadows the present' },
     ],
 
     pacing: {
-      totalWordCount: { min: 1500, max: 2000 },
-      sceneCount: { min: 4, max: 5 },
+      totalWordCount: { min: 1600, max: 2000 },
+      sceneCount: { min: 5, max: 5 },
     },
   },
 
-  // 13. LOST LEGACY
+  // ============================================================================
+  // 13. LOST LEGACY - Generational Mosaic Structure
+  // ============================================================================
   {
     id: 'lost-legacy',
     name: 'Lost Legacy',
-    description: 'Inheritance narratives exploring what artifacts mean across generations',
-    tags: ['artifact', 'inheritance', 'family', 'history'],
+    description: 'Multiple generations, no privileged present - the artifact is the protagonist, carrying meaning through time',
+    tags: ['generational', 'mosaic', 'inheritance'],
     format: 'story',
 
-    narrativeInstructions: `This is a story about what objects carry across time. The heirloom connects generations, and the narrative moves between past and present. The inheritor must reckon with what they've received. Ancestors shaped the heirloom's meaning. Claimants may dispute ownership. Family-traditions define what the heirloom demands.
+    narrativeInstructions: `STRUCTURE: GENERATIONAL MOSAIC
+The artifact is the protagonist. Each scene is a different generation - a complete mini-story showing what the artifact meant in that time. No single "present" is privileged; all generations are equally real.
 
-Scene Progression:
-1. THE INHERITANCE: The inheritor receives or discovers the heirloom connected to their lineage. It may come with expectations, secrets, or obligations defined by family-tradition. Begin with the grief or surprise of receiving the heirloom, end with the weight of responsibility settling on the inheritor.
+=== SCENE 1: FIRST GENERATION ===
+The artifact's origin or first significant moment in the lineage. A complete mini-story - character, conflict, resolution - but brief.
 
-2. THE ANCESTOR'S STORY: Flashbacks or discovered records reveal how ancestors acquired and used the heirloom. Each generation added meaning. The object accumulated purpose, stain, or power. These stories should illuminate the present. Begin with discovery of the ancestor's connection to the heirloom, move through understanding of what it meant to them, arrive at complications that echo in the present.
+What did the artifact mean to this generation? What did they add to its meaning? How did it come to pass on?
 
-3. THE PRESENT CRISIS: The inheritor must decide what to do with this legacy. Keep faith with ancestors? Reject their choices? Transform the heirloom's meaning? Claimants may have different views. Family-traditions may demand specific actions. Begin with conflict over the heirloom's fate, move through the decision the inheritor makes, end with action taken.
+=== SCENE 2: MIDDLE GENERATION ===
+A different time. The artifact has traveled - years, decades, maybe centuries. The world has changed. The artifact means something different now.
 
-4. THE PASSING ON: The heirloom passes on again - to the next generation, to a new purpose, or to destruction. The story should acknowledge both continuity and change. What the ancestors intended meets what the inheritor chooses. Move from resolution of the crisis toward either continuity of tradition or closure that ends it.`,
+Another complete mini-story. Different character, different conflict. But echoes of the first - same object, evolved meaning.
 
-    proseInstructions: `Tone: generational, layered, weighted, familial, bittersweet.
+=== SCENE 3: LATER GENERATION ===
+Still later. The pattern visible now. What the artifact carries across time - not just material but meaning, obligation, curse, blessing.
 
-Dialogue: Family speaks in echoes. Similar phrases across generations. Expectations unspoken.
+The reader sees the through-line. Each generation added something. The artifact is layered with history.
 
-Description: The artifact described differently in each time period. Show how meaning changes. Family dynamics matter as much as the object itself.
+=== SCENE 4: THE CURRENT HOLDER ===
+The most recent generation. Briefer than the others - not privileged, just the current moment in an ongoing story.
 
-Pacing: Balance past and present. Neither should overwhelm. Let time periods illuminate each other.
+The current holder faces a choice that acknowledges all that came before. Keep faith? Transform the meaning? End the line?
 
-World Elements:
-- Family lands, ancestral homes. Places where memory lives.
-- THE THREAD connecting everything: The artifact is the physical manifestation of family.
-- Inheritance customs. What families owe their dead.
-- Different eras show different meanings of the same object.
+The artifact passes on (or is destroyed, or is transformed). The story doesn't end - it just leaves our view.`,
 
-Avoid: sentimentality, simple answers, villainous ancestors without nuance, ignoring the artifact.`,
+    proseInstructions: `TONE: Generational, layered, bittersweet. Each generation has its own texture - vocabulary, concerns, relationship to the past.
 
-    eventInstructions: 'Events span generations. Deaths that transfer the artifact, moments that changed its meaning.',
+DIALOGUE: Family speaks in echoes. Phrases passed down. Expectations unspoken. The artifact discussed differently in each era.
+
+DESCRIPTION: The artifact described differently in each generation. Same object, different seeing. What one generation treasured, another might resent. What one polished, another let tarnish.
+
+TECHNIQUE - GENERATION VOICES: Each scene should feel like its era. Not just vocabulary but concerns, assumptions, what's normal and what's strange.
+
+TECHNIQUE - THE ECHO: Moments should rhyme across generations. Same gesture, different meaning. Same choice, different outcome. The repetition reveals the pattern.
+
+TECHNIQUE - THE ARTIFACT'S JOURNEY: Track what happens to the artifact between scenes. It may be treasured, neglected, lost and found, modified, restored. Its physical state tells a story.
+
+AVOID: Privileging one generation as "the real story." Sentimentality about ancestors. Simple inheritance (good artifact from good ancestors). The artifact should be complicated.`,
+
+    eventInstructions: 'Events span generations. What happened to the artifact? How did it pass? What moments changed its meaning?',
 
     roles: [
-      { role: 'heirloom', count: { min: 1, max: 1 }, description: 'The artifact passed through generations' },
-      { role: 'inheritor', count: { min: 1, max: 1 }, description: 'Current generation receiving the legacy' },
-      { role: 'ancestor', count: { min: 1, max: 2 }, description: 'Past family members whose stories illuminate the heirloom' },
-      { role: 'claimant', count: { min: 0, max: 1 }, description: 'Others who believe they have right to the artifact' },
-      { role: 'family-tradition', count: { min: 0, max: 1 }, description: 'The customs or obligations attached to the heirloom' },
+      { role: 'artifact', count: { min: 1, max: 1 }, description: 'The object that passes through time - the true protagonist, carrying accumulated meaning' },
+      { role: 'first-generation', count: { min: 1, max: 1 }, description: 'Origin point - who made it, found it, first held it' },
+      { role: 'middle-generation', count: { min: 1, max: 2 }, description: 'Those between - who carried, changed, lost, or saved it' },
+      { role: 'current-holder', count: { min: 1, max: 1 }, description: 'Present moment - facing the choice of what to do with inherited meaning' },
     ],
 
     pacing: {
-      totalWordCount: { min: 1600, max: 2200 },
-      sceneCount: { min: 4, max: 5 },
+      totalWordCount: { min: 1600, max: 2000 },
+      sceneCount: { min: 4, max: 4 },
     },
   },
 ];
