@@ -138,7 +138,6 @@ export default function DynamicsGenerationModal({
   onCancel,
 }) {
   const [feedback, setFeedback] = useState('');
-  const [exportStatus, setExportStatus] = useState('');
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to bottom on new messages
@@ -294,35 +293,6 @@ export default function DynamicsGenerationModal({
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-            {exportStatus && (
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{exportStatus}</span>
-            )}
-            {isReviewable && run.proposedDynamics?.length > 0 && (
-              <button
-                onClick={() => {
-                  const json = JSON.stringify(run.proposedDynamics, null, 2);
-                  navigator.clipboard.writeText(json).then(
-                    () => { setExportStatus('Copied to clipboard'); setTimeout(() => setExportStatus(''), 2000); },
-                    () => {
-                      // Fallback: download as file
-                      const blob = new Blob([json], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `dynamics-${new Date().toISOString().slice(0, 10)}.json`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      setExportStatus('Downloaded');
-                      setTimeout(() => setExportStatus(''), 2000);
-                    }
-                  );
-                }}
-                className="illuminator-button illuminator-button-secondary"
-                style={{ padding: '6px 16px', fontSize: '12px' }}
-              >
-                Export JSON
-              </button>
-            )}
             {(isReviewable || isFailed) && (
               <button
                 onClick={handleSubmitFeedback}

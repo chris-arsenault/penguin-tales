@@ -854,16 +854,38 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange,
         <div className="illuminator-card">
           <div className="illuminator-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 className="illuminator-card-title">World Dynamics</h2>
-            {onGenerateDynamics && (
-              <button
-                onClick={onGenerateDynamics}
-                disabled={isGeneratingDynamics}
-                className="illuminator-button illuminator-button-secondary"
-                style={{ padding: '4px 12px', fontSize: '11px' }}
-              >
-                {isGeneratingDynamics ? 'Generating...' : 'Generate from Lore'}
-              </button>
-            )}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {(worldContext.worldDynamics?.length > 0) && (
+                <button
+                  onClick={() => {
+                    const json = JSON.stringify(worldContext.worldDynamics, null, 2);
+                    navigator.clipboard.writeText(json).catch(() => {
+                      const blob = new Blob([json], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `dynamics-${new Date().toISOString().slice(0, 10)}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    });
+                  }}
+                  className="illuminator-button illuminator-button-secondary"
+                  style={{ padding: '4px 12px', fontSize: '11px' }}
+                >
+                  Export JSON
+                </button>
+              )}
+              {onGenerateDynamics && (
+                <button
+                  onClick={onGenerateDynamics}
+                  disabled={isGeneratingDynamics}
+                  className="illuminator-button illuminator-button-secondary"
+                  style={{ padding: '4px 12px', fontSize: '11px' }}
+                >
+                  {isGeneratingDynamics ? 'Generating...' : 'Generate from Lore'}
+                </button>
+              )}
+            </div>
           </div>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
             Higher-level narrative context about inter-group forces and behaviors.
