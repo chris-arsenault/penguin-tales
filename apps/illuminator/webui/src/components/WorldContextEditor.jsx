@@ -737,7 +737,7 @@ function EditableList({ items, onChange, placeholder }) {
   );
 }
 
-export default function WorldContextEditor({ worldContext, onWorldContextChange, eras, onGenerateDynamics, isGeneratingDynamics, onStartRevision, isRevising }) {
+export default function WorldContextEditor({ worldContext, onWorldContextChange, eras, onGenerateDynamics, isGeneratingDynamics }) {
   const updateField = useCallback(
     (field, value) => {
       onWorldContextChange({ [field]: value });
@@ -883,16 +883,6 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange,
                   style={{ padding: '4px 12px', fontSize: '11px' }}
                 >
                   {isGeneratingDynamics ? 'Generating...' : 'Generate from Lore'}
-                </button>
-              )}
-              {onStartRevision && (
-                <button
-                  onClick={onStartRevision}
-                  disabled={isRevising}
-                  className="illuminator-button illuminator-button-secondary"
-                  style={{ padding: '4px 12px', fontSize: '11px' }}
-                >
-                  {isRevising ? 'Revising...' : 'Revise Summaries'}
                 </button>
               )}
             </div>

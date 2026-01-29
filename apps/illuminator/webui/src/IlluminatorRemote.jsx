@@ -1494,6 +1494,8 @@ export default function IlluminatorRemote({
               styleSelection={styleSelection}
               onStyleSelectionChange={setStyleSelection}
               prominenceScale={prominenceScale}
+              onStartRevision={handleStartRevision}
+              isRevising={isRevisionActive}
             />
           </div>
         )}
@@ -1535,8 +1537,6 @@ export default function IlluminatorRemote({
               eras={eraTemporalInfo}
               onGenerateDynamics={handleGenerateDynamics}
               isGeneratingDynamics={isDynamicsActive}
-              onStartRevision={handleStartRevision}
-              isRevising={isRevisionActive}
             />
           </div>
         )}

@@ -413,6 +413,8 @@ export default function EntityBrowser({
   styleSelection,
   onStyleSelectionChange,
   prominenceScale,
+  onStartRevision,
+  isRevising,
 }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [filters, setFilters] = useState({
@@ -1129,6 +1131,15 @@ export default function EntityBrowser({
               </span>
             )}
           </button>
+          {onStartRevision && (
+            <button
+              onClick={onStartRevision}
+              disabled={isRevising}
+              className="illuminator-button illuminator-button-secondary"
+            >
+              {isRevising ? 'Revising...' : 'Revise Summaries'}
+            </button>
+          )}
         </div>
       </div>
 
