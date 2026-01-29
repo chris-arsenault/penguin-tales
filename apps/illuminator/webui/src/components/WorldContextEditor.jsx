@@ -737,7 +737,7 @@ function EditableList({ items, onChange, placeholder }) {
   );
 }
 
-export default function WorldContextEditor({ worldContext, onWorldContextChange, eras, onGenerateDynamics, isGeneratingDynamics }) {
+export default function WorldContextEditor({ worldContext, onWorldContextChange, eras, onGenerateDynamics, isGeneratingDynamics, onStartRevision, isRevising }) {
   const updateField = useCallback(
     (field, value) => {
       onWorldContextChange({ [field]: value });
@@ -859,15 +859,15 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange,
                 <button
                   onClick={() => {
                     const json = JSON.stringify(worldContext.worldDynamics, null, 2);
-                    navigator.clipboard.writeText(json).catch(() => {
-                      const blob = new Blob([json], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `dynamics-${new Date().toISOString().slice(0, 10)}.json`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    });
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `dynamics-${new Date().toISOString().slice(0, 10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
                   }}
                   className="illuminator-button illuminator-button-secondary"
                   style={{ padding: '4px 12px', fontSize: '11px' }}
@@ -883,6 +883,16 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange,
                   style={{ padding: '4px 12px', fontSize: '11px' }}
                 >
                   {isGeneratingDynamics ? 'Generating...' : 'Generate from Lore'}
+                </button>
+              )}
+              {onStartRevision && (
+                <button
+                  onClick={onStartRevision}
+                  disabled={isRevising}
+                  className="illuminator-button illuminator-button-secondary"
+                  style={{ padding: '4px 12px', fontSize: '11px' }}
+                >
+                  {isRevising ? 'Revising...' : 'Revise Summaries'}
                 </button>
               )}
             </div>

@@ -219,26 +219,45 @@ function buildInitialContext(config: DynamicsGenerationConfig): string {
   }
 
   // World state: Entity summaries grouped by kind
+  // Sort by prominence so the most important entities appear first
+  const prominenceOrder: Record<string, number> = { mythic: 0, renowned: 1, recognized: 2, marginal: 3, forgotten: 4 };
+  const sortedEntities = [...config.entities].sort((a, b) =>
+    (prominenceOrder[a.prominence] ?? 5) - (prominenceOrder[b.prominence] ?? 5)
+  );
+
   const byKind = new Map<string, EntityContext[]>();
-  for (const e of config.entities) {
+  for (const e of sortedEntities) {
     const list = byKind.get(e.kind) || [];
     list.push(e);
     byKind.set(e.kind, list);
   }
 
+  const formatEntity = (e: EntityContext, kind: string): string => {
+    const parts = [`${e.name}`];
+    if (e.subtype) parts[0] += ` (${e.subtype})`;
+    if (kind === 'era') parts.push(`id: ${e.id}`);
+    parts.push(`prominence: ${e.prominence}`);
+    if (e.culture) parts.push(`culture: ${e.culture}`);
+    if (e.status && e.status !== 'active') parts.push(`status: ${e.status}`);
+    const text = e.summary || e.description || '';
+    if (text) parts.push(text);
+    return `- ${parts.join(' | ')}`;
+  };
+
+  // Prominent entities get full summaries; marginal/forgotten get name-only lists
   const entitySections: string[] = [];
   for (const [kind, entities] of byKind.entries()) {
-    const lines = entities.map((e) => {
-      const parts = [`${e.name}`];
-      if (e.subtype) parts[0] += ` (${e.subtype})`;
-      // Include IDs for eras so the LLM can reference them in eraOverrides
-      if (kind === 'era') parts.push(`id: ${e.id}`);
-      if (e.culture) parts.push(`culture: ${e.culture}`);
-      if (e.status && e.status !== 'active') parts.push(`status: ${e.status}`);
-      const text = e.summary || e.description || '';
-      if (text) parts.push(text);
-      return `- ${parts.join(' | ')}`;
-    });
+    const prominent = entities.filter((e) => e.prominence !== 'marginal' && e.prominence !== 'forgotten');
+    const minor = entities.filter((e) => e.prominence === 'marginal' || e.prominence === 'forgotten');
+
+    const lines: string[] = [];
+    if (prominent.length > 0) {
+      lines.push(...prominent.map((e) => formatEntity(e, kind)));
+    }
+    if (minor.length > 0) {
+      const names = minor.map((e) => e.name).join(', ');
+      lines.push(`- [${minor.length} minor]: ${names}`);
+    }
     entitySections.push(`### ${kind} (${entities.length})\n${lines.join('\n')}`);
   }
 
