@@ -30,10 +30,12 @@ import StyleLibraryEditor from './components/StyleLibraryEditor';
 import StaticPagesPanel from './components/StaticPagesPanel';
 import DynamicsGenerationModal from './components/DynamicsGenerationModal';
 import SummaryRevisionModal from './components/SummaryRevisionModal';
+import RevisionFilterModal from './components/RevisionFilterModal';
 import { useEnrichmentQueue } from './hooks/useEnrichmentQueue';
 import { useDynamicsGeneration } from './hooks/useDynamicsGeneration';
 import { useSummaryRevision } from './hooks/useSummaryRevision';
 import { getPublishedStaticPagesForProject } from './lib/staticPageStorage';
+import { getEntityUsageStats } from './lib/chronicleStorage';
 import { useStyleLibrary } from './hooks/useStyleLibrary';
 import {
   buildDescriptionPromptFromGuidance,
@@ -1207,8 +1209,41 @@ export default function IlluminatorRemote({
     cancelRevision,
   } = useSummaryRevision(enqueue, getEntityContextsForRevision);
 
-  const handleStartRevision = useCallback(async () => {
+  // Revision filter modal state
+  const [revisionFilter, setRevisionFilter] = useState({
+    open: false,
+    totalEligible: 0,
+    usedInChronicles: 0,
+    chronicleEntityIds: new Set(),
+  });
+
+  const handleOpenRevisionFilter = useCallback(async () => {
     if (!projectId || !simulationRunId) return;
+
+    const eligible = entities.filter((e) => e.summary && e.description && !e.lockedSummary);
+
+    let chronicleEntityIds = new Set();
+    try {
+      const usageStats = await getEntityUsageStats(simulationRunId);
+      chronicleEntityIds = new Set(usageStats.keys());
+    } catch (err) {
+      console.warn('[Revision] Failed to load chronicle usage stats:', err);
+    }
+
+    const usedInChronicles = eligible.filter((e) => chronicleEntityIds.has(e.id)).length;
+
+    setRevisionFilter({
+      open: true,
+      totalEligible: eligible.length,
+      usedInChronicles,
+      chronicleEntityIds,
+    });
+  }, [projectId, simulationRunId, entities]);
+
+  const handleStartRevision = useCallback(async (excludeChronicleEntities) => {
+    if (!projectId || !simulationRunId) return;
+
+    setRevisionFilter((prev) => ({ ...prev, open: false }));
 
     // Load static pages for lore context
     let staticPagesContext = '';
@@ -1236,9 +1271,13 @@ export default function IlluminatorRemote({
     // Build schema context
     const schemaContext = buildSchemaContext(worldSchema);
 
-    // Build entity contexts — exclude locked summary entities
+    // Build entity contexts — exclude locked and optionally chronicle-used entities
     const revisionEntities = entities
-      .filter((e) => e.summary && e.description && !e.lockedSummary)
+      .filter((e) => {
+        if (!e.summary || !e.description || e.lockedSummary) return false;
+        if (excludeChronicleEntities && revisionFilter.chronicleEntityIds.has(e.id)) return false;
+        return true;
+      })
       .map((e) => {
         const rels = (relationshipsByEntity.get(e.id) || []).slice(0, 8).map((rel) => {
           const targetId = rel.src === e.id ? rel.dst : rel.src;
@@ -1274,7 +1313,7 @@ export default function IlluminatorRemote({
       revisionGuidance: '',
       entities: revisionEntities,
     });
-  }, [projectId, simulationRunId, worldContext, worldSchema, entities, entityById, relationshipsByEntity, prominenceScale, startRevision]);
+  }, [projectId, simulationRunId, worldContext, worldSchema, entities, entityById, relationshipsByEntity, prominenceScale, startRevision, revisionFilter.chronicleEntityIds]);
 
   const handleAcceptRevision = useCallback(() => {
     const patches = applyAcceptedPatches();
@@ -1494,7 +1533,7 @@ export default function IlluminatorRemote({
               styleSelection={styleSelection}
               onStyleSelectionChange={setStyleSelection}
               prominenceScale={prominenceScale}
-              onStartRevision={handleStartRevision}
+              onStartRevision={handleOpenRevisionFilter}
               isRevising={isRevisionActive}
             />
           </div>
@@ -1648,6 +1687,15 @@ export default function IlluminatorRemote({
         onSubmitFeedback={submitDynamicsFeedback}
         onAccept={acceptDynamics}
         onCancel={cancelDynamicsGeneration}
+      />
+
+      {/* Revision Filter Modal (pre-step) */}
+      <RevisionFilterModal
+        isOpen={revisionFilter.open}
+        totalEligible={revisionFilter.totalEligible}
+        usedInChronicles={revisionFilter.usedInChronicles}
+        onStart={handleStartRevision}
+        onCancel={() => setRevisionFilter((prev) => ({ ...prev, open: false }))}
       />
 
       {/* Summary Revision Modal */}
