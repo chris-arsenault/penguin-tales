@@ -227,6 +227,8 @@ export type QueueItem = EnrichmentTaskPayload & {
 export type ChronicleStep =
   | 'generate_v2'  // Single-shot generation
   | 'regenerate_temperature' // Re-run chronicle generation with prior prompts
+  | 'compare'  // Compare all versions (produces report, no new draft)
+  | 'combine'  // Combine all versions into a new draft
   | 'validate'
   | 'edit'
   | 'summary'

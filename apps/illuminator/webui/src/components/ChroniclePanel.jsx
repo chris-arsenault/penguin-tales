@@ -24,7 +24,7 @@ import {
 } from '../lib/chronicleStorage';
 import { downloadChronicleExport } from '../lib/chronicleExport';
 
-const REFINEMENT_STEPS = new Set(['summary', 'image_refs']);
+const REFINEMENT_STEPS = new Set(['summary', 'image_refs', 'compare', 'combine']);
 const NAV_PAGE_SIZE = 10;
 
 // Badge colors for chronicle-first display
@@ -49,9 +49,6 @@ const STATUS_OPTIONS = [
   { value: 'not_started', label: 'Not started' },
   { value: 'generating', label: 'Generating' },
   { value: 'assembly_ready', label: 'Assembly ready' },
-  { value: 'editing', label: 'Editing' },
-  { value: 'validating', label: 'Validating' },
-  { value: 'validation_ready', label: 'Review' },
   { value: 'failed', label: 'Failed' },
   { value: 'complete', label: 'Complete' },
 ];
@@ -300,6 +297,8 @@ export default function ChroniclePanel({
     generateSummary,
     generateImageRefs,
     regenerateWithTemperature,
+    compareVersions,
+    combineVersions,
     acceptChronicle,
     cancelChronicle,
     restartChronicle,
@@ -427,6 +426,10 @@ export default function ChroniclePanel({
         // V2-specific
         selectionSummary: chronicle.selectionSummary,
         perspectiveSynthesis: chronicle.perspectiveSynthesis,
+
+        // Comparison report
+        comparisonReport: chronicle.comparisonReport,
+        comparisonReportGeneratedAt: chronicle.comparisonReportGeneratedAt,
 
         // Refinement fields
         summary: chronicle.summary,
@@ -634,6 +637,12 @@ export default function ChroniclePanel({
         model: selectedItem.imageRefsModel,
         running: isRunning('image_refs'),
       },
+      compare: {
+        running: isRunning('compare'),
+      },
+      combine: {
+        running: isRunning('combine'),
+      },
     };
   }, [selectedItem, queue]);
 
@@ -745,6 +754,16 @@ export default function ChroniclePanel({
     const clamped = Math.min(1, Math.max(0, Number(temperature)));
     regenerateWithTemperature(selectedItem.chronicleId, clamped);
   }, [selectedItem, regenerateWithTemperature]);
+
+  const handleCompareVersions = useCallback(() => {
+    if (!selectedItem) return;
+    compareVersions(selectedItem.chronicleId);
+  }, [selectedItem, compareVersions]);
+
+  const handleCombineVersions = useCallback(() => {
+    if (!selectedItem) return;
+    combineVersions(selectedItem.chronicleId);
+  }, [selectedItem, combineVersions]);
 
   // Handle regenerate (delete and go back to start screen) - uses restart modal
   const handleRegenerate = useCallback(() => {
@@ -1577,6 +1596,8 @@ export default function ChroniclePanel({
                   onGenerateSummary={handleGenerateSummary}
                   onGenerateImageRefs={handleGenerateImageRefs}
                   onRegenerateWithTemperature={handleRegenerateWithTemperature}
+                  onCompareVersions={handleCompareVersions}
+                  onCombineVersions={handleCombineVersions}
                   onGenerateChronicleImage={handleGenerateChronicleImage}
                   onResetChronicleImage={handleResetChronicleImage}
                   onUpdateChronicleAnchorText={handleUpdateChronicleAnchorText}

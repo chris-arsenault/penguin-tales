@@ -132,6 +132,10 @@ export interface ChronicleRecord {
   cohesionReport?: CohesionReport;
   validatedAt?: number;
 
+  // Version comparison report (user-triggered, text only)
+  comparisonReport?: string;
+  comparisonReportGeneratedAt?: number;
+
   // Refinements
   summary?: string;
   summaryGeneratedAt?: number;
@@ -357,7 +361,6 @@ export interface ChronicleMetadata {
 
   // Generation result
   assembledContent: string;
-  generationHistory?: ChronicleGenerationVersion[];
   selectionSummary: {
     entityCount: number;
     eventCount: number;
@@ -407,7 +410,6 @@ export async function createChronicle(
     generationSystemPrompt: metadata.generationSystemPrompt,
     generationUserPrompt: metadata.generationUserPrompt,
     generationTemperature: metadata.generationTemperature,
-    generationHistory: metadata.generationHistory,
     activeVersionId,
     status: 'assembly_ready',
     assembledContent: metadata.assembledContent,
@@ -707,6 +709,39 @@ export async function updateChronicleCohesion(
 
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle cohesion'));
+  });
+}
+
+/**
+ * Store a version comparison report (text analysis, no new draft).
+ */
+export async function updateChronicleComparisonReport(
+  chronicleId: string,
+  report: string
+): Promise<void> {
+  const db = await openChronicleDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as ChronicleRecord | undefined;
+      if (!record) {
+        reject(new Error(`Chronicle ${chronicleId} not found`));
+        return;
+      }
+
+      record.comparisonReport = report;
+      record.comparisonReportGeneratedAt = Date.now();
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to update comparison report'));
   });
 }
 

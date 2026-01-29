@@ -18,8 +18,8 @@ import type { PerspectiveSynthesisRecord } from '../../lib/chronicleTypes';
 import {
   createChronicle,
   type ChronicleRecord,
-  type ChronicleGenerationVersion,
   regenerateChronicleAssembly,
+  updateChronicleComparisonReport,
   updateChronicleSummary,
   updateChronicleImageRefs,
   updateChronicleFailure,
@@ -89,6 +89,14 @@ async function executeEntityChronicleTask(
 
   if (step === 'regenerate_temperature') {
     return executeTemperatureRegenerationStep(task, chronicleRecord, context);
+  }
+
+  if (step === 'compare') {
+    return executeCompareStep(task, chronicleRecord, context);
+  }
+
+  if (step === 'combine') {
+    return executeCombineStep(task, chronicleRecord, context);
   }
 
   if (step === 'summary') {
@@ -371,163 +379,43 @@ async function executeV2GenerationStep(
   const prompt = buildV2Prompt(chronicleContext, narrativeStyle, selection);
   const styleMaxTokens = getMaxTokensFromStyle(narrativeStyle);
   const systemPrompt = getV2SystemPrompt(narrativeStyle);
-  const baseTemperature = narrativeStyle.temperature ?? 0.85;
-  const temperatureA = baseTemperature;
-  const temperatureB = Math.min(1.0, baseTemperature + 0.2);
+    const generationCall = await runTextCall({
+      llmClient,
+      callType: 'chronicle.generation',
+      callConfig,
+      systemPrompt,
+      prompt,
+      temperature: narrativeStyle.temperature ?? 0.85,
+      autoMaxTokens: styleMaxTokens,
+    });
+  const result = generationCall.result;
 
-  // ==========================================================================
-  // VERSION A — Base temperature
-  // ==========================================================================
-  console.log(`[Worker] Generating Version A at temperature ${temperatureA}...`);
-  const genCallA = await runTextCall({
-    llmClient,
-    callType: 'chronicle.generation',
-    callConfig,
-    systemPrompt,
-    prompt,
-    temperature: temperatureA,
-    autoMaxTokens: styleMaxTokens,
-  });
-
-  console.log(`[Worker] V2 prompt length: ${prompt.length} chars, maxTokens: ${genCallA.budget.totalMaxTokens}`);
+  console.log(`[Worker] V2 prompt length: ${prompt.length} chars, maxTokens: ${generationCall.budget.totalMaxTokens}`);
 
   if (isAborted()) {
-    return { success: false, error: 'Task aborted', debug: genCallA.result.debug };
+    return { success: false, error: 'Task aborted', debug: result.debug };
   }
 
-  if (genCallA.result.error || !genCallA.result.text) {
+  if (result.error || !result.text) {
     return {
       success: false,
-      error: `V2 generation (Version A) failed: ${genCallA.result.error || 'No text returned'}`,
-      debug: genCallA.result.debug,
+      error: `V2 generation failed: ${result.error || 'No text returned'}`,
+      debug: result.debug,
     };
   }
-
-  const versionAText = genCallA.result.text;
-
-  // ==========================================================================
-  // VERSION B — Higher temperature
-  // ==========================================================================
-  console.log(`[Worker] Generating Version B at temperature ${temperatureB}...`);
-  const genCallB = await runTextCall({
-    llmClient,
-    callType: 'chronicle.generation',
-    callConfig,
-    systemPrompt,
-    prompt,
-    temperature: temperatureB,
-    autoMaxTokens: styleMaxTokens,
-  });
-
-  if (isAborted()) {
-    return { success: false, error: 'Task aborted', debug: genCallB.result.debug };
-  }
-
-  if (genCallB.result.error || !genCallB.result.text) {
-    return {
-      success: false,
-      error: `V2 generation (Version B) failed: ${genCallB.result.error || 'No text returned'}`,
-      debug: genCallB.result.debug,
-    };
-  }
-
-  const versionBText = genCallB.result.text;
-
-  // ==========================================================================
-  // COMBINE — Best elements of both versions
-  // ==========================================================================
-  console.log('[Worker] Combining versions A and B...');
-  const combineConfig = getCallConfig(config, 'chronicle.combine');
-  const combineResult = await executeCombineStep(
-    versionAText,
-    versionBText,
-    systemPrompt,
-    narrativeStyle,
-    llmClient,
-    combineConfig,
-  );
-
-  if (isAborted()) {
-    return { success: false, error: 'Task aborted' };
-  }
-
-  if (!combineResult.success || !combineResult.text) {
-    // If combine fails, fall back to Version A
-    console.warn(`[Worker] Combine failed (${combineResult.error}), falling back to Version A`);
-  }
-
-  const finalText = combineResult.text || versionAText;
 
   // Note: Wikilinks are NOT applied here - they are applied once at acceptance time
   // (in useChronicleGeneration.ts acceptChronicle) to avoid double-bracketing issues.
 
-  // Build generation history: store both source versions
-  const now = Date.now();
-  const generationHistory: ChronicleGenerationVersion[] = [
-    {
-      versionId: `versionA_${now}`,
-      generatedAt: now,
-      content: versionAText,
-      wordCount: versionAText.split(/\s+/).length,
-      model: callConfig.model,
-      temperature: temperatureA,
-      systemPrompt,
-      userPrompt: prompt,
-      cost: {
-        estimated: genCallA.estimate.estimatedCost,
-        actual: genCallA.usage.actualCost,
-        inputTokens: genCallA.usage.inputTokens,
-        outputTokens: genCallA.usage.outputTokens,
-      },
-    },
-    {
-      versionId: `versionB_${now}`,
-      generatedAt: now,
-      content: versionBText,
-      wordCount: versionBText.split(/\s+/).length,
-      model: callConfig.model,
-      temperature: temperatureB,
-      systemPrompt,
-      userPrompt: prompt,
-      cost: {
-        estimated: genCallB.estimate.estimatedCost,
-        actual: genCallB.usage.actualCost,
-        inputTokens: genCallB.usage.inputTokens,
-        outputTokens: genCallB.usage.outputTokens,
-      },
-    },
-  ];
-
-  // Calculate total cost (perspective + both generations + combine)
-  const combineCostActual = combineResult.usage?.actualCost ?? 0;
-  const combineCostEstimated = combineResult.usage?.estimatedCost ?? 0;
-  const combineCostInput = combineResult.usage?.inputTokens ?? 0;
-  const combineCostOutput = combineResult.usage?.outputTokens ?? 0;
-
+  // Calculate cost (always includes perspective synthesis)
   const cost = {
-    estimated:
-      perspectiveResult.usage.actualCost +
-      genCallA.estimate.estimatedCost +
-      genCallB.estimate.estimatedCost +
-      combineCostEstimated,
-    actual:
-      perspectiveResult.usage.actualCost +
-      genCallA.usage.actualCost +
-      genCallB.usage.actualCost +
-      combineCostActual,
-    inputTokens:
-      perspectiveResult.usage.inputTokens +
-      genCallA.usage.inputTokens +
-      genCallB.usage.inputTokens +
-      combineCostInput,
-    outputTokens:
-      perspectiveResult.usage.outputTokens +
-      genCallA.usage.outputTokens +
-      genCallB.usage.outputTokens +
-      combineCostOutput,
+    estimated: generationCall.estimate.estimatedCost + perspectiveResult.usage.actualCost,
+    actual: generationCall.usage.actualCost + perspectiveResult.usage.actualCost,
+    inputTokens: generationCall.usage.inputTokens + perspectiveResult.usage.inputTokens,
+    outputTokens: generationCall.usage.outputTokens + perspectiveResult.usage.outputTokens,
   };
 
-  // Save chronicle to assembled state
+  // Save chronicle directly to assembled state (single-shot generation)
   try {
     const focus = chronicleContext.focus;
     const existingChronicle = await getChronicle(chronicleId);
@@ -535,12 +423,13 @@ async function executeV2GenerationStep(
     const selectedEntityIds = existingChronicle?.selectedEntityIds ?? focus?.selectedEntityIds ?? [];
     const selectedEventIds = existingChronicle?.selectedEventIds ?? focus?.selectedEventIds ?? [];
     const selectedRelationshipIds = existingChronicle?.selectedRelationshipIds ?? focus?.selectedRelationshipIds ?? [];
+    // Prefer the context used to build the prompt so stored focal era matches generation.
     const temporalContext = chronicleContext.temporalContext ?? existingChronicle?.temporalContext;
 
     await createChronicle(chronicleId, {
       projectId: task.projectId,
       simulationRunId: task.simulationRunId,
-      model: combineConfig.model,
+      model: callConfig.model,
       title: existingChronicle?.title,
       format: existingChronicle?.format || narrativeStyle.format,
       narrativeStyleId: existingChronicle?.narrativeStyleId || narrativeStyle.id,
@@ -551,16 +440,18 @@ async function executeV2GenerationStep(
       selectedRelationshipIds,
       entrypointId: existingChronicle?.entrypointId,
       temporalContext,
-      assembledContent: finalText,
-      generationHistory,
+      assembledContent: result.text,
+      // Store the ACTUAL prompts sent to the LLM (canonical source of truth)
       generationSystemPrompt: systemPrompt,
       generationUserPrompt: prompt,
-      generationTemperature: baseTemperature,
+      generationTemperature: narrativeStyle.temperature ?? 0.85,
+      // Store the generation context snapshot (post-perspective synthesis)
+      // This is what was actually used to build the prompt
       generationContext: {
         worldName: chronicleContext.worldName,
         worldDescription: chronicleContext.worldDescription,
-        tone: chronicleContext.tone,
-        canonFacts: chronicleContext.canonFacts,
+        tone: chronicleContext.tone, // Final tone (assembled + brief + motifs)
+        canonFacts: chronicleContext.canonFacts, // Faceted facts
         nameBank: chronicleContext.nameBank,
         narrativeVoice: chronicleContext.narrativeVoice,
         entityDirectives: chronicleContext.entityDirectives,
@@ -573,7 +464,7 @@ async function executeV2GenerationStep(
       perspectiveSynthesis: perspectiveRecord,
       cost,
     });
-    console.log(`[Worker] Chronicle saved: ${chronicleId} (combined from T=${temperatureA} + T=${temperatureB})`);
+    console.log(`[Worker] Chronicle saved: ${chronicleId}`);
   } catch (err) {
     return { success: false, error: `Failed to save chronicle: ${err}` };
   }
@@ -595,7 +486,7 @@ async function executeV2GenerationStep(
     outputTokens: perspectiveResult.usage.outputTokens,
   });
 
-  // Record generation cost (both versions)
+  // Record generation cost
   await saveCostRecordWithDefaults({
     projectId: task.projectId,
     simulationRunId: task.simulationRunId,
@@ -605,50 +496,192 @@ async function executeV2GenerationStep(
     chronicleId,
     type: 'chronicleV2',
     model: callConfig.model,
-    estimatedCost: genCallA.estimate.estimatedCost + genCallB.estimate.estimatedCost,
-    actualCost: genCallA.usage.actualCost + genCallB.usage.actualCost,
-    inputTokens: genCallA.usage.inputTokens + genCallB.usage.inputTokens,
-    outputTokens: genCallA.usage.outputTokens + genCallB.usage.outputTokens,
+    estimatedCost: generationCall.estimate.estimatedCost,
+    actualCost: generationCall.usage.actualCost,
+    inputTokens: generationCall.usage.inputTokens,
+    outputTokens: generationCall.usage.outputTokens,
   });
-
-  // Record combine cost
-  if (combineCostActual > 0) {
-    await saveCostRecordWithDefaults({
-      projectId: task.projectId,
-      simulationRunId: task.simulationRunId,
-      entityId: task.entityId,
-      entityName: task.entityName,
-      entityKind: task.entityKind,
-      chronicleId,
-      type: 'chronicleV2',
-      model: combineConfig.model,
-      estimatedCost: combineCostEstimated,
-      actualCost: combineCostActual,
-      inputTokens: combineCostInput,
-      outputTokens: combineCostOutput,
-    });
-  }
 
   return {
     success: true,
     result: {
       chronicleId,
       generatedAt: Date.now(),
-      model: combineConfig.model,
+      model: callConfig.model,
       estimatedCost: cost.estimated,
       actualCost: cost.actual,
       inputTokens: cost.inputTokens,
       outputTokens: cost.outputTokens,
     },
-    debug: genCallA.result.debug,
+    debug: result.debug,
+  };
+}
+
+
+// ============================================================================
+// Compare Versions Step (user-triggered, produces report only)
+// ============================================================================
+
+function collectAllVersionTexts(
+  chronicleRecord: NonNullable<Awaited<ReturnType<typeof getChronicle>>>
+): Array<{ label: string; content: string; temperature?: number; wordCount: number }> {
+  const versions: Array<{ label: string; content: string; temperature?: number; wordCount: number }> = [];
+
+  // History versions
+  const history = chronicleRecord.generationHistory || [];
+  for (let i = 0; i < history.length; i++) {
+    versions.push({
+      label: `Version ${i + 1} (T=${history[i].temperature ?? '?'})`,
+      content: history[i].content,
+      temperature: history[i].temperature,
+      wordCount: history[i].wordCount,
+    });
+  }
+
+  // Current assembled content
+  if (chronicleRecord.assembledContent) {
+    versions.push({
+      label: `Current (T=${chronicleRecord.generationTemperature ?? '?'})`,
+      content: chronicleRecord.assembledContent,
+      temperature: chronicleRecord.generationTemperature,
+      wordCount: chronicleRecord.assembledContent.split(/\s+/).length,
+    });
+  }
+
+  return versions;
+}
+
+async function executeCompareStep(
+  task: WorkerTask,
+  chronicleRecord: NonNullable<Awaited<ReturnType<typeof getChronicle>>>,
+  context: TaskContext
+): Promise<TaskResult> {
+  const { config, llmClient, isAborted } = context;
+
+  const chronicleId = chronicleRecord.chronicleId;
+  const versions = collectAllVersionTexts(chronicleRecord);
+
+  if (versions.length < 2) {
+    return { success: false, error: 'At least 2 versions required for comparison' };
+  }
+
+  const callConfig = getCallConfig(config, 'chronicle.compare');
+  console.log(`[Worker] Comparing ${versions.length} versions, model=${callConfig.model}...`);
+
+  const versionsBlock = versions.map((v) =>
+    `## ${v.label}\nWord count: ${v.wordCount}\n\n${v.content}`
+  ).join('\n\n---\n\n');
+
+  const comparePrompt = `You are comparing ${versions.length} versions of the same chronicle. Each was generated from the same prompt and narrative style but at different temperatures (creative latitude).
+
+Produce a comparative analysis covering:
+
+1. **Prose Quality**: Which version has more natural, engaging prose? Where does each feel templated or forced?
+2. **Structural Choices**: How do the versions differ in scene ordering, POV, pacing? Which makes more surprising or effective choices?
+3. **World-Building Detail**: Which invents richer names, places, customs, sensory details? Which feels more grounded in the world?
+4. **Narrative Voice**: Which better adheres to the intended narrative style and entity directives?
+5. **Emotional Range**: Which has more varied emotional registers vs. falling into a single mood?
+6. **Dynamics Integration**: Which better reflects the world's political/social forces without name-dropping?
+
+For each dimension, name the stronger version and give a specific example.
+
+End with a **Recommendation**: which version you'd pick as the stronger overall draft, and why.
+
+## Chronicle Versions
+
+${versionsBlock}`;
+
+  const compareCall = await runTextCall({
+    llmClient,
+    callType: 'chronicle.compare',
+    callConfig,
+    systemPrompt: 'You are a narrative editor providing a comparative analysis of chronicle drafts. Be specific and cite examples from the text.',
+    prompt: comparePrompt,
+    temperature: 0.3,
+  });
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted', debug: compareCall.result.debug };
+  }
+
+  if (compareCall.result.error || !compareCall.result.text) {
+    return {
+      success: false,
+      error: `Compare failed: ${compareCall.result.error || 'No text returned'}`,
+      debug: compareCall.result.debug,
+    };
+  }
+
+  // Store the report on the chronicle record
+  await updateChronicleComparisonReport(chronicleId, compareCall.result.text);
+
+  const compareCost = {
+    estimated: compareCall.estimate.estimatedCost,
+    actual: compareCall.usage.actualCost,
+    inputTokens: compareCall.usage.inputTokens,
+    outputTokens: compareCall.usage.outputTokens,
+  };
+
+  await saveCostRecordWithDefaults({
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    chronicleId,
+    type: 'chronicleV2',
+    model: callConfig.model,
+    estimatedCost: compareCost.estimated,
+    actualCost: compareCost.actual,
+    inputTokens: compareCost.inputTokens,
+    outputTokens: compareCost.outputTokens,
+  });
+
+  return {
+    success: true,
+    result: {
+      chronicleId,
+      generatedAt: Date.now(),
+      model: callConfig.model,
+      estimatedCost: compareCost.estimated,
+      actualCost: compareCost.actual,
+      inputTokens: compareCost.inputTokens,
+      outputTokens: compareCost.outputTokens,
+    },
+    debug: compareCall.result.debug,
   };
 }
 
 // ============================================================================
-// Compare + Combine Step
+// Combine Versions Step (user-triggered, produces new draft)
 // ============================================================================
 
-const COMBINE_SYSTEM_PROMPT = `You are a narrative editor combining two versions of the same chronicle into a single final version. Both versions follow the same prompt, style, and narrative structure — they differ in temperature (creative latitude).
+async function executeCombineStep(
+  task: WorkerTask,
+  chronicleRecord: NonNullable<Awaited<ReturnType<typeof getChronicle>>>,
+  context: TaskContext
+): Promise<TaskResult> {
+  const { config, llmClient, isAborted } = context;
+
+  const chronicleId = chronicleRecord.chronicleId;
+  const versions = collectAllVersionTexts(chronicleRecord);
+
+  if (versions.length < 2) {
+    return { success: false, error: 'At least 2 versions required for combining' };
+  }
+
+  const callConfig = getCallConfig(config, 'chronicle.combine');
+  console.log(`[Worker] Combining ${versions.length} versions, model=${callConfig.model}...`);
+
+  const versionsBlock = versions.map((v) =>
+    `## ${v.label}\n\n${v.content}`
+  ).join('\n\n---\n\n');
+
+  const systemPrompt = chronicleRecord.generationSystemPrompt || '';
+  const narrativeStyle = chronicleRecord.narrativeStyle;
+  const styleName = narrativeStyle ? `${narrativeStyle.name} (${narrativeStyle.format})` : 'unknown';
+
+  const combinePrompt = `You are a narrative editor combining ${versions.length} versions of the same chronicle into a single final version. All versions follow the same prompt and narrative style — they differ in temperature (creative latitude).
 
 Your job is NOT to merge or average. Your job is to CHOOSE and REWRITE: take the stronger elements from each version and produce one polished chronicle.
 
@@ -661,94 +694,89 @@ Prefer whichever version has:
 - **Better adherence to the narrative voice and entity directives**
 - **Stronger emotional range** — not every beat should feel the same
 
-If Version A has a better opening and Version B has a better middle, use each. If both handle the same beat differently, pick the one that reads more naturally.
+If one version has a better opening and another has a better middle, use each. If versions handle the same beat differently, pick the one that reads more naturally.
 
-## Output Rules
-- Output ONLY the final chronicle text
-- No commentary, no labels, no "Here is the combined version"
-- Maintain the target word count of the originals
-- Preserve all entity names, facts, and relationships exactly as they appear`;
+## Original System Prompt Context
+${systemPrompt}
 
-interface CombineStepResult {
-  success: boolean;
-  text?: string;
-  error?: string;
-  usage?: {
-    estimatedCost: number;
-    actualCost: number;
-    inputTokens: number;
-    outputTokens: number;
-  };
-}
+Style: ${styleName}
 
-async function executeCombineStep(
-  versionAText: string,
-  versionBText: string,
-  originalSystemPrompt: string,
-  narrativeStyle: NarrativeStyle,
-  llmClient: { isEnabled: () => boolean } & Record<string, unknown>,
-  combineCallConfig: ReturnType<typeof getCallConfig>,
-): Promise<CombineStepResult> {
-  const combinePrompt = `## Original Generation Prompt Context
-The following system prompt was used to generate both versions:
+## Chronicle Versions
 
-${originalSystemPrompt}
-
-Style: ${narrativeStyle.name} (${narrativeStyle.format})
-
----
-
-## VERSION A (lower temperature — more controlled)
-
-${versionAText}
-
----
-
-## VERSION B (higher temperature — more creative)
-
-${versionBText}
-
----
+${versionsBlock}
 
 ## YOUR TASK
 
-Produce the final chronicle by selecting the strongest elements from each version. Output only the chronicle text.`;
+Produce the final chronicle by selecting the strongest elements from each version. Output ONLY the chronicle text — no commentary, no labels, no preamble.`;
 
-  try {
-    const combineCall = await runTextCall({
-      llmClient,
-      callType: 'chronicle.combine',
-      callConfig: combineCallConfig,
-      systemPrompt: COMBINE_SYSTEM_PROMPT,
-      prompt: combinePrompt,
-      temperature: 0.4,
-    });
+  const combineCall = await runTextCall({
+    llmClient,
+    callType: 'chronicle.combine',
+    callConfig,
+    systemPrompt: 'You are a narrative editor producing the definitive version of a chronicle from multiple drafts. Output only the final chronicle text.',
+    prompt: combinePrompt,
+    temperature: 0.4,
+  });
 
-    if (combineCall.result.error || !combineCall.result.text) {
-      return {
-        success: false,
-        error: combineCall.result.error || 'No text returned from combine step',
-      };
-    }
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted', debug: combineCall.result.debug };
+  }
 
-    return {
-      success: true,
-      text: combineCall.result.text,
-      usage: {
-        estimatedCost: combineCall.estimate.estimatedCost,
-        actualCost: combineCall.usage.actualCost,
-        inputTokens: combineCall.usage.inputTokens,
-        outputTokens: combineCall.usage.outputTokens,
-      },
-    };
-  } catch (err) {
+  if (combineCall.result.error || !combineCall.result.text) {
     return {
       success: false,
-      error: `Combine step failed: ${err instanceof Error ? err.message : String(err)}`,
+      error: `Combine failed: ${combineCall.result.error || 'No text returned'}`,
+      debug: combineCall.result.debug,
     };
   }
+
+  // Save as a new version (snapshots current into history)
+  await regenerateChronicleAssembly(chronicleId, {
+    assembledContent: combineCall.result.text,
+    systemPrompt: chronicleRecord.generationSystemPrompt || '',
+    userPrompt: chronicleRecord.generationUserPrompt || '',
+    model: callConfig.model,
+    cost: {
+      estimated: combineCall.estimate.estimatedCost,
+      actual: combineCall.usage.actualCost,
+      inputTokens: combineCall.usage.inputTokens,
+      outputTokens: combineCall.usage.outputTokens,
+    },
+  });
+
+  await saveCostRecordWithDefaults({
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    chronicleId,
+    type: 'chronicleV2',
+    model: callConfig.model,
+    estimatedCost: combineCall.estimate.estimatedCost,
+    actualCost: combineCall.usage.actualCost,
+    inputTokens: combineCall.usage.inputTokens,
+    outputTokens: combineCall.usage.outputTokens,
+  });
+
+  return {
+    success: true,
+    result: {
+      chronicleId,
+      generatedAt: Date.now(),
+      model: callConfig.model,
+      estimatedCost: combineCall.estimate.estimatedCost,
+      actualCost: combineCall.usage.actualCost,
+      inputTokens: combineCall.usage.inputTokens,
+      outputTokens: combineCall.usage.outputTokens,
+    },
+    debug: combineCall.result.debug,
+  };
 }
 
+// ============================================================================
+// Summary + Image Refs Steps
+// ============================================================================
 
 function buildSummaryPrompt(content: string): string {
   return `Generate a title and summary for the chronicle below.

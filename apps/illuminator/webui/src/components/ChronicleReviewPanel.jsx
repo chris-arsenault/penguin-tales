@@ -990,6 +990,8 @@ export default function ChronicleReviewPanel({
   onAccept,
   onRegenerate,
   onRegenerateWithTemperature,
+  onCompareVersions,
+  onCombineVersions,
   onCorrectSuggestions,
   onGenerateSummary,
   onGenerateImageRefs,
@@ -1076,6 +1078,10 @@ export default function ChronicleReviewPanel({
     () => versions.find((version) => version.id === selectedVersionId) || versions[versions.length - 1],
     [versions, selectedVersionId]
   );
+
+  const hasMultipleVersions = versions.length >= 2;
+  const compareRunning = refinements?.compare?.running || false;
+  const combineRunning = refinements?.combine?.running || false;
 
   // Build seed data from item for display
   const seedData = {
@@ -1178,6 +1184,109 @@ export default function ChronicleReviewPanel({
           onRegenerateWithTemperature={onRegenerateWithTemperature}
           isGenerating={isGenerating}
         />
+
+        {/* Compare & Combine Versions */}
+        {hasMultipleVersions && (
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px 16px',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+            }}
+          >
+            <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '10px' }}>
+              Version Analysis
+              <span style={{ marginLeft: '8px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 400 }}>
+                ({versions.length} versions available)
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                onClick={onCompareVersions}
+                disabled={isGenerating || compareRunning || combineRunning}
+                style={{
+                  padding: '8px 14px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  cursor: isGenerating || compareRunning || combineRunning ? 'not-allowed' : 'pointer',
+                  opacity: isGenerating || compareRunning || combineRunning ? 0.6 : 1,
+                  fontSize: '12px',
+                }}
+              >
+                {compareRunning ? 'Comparing...' : 'Compare Versions'}
+              </button>
+              <button
+                onClick={onCombineVersions}
+                disabled={isGenerating || compareRunning || combineRunning}
+                style={{
+                  padding: '8px 14px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  cursor: isGenerating || compareRunning || combineRunning ? 'not-allowed' : 'pointer',
+                  opacity: isGenerating || compareRunning || combineRunning ? 0.6 : 1,
+                  fontSize: '12px',
+                }}
+              >
+                {combineRunning ? 'Combining...' : 'Combine Versions'}
+              </button>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+              Compare produces an analysis report. Combine synthesizes all drafts into a new version.
+            </div>
+          </div>
+        )}
+
+        {/* Comparison Report */}
+        {item.comparisonReport && (
+          <div
+            style={{
+              marginBottom: '16px',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                padding: '12px 16px',
+                background: 'var(--bg-tertiary)',
+                borderBottom: '1px solid var(--border-color)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <span style={{ fontSize: '13px', fontWeight: 500 }}>
+                Comparison Report
+              </span>
+              {item.comparisonReportGeneratedAt && (
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  {new Date(item.comparisonReportGeneratedAt).toLocaleString()}
+                </span>
+              )}
+            </div>
+            <div
+              style={{
+                padding: '16px',
+                maxHeight: '400px',
+                overflowY: 'auto',
+                fontSize: '13px',
+                lineHeight: 1.7,
+                whiteSpace: 'pre-wrap',
+                color: 'var(--text-primary)',
+              }}
+            >
+              {item.comparisonReport}
+            </div>
+          </div>
+        )}
 
         {/* Refinement Options */}
         <RefinementOptionsPanel

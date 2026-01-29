@@ -19,7 +19,8 @@ export type LLMCallType =
 
   // Chronicle Generation
   | 'chronicle.generation'       // Single-shot V2 generation
-  | 'chronicle.combine'          // Compare + combine two temperature versions
+  | 'chronicle.compare'          // Comparative analysis of multiple drafts (report only)
+  | 'chronicle.combine'          // Synthesize multiple drafts into one
   | 'chronicle.summary'          // Title + summary
   | 'chronicle.imageRefs'        // Image reference extraction
 
@@ -39,6 +40,7 @@ export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'image.promptFormatting',
   'perspective.synthesis',
   'chronicle.generation',
+  'chronicle.compare',
   'chronicle.combine',
   'chronicle.summary',
   'chronicle.imageRefs',
@@ -172,9 +174,20 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
     },
     recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
   },
+  'chronicle.compare': {
+    label: 'Compare Versions',
+    description: 'Comparative analysis of multiple chronicle drafts (report only)',
+    category: 'chronicle',
+    defaults: {
+      model: 'claude-sonnet-4-5-20250929',
+      thinkingBudget: 4096,
+      maxTokens: 4096,
+    },
+    recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
+  },
   'chronicle.combine': {
-    label: 'Compare + Combine',
-    description: 'Combines two temperature variants into a final chronicle',
+    label: 'Combine Versions',
+    description: 'Synthesizes multiple chronicle drafts into one final version',
     category: 'chronicle',
     defaults: {
       model: 'claude-opus-4-5-20251101',
@@ -266,7 +279,7 @@ export function getCallTypesByCategory(): Record<LLMCallCategory, LLMCallType[]>
     description: ['description.narrative', 'description.visualThesis', 'description.visualTraits'],
     image: ['image.promptFormatting'],
     perspective: ['perspective.synthesis'],
-    chronicle: ['chronicle.generation', 'chronicle.combine', 'chronicle.summary', 'chronicle.imageRefs'],
+    chronicle: ['chronicle.generation', 'chronicle.compare', 'chronicle.combine', 'chronicle.summary', 'chronicle.imageRefs'],
     palette: ['palette.expansion'],
     dynamics: ['dynamics.generation'],
     revision: ['revision.summary'],

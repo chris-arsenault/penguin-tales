@@ -88,6 +88,8 @@ export interface UseChronicleGenerationReturn {
   generateSummary: (chronicleId: string, context: ChronicleGenerationContext) => void;
   generateImageRefs: (chronicleId: string, context: ChronicleGenerationContext) => void;
   regenerateWithTemperature: (chronicleId: string, temperature: number) => void;
+  compareVersions: (chronicleId: string) => void;
+  combineVersions: (chronicleId: string) => void;
   acceptChronicle: (chronicleId: string) => Promise<AcceptedChronicle | null>;
   restartChronicle: (chronicleId: string) => Promise<void>;
 
@@ -423,6 +425,120 @@ export function useChronicleGeneration(
   );
 
   // -------------------------------------------------------------------------
+  // Compare versions (produces report, no new draft)
+  // -------------------------------------------------------------------------
+
+  const compareVersions = useCallback(
+    (chronicleId: string) => {
+      const chronicle = chronicles.get(chronicleId);
+      if (!chronicle) {
+        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
+        return;
+      }
+      if (!chronicle.assembledContent) {
+        console.error('[Chronicle] No assembled content to compare');
+        return;
+      }
+      const historyCount = (chronicle.generationHistory?.length || 0) + 1; // +1 for current
+      if (historyCount < 2) {
+        console.error('[Chronicle] Need at least 2 versions to compare');
+        return;
+      }
+
+      const primaryRole = chronicle.roleAssignments?.find((r) => r.isPrimary) || chronicle.roleAssignments?.[0];
+      const entity = primaryRole
+        ? {
+            id: primaryRole.entityId,
+            name: primaryRole.entityName,
+            kind: primaryRole.entityKind,
+            subtype: '',
+            prominence: 'recognized',
+            culture: '',
+            status: 'active',
+            description: '',
+            tags: {},
+          }
+        : {
+            id: chronicleId,
+            name: chronicle.title || 'Chronicle',
+            kind: 'chronicle',
+            subtype: '',
+            prominence: 'recognized',
+            culture: '',
+            status: 'active',
+            description: '',
+            tags: {},
+          };
+
+      onEnqueue([{
+        entity,
+        type: 'entityChronicle' as EnrichmentType,
+        prompt: '',
+        chronicleStep: 'compare',
+        chronicleId,
+      }]);
+    },
+    [chronicles, onEnqueue]
+  );
+
+  // -------------------------------------------------------------------------
+  // Combine versions (synthesize all drafts into a new draft)
+  // -------------------------------------------------------------------------
+
+  const combineVersions = useCallback(
+    (chronicleId: string) => {
+      const chronicle = chronicles.get(chronicleId);
+      if (!chronicle) {
+        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
+        return;
+      }
+      if (!chronicle.assembledContent) {
+        console.error('[Chronicle] No assembled content to combine');
+        return;
+      }
+      const historyCount = (chronicle.generationHistory?.length || 0) + 1; // +1 for current
+      if (historyCount < 2) {
+        console.error('[Chronicle] Need at least 2 versions to combine');
+        return;
+      }
+
+      const primaryRole = chronicle.roleAssignments?.find((r) => r.isPrimary) || chronicle.roleAssignments?.[0];
+      const entity = primaryRole
+        ? {
+            id: primaryRole.entityId,
+            name: primaryRole.entityName,
+            kind: primaryRole.entityKind,
+            subtype: '',
+            prominence: 'recognized',
+            culture: '',
+            status: 'active',
+            description: '',
+            tags: {},
+          }
+        : {
+            id: chronicleId,
+            name: chronicle.title || 'Chronicle',
+            kind: 'chronicle',
+            subtype: '',
+            prominence: 'recognized',
+            culture: '',
+            status: 'active',
+            description: '',
+            tags: {},
+          };
+
+      onEnqueue([{
+        entity,
+        type: 'entityChronicle' as EnrichmentType,
+        prompt: '',
+        chronicleStep: 'combine',
+        chronicleId,
+      }]);
+    },
+    [chronicles, onEnqueue]
+  );
+
+  // -------------------------------------------------------------------------
   // Accept chronicle (mark complete)
   // -------------------------------------------------------------------------
 
@@ -518,6 +634,8 @@ export function useChronicleGeneration(
     generateSummary,
     generateImageRefs,
     regenerateWithTemperature,
+    compareVersions,
+    combineVersions,
     acceptChronicle,
     cancelChronicle,
     restartChronicle,
