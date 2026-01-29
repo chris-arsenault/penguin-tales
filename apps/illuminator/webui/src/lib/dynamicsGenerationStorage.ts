@@ -111,8 +111,6 @@ export async function updateDynamicsRun(
   updates: Partial<Pick<DynamicsRun,
     | 'status'
     | 'messages'
-    | 'pendingSearches'
-    | 'searchResults'
     | 'proposedDynamics'
     | 'userFeedback'
     | 'error'
@@ -138,8 +136,6 @@ export async function updateDynamicsRun(
       // Apply updates
       if (updates.status !== undefined) run.status = updates.status;
       if (updates.messages !== undefined) run.messages = updates.messages;
-      if (updates.pendingSearches !== undefined) run.pendingSearches = updates.pendingSearches;
-      if (updates.searchResults !== undefined) run.searchResults = updates.searchResults;
       if (updates.proposedDynamics !== undefined) run.proposedDynamics = updates.proposedDynamics;
       if (updates.userFeedback !== undefined) run.userFeedback = updates.userFeedback;
       if (updates.error !== undefined) run.error = updates.error;

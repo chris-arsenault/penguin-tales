@@ -2,7 +2,7 @@
  * DynamicsGenerationModal - Multi-turn conversation UI for generating world dynamics
  *
  * Shows a modal with:
- * - Conversation history (system context, LLM responses, user feedback, search results)
+ * - Conversation history (system context, LLM responses, user feedback)
  * - Current proposed dynamics
  * - Feedback input for steering
  * - Accept/cancel controls
@@ -17,7 +17,6 @@ import { useState, useRef, useEffect } from 'react';
 function MessageBubble({ message }) {
   const isAssistant = message.role === 'assistant';
   const isUser = message.role === 'user';
-  const isSearch = message.role === 'search_results';
   const isSystem = message.role === 'system';
 
   // Parse assistant messages to extract reasoning
@@ -48,33 +47,6 @@ function MessageBubble({ message }) {
         <div style={{ opacity: 0.7 }}>
           {message.content.substring(0, 200)}...
         </div>
-      </div>
-    );
-  }
-
-  if (isSearch) {
-    return (
-      <div style={{
-        padding: '10px 12px',
-        fontSize: '12px',
-        background: 'var(--bg-tertiary)',
-        borderRadius: '6px',
-        borderLeft: '3px solid var(--warning-color, #e6a817)',
-        marginBottom: '8px',
-      }}>
-        <div style={{ fontWeight: 600, marginBottom: '6px', color: 'var(--warning-color, #e6a817)' }}>
-          Search Results
-        </div>
-        <pre style={{
-          whiteSpace: 'pre-wrap',
-          margin: 0,
-          fontSize: '11px',
-          color: 'var(--text-secondary)',
-          maxHeight: '200px',
-          overflow: 'auto',
-        }}>
-          {message.content}
-        </pre>
       </div>
     );
   }
@@ -143,33 +115,6 @@ function ProposedDynamicsList({ dynamics }) {
 }
 
 // ============================================================================
-// Pending Searches Display
-// ============================================================================
-
-function PendingSearches({ searches }) {
-  if (!searches || searches.length === 0) return null;
-
-  return (
-    <div style={{
-      padding: '10px 12px',
-      background: 'var(--bg-tertiary)',
-      borderRadius: '6px',
-      borderLeft: '3px solid var(--warning-color, #e6a817)',
-      marginBottom: '12px',
-    }}>
-      <div style={{ fontWeight: 600, marginBottom: '6px', fontSize: '12px', color: 'var(--warning-color, #e6a817)' }}>
-        Executing searches...
-      </div>
-      {searches.map((s) => (
-        <div key={s.id} style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-          {s.intent}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================================
 // Main Modal
 // ============================================================================
 
@@ -186,12 +131,11 @@ export default function DynamicsGenerationModal({
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [run?.messages?.length]);
+  }, [run?.messages?.length, run?.proposedDynamics?.length]);
 
   if (!isActive || !run) return null;
 
   const isGenerating = run.status === 'generating' || run.status === 'pending';
-  const isSearching = run.status === 'awaiting_searches';
   const isReviewable = run.status === 'awaiting_review';
   const isFailed = run.status === 'failed';
 
@@ -208,7 +152,6 @@ export default function DynamicsGenerationModal({
     }
   };
 
-  // Filter out system messages for display (show collapsed)
   const displayMessages = run.messages || [];
 
   return (
@@ -239,6 +182,7 @@ export default function DynamicsGenerationModal({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexShrink: 0,
         }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '16px' }}>Generate World Dynamics</h2>
@@ -262,29 +206,25 @@ export default function DynamicsGenerationModal({
           </div>
         </div>
 
-        {/* Messages area */}
+        {/* Scrollable content area: messages + proposed dynamics */}
         <div style={{
           flex: 1,
           overflow: 'auto',
           padding: '16px 20px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
+          minHeight: 0,
         }}>
           {displayMessages.map((msg, i) => (
             <MessageBubble key={i} message={msg} />
           ))}
 
-          {isSearching && <PendingSearches searches={run.pendingSearches} />}
-
-          {(isGenerating || isSearching) && (
+          {isGenerating && (
             <div style={{
               padding: '12px',
               fontSize: '12px',
               color: 'var(--text-muted)',
               textAlign: 'center',
             }}>
-              {isSearching ? 'Executing searches against world state...' : 'Generating...'}
+              Generating...
             </div>
           )}
 
@@ -296,25 +236,25 @@ export default function DynamicsGenerationModal({
               borderLeft: '3px solid var(--danger)',
               fontSize: '12px',
               color: 'var(--danger)',
+              marginBottom: '8px',
             }}>
               {run.error || 'Generation failed'}
             </div>
           )}
 
+          {/* Proposed dynamics inside scrollable area */}
+          {isReviewable && run.proposedDynamics && (
+            <ProposedDynamicsList dynamics={run.proposedDynamics} />
+          )}
+
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Proposed dynamics */}
-        {isReviewable && run.proposedDynamics && (
-          <div style={{ padding: '0 20px' }}>
-            <ProposedDynamicsList dynamics={run.proposedDynamics} />
-          </div>
-        )}
-
-        {/* Footer: feedback input + actions */}
+        {/* Footer: feedback input + actions (always visible) */}
         <div style={{
           padding: '12px 20px 16px',
           borderTop: '1px solid var(--border-color)',
+          flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
           gap: '10px',

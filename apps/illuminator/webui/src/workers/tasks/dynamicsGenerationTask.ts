@@ -13,7 +13,6 @@ import type { WorkerTask } from '../../lib/enrichmentTypes';
 import type { TaskContext } from './taskTypes';
 import type { TaskResult } from '../types';
 import type {
-  DynamicsRun,
   DynamicsLLMResponse,
   DynamicsMessage,
 } from '../../lib/dynamicsGenerationTypes';
@@ -31,24 +30,15 @@ const SYSTEM_PROMPT = `You are a world dynamics analyst for a procedural fantasy
 You will receive:
 1. LORE BIBLE: Static pages containing the primary world lore (cultures, history, mechanics)
 2. SCHEMA: Entity kinds, relationship kinds, and culture definitions
-3. CONVERSATION HISTORY: Previous turns, search results, and user feedback
-4. SEARCH RESULTS: Entity data you requested from the world state (if any)
+3. WORLD STATE: Entity summaries grouped by kind, relationship patterns, and era descriptions from the actual simulation
+4. CONVERSATION HISTORY: Previous turns and user feedback (on refinement turns)
 
 Your task each turn:
-- Analyze the lore and any search results to identify world dynamics
+- Analyze the lore AND the world state data to identify world dynamics
 - Propose dynamics as concise statements with optional culture/kind filters
-- If you need more information about specific entities, relationships, or patterns, request searches
 - Explain your reasoning so the user can steer
 
-IMPORTANT: Dynamics should be DERIVED FROM THE LORE, not invented. They describe forces and patterns that the lore establishes. World state data (entity summaries, era descriptions) refines and grounds these in the actual simulation output.
-
-For searches, you can request:
-- textQuery: Search entity summaries/descriptions for keywords
-- kinds: Filter by entity kind (e.g., ["npc", "artifact"])
-- cultures: Filter by culture (e.g., ["nightshelf", "aurora_stack"])
-- tags: Filter by tag key/value (e.g., {"role": "leader"})
-- eraId: Filter by era
-- connectedTo: Find entities connected to a specific entity ID
+IMPORTANT: Dynamics should be DERIVED FROM THE LORE AND WORLD STATE, not invented. They describe forces and patterns that the lore establishes and the simulation data confirms. Use entity summaries, relationship patterns, and era descriptions to ground your dynamics in what actually exists in the world.
 
 Output ONLY valid JSON in this format:
 {
@@ -56,21 +46,17 @@ Output ONLY valid JSON in this format:
     { "text": "Statement about a world dynamic", "cultures": ["culture1"], "kinds": ["kind1"] }
   ],
   "reasoning": "Explanation of your analysis and reasoning",
-  "searches": [
-    { "id": "search_1", "intent": "What this search is looking for", "textQuery": "keyword" }
-  ],
   "complete": false
 }
 
 Set "complete": true when you believe the dynamics are comprehensive and refined.
-Omit "searches" if you don't need more data this turn.
 Cultures and kinds on dynamics are optional filters — omit them for universal dynamics.`;
 
 // ============================================================================
 // Context Assembly
 // ============================================================================
 
-function buildUserPrompt(run: DynamicsRun): string {
+function buildUserPrompt(run: { messages: DynamicsMessage[]; userFeedback?: string }): string {
   const sections: string[] = [];
 
   // Rebuild conversation from messages
@@ -81,20 +67,7 @@ function buildUserPrompt(run: DynamicsRun): string {
       sections.push(`=== YOUR PREVIOUS RESPONSE ===\n${msg.content}`);
     } else if (msg.role === 'user') {
       sections.push(`=== USER FEEDBACK ===\n${msg.content}`);
-    } else if (msg.role === 'search_results') {
-      sections.push(`=== SEARCH RESULTS ===\n${msg.content}`);
     }
-  }
-
-  // Add pending search results if the UI executed searches
-  if (run.searchResults && run.searchResults.length > 0) {
-    const resultText = run.searchResults.map((sr) => {
-      const entries = sr.results.map((e) =>
-        `  - ${e.name} (${e.kind}${e.culture ? `, ${e.culture}` : ''}): ${e.summary}`
-      ).join('\n');
-      return `Search "${sr.intent}" (${sr.results.length} results):\n${entries}`;
-    }).join('\n\n');
-    sections.push(`=== SEARCH RESULTS ===\n${resultText}`);
   }
 
   // Add user feedback if present
@@ -103,16 +76,15 @@ function buildUserPrompt(run: DynamicsRun): string {
   }
 
   // Add task instruction
-  if (run.messages.length === 0) {
-    // First turn — ask for initial analysis
+  const isFirstTurn = run.messages.filter((m) => m.role === 'assistant').length === 0;
+  if (isFirstTurn) {
     sections.push(`=== YOUR TASK ===
-Based on the lore bible and schema above, identify the world dynamics — the macro-level forces, tensions, alliances, and behavioral patterns that drive stories in this world.
+Based on the lore bible, schema, and world state above, identify the world dynamics — the macro-level forces, tensions, alliances, and behavioral patterns that drive stories in this world.
 
-Start by proposing dynamics derived from the lore. If you need entity data to ground or refine them, include search requests.`);
+Use the entity summaries and relationship data to ground your dynamics in the actual simulation state.`);
   } else {
-    // Subsequent turns
     sections.push(`=== YOUR TASK ===
-Continue refining the world dynamics based on any new search results and user feedback. Propose updated dynamics.`);
+Continue refining the world dynamics based on user feedback. Propose updated dynamics.`);
   }
 
   return sections.join('\n\n');
@@ -189,17 +161,6 @@ async function executeDynamicsGenerationTask(
     // Build updated messages
     const newMessages: DynamicsMessage[] = [...run.messages];
 
-    // Add search results as a message if they were provided
-    if (run.searchResults && run.searchResults.length > 0) {
-      const resultText = run.searchResults.map((sr) => {
-        const entries = sr.results.map((e) =>
-          `- ${e.name} (${e.kind}${e.culture ? `, ${e.culture}` : ''}): ${e.summary}`
-        ).join('\n');
-        return `Search "${sr.intent}" (${sr.results.length} results):\n${entries}`;
-      }).join('\n\n');
-      newMessages.push({ role: 'search_results', content: resultText, timestamp: Date.now() });
-    }
-
     // Add user feedback as a message if provided
     if (run.userFeedback) {
       newMessages.push({ role: 'user', content: run.userFeedback, timestamp: Date.now() });
@@ -208,17 +169,11 @@ async function executeDynamicsGenerationTask(
     // Add assistant response
     newMessages.push({ role: 'assistant', content: resultText, timestamp: Date.now() });
 
-    // Determine next status
-    const hasSearches = parsed.searches && parsed.searches.length > 0;
-    const nextStatus = hasSearches ? 'awaiting_searches' : 'awaiting_review';
-
     // Update run
     await updateDynamicsRun(runId, {
-      status: nextStatus,
+      status: 'awaiting_review',
       messages: newMessages,
       proposedDynamics: parsed.dynamics,
-      pendingSearches: hasSearches ? parsed.searches : undefined,
-      searchResults: undefined, // Clear consumed search results
       userFeedback: undefined,  // Clear consumed feedback
       totalInputTokens: run.totalInputTokens + callResult.usage.inputTokens,
       totalOutputTokens: run.totalOutputTokens + callResult.usage.outputTokens,
