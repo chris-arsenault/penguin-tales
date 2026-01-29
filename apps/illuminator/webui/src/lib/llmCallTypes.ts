@@ -28,7 +28,10 @@ export type LLMCallType =
   | 'palette.expansion'          // Trait palette curation
 
   // Dynamics Generation
-  | 'dynamics.generation';       // Multi-turn world dynamics synthesis
+  | 'dynamics.generation'        // Multi-turn world dynamics synthesis
+
+  // Summary Revision
+  | 'revision.summary';          // Batch summary/description revision
 
 export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'description.narrative',
@@ -43,9 +46,10 @@ export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'chronicle.imageRefs',
   'palette.expansion',
   'dynamics.generation',
+  'revision.summary',
 ];
 
-export type LLMCallCategory = 'description' | 'image' | 'perspective' | 'chronicle' | 'palette' | 'dynamics';
+export type LLMCallCategory = 'description' | 'image' | 'perspective' | 'chronicle' | 'palette' | 'dynamics' | 'revision';
 
 export interface LLMCallDefaults {
   model: string;
@@ -236,6 +240,17 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
     },
     recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
   },
+  'revision.summary': {
+    label: 'Summary Revision',
+    description: 'Batch revision of entity summaries/descriptions using world dynamics',
+    category: 'revision',
+    defaults: {
+      model: 'claude-opus-4-5-20251101',
+      thinkingBudget: 4096,
+      maxTokens: 8192,
+    },
+    recommendedModels: ['claude-opus-4-5-20251101', 'claude-sonnet-4-5-20250929'],
+  },
 };
 
 export const CATEGORY_LABELS: Record<LLMCallCategory, string> = {
@@ -245,6 +260,7 @@ export const CATEGORY_LABELS: Record<LLMCallCategory, string> = {
   chronicle: 'Chronicle Generation',
   palette: 'Trait Palette',
   dynamics: 'Dynamics Generation',
+  revision: 'Summary Revision',
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<LLMCallCategory, string> = {
@@ -254,6 +270,7 @@ export const CATEGORY_DESCRIPTIONS: Record<LLMCallCategory, string> = {
   chronicle: 'Multi-step pipeline for long-form narrative documents',
   palette: 'AI-assisted curation of visual trait categories',
   dynamics: 'Multi-turn synthesis of world dynamics from lore and entity data',
+  revision: 'Batch revision of entity summaries and descriptions using world dynamics',
 };
 
 // Group call types by category
@@ -265,5 +282,6 @@ export function getCallTypesByCategory(): Record<LLMCallCategory, LLMCallType[]>
     chronicle: ['chronicle.generation', 'chronicle.edit', 'chronicle.validation', 'chronicle.summary', 'chronicle.imageRefs'],
     palette: ['palette.expansion'],
     dynamics: ['dynamics.generation'],
+    revision: ['revision.summary'],
   };
 }

@@ -29,8 +29,10 @@ import TraitPaletteSection from './components/TraitPaletteSection';
 import StyleLibraryEditor from './components/StyleLibraryEditor';
 import StaticPagesPanel from './components/StaticPagesPanel';
 import DynamicsGenerationModal from './components/DynamicsGenerationModal';
+import SummaryRevisionModal from './components/SummaryRevisionModal';
 import { useEnrichmentQueue } from './hooks/useEnrichmentQueue';
 import { useDynamicsGeneration } from './hooks/useDynamicsGeneration';
+import { useSummaryRevision } from './hooks/useSummaryRevision';
 import { getPublishedStaticPagesForProject } from './lib/staticPageStorage';
 import { useStyleLibrary } from './hooks/useStyleLibrary';
 import {
@@ -1146,6 +1148,139 @@ export default function IlluminatorRemote({
     cancelGeneration: cancelDynamicsGeneration,
   } = useDynamicsGeneration(enqueue, handleDynamicsAccepted);
 
+  // Summary revision (batch entity summary/description revision)
+  const getEntityContextsForRevision = useCallback((entityIds) => {
+    return entityIds.map((id) => {
+      const entity = entityById.get(id);
+      if (!entity) return null;
+
+      const rels = (relationshipsByEntity.get(entity.id) || []).slice(0, 8).map((rel) => {
+        const targetId = rel.src === entity.id ? rel.dst : rel.src;
+        const target = entityById.get(targetId);
+        return {
+          kind: rel.kind,
+          targetName: target?.name || targetId,
+          targetKind: target?.kind || 'unknown',
+        };
+      });
+
+      return {
+        id: entity.id,
+        name: entity.name,
+        kind: entity.kind,
+        subtype: entity.subtype || '',
+        prominence: prominenceLabelFromScale(entity.prominence, prominenceScale),
+        culture: entity.culture || '',
+        status: entity.status || 'active',
+        summary: entity.summary || '',
+        description: entity.description || '',
+        visualThesis: entity.enrichment?.text?.visualThesis || '',
+        relationships: rels,
+      };
+    }).filter(Boolean);
+  }, [entityById, relationshipsByEntity, prominenceScale]);
+
+  const handleRevisionApplied = useCallback((patches) => {
+    if (!patches?.length) return;
+    // Apply patches to entities
+    setEntities((prev) =>
+      prev.map((entity) => {
+        const patch = patches.find((p) => p.entityId === entity.id);
+        if (!patch) return entity;
+        return {
+          ...entity,
+          ...(patch.summary !== undefined ? { summary: patch.summary } : {}),
+          ...(patch.description !== undefined ? { description: patch.description } : {}),
+        };
+      })
+    );
+  }, []);
+
+  const {
+    run: revisionRun,
+    isActive: isRevisionActive,
+    startRevision,
+    continueToNextBatch,
+    autoContineAll: autoContineAllRevision,
+    togglePatchDecision,
+    applyAccepted: applyAcceptedPatches,
+    cancelRevision,
+  } = useSummaryRevision(enqueue, getEntityContextsForRevision);
+
+  const handleStartRevision = useCallback(async () => {
+    if (!projectId || !simulationRunId) return;
+
+    // Load static pages for lore context
+    let staticPagesContext = '';
+    try {
+      const pages = await getPublishedStaticPagesForProject(projectId);
+      if (pages.length > 0) {
+        staticPagesContext = pages
+          .map((p) => `## ${p.title}\n\n${p.content}`)
+          .join('\n\n---\n\n');
+      }
+    } catch (err) {
+      console.warn('[Revision] Failed to load static pages:', err);
+    }
+
+    // Build world dynamics context
+    const dynamicsContext = (worldContext?.worldDynamics || [])
+      .map((d) => {
+        let text = d.text;
+        if (d.cultures?.length) text += ` [cultures: ${d.cultures.join(', ')}]`;
+        if (d.kinds?.length) text += ` [kinds: ${d.kinds.join(', ')}]`;
+        return `- ${text}`;
+      })
+      .join('\n');
+
+    // Build schema context
+    const schemaContext = buildSchemaContext(worldSchema);
+
+    // Build entity contexts — exclude locked summary entities
+    const revisionEntities = entities
+      .filter((e) => e.summary && e.description && !e.lockedSummary)
+      .map((e) => {
+        const rels = (relationshipsByEntity.get(e.id) || []).slice(0, 8).map((rel) => {
+          const targetId = rel.src === e.id ? rel.dst : rel.src;
+          const target = entityById.get(targetId);
+          return {
+            kind: rel.kind,
+            targetName: target?.name || targetId,
+            targetKind: target?.kind || 'unknown',
+          };
+        });
+
+        return {
+          id: e.id,
+          name: e.name,
+          kind: e.kind,
+          subtype: e.subtype || '',
+          prominence: prominenceLabelFromScale(e.prominence, prominenceScale),
+          culture: e.culture || '',
+          status: e.status || 'active',
+          summary: e.summary || '',
+          description: e.description || '',
+          visualThesis: e.enrichment?.text?.visualThesis || '',
+          relationships: rels,
+        };
+      });
+
+    startRevision({
+      projectId,
+      simulationRunId,
+      worldDynamicsContext: dynamicsContext,
+      staticPagesContext,
+      schemaContext,
+      revisionGuidance: '',
+      entities: revisionEntities,
+    });
+  }, [projectId, simulationRunId, worldContext, worldSchema, entities, entityById, relationshipsByEntity, prominenceScale, startRevision]);
+
+  const handleAcceptRevision = useCallback(() => {
+    const patches = applyAcceptedPatches();
+    handleRevisionApplied(patches);
+  }, [applyAcceptedPatches, handleRevisionApplied]);
+
   const handleGenerateDynamics = useCallback(async () => {
     if (!projectId || !simulationRunId) return;
 
@@ -1400,6 +1535,8 @@ export default function IlluminatorRemote({
               eras={eraTemporalInfo}
               onGenerateDynamics={handleGenerateDynamics}
               isGeneratingDynamics={isDynamicsActive}
+              onStartRevision={handleStartRevision}
+              isRevising={isRevisionActive}
             />
           </div>
         )}
@@ -1511,6 +1648,18 @@ export default function IlluminatorRemote({
         onSubmitFeedback={submitDynamicsFeedback}
         onAccept={acceptDynamics}
         onCancel={cancelDynamicsGeneration}
+      />
+
+      {/* Summary Revision Modal */}
+      <SummaryRevisionModal
+        run={revisionRun}
+        isActive={isRevisionActive}
+        onContinue={continueToNextBatch}
+        onAutoContine={autoContineAllRevision}
+        onTogglePatch={togglePatchDecision}
+        onAccept={handleAcceptRevision}
+        onCancel={cancelRevision}
+        getEntityContexts={getEntityContextsForRevision}
       />
     </div>
   );

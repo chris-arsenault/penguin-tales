@@ -6,6 +6,7 @@ import { imageTask } from './imageTask';
 import { chronicleTask } from './chronicleTask';
 import { paletteExpansionTask } from './paletteExpansionTask';
 import { dynamicsGenerationTask } from './dynamicsGenerationTask';
+import { summaryRevisionTask } from './summaryRevisionTask';
 
 export const TASK_HANDLERS = {
   description: descriptionTask,
@@ -13,6 +14,7 @@ export const TASK_HANDLERS = {
   entityChronicle: chronicleTask,
   paletteExpansion: paletteExpansionTask,
   dynamicsGeneration: dynamicsGenerationTask,
+  summaryRevision: summaryRevisionTask,
 } satisfies TaskHandlerMap;
 
 export async function executeTask<TType extends WorkerTask['type']>(
@@ -29,4 +31,5 @@ export {
   chronicleTask,
   paletteExpansionTask,
   dynamicsGenerationTask,
+  summaryRevisionTask,
 };
