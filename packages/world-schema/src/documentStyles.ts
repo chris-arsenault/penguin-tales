@@ -548,4 +548,199 @@ Avoid identical voices, all positive or all negative, generic praise, modern rev
       wordCount: { min: 350, max: 500 },
     },
   },
+
+  // 14. PERSONAL DIARY
+  {
+    id: 'personal-diary',
+    name: 'Personal Diary',
+    description: 'Private journal entries spanning days or weeks - unguarded, inconsistent, never meant to be read',
+    tags: ['document', 'personal', 'private', 'journal'],
+    format: 'document',
+
+    documentInstructions: `This is a private diary. The writer is talking to themselves. There is no audience, no performance, no filter. Some entries are three words. Some are rambling paragraphs. The tone shifts with the writer's mood - bored, panicked, tender, petty, profound.
+
+STRUCTURE:
+- Entry 1 (~80 words): A mundane day. Establish the writer's voice, daily concerns, small complaints or pleasures. Dated.
+- Entry 2 (~120 words): Something happened. The writer processes it messily - not as narrative but as emotional reaction. Incomplete sentences. Second-guessing. Crossed-out phrases represented as [struck through: ...] or dashes trailing off.
+- Entry 3 (~150 words): The event's aftermath. The writer tries to make sense of things. Fails partially. Reveals something they wouldn't tell anyone - a fear, a desire, a secret opinion of someone.
+- Entry 4 (~80 words): Time has passed. Shorter. Either the crisis resolved or the writer moved on. A new mundane concern. Life continues.
+- Final Entry (~40 words, optional): Brief. Cryptic. May hint at something coming. Or may just be "Rain again. Need candles."
+
+VOICE & TONE: First person, utterly private. Grammar loosens when emotional. Abbreviations, nicknames, private references the reader can't fully decode. The writer doesn't explain context - they already know it. Unfiltered, inconsistent, raw, intimate, messy.
+
+Include private opinions about known entities (harsher or kinder than public face), mundane details (meals, weather, health), and emotional processing that's incomplete and honest.
+
+Avoid consistent tone, literary polish, awareness of audience, complete narratives, exposition for the reader's benefit. The diary is NOT trying to communicate.`,
+
+    eventInstructions: 'Events are experienced personally, not reported. "That thing at the market today" not "The merchant guild trade dispute." The writer assumes they remember context.',
+
+    roles: [
+      { role: 'diarist', count: { min: 1, max: 1 }, description: 'The private voice - their unguarded self, messier than their public persona' },
+      { role: 'mentioned-person', count: { min: 0, max: 2 }, description: 'People the diarist writes about - described with unfiltered private opinion' },
+      { role: 'private-concern', count: { min: 0, max: 1 }, description: 'The thing weighing on them - may be petty, profound, or both' },
+    ],
+
+    pacing: {
+      wordCount: { min: 350, max: 550 },
+    },
+  },
+
+  // 15. INTERROGATION RECORD
+  {
+    id: 'interrogation-record',
+    name: 'Interrogation Record',
+    description: 'Official transcript of questioning - terse exchanges, redacted sections, margin notes from a reviewing officer',
+    tags: ['document', 'official', 'transcript', 'adversarial'],
+    format: 'document',
+
+    documentInstructions: `This is an official interrogation transcript. Bureaucratic header. Terse Q&A format. The interrogator is persistent. The subject is evasive, frightened, or defiant. Truth leaks out through cracks in the subject's composure.
+
+STRUCTURE:
+- Header (~40 words): Official classification. Date. Location. Interrogator rank and name. Subject name and status (prisoner, witness, detainee). Authorization reference.
+- Opening Exchange (~100 words): Formal identification. Subject's state noted. The interrogator establishes authority and topic. The subject's first responses reveal their strategy - cooperation, defiance, or calculated partial truth.
+- Core Questioning (~200 words): The interrogator presses on key points. Questions get sharper. Answers get shorter or more evasive. Include at least one [REDACTED] passage and one [Subject pauses] or [Subject becomes agitated] notation.
+- Pressure Point (~100 words): The interrogator reveals something the subject didn't expect them to know. The subject's composure breaks briefly. What they say (or refuse to say) in this moment is the transcript's key revelation.
+- Margin Notes (~60 words): Handwritten notes from a reviewing officer, formatted as [MARGIN NOTE: ...]. These are a second voice commenting on the transcript - noting inconsistencies, flagging follow-up questions, or recording their own assessment.
+- Closing (~40 words): Session end notation. Subject returned to holding. Interrogator's signature. Recommendation for further action or release.
+
+VOICE & TONE: Two voices. The interrogator is professional, persistent, occasionally threatening through implication. The subject is constrained - every word chosen carefully because words have consequences here. Terse, adversarial, bureaucratic, tense, controlled.
+
+Include timestamps at key moments, [REDACTED] for sensitive information, stage directions in brackets ([Subject looks away], [Long silence], [Interrogator produces document]), and official reference numbers.
+
+Avoid casual language, long speeches, the subject volunteering information freely, clear resolution. The transcript raises as many questions as it answers.`,
+
+    eventInstructions: 'Events are what the interrogation is about. They appear as contested facts - the interrogator\'s version versus the subject\'s version, with the truth somewhere between.',
+
+    roles: [
+      { role: 'subject', count: { min: 1, max: 1 }, description: 'The one being questioned - their evasions reveal as much as their answers' },
+      { role: 'interrogator', count: { min: 1, max: 1 }, description: 'The questioner - professional, persistent, holding information back strategically' },
+      { role: 'reviewing-officer', count: { min: 0, max: 1 }, description: 'The margin-note voice - reads the transcript later, catches what the interrogator missed' },
+    ],
+
+    pacing: {
+      wordCount: { min: 450, max: 650 },
+    },
+  },
+
+  // 16. FOLK SONG
+  {
+    id: 'folk-song',
+    name: 'Folk Song',
+    description: 'Verse with stanzas and refrain - rhyming flow is primary, story optional or told obliquely through imagery',
+    tags: ['document', 'verse', 'song', 'oral-tradition'],
+    format: 'document',
+
+    documentInstructions: `This is a folk song meant to be sung. Rhythm and rhyme are paramount. Story is optional - if present, it's told obliquely through images and refrains rather than narrated directly. The song should feel like it's been passed through many voices, smoothed by repetition into something that sounds inevitable.
+
+STRUCTURE:
+- Collector's Note (~40 words): Brief context. Where this song is sung, by whom, on what occasions. Attribution if known ("commonly heard among the river traders" or "attributed to the blind poet Kael").
+- Verse 1 (~60 words, 4-6 lines): Establish the song's world in images, not exposition. A place, a mood, a season, a figure. The rhythm and rhyme scheme are set here - ABAB, AABB, or ABCB. The reader should hear the melody even without music.
+- Refrain (~30 words, 2-4 lines): The emotional heart. Repeated after each verse. Should be the most singable, most memorable lines. May be a question, a lament, a boast, or a cryptic phrase that gains meaning through repetition.
+- Verse 2 (~60 words, 4-6 lines): Develop or shift. New images that rhyme (thematically, not just phonetically) with verse 1. If there's a story, it advances here - but through image, not plot. The same rhyme scheme.
+- Refrain (repeat)
+- Verse 3 (~60 words, 4-6 lines): The turn or deepening. What seemed simple now carries weight. If a story, its consequence. If mood, its darkest or brightest point. The same structure, different content.
+- Refrain (repeat, possibly with one word changed for devastating effect)
+- Final Verse or Coda (~40 words, 2-4 lines, optional): Brief. May circle back to verse 1's opening image. May break the pattern. Ends the song with resonance.
+
+VOICE & TONE: The voice of many mouths. This song belongs to a community, not an author. The language is simple but precise - no word wasted. Singable, rhythmic, communal, haunting, worn-smooth.
+
+Rhyme and rhythm are more important than narrative clarity. Near-rhymes and slant-rhymes are welcome. Meter should be consistent within verses (tetrameter or trimeter work well for folk songs). The song should sound good read aloud.
+
+Include imagery specific to the world and culture. Use concrete nouns over abstractions. The song's meaning may be debated - "some say this is about the fall of the Silver Court, others claim it's a love song."
+
+Avoid prose disguised as verse, forced rhymes that sacrifice meaning, modern idioms, complex vocabulary. Folk songs use common words arranged uncommonly.`,
+
+    eventInstructions: 'Events become imagery. A war becomes "the red year." A leader becomes "the one who wore the crown of thorns." The song remembers events as feelings and images, not facts.',
+
+    roles: [
+      { role: 'song-subject', count: { min: 1, max: 2 }, description: 'What or whom the song is about - may be a person, place, event, or feeling, transformed into imagery' },
+      { role: 'cultural-origin', count: { min: 0, max: 1 }, description: 'The community that sings this - their concerns and values shape the song' },
+    ],
+
+    pacing: {
+      wordCount: { min: 250, max: 400 },
+    },
+
+    temperature: 0.9,
+  },
+
+  // 17. NURSERY RHYMES
+  {
+    id: 'nursery-rhymes',
+    name: 'Nursery Rhymes',
+    description: 'Collection of short children\'s rhymes on diverse subjects - simple meter, memorable, often darker than they seem',
+    tags: ['document', 'verse', 'children', 'folklore'],
+    format: 'document',
+
+    documentInstructions: `This is a collection of nursery rhymes - the songs and chants children use for games, skipping, counting, or bedtime. Each rhyme is independent, touching a different subject. Together they form a mosaic of a culture's anxieties, values, and history filtered through children's mouths.
+
+STRUCTURE:
+- Collector's Introduction (~50 words): Who collected these, from where. "Gathered from the schoolyards and hearths of [place]" or similar. Note that children's rhymes often preserve history adults have forgotten.
+- Rhyme 1 (~40 words, 4-6 lines): A counting or game rhyme. Bouncy meter. Used for choosing who's "it" or counting steps. References a historical figure or event obliquely. Children don't know the origin.
+- Rhyme 2 (~40 words, 4-6 lines): A cautionary rhyme. Warning dressed as play. "Don't go past the old wall / when the moon is thin" - real danger made into singsong.
+- Rhyme 3 (~40 words, 4-6 lines): A nonsense rhyme. Sounds like gibberish but may preserve corrupted names, places, or events. The meaning is lost; the rhythm survives.
+- Rhyme 4 (~40 words, 4-6 lines): A lullaby or bedtime rhyme. Gentler. May contain an undertone of sadness or threat ("and if the wind should take you away...").
+- Rhyme 5 (~40 words, 4-6 lines, optional): A clapping or taunting rhyme. Used between children. May reference a real person or group in mocking terms.
+- Collector's Note (~40 words, optional): Brief scholarly footnote connecting one or two rhymes to their probable historical origins.
+
+VOICE & TONE: Children's voices. Simple words, strong rhythm, perfect or near-perfect rhyme. The rhymes should be genuinely singable and clappable. The darkness is accidental - children repeat what they've heard without understanding. Innocent, rhythmic, catchy, ancient, dark-underneath.
+
+Each rhyme should be metrically tight. Nursery rhymes are defined by their rhythm - they must scan. Trochaic or iambic tetrameter/trimeter. The beat should be so strong a child could clap to it.
+
+Include corrupted versions of real names from the world, references to real events transformed beyond recognition, specific local details (places, creatures, foods).
+
+Avoid adult vocabulary, complex syntax, obvious allegory, rhymes that sound composed rather than inherited. These should feel like they've been chanted by a thousand children who have no idea what the words originally meant.`,
+
+    eventInstructions: 'Historical events become unrecognizable in children\'s mouths. A plague becomes "Ring around the rosie." A tyrant becomes "Old King Grumblethorn." The rhyme preserves the emotional residue, not the facts.',
+
+    roles: [
+      { role: 'rhyme-subjects', count: { min: 2, max: 4 }, description: 'Diverse subjects across the rhymes - historical figures, places, events, all transformed into children\'s chant material' },
+      { role: 'cultural-origin', count: { min: 0, max: 1 }, description: 'The culture whose children sing these - their world is embedded in the imagery' },
+    ],
+
+    pacing: {
+      wordCount: { min: 250, max: 400 },
+    },
+  },
+
+  // 18. HAIKU COLLECTION
+  {
+    id: 'haiku-collection',
+    name: 'Haiku Collection',
+    description: 'Three to four haikus - extreme compression, nature imagery, a single moment seized in 5-7-5 syllables',
+    tags: ['document', 'verse', 'minimal', 'contemplative'],
+    format: 'document',
+
+    documentInstructions: `This is a small collection of 3-4 haikus. Each is exactly three lines: 5 syllables, 7 syllables, 5 syllables. The haiku captures a single moment of perception - not a thought, not a narrative, but a seeing. The world briefly holds still.
+
+STRUCTURE:
+- Attribution (~20 words): The poet's name (or "anonymous"), the occasion or season, and the place. Brief and formal.
+- Haiku 1 (3 lines, 5-7-5): A nature observation. What is seen, heard, or felt in this moment. Present tense. No commentary. The image carries everything.
+- Haiku 2 (3 lines, 5-7-5): A human moment set against nature. A person doing something ordinary while the world does something extraordinary around them (or vice versa).
+- Haiku 3 (3 lines, 5-7-5): The deepest perception. An image that opens into something larger. Loneliness, mortality, wonder, change - expressed entirely through concrete detail.
+- Haiku 4 (3 lines, 5-7-5, optional): A final image. May circle back to the first haiku's season or setting. A closing note.
+
+VOICE & TONE: No voice. The haiku is a window, not a speaker. Present tense, concrete nouns, active verbs. No adjectives unless they are precise and sensory. No abstractions. No metaphors explained. Still, precise, vast, fleeting, natural.
+
+The 5-7-5 syllable count is STRICT. Count every syllable. This constraint is the form - do not violate it.
+
+Seasonal reference (kigo) in at least two haikus - specific plants, weather, light quality, animal behavior that places the moment in a season.
+
+A cutting word or break (kireji) in each haiku - a pause that divides the haiku into two parts, creating juxtaposition. This is what gives the haiku its resonance: two images held together, the space between them alive with meaning.
+
+Include imagery specific to the world - its flora, fauna, weather, landscapes. The haiku should feel rooted in this world, not generic.
+
+Avoid sentimentality, abstraction, commentary, narrative, metaphor spelled out, anything that explains rather than shows. The haiku trusts the reader completely.`,
+
+    eventInstructions: 'Events are absent. The haiku exists outside history, in the eternal present of perception. If a war raged yesterday, the haiku notices the frost on a blade of grass this morning.',
+
+    roles: [
+      { role: 'observed-moment', count: { min: 1, max: 2 }, description: 'The subject of perception - a season, a place, a fleeting natural event' },
+      { role: 'poet-context', count: { min: 0, max: 1 }, description: 'The poet or the occasion - minimal, providing just enough frame' },
+    ],
+
+    pacing: {
+      wordCount: { min: 80, max: 150 },
+    },
+  },
 ];
