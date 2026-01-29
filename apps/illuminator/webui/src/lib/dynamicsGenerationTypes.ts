@@ -37,6 +37,7 @@ export interface ProposedDynamic {
   text: string;
   cultures?: string[];
   kinds?: string[];
+  eraOverrides?: Record<string, { text: string; replace: boolean }>;
 }
 
 export interface DynamicsLLMResponse {

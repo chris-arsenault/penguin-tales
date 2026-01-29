@@ -231,6 +231,8 @@ function buildInitialContext(config: DynamicsGenerationConfig): string {
     const lines = entities.map((e) => {
       const parts = [`${e.name}`];
       if (e.subtype) parts[0] += ` (${e.subtype})`;
+      // Include IDs for eras so the LLM can reference them in eraOverrides
+      if (kind === 'era') parts.push(`id: ${e.id}`);
       if (e.culture) parts.push(`culture: ${e.culture}`);
       if (e.status && e.status !== 'active') parts.push(`status: ${e.status}`);
       const text = e.summary || e.description || '';

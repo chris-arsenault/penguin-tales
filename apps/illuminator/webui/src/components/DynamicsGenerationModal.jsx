@@ -108,6 +108,18 @@ function ProposedDynamicsList({ dynamics }) {
               {d.kinds?.length > 0 && <span>Kinds: {d.kinds.join(', ')}</span>}
             </div>
           )}
+          {d.eraOverrides && Object.keys(d.eraOverrides).length > 0 && (
+            <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid var(--border-color)' }}>
+              {Object.entries(d.eraOverrides).map(([eraId, override]) => (
+                <div key={eraId} style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    {override.replace ? '[replaces]' : '[adds]'} {eraId}:
+                  </span>{' '}
+                  {override.text}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ))}
     </div>

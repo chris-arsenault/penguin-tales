@@ -1131,6 +1131,7 @@ export default function IlluminatorRemote({
       text: d.text,
       cultures: d.cultures?.length ? d.cultures : undefined,
       kinds: d.kinds?.length ? d.kinds : undefined,
+      eraOverrides: d.eraOverrides && Object.keys(d.eraOverrides).length > 0 ? d.eraOverrides : undefined,
     }));
     const existing = worldContext?.worldDynamics || [];
     updateWorldContext({ worldDynamics: [...existing, ...newDynamics] });
