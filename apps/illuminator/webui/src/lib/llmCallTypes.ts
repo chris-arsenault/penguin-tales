@@ -19,8 +19,7 @@ export type LLMCallType =
 
   // Chronicle Generation
   | 'chronicle.generation'       // Single-shot V2 generation
-  | 'chronicle.edit'             // Edit pass
-  | 'chronicle.validation'       // Cohesion validation
+  | 'chronicle.combine'          // Compare + combine two temperature versions
   | 'chronicle.summary'          // Title + summary
   | 'chronicle.imageRefs'        // Image reference extraction
 
@@ -40,8 +39,7 @@ export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'image.promptFormatting',
   'perspective.synthesis',
   'chronicle.generation',
-  'chronicle.edit',
-  'chronicle.validation',
+  'chronicle.combine',
   'chronicle.summary',
   'chronicle.imageRefs',
   'palette.expansion',
@@ -174,27 +172,16 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
     },
     recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
   },
-  'chronicle.edit': {
-    label: 'Edit Pass',
-    description: 'Applies style corrections and tone adjustments',
+  'chronicle.combine': {
+    label: 'Compare + Combine',
+    description: 'Combines two temperature variants into a final chronicle',
     category: 'chronicle',
     defaults: {
-      model: 'claude-sonnet-4-5-20250929',
-      thinkingBudget: 0,
-      maxTokens: 4096,
+      model: 'claude-opus-4-5-20251101',
+      thinkingBudget: 4096,
+      maxTokens: 8192,
     },
-    recommendedModels: ['claude-sonnet-4-5-20250929'],
-  },
-  'chronicle.validation': {
-    label: 'Validation',
-    description: 'Checks narrative cohesion and factual consistency',
-    category: 'chronicle',
-    defaults: {
-      model: 'claude-haiku-4-5-20251001',
-      thinkingBudget: 0,
-      maxTokens: 4096,
-    },
-    recommendedModels: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'],
+    recommendedModels: ['claude-opus-4-5-20251101', 'claude-sonnet-4-5-20250929'],
   },
   'chronicle.summary': {
     label: 'Summary',
@@ -279,7 +266,7 @@ export function getCallTypesByCategory(): Record<LLMCallCategory, LLMCallType[]>
     description: ['description.narrative', 'description.visualThesis', 'description.visualTraits'],
     image: ['image.promptFormatting'],
     perspective: ['perspective.synthesis'],
-    chronicle: ['chronicle.generation', 'chronicle.edit', 'chronicle.validation', 'chronicle.summary', 'chronicle.imageRefs'],
+    chronicle: ['chronicle.generation', 'chronicle.combine', 'chronicle.summary', 'chronicle.imageRefs'],
     palette: ['palette.expansion'],
     dynamics: ['dynamics.generation'],
     revision: ['revision.summary'],

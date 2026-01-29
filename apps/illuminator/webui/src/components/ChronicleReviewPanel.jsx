@@ -917,6 +917,64 @@ function TemperatureRegenerationControl({ item, onRegenerateWithTemperature, isG
   );
 }
 
+function ChronicleVersionSelector({
+  versions,
+  selectedVersionId,
+  activeVersionId,
+  onSelectVersion,
+  onSetActiveVersion,
+  disabled,
+}) {
+  const isActive = selectedVersionId === activeVersionId;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <select
+        value={selectedVersionId}
+        onChange={(e) => onSelectVersion(e.target.value)}
+        disabled={disabled}
+        className="illuminator-select"
+        style={{ width: 'auto', minWidth: '240px', fontSize: '12px', padding: '4px 6px' }}
+      >
+        {versions.map((version) => (
+          <option key={version.id} value={version.id}>{version.label}</option>
+        ))}
+      </select>
+      {isActive ? (
+        <span
+          style={{
+            fontSize: '11px',
+            padding: '2px 8px',
+            background: 'rgba(16, 185, 129, 0.15)',
+            color: '#10b981',
+            borderRadius: '999px',
+            fontWeight: 500,
+          }}
+        >
+          Active
+        </span>
+      ) : (
+        <button
+          onClick={() => onSetActiveVersion?.(selectedVersionId)}
+          disabled={disabled || !onSetActiveVersion}
+          style={{
+            padding: '6px 12px',
+            fontSize: '11px',
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '6px',
+            color: 'var(--text-secondary)',
+            cursor: disabled || !onSetActiveVersion ? 'not-allowed' : 'pointer',
+            opacity: disabled || !onSetActiveVersion ? 0.6 : 1,
+          }}
+        >
+          Make Active
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ============================================================================
 // Main Component
 // ============================================================================
@@ -940,6 +998,7 @@ export default function ChronicleReviewPanel({
   onResetChronicleImage,
   onUpdateChronicleAnchorText,
   onUpdateChronicleTemporalContext,
+  onUpdateChronicleActiveVersion,
 
   // Image layout edits
   onUpdateChronicleImageSize,
@@ -971,6 +1030,52 @@ export default function ChronicleReviewPanel({
 
   const wordCount = (content) => content?.split(/\s+/).filter(Boolean).length || 0;
   const copyToClipboard = (content) => navigator.clipboard.writeText(content);
+
+  const currentVersionId = `current_${item.assembledAt ?? item.createdAt}`;
+  const activeVersionId = item.activeVersionId || currentVersionId;
+
+  const versions = useMemo(() => {
+    const history = (item.generationHistory || []).map((version, index) => {
+      const tempLabel = typeof version.temperature === 'number' ? version.temperature.toFixed(2) : 'default';
+      return {
+        id: version.versionId,
+        content: version.content,
+        wordCount: version.wordCount,
+        label: `Version ${index + 1} • ${new Date(version.generatedAt).toLocaleString()} • temp ${tempLabel}`,
+      };
+    });
+
+    const currentTempLabel = typeof item.generationTemperature === 'number'
+      ? item.generationTemperature.toFixed(2)
+      : 'default';
+
+    history.push({
+      id: currentVersionId,
+      content: item.assembledContent,
+      wordCount: wordCount(item.assembledContent),
+      label: `Current • ${new Date(item.assembledAt ?? item.createdAt).toLocaleString()} • temp ${currentTempLabel}`,
+    });
+
+    return history;
+  }, [
+    item.generationHistory,
+    item.assembledContent,
+    item.assembledAt,
+    item.createdAt,
+    item.generationTemperature,
+    wordCount,
+  ]);
+
+  const [selectedVersionId, setSelectedVersionId] = useState(activeVersionId);
+
+  useEffect(() => {
+    setSelectedVersionId(activeVersionId);
+  }, [activeVersionId, item.chronicleId]);
+
+  const selectedVersion = useMemo(
+    () => versions.find((version) => version.id === selectedVersionId) || versions[versions.length - 1],
+    [versions, selectedVersionId]
+  );
 
   // Build seed data from item for display
   const seedData = {
@@ -1007,7 +1112,7 @@ export default function ChronicleReviewPanel({
           <div>
             <h3 style={{ margin: '0 0 8px 0', fontSize: '18px' }}>Chronicle Review</h3>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-              {wordCount(item.assembledContent).toLocaleString()} words
+              {(selectedVersion?.wordCount ?? wordCount(item.assembledContent)).toLocaleString()} words
               {item.selectionSummary && (
                 <span>
                   {' '}• {item.selectionSummary.entityCount} entities, {item.selectionSummary.eventCount} events
@@ -1032,6 +1137,22 @@ export default function ChronicleReviewPanel({
             >
               ⟳ Regenerate
             </button>
+            {onExport && (
+              <button
+                onClick={onExport}
+                style={{
+                  padding: '10px 20px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                }}
+              >
+                Export
+              </button>
+            )}
             <button
               onClick={onAccept}
               disabled={isGenerating}
@@ -1088,11 +1209,21 @@ export default function ChronicleReviewPanel({
 
         {/* Content Preview */}
         <div>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>Content</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0, fontSize: '16px' }}>Content</h3>
+            <ChronicleVersionSelector
+              versions={versions}
+              selectedVersionId={selectedVersionId}
+              activeVersionId={activeVersionId}
+              onSelectVersion={setSelectedVersionId}
+              onSetActiveVersion={onUpdateChronicleActiveVersion}
+              disabled={isGenerating}
+            />
+          </div>
           <AssembledContentViewer
-            content={item.assembledContent}
-            wordCount={wordCount(item.assembledContent)}
-            onCopy={() => copyToClipboard(item.assembledContent)}
+            content={selectedVersion?.content || item.assembledContent}
+            wordCount={selectedVersion?.wordCount ?? wordCount(item.assembledContent)}
+            onCopy={() => copyToClipboard(selectedVersion?.content || item.assembledContent)}
           />
         </div>
       </div>
@@ -1105,6 +1236,25 @@ export default function ChronicleReviewPanel({
   if (item.status === 'validation_ready') {
     return (
       <div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+          {onExport && (
+            <button
+              onClick={onExport}
+              style={{
+                padding: '8px 16px',
+                fontSize: '12px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                color: 'var(--text-secondary)',
+              }}
+              title="Export chronicle with full generation context as JSON"
+            >
+              Export
+            </button>
+          )}
+        </div>
         <TemperatureRegenerationControl
           item={item}
           onRegenerateWithTemperature={onRegenerateWithTemperature}
@@ -1147,11 +1297,21 @@ export default function ChronicleReviewPanel({
         )}
         {item.assembledContent && (
           <div style={{ marginTop: '24px' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>Preview</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Preview</h3>
+              <ChronicleVersionSelector
+                versions={versions}
+                selectedVersionId={selectedVersionId}
+                activeVersionId={activeVersionId}
+                onSelectVersion={setSelectedVersionId}
+                onSetActiveVersion={onUpdateChronicleActiveVersion}
+                disabled={isGenerating}
+              />
+            </div>
             <AssembledContentViewer
-              content={item.assembledContent}
-              wordCount={wordCount(item.assembledContent)}
-              onCopy={() => copyToClipboard(item.assembledContent)}
+              content={selectedVersion?.content || item.assembledContent}
+              wordCount={selectedVersion?.wordCount ?? wordCount(item.assembledContent)}
+              onCopy={() => copyToClipboard(selectedVersion?.content || item.assembledContent)}
             />
           </div>
         )}

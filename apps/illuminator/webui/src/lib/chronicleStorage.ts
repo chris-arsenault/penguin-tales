@@ -105,6 +105,8 @@ export interface ChronicleRecord {
   generationTemperature?: number;
   /** Prior generation versions (chronicle regeneration history) */
   generationHistory?: ChronicleGenerationVersion[];
+  /** Version id that should be published on accept */
+  activeVersionId?: string;
 
   // Generation context snapshot (stored for export - what was actually used)
   // This is the FINAL context after perspective synthesis, not the original input
@@ -355,6 +357,7 @@ export interface ChronicleMetadata {
 
   // Generation result
   assembledContent: string;
+  generationHistory?: ChronicleGenerationVersion[];
   selectionSummary: {
     entityCount: number;
     eventCount: number;
@@ -375,6 +378,8 @@ export async function createChronicle(
 
   const focusType = deriveFocusType(metadata.roleAssignments);
   const title = metadata.title || deriveTitleFromRoles(metadata.roleAssignments);
+  const assembledAt = Date.now();
+  const activeVersionId = `current_${assembledAt}`;
 
   const record: ChronicleRecord = {
     chronicleId,
@@ -402,9 +407,11 @@ export async function createChronicle(
     generationSystemPrompt: metadata.generationSystemPrompt,
     generationUserPrompt: metadata.generationUserPrompt,
     generationTemperature: metadata.generationTemperature,
+    generationHistory: metadata.generationHistory,
+    activeVersionId,
     status: 'assembly_ready',
     assembledContent: metadata.assembledContent,
-    assembledAt: Date.now(),
+    assembledAt,
     editVersion: 0,
     validationStale: false,
     totalEstimatedCost: metadata.cost.estimated,
@@ -537,6 +544,7 @@ export async function regenerateChronicleAssembly(
       record.generationSystemPrompt = updates.systemPrompt;
       record.generationUserPrompt = updates.userPrompt;
       record.generationTemperature = updates.temperature;
+      record.activeVersionId = `current_${record.assembledAt}`;
 
       record.failureStep = undefined;
       record.failureReason = undefined;
@@ -947,6 +955,38 @@ export async function acceptChronicle(chronicleId: string, finalContent?: string
 
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error || new Error('Failed to accept chronicle'));
+  });
+}
+
+/**
+ * Update which generation version should be published when accepting.
+ */
+export async function updateChronicleActiveVersion(
+  chronicleId: string,
+  versionId: string
+): Promise<void> {
+  const db = await openChronicleDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as ChronicleRecord | undefined;
+      if (!record) {
+        reject(new Error(`Chronicle ${chronicleId} not found`));
+        return;
+      }
+
+      record.activeVersionId = versionId;
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle active version'));
   });
 }
 

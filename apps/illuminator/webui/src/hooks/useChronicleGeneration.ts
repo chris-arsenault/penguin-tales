@@ -43,15 +43,12 @@ export function deriveStatus(record: ChronicleRecord | undefined): string {
   if (record.status === 'failed') return 'failed';
 
   // Check for in-progress states (worker is running)
-  if (record.status === 'validating' ||
-      record.status === 'editing' ||
-      record.status === 'generating') {
+  if (record.status === 'generating') {
     return record.status;
   }
 
   // Derive from data presence (completed states)
   if (record.finalContent || record.status === 'complete') return 'complete';
-  if (record.cohesionReport) return 'validation_ready';
   if (record.assembledContent) return 'assembly_ready';
 
   return 'not_started';
@@ -88,10 +85,8 @@ export interface UseChronicleGenerationReturn {
   generateV2: (chronicleId: string, context: ChronicleGenerationContext, metadata?: ChronicleMetadata) => void;
 
   // Post-generation refinements
-  correctSuggestions: (chronicleId: string, context: ChronicleGenerationContext) => void;
   generateSummary: (chronicleId: string, context: ChronicleGenerationContext) => void;
   generateImageRefs: (chronicleId: string, context: ChronicleGenerationContext) => void;
-  revalidateChronicle: (chronicleId: string, context: ChronicleGenerationContext) => void;
   regenerateWithTemperature: (chronicleId: string, temperature: number) => void;
   acceptChronicle: (chronicleId: string) => Promise<AcceptedChronicle | null>;
   restartChronicle: (chronicleId: string) => Promise<void>;
@@ -308,39 +303,6 @@ export function useChronicleGeneration(
         };
   }, []);
 
-  // -------------------------------------------------------------------------
-  // Correct suggestions (apply validation feedback)
-  // -------------------------------------------------------------------------
-
-  const correctSuggestions = useCallback(
-    (chronicleId: string, context: ChronicleGenerationContext) => {
-      const chronicle = chronicles.get(chronicleId);
-      if (!chronicle) {
-        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
-        return;
-      }
-      if (!chronicle.cohesionReport || !chronicle.assembledContent) {
-        console.error('[Chronicle] No validation report or assembled content to revise');
-        return;
-      }
-      const narrativeStyle = context.narrativeStyle;
-      if (!narrativeStyle) {
-        console.error('[Chronicle] Narrative style required to correct suggestions');
-        return;
-      }
-
-      onEnqueue([{
-        entity: buildEntityRef(chronicleId, context, chronicle),
-        type: 'entityChronicle' as EnrichmentType,
-        prompt: '',
-        chronicleContext: context,
-        chronicleStep: 'edit',
-        chronicleId,
-      }]);
-    },
-    [chronicles, onEnqueue, buildEntityRef]
-  );
-
   const generateSummary = useCallback(
     (chronicleId: string, context: ChronicleGenerationContext) => {
       const chronicle = chronicles.get(chronicleId);
@@ -460,35 +422,6 @@ export function useChronicleGeneration(
     [chronicles, onEnqueue]
   );
 
-  const revalidateChronicle = useCallback(
-    (chronicleId: string, context: ChronicleGenerationContext) => {
-      const chronicle = chronicles.get(chronicleId);
-      if (!chronicle) {
-        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
-        return;
-      }
-      if (!chronicle.assembledContent) {
-        console.error('[Chronicle] No assembled content to validate');
-        return;
-      }
-      const narrativeStyle = context.narrativeStyle;
-      if (!narrativeStyle) {
-        console.error('[Chronicle] Narrative style required to revalidate');
-        return;
-      }
-
-      onEnqueue([{
-        entity: buildEntityRef(chronicleId, context, chronicle),
-        type: 'entityChronicle' as EnrichmentType,
-        prompt: '',
-        chronicleContext: context,
-        chronicleStep: 'validate',
-        chronicleId,
-      }]);
-    },
-    [chronicles, onEnqueue, buildEntityRef]
-  );
-
   // -------------------------------------------------------------------------
   // Accept chronicle (mark complete)
   // -------------------------------------------------------------------------
@@ -505,15 +438,20 @@ export function useChronicleGeneration(
     }
 
     try {
+      const currentVersionId = `current_${chronicle.assembledAt ?? chronicle.createdAt}`;
+      const activeVersionId = chronicle.activeVersionId || currentVersionId;
+      const historyMatch = chronicle.generationHistory?.find((version) => version.versionId === activeVersionId);
+      const activeContent = historyMatch?.content || chronicle.assembledContent;
+
       // Store raw content - wiki links are applied at render time in Chronicler
-      await acceptChronicleInDb(chronicleId, chronicle.assembledContent);
+      await acceptChronicleInDb(chronicleId, activeContent);
       await loadChronicles(); // Reload to reflect change
 
       return {
         chronicleId,
         title: chronicle.title,
         format: chronicle.format,
-        content: chronicle.assembledContent,
+        content: activeContent,
         summary: chronicle.summary,
         imageRefs: chronicle.imageRefs,
         entrypointId: chronicle.entrypointId,
@@ -577,10 +515,8 @@ export function useChronicleGeneration(
   return {
     chronicles,
     generateV2,
-    correctSuggestions,
     generateSummary,
     generateImageRefs,
-    revalidateChronicle,
     regenerateWithTemperature,
     acceptChronicle,
     cancelChronicle,

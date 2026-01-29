@@ -82,6 +82,7 @@ interface ExportChronicleVersion {
 export interface ChronicleExport {
   exportVersion: '1.2';
   exportedAt: string;
+  activeVersionId?: string;
 
   // Chronicle identity
   chronicle: {
@@ -226,21 +227,45 @@ function exportPerspectiveSynthesis(
  * No reconstruction, no parameter passing of generation context.
  */
 export function buildChronicleExport(chronicle: ChronicleRecord): ChronicleExport {
-  // Get the final content
-  const content = chronicle.finalContent || chronicle.assembledContent || '';
-  const wordCount = content.split(/\s+/).filter(Boolean).length;
+  const currentVersionId = `current_${chronicle.assembledAt ?? chronicle.createdAt}`;
+  const activeVersionId = chronicle.activeVersionId || currentVersionId;
 
-  // Use the STORED prompts - the canonical source of truth
-  const systemPrompt =
-    chronicle.generationSystemPrompt ||
-    '(prompt not stored - chronicle generated before prompt storage was implemented)';
-  const userPrompt =
-    chronicle.generationUserPrompt ||
-    '(prompt not stored - chronicle generated before prompt storage was implemented)';
+  const currentVersion = {
+    id: currentVersionId,
+    content: chronicle.finalContent || chronicle.assembledContent || '',
+    wordCount: (chronicle.finalContent || chronicle.assembledContent || '').split(/\s+/).filter(Boolean).length,
+    systemPrompt:
+      chronicle.generationSystemPrompt ||
+      '(prompt not stored - chronicle generated before prompt storage was implemented)',
+    userPrompt:
+      chronicle.generationUserPrompt ||
+      '(prompt not stored - chronicle generated before prompt storage was implemented)',
+    model: chronicle.model,
+  };
+
+  const historyMatch = chronicle.generationHistory?.find((version) => version.versionId === activeVersionId);
+  const activeVersion = historyMatch
+    ? {
+        id: historyMatch.versionId,
+        content: historyMatch.content,
+        wordCount: historyMatch.wordCount,
+        systemPrompt: historyMatch.systemPrompt,
+        userPrompt: historyMatch.userPrompt,
+        model: historyMatch.model,
+      }
+    : currentVersion;
+
+  const content = activeVersion.content;
+  const wordCount = activeVersion.wordCount;
+  const systemPrompt = activeVersion.systemPrompt;
+  const userPrompt = activeVersion.userPrompt;
+  const currentContent = chronicle.assembledContent || chronicle.finalContent || '';
+  const currentWordCount = currentContent.split(/\s+/).filter(Boolean).length;
 
   const exportData: ChronicleExport = {
     exportVersion: '1.2',
     exportedAt: new Date().toISOString(),
+    activeVersionId,
 
     chronicle: {
       id: chronicle.chronicleId,
@@ -262,7 +287,7 @@ export function buildChronicleExport(chronicle: ChronicleRecord): ChronicleExpor
     generationLLMCall: {
       systemPrompt,
       userPrompt,
-      model: chronicle.model,
+      model: activeVersion.model,
     },
   };
 
@@ -288,10 +313,10 @@ export function buildChronicleExport(chronicle: ChronicleRecord): ChronicleExpor
     generatedAt: new Date(chronicle.assembledAt ?? chronicle.createdAt).toISOString(),
     temperature: chronicle.generationTemperature,
     model: chronicle.model,
-    wordCount,
-    content,
-    systemPrompt,
-    userPrompt,
+    wordCount: currentWordCount,
+    content: currentContent,
+    systemPrompt: currentVersion.systemPrompt,
+    userPrompt: currentVersion.userPrompt,
   });
 
   exportData.versions = versions;

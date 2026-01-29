@@ -1,10 +1,8 @@
 import type {
   WorkerTask,
-  NetworkDebugInfo,
 } from '../../lib/enrichmentTypes';
 import type {
   ChronicleGenerationContext,
-  CohesionReport,
   ChronicleImageRefs,
   ChronicleImageRef,
   EntityImageRef,
@@ -20,9 +18,8 @@ import type { PerspectiveSynthesisRecord } from '../../lib/chronicleTypes';
 import {
   createChronicle,
   type ChronicleRecord,
+  type ChronicleGenerationVersion,
   regenerateChronicleAssembly,
-  updateChronicleCohesion,
-  updateChronicleEdit,
   updateChronicleSummary,
   updateChronicleImageRefs,
   updateChronicleFailure,
@@ -36,11 +33,7 @@ import {
   getV2SystemPrompt,
   DEFAULT_V2_CONFIG,
 } from '../../lib/chronicle/v2';
-import type {
-  NarrativeStyle,
-  StoryNarrativeStyle,
-  DocumentNarrativeStyle,
-} from '@canonry/world-schema';
+import type { NarrativeStyle } from '@canonry/world-schema';
 import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
 import { stripLeadingWrapper, parseJsonObject } from './textParsing';
@@ -94,13 +87,6 @@ async function executeEntityChronicleTask(
     return { success: false, error: `Chronicle ${task.chronicleId} not found` };
   }
 
-  if (step === 'edit') {
-    if (!task.chronicleContext) {
-      return { success: false, error: 'Chronicle context required for edit step' };
-    }
-    return executeEditStep(task, chronicleRecord, context);
-  }
-
   if (step === 'regenerate_temperature') {
     return executeTemperatureRegenerationStep(task, chronicleRecord, context);
   }
@@ -117,13 +103,6 @@ async function executeEntityChronicleTask(
       return { success: false, error: 'Chronicle context required for image refs step' };
     }
     return executeImageRefsStep(task, chronicleRecord, context);
-  }
-
-  if (step === 'validate') {
-    if (!task.chronicleContext) {
-      return { success: false, error: 'Chronicle context required for validate step' };
-    }
-    return executeValidateStep(task, chronicleRecord, context);
   }
 
   return { success: false, error: `Unknown step: ${step}` };
@@ -157,7 +136,7 @@ async function executeTemperatureRegenerationStep(
   const callConfig = getCallConfig(config, 'chronicle.generation');
   const temperatureRaw = typeof task.chronicleTemperature === 'number'
     ? task.chronicleTemperature
-    : (chronicleRecord.generationTemperature ?? chronicleRecord.narrativeStyle?.temperature ?? 0.7);
+    : (chronicleRecord.generationTemperature ?? chronicleRecord.narrativeStyle?.temperature ?? 0.85);
   const temperature = Math.min(1, Math.max(0, temperatureRaw));
 
   const styleMaxTokens = chronicleRecord.narrativeStyle
@@ -392,43 +371,163 @@ async function executeV2GenerationStep(
   const prompt = buildV2Prompt(chronicleContext, narrativeStyle, selection);
   const styleMaxTokens = getMaxTokensFromStyle(narrativeStyle);
   const systemPrompt = getV2SystemPrompt(narrativeStyle);
-    const generationCall = await runTextCall({
-      llmClient,
-      callType: 'chronicle.generation',
-      callConfig,
-      systemPrompt,
-      prompt,
-      temperature: narrativeStyle.temperature ?? 0.7,
-      autoMaxTokens: styleMaxTokens,
-    });
-  const result = generationCall.result;
+  const baseTemperature = narrativeStyle.temperature ?? 0.85;
+  const temperatureA = baseTemperature;
+  const temperatureB = Math.min(1.0, baseTemperature + 0.2);
 
-  console.log(`[Worker] V2 prompt length: ${prompt.length} chars, maxTokens: ${generationCall.budget.totalMaxTokens}`);
+  // ==========================================================================
+  // VERSION A — Base temperature
+  // ==========================================================================
+  console.log(`[Worker] Generating Version A at temperature ${temperatureA}...`);
+  const genCallA = await runTextCall({
+    llmClient,
+    callType: 'chronicle.generation',
+    callConfig,
+    systemPrompt,
+    prompt,
+    temperature: temperatureA,
+    autoMaxTokens: styleMaxTokens,
+  });
+
+  console.log(`[Worker] V2 prompt length: ${prompt.length} chars, maxTokens: ${genCallA.budget.totalMaxTokens}`);
 
   if (isAborted()) {
-    return { success: false, error: 'Task aborted', debug: result.debug };
+    return { success: false, error: 'Task aborted', debug: genCallA.result.debug };
   }
 
-  if (result.error || !result.text) {
+  if (genCallA.result.error || !genCallA.result.text) {
     return {
       success: false,
-      error: `V2 generation failed: ${result.error || 'No text returned'}`,
-      debug: result.debug,
+      error: `V2 generation (Version A) failed: ${genCallA.result.error || 'No text returned'}`,
+      debug: genCallA.result.debug,
     };
   }
+
+  const versionAText = genCallA.result.text;
+
+  // ==========================================================================
+  // VERSION B — Higher temperature
+  // ==========================================================================
+  console.log(`[Worker] Generating Version B at temperature ${temperatureB}...`);
+  const genCallB = await runTextCall({
+    llmClient,
+    callType: 'chronicle.generation',
+    callConfig,
+    systemPrompt,
+    prompt,
+    temperature: temperatureB,
+    autoMaxTokens: styleMaxTokens,
+  });
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted', debug: genCallB.result.debug };
+  }
+
+  if (genCallB.result.error || !genCallB.result.text) {
+    return {
+      success: false,
+      error: `V2 generation (Version B) failed: ${genCallB.result.error || 'No text returned'}`,
+      debug: genCallB.result.debug,
+    };
+  }
+
+  const versionBText = genCallB.result.text;
+
+  // ==========================================================================
+  // COMBINE — Best elements of both versions
+  // ==========================================================================
+  console.log('[Worker] Combining versions A and B...');
+  const combineConfig = getCallConfig(config, 'chronicle.combine');
+  const combineResult = await executeCombineStep(
+    versionAText,
+    versionBText,
+    systemPrompt,
+    narrativeStyle,
+    llmClient,
+    combineConfig,
+  );
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted' };
+  }
+
+  if (!combineResult.success || !combineResult.text) {
+    // If combine fails, fall back to Version A
+    console.warn(`[Worker] Combine failed (${combineResult.error}), falling back to Version A`);
+  }
+
+  const finalText = combineResult.text || versionAText;
 
   // Note: Wikilinks are NOT applied here - they are applied once at acceptance time
   // (in useChronicleGeneration.ts acceptChronicle) to avoid double-bracketing issues.
 
-  // Calculate cost (always includes perspective synthesis)
+  // Build generation history: store both source versions
+  const now = Date.now();
+  const generationHistory: ChronicleGenerationVersion[] = [
+    {
+      versionId: `versionA_${now}`,
+      generatedAt: now,
+      content: versionAText,
+      wordCount: versionAText.split(/\s+/).length,
+      model: callConfig.model,
+      temperature: temperatureA,
+      systemPrompt,
+      userPrompt: prompt,
+      cost: {
+        estimated: genCallA.estimate.estimatedCost,
+        actual: genCallA.usage.actualCost,
+        inputTokens: genCallA.usage.inputTokens,
+        outputTokens: genCallA.usage.outputTokens,
+      },
+    },
+    {
+      versionId: `versionB_${now}`,
+      generatedAt: now,
+      content: versionBText,
+      wordCount: versionBText.split(/\s+/).length,
+      model: callConfig.model,
+      temperature: temperatureB,
+      systemPrompt,
+      userPrompt: prompt,
+      cost: {
+        estimated: genCallB.estimate.estimatedCost,
+        actual: genCallB.usage.actualCost,
+        inputTokens: genCallB.usage.inputTokens,
+        outputTokens: genCallB.usage.outputTokens,
+      },
+    },
+  ];
+
+  // Calculate total cost (perspective + both generations + combine)
+  const combineCostActual = combineResult.usage?.actualCost ?? 0;
+  const combineCostEstimated = combineResult.usage?.estimatedCost ?? 0;
+  const combineCostInput = combineResult.usage?.inputTokens ?? 0;
+  const combineCostOutput = combineResult.usage?.outputTokens ?? 0;
+
   const cost = {
-    estimated: generationCall.estimate.estimatedCost + perspectiveResult.usage.actualCost,
-    actual: generationCall.usage.actualCost + perspectiveResult.usage.actualCost,
-    inputTokens: generationCall.usage.inputTokens + perspectiveResult.usage.inputTokens,
-    outputTokens: generationCall.usage.outputTokens + perspectiveResult.usage.outputTokens,
+    estimated:
+      perspectiveResult.usage.actualCost +
+      genCallA.estimate.estimatedCost +
+      genCallB.estimate.estimatedCost +
+      combineCostEstimated,
+    actual:
+      perspectiveResult.usage.actualCost +
+      genCallA.usage.actualCost +
+      genCallB.usage.actualCost +
+      combineCostActual,
+    inputTokens:
+      perspectiveResult.usage.inputTokens +
+      genCallA.usage.inputTokens +
+      genCallB.usage.inputTokens +
+      combineCostInput,
+    outputTokens:
+      perspectiveResult.usage.outputTokens +
+      genCallA.usage.outputTokens +
+      genCallB.usage.outputTokens +
+      combineCostOutput,
   };
 
-  // Save chronicle directly to assembled state (single-shot generation)
+  // Save chronicle to assembled state
   try {
     const focus = chronicleContext.focus;
     const existingChronicle = await getChronicle(chronicleId);
@@ -436,13 +535,12 @@ async function executeV2GenerationStep(
     const selectedEntityIds = existingChronicle?.selectedEntityIds ?? focus?.selectedEntityIds ?? [];
     const selectedEventIds = existingChronicle?.selectedEventIds ?? focus?.selectedEventIds ?? [];
     const selectedRelationshipIds = existingChronicle?.selectedRelationshipIds ?? focus?.selectedRelationshipIds ?? [];
-    // Prefer the context used to build the prompt so stored focal era matches generation.
     const temporalContext = chronicleContext.temporalContext ?? existingChronicle?.temporalContext;
 
     await createChronicle(chronicleId, {
       projectId: task.projectId,
       simulationRunId: task.simulationRunId,
-      model: callConfig.model,
+      model: combineConfig.model,
       title: existingChronicle?.title,
       format: existingChronicle?.format || narrativeStyle.format,
       narrativeStyleId: existingChronicle?.narrativeStyleId || narrativeStyle.id,
@@ -453,18 +551,16 @@ async function executeV2GenerationStep(
       selectedRelationshipIds,
       entrypointId: existingChronicle?.entrypointId,
       temporalContext,
-      assembledContent: result.text,
-      // Store the ACTUAL prompts sent to the LLM (canonical source of truth)
+      assembledContent: finalText,
+      generationHistory,
       generationSystemPrompt: systemPrompt,
       generationUserPrompt: prompt,
-      generationTemperature: narrativeStyle.temperature ?? 0.7,
-      // Store the generation context snapshot (post-perspective synthesis)
-      // This is what was actually used to build the prompt
+      generationTemperature: baseTemperature,
       generationContext: {
         worldName: chronicleContext.worldName,
         worldDescription: chronicleContext.worldDescription,
-        tone: chronicleContext.tone, // Final tone (assembled + brief + motifs)
-        canonFacts: chronicleContext.canonFacts, // Faceted facts
+        tone: chronicleContext.tone,
+        canonFacts: chronicleContext.canonFacts,
         nameBank: chronicleContext.nameBank,
         narrativeVoice: chronicleContext.narrativeVoice,
         entityDirectives: chronicleContext.entityDirectives,
@@ -477,7 +573,7 @@ async function executeV2GenerationStep(
       perspectiveSynthesis: perspectiveRecord,
       cost,
     });
-    console.log(`[Worker] Chronicle saved: ${chronicleId}`);
+    console.log(`[Worker] Chronicle saved: ${chronicleId} (combined from T=${temperatureA} + T=${temperatureB})`);
   } catch (err) {
     return { success: false, error: `Failed to save chronicle: ${err}` };
   }
@@ -499,7 +595,7 @@ async function executeV2GenerationStep(
     outputTokens: perspectiveResult.usage.outputTokens,
   });
 
-  // Record generation cost
+  // Record generation cost (both versions)
   await saveCostRecordWithDefaults({
     projectId: task.projectId,
     simulationRunId: task.simulationRunId,
@@ -509,382 +605,150 @@ async function executeV2GenerationStep(
     chronicleId,
     type: 'chronicleV2',
     model: callConfig.model,
-    estimatedCost: generationCall.estimate.estimatedCost,
-    actualCost: generationCall.usage.actualCost,
-    inputTokens: generationCall.usage.inputTokens,
-    outputTokens: generationCall.usage.outputTokens,
+    estimatedCost: genCallA.estimate.estimatedCost + genCallB.estimate.estimatedCost,
+    actualCost: genCallA.usage.actualCost + genCallB.usage.actualCost,
+    inputTokens: genCallA.usage.inputTokens + genCallB.usage.inputTokens,
+    outputTokens: genCallA.usage.outputTokens + genCallB.usage.outputTokens,
   });
+
+  // Record combine cost
+  if (combineCostActual > 0) {
+    await saveCostRecordWithDefaults({
+      projectId: task.projectId,
+      simulationRunId: task.simulationRunId,
+      entityId: task.entityId,
+      entityName: task.entityName,
+      entityKind: task.entityKind,
+      chronicleId,
+      type: 'chronicleV2',
+      model: combineConfig.model,
+      estimatedCost: combineCostEstimated,
+      actualCost: combineCostActual,
+      inputTokens: combineCostInput,
+      outputTokens: combineCostOutput,
+    });
+  }
 
   return {
     success: true,
     result: {
       chronicleId,
       generatedAt: Date.now(),
-      model: callConfig.model,
+      model: combineConfig.model,
       estimatedCost: cost.estimated,
       actualCost: cost.actual,
       inputTokens: cost.inputTokens,
       outputTokens: cost.outputTokens,
     },
-    debug: result.debug,
+    debug: genCallA.result.debug,
   };
 }
 
-/**
- * Edit chronicle based on validation suggestions, then re-validate
- */
-async function executeEditStep(
-  task: WorkerTask,
-  chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
-  context: TaskContext
-): Promise<TaskResult> {
-  const { config, llmClient, isAborted } = context;
+// ============================================================================
+// Compare + Combine Step
+// ============================================================================
 
-  if (!chronicleRecord) {
-    return { success: false, error: 'Chronicle record missing for editing' };
-  }
+const COMBINE_SYSTEM_PROMPT = `You are a narrative editor combining two versions of the same chronicle into a single final version. Both versions follow the same prompt, style, and narrative structure — they differ in temperature (creative latitude).
 
-  const chronicleId = chronicleRecord.chronicleId;
-  const failEdit = async (message: string, debug?: NetworkDebugInfo): Promise<TaskResult> => {
-    await markChronicleFailure(chronicleId, 'edit', message);
-    return { success: false, error: message, debug };
+Your job is NOT to merge or average. Your job is to CHOOSE and REWRITE: take the stronger elements from each version and produce one polished chronicle.
+
+## Selection Criteria
+
+Prefer whichever version has:
+- **Richer world-building details** — invented names, places, customs that feel grounded
+- **More surprising structural choices** — non-obvious scene ordering, interesting POV decisions
+- **More natural prose** — sentences that flow without feeling templated
+- **Better adherence to the narrative voice and entity directives**
+- **Stronger emotional range** — not every beat should feel the same
+
+If Version A has a better opening and Version B has a better middle, use each. If both handle the same beat differently, pick the one that reads more naturally.
+
+## Output Rules
+- Output ONLY the final chronicle text
+- No commentary, no labels, no "Here is the combined version"
+- Maintain the target word count of the originals
+- Preserve all entity names, facts, and relationships exactly as they appear`;
+
+interface CombineStepResult {
+  success: boolean;
+  text?: string;
+  error?: string;
+  usage?: {
+    estimatedCost: number;
+    actualCost: number;
+    inputTokens: number;
+    outputTokens: number;
   };
+}
 
-  if (!chronicleRecord.assembledContent) {
-    return failEdit('Chronicle has no assembled content to edit');
-  }
-  if (!chronicleRecord.cohesionReport) {
-    return failEdit('Chronicle has no validation report to edit against');
-  }
+async function executeCombineStep(
+  versionAText: string,
+  versionBText: string,
+  originalSystemPrompt: string,
+  narrativeStyle: NarrativeStyle,
+  llmClient: { isEnabled: () => boolean } & Record<string, unknown>,
+  combineCallConfig: ReturnType<typeof getCallConfig>,
+): Promise<CombineStepResult> {
+  const combinePrompt = `## Original Generation Prompt Context
+The following system prompt was used to generate both versions:
 
-  const callConfig = getCallConfig(config, 'chronicle.edit');
-  console.log(`[Worker] Editing chronicle based on validation feedback, model=${callConfig.model}...`);
+${originalSystemPrompt}
 
-  // Build edit prompt from validation issues
-  const issues = chronicleRecord.cohesionReport.issues || [];
-  const issueList = issues
-    .map((issue, i) => `${i + 1}. [${issue.severity}] ${issue.description}\n   Suggestion: ${issue.suggestion}`)
-    .join('\n\n');
+Style: ${narrativeStyle.name} (${narrativeStyle.format})
 
-  const editPrompt = `Revise the chronicle below based on the validation feedback.
+---
 
-## Validation Issues
-${issueList || 'No specific issues identified.'}
+## VERSION A (lower temperature — more controlled)
 
-## Original Chronicle
-${chronicleRecord.assembledContent}
+${versionAText}
 
-## Instructions
-1. Address each issue while preserving the overall narrative flow
-2. Maintain entity names, facts, and relationships accurately
-3. Return ONLY the revised chronicle text, no explanations`;
+---
 
-  const editCall = await runTextCall({
-    llmClient,
-    callType: 'chronicle.edit',
-    callConfig,
-    systemPrompt: 'You are a narrative editor. Revise the chronicle to address the validation feedback while maintaining quality and consistency.',
-    prompt: editPrompt,
-    temperature: 0.3,
-  });
-  const editResult = editCall.result;
-  const debug = editResult.debug;
+## VERSION B (higher temperature — more creative)
 
-  if (isAborted()) {
-    return failEdit('Task aborted', debug);
-  }
+${versionBText}
 
-  if (editResult.error || !editResult.text) {
-    return failEdit(`Edit failed: ${editResult.error || 'Empty response'}`, debug);
-  }
+---
 
-  const editCost = {
-    estimated: editCall.estimate.estimatedCost,
-    actual: editCall.usage.actualCost,
-    inputTokens: editCall.usage.inputTokens,
-    outputTokens: editCall.usage.outputTokens,
-  };
+## YOUR TASK
 
-  const cleanedContent = stripLeadingWrapper(editResult.text);
+Produce the final chronicle by selecting the strongest elements from each version. Output only the chronicle text.`;
 
-  await updateChronicleEdit(chronicleId, cleanedContent, editCost);
+  try {
+    const combineCall = await runTextCall({
+      llmClient,
+      callType: 'chronicle.combine',
+      callConfig: combineCallConfig,
+      systemPrompt: COMBINE_SYSTEM_PROMPT,
+      prompt: combinePrompt,
+      temperature: 0.4,
+    });
 
-  await saveCostRecordWithDefaults({
-    projectId: task.projectId,
-    simulationRunId: task.simulationRunId,
-    entityId: task.entityId,
-    entityName: task.entityName,
-    entityKind: task.entityKind,
-    chronicleId,
-    type: 'chronicleRevision',
-    model: callConfig.model,
-    estimatedCost: editCost.estimated,
-    actualCost: editCost.actual,
-    inputTokens: editCost.inputTokens,
-    outputTokens: editCost.outputTokens,
-  });
+    if (combineCall.result.error || !combineCall.result.text) {
+      return {
+        success: false,
+        error: combineCall.result.error || 'No text returned from combine step',
+      };
+    }
 
-  if (isAborted()) {
-    return failEdit('Task aborted', debug);
-  }
-
-  const updatedChronicleRecord = {
-    ...chronicleRecord,
-    assembledContent: cleanedContent,
-  };
-
-  const validationResult = await executeValidateStep(
-    task,
-    updatedChronicleRecord,
-    context
-  );
-
-  if (!validationResult.success) {
+    return {
+      success: true,
+      text: combineCall.result.text,
+      usage: {
+        estimatedCost: combineCall.estimate.estimatedCost,
+        actualCost: combineCall.usage.actualCost,
+        inputTokens: combineCall.usage.inputTokens,
+        outputTokens: combineCall.usage.outputTokens,
+      },
+    };
+  } catch (err) {
     return {
       success: false,
-      error: validationResult.error || 'Validation failed after edit',
-      debug: validationResult.debug || debug,
+      error: `Combine step failed: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
-
-  return {
-    success: true,
-    result: validationResult.result,
-    debug: validationResult.debug || debug,
-  };
 }
 
-/**
- * Build V2 validation prompt (simpler, no plan required)
- */
-function buildV2ValidationPrompt(
-  content: string,
-  chronicleContext: ChronicleGenerationContext,
-  style: NarrativeStyle
-): string {
-  const isStory = style.format === 'story';
-  const storyStyle = isStory ? (style as StoryNarrativeStyle) : null;
-  const docStyle = !isStory ? (style as DocumentNarrativeStyle) : null;
-
-  const wordCountTarget = isStory
-    ? `${storyStyle!.pacing.totalWordCount.min}-${storyStyle!.pacing.totalWordCount.max}`
-    : `${docStyle!.documentConfig.wordCount.min}-${docStyle!.documentConfig.wordCount.max}`;
-
-  const sections: string[] = [];
-
-  // Style expectations
-  sections.push(`# Style: ${style.name}
-Format: ${style.format}
-Target word count: ${wordCountTarget}`);
-
-  if (isStory && storyStyle!.plotStructure) {
-    sections.push(`Plot structure: ${storyStyle!.plotStructure.type}`);
-  }
-
-  if (isStory && storyStyle!.proseDirectives) {
-    const pd = storyStyle!.proseDirectives;
-    sections.push(`Tone: ${pd.toneKeywords?.join(', ') || 'not specified'}
-Dialogue style: ${pd.dialogueStyle || 'not specified'}
-${pd.avoid?.length ? `Avoid: ${pd.avoid.join(', ')}` : ''}`);
-  }
-
-  if (!isStory && docStyle!.documentConfig) {
-    const dc = docStyle!.documentConfig;
-    sections.push(`Document type: ${dc.documentType}
-Voice: ${dc.voice || 'not specified'}
-${dc.toneKeywords?.length ? `Tone: ${dc.toneKeywords.join(', ')}` : ''}
-${dc.avoid?.length ? `Avoid: ${dc.avoid.join(', ')}` : ''}`);
-  }
-
-  // Available entities
-  sections.push(`# Entities Provided
-${chronicleContext.entities.map((e) => `- ${e.name} (${e.kind}${e.subtype ? `/${e.subtype}` : ''}, ${e.status})`).join('\n')}`);
-
-  // Content
-  sections.push(`# Chronicle Content
-${content}`);
-
-  // Task
-  sections.push(`# Validation Task
-
-Evaluate this chronicle and output a JSON cohesion report.
-
-Check the following:
-
-1. **Word Count**: Is the content within the target range (${wordCountTarget} words)?
-
-2. **Style Adherence**: Does the narrative match the expected tone, format, and voice?
-
-3. **Entity Usage**: Are entities from the provided list used appropriately? Are entity kinds (person, faction, location, etc.) treated correctly (e.g., factions are groups, not individual characters)?
-
-4. **Narrative Coherence**: Does the chronicle flow logically? Is there a clear beginning, middle, and end?
-
-5. **Factual Consistency**: Are entity facts (names, relationships, status) consistent throughout?
-
-Output this exact JSON structure:
-
-\`\`\`json
-{
-  "overallScore": 85,
-  "checks": {
-    "wordCount": { "pass": true, "notes": "Approximately 2400 words, within target range" },
-    "styleAdherence": { "pass": true, "notes": "Matches the expected tone and format" },
-    "entityUsage": { "pass": true, "notes": "Entities used appropriately" },
-    "narrativeCoherence": { "pass": true, "notes": "Clear narrative arc" },
-    "factualConsistency": { "pass": true, "notes": "Facts are consistent" }
-  },
-  "issues": [
-    {
-      "severity": "minor",
-      "checkType": "entityUsage",
-      "description": "Faction name interpreted as character name",
-      "suggestion": "Clarify that this is a group, not an individual"
-    }
-  ]
-}
-\`\`\`
-
-Score guidelines:
-- 90-100: Excellent, minimal issues
-- 75-89: Good, minor issues only
-- 60-74: Acceptable, some issues to address
-- Below 60: Needs significant revision
-
-Output ONLY the JSON, no other text.`);
-
-  return sections.join('\n\n');
-}
-
-/**
- * Parse V2 validation response into CohesionReport format
- */
-function parseV2ValidationResponse(text: string): CohesionReport {
-  const parsed = parseJsonObject<Record<string, unknown>>(text, 'V2 validation response');
-
-  // Map V2 checks to V1 cohesion report format
-  const checks = (parsed.checks as Record<string, unknown>) || {};
-  return {
-    overallScore: (parsed.overallScore as number) || 0,
-    checks: {
-      plotStructure: (checks.narrativeCoherence as Record<string, unknown>) || { pass: true, notes: 'N/A for V2' },
-      entityConsistency: (checks.entityUsage as Record<string, unknown>) || { pass: true, notes: 'N/A for V2' },
-      sectionGoals: [], // V2 doesn't have sections
-      resolution: (checks.styleAdherence as Record<string, unknown>) || { pass: true, notes: 'N/A for V2' },
-      factualAccuracy: (checks.factualConsistency as Record<string, unknown>) || { pass: true, notes: 'N/A for V2' },
-      themeExpression: (checks.wordCount as Record<string, unknown>) || { pass: true, notes: 'N/A for V2' },
-    },
-    issues: (Array.isArray(parsed.issues) ? parsed.issues : []).map((issue: { severity?: string; checkType?: string; description?: string; suggestion?: string }) => ({
-      severity: issue.severity || 'minor',
-      checkType: issue.checkType || 'unknown',
-      description: issue.description || '',
-      suggestion: issue.suggestion || '',
-    })),
-  };
-}
-
-/**
- * Validate cohesion
- */
-async function executeValidateStep(
-  task: WorkerTask,
-  chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
-  context: TaskContext
-): Promise<TaskResult> {
-  const { config, llmClient, isAborted } = context;
-
-  if (!chronicleRecord) {
-    return { success: false, error: 'Chronicle record missing for validation' };
-  }
-
-  const chronicleId = chronicleRecord.chronicleId;
-  const failValidate = async (message: string, debug?: NetworkDebugInfo): Promise<TaskResult> => {
-    await markChronicleFailure(chronicleId, 'validate', message);
-    return { success: false, error: message, debug };
-  };
-
-  if (!chronicleRecord.assembledContent) {
-    return failValidate('Chronicle has no assembled content to validate');
-  }
-
-  const chronicleContext = task.chronicleContext!;
-  const narrativeStyle = chronicleContext.narrativeStyle;
-  if (!narrativeStyle) {
-    return failValidate('Narrative style is required for validation');
-  }
-
-  const callConfig = getCallConfig(config, 'chronicle.validation');
-  console.log(`[Worker] Validating cohesion, model=${callConfig.model}...`);
-  const validationPrompt = buildV2ValidationPrompt(chronicleRecord.assembledContent, chronicleContext, narrativeStyle);
-  const systemPrompt = 'You are a narrative quality evaluator. Analyze the chronicle and provide a structured assessment.';
-
-  const validationCall = await runTextCall({
-    llmClient,
-    callType: 'chronicle.validation',
-    callConfig,
-    systemPrompt,
-    prompt: validationPrompt,
-    temperature: 0.3,
-  });
-  const validationResult = validationCall.result;
-  const debug = validationResult.debug;
-
-  if (isAborted()) {
-    return failValidate('Task aborted', debug);
-  }
-
-  const validationCost = {
-    estimated: validationCall.estimate.estimatedCost,
-    actual: validationCall.usage.actualCost,
-    inputTokens: validationCall.usage.inputTokens,
-    outputTokens: validationCall.usage.outputTokens,
-  };
-
-  if (validationResult.error || !validationResult.text) {
-    return failValidate(`Validation failed: ${validationResult.error || 'Empty response'}`, debug);
-  }
-
-  let cohesionReport: CohesionReport;
-  try {
-    cohesionReport = parseV2ValidationResponse(validationResult.text);
-    cohesionReport.generatedAt = Date.now();
-    cohesionReport.model = callConfig.model;
-  } catch (err) {
-    return failValidate(`Failed to parse validation response: ${err}`, debug);
-  }
-
-  await updateChronicleCohesion(chronicleId, cohesionReport, validationCost);
-  console.log('[Worker] Validation complete');
-
-  // Save cost record independently
-  await saveCostRecordWithDefaults({
-    projectId: task.projectId,
-    simulationRunId: task.simulationRunId,
-    entityId: task.entityId,
-    entityName: task.entityName,
-    entityKind: task.entityKind,
-    chronicleId,
-    type: 'chronicleValidation',
-    model: callConfig.model,
-    estimatedCost: validationCost.estimated,
-    actualCost: validationCost.actual,
-    inputTokens: validationCost.inputTokens,
-    outputTokens: validationCost.outputTokens,
-  });
-
-  return {
-    success: true,
-    result: {
-      chronicleId,
-      generatedAt: Date.now(),
-      model: callConfig.model,
-      estimatedCost: validationCost.estimated,
-      actualCost: validationCost.actual,
-      inputTokens: validationCost.inputTokens,
-      outputTokens: validationCost.outputTokens,
-    },
-    debug,
-  };
-}
 
 function buildSummaryPrompt(content: string): string {
   return `Generate a title and summary for the chronicle below.

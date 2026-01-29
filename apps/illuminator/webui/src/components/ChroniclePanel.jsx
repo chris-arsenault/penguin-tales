@@ -17,6 +17,7 @@ import { computeTemporalContext } from '../lib/chronicle/selectionWizard';
 import {
   updateChronicleImageRef,
   updateChronicleTemporalContext,
+  updateChronicleActiveVersion,
   generateChronicleId,
   deriveTitleFromRoles,
   createChronicleShell,
@@ -296,10 +297,8 @@ export default function ChroniclePanel({
   const {
     chronicles,
     generateV2,
-    correctSuggestions,
     generateSummary,
     generateImageRefs,
-    revalidateChronicle,
     regenerateWithTemperature,
     acceptChronicle,
     cancelChronicle,
@@ -423,6 +422,7 @@ export default function ChroniclePanel({
         generationUserPrompt: chronicle.generationUserPrompt,
         generationTemperature: chronicle.generationTemperature,
         generationHistory: chronicle.generationHistory,
+        activeVersionId: chronicle.activeVersionId,
 
         // V2-specific
         selectionSummary: chronicle.selectionSummary,
@@ -690,6 +690,7 @@ export default function ChroniclePanel({
         // Required for perspective synthesis
         toneFragments: worldContext.toneFragments,
         canonFactsWithMetadata: worldContext.canonFactsWithMetadata,
+        worldDynamics: worldContext.worldDynamics,
       };
 
       // Extract prose hints from entity guidance (if available)
@@ -729,11 +730,6 @@ export default function ChroniclePanel({
     await acceptChronicle(selectedItem.chronicleId);
   }, [selectedItem, acceptChronicle]);
 
-  const handleCorrectSuggestions = useCallback(() => {
-    if (!selectedItem || !generationContext) return;
-    correctSuggestions(selectedItem.chronicleId, generationContext);
-  }, [selectedItem, generationContext, correctSuggestions]);
-
   const handleGenerateSummary = useCallback(() => {
     if (!selectedItem || !generationContext) return;
     generateSummary(selectedItem.chronicleId, generationContext);
@@ -749,11 +745,6 @@ export default function ChroniclePanel({
     const clamped = Math.min(1, Math.max(0, Number(temperature)));
     regenerateWithTemperature(selectedItem.chronicleId, clamped);
   }, [selectedItem, regenerateWithTemperature]);
-
-  const handleRevalidate = useCallback(() => {
-    if (!selectedItem || !generationContext) return;
-    revalidateChronicle(selectedItem.chronicleId, generationContext);
-  }, [selectedItem, generationContext, revalidateChronicle]);
 
   // Handle regenerate (delete and go back to start screen) - uses restart modal
   const handleRegenerate = useCallback(() => {
@@ -937,6 +928,7 @@ export default function ChroniclePanel({
       description: worldContext?.description || '',
       toneFragments: worldContext.toneFragments,
       canonFactsWithMetadata: worldContext.canonFactsWithMetadata,
+      worldDynamics: worldContext.worldDynamics,
     };
 
     // Generate name bank for invented characters
@@ -1165,6 +1157,14 @@ export default function ChroniclePanel({
       updateChronicleTemporalContext(selectedItem.chronicleId, nextContext).then(() => refresh());
     },
     [selectedItem, wizardEras, wizardEvents, entities, refresh]
+  );
+
+  const handleUpdateChronicleActiveVersion = useCallback(
+    (versionId) => {
+      if (!selectedItem?.chronicleId || !versionId) return;
+      updateChronicleActiveVersion(selectedItem.chronicleId, versionId).then(() => refresh());
+    },
+    [selectedItem, refresh]
   );
 
   // Handle export of completed chronicle
@@ -1566,29 +1566,16 @@ export default function ChroniclePanel({
                 </div>
               )}
 
-              {/* Review states - assembly_ready, validation_ready, complete */}
+              {/* Review states - assembly_ready, complete */}
               {(selectedItem.status === 'assembly_ready' ||
-                selectedItem.status === 'validation_ready' ||
                 selectedItem.status === 'complete') && (
                 <ChronicleReviewPanel
                   item={selectedItem}
-                  onContinueToValidation={() => {
-                    if (generationContext) {
-                      revalidateChronicle(selectedItem.chronicleId, generationContext);
-                    }
-                  }}
-                  onValidate={() => {
-                    if (generationContext) {
-                      revalidateChronicle(selectedItem.chronicleId, generationContext);
-                    }
-                  }}
                   onAddImages={handleGenerateImageRefs}
                   onAccept={handleAcceptChronicle}
                   onRegenerate={handleRegenerate}
-                  onCorrectSuggestions={handleCorrectSuggestions}
                   onGenerateSummary={handleGenerateSummary}
                   onGenerateImageRefs={handleGenerateImageRefs}
-                  onRevalidate={handleRevalidate}
                   onRegenerateWithTemperature={handleRegenerateWithTemperature}
                   onGenerateChronicleImage={handleGenerateChronicleImage}
                   onResetChronicleImage={handleResetChronicleImage}
@@ -1596,6 +1583,7 @@ export default function ChroniclePanel({
                   onUpdateChronicleImageSize={handleUpdateChronicleImageSize}
                   onUpdateChronicleImageJustification={handleUpdateChronicleImageJustification}
                   onUpdateChronicleTemporalContext={handleUpdateChronicleTemporalContext}
+                  onUpdateChronicleActiveVersion={handleUpdateChronicleActiveVersion}
                   onExport={handleExport}
                   isGenerating={isGenerating}
                   refinements={refinementState}

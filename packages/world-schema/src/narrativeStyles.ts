@@ -468,7 +468,7 @@ AVOID: Plot mechanics. Explaining what images mean. Rushing to conclusion. Gener
       sceneCount: { min: 3, max: 4 },
     },
 
-    temperature: 0.85,
+    temperature: 1.0,
   },
 
   // ============================================================================
