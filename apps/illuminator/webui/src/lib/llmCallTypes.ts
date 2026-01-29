@@ -25,7 +25,10 @@ export type LLMCallType =
   | 'chronicle.imageRefs'        // Image reference extraction
 
   // Palette
-  | 'palette.expansion';         // Trait palette curation
+  | 'palette.expansion'          // Trait palette curation
+
+  // Dynamics Generation
+  | 'dynamics.generation';       // Multi-turn world dynamics synthesis
 
 export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'description.narrative',
@@ -39,9 +42,10 @@ export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'chronicle.summary',
   'chronicle.imageRefs',
   'palette.expansion',
+  'dynamics.generation',
 ];
 
-export type LLMCallCategory = 'description' | 'image' | 'perspective' | 'chronicle' | 'palette';
+export type LLMCallCategory = 'description' | 'image' | 'perspective' | 'chronicle' | 'palette' | 'dynamics';
 
 export interface LLMCallDefaults {
   model: string;
@@ -221,6 +225,17 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
     },
     recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
   },
+  'dynamics.generation': {
+    label: 'Dynamics Generation',
+    description: 'Multi-turn world dynamics synthesis from lore and entity data',
+    category: 'dynamics',
+    defaults: {
+      model: 'claude-sonnet-4-5-20250929',
+      thinkingBudget: 4096,
+      maxTokens: 4096,
+    },
+    recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
+  },
 };
 
 export const CATEGORY_LABELS: Record<LLMCallCategory, string> = {
@@ -229,6 +244,7 @@ export const CATEGORY_LABELS: Record<LLMCallCategory, string> = {
   perspective: 'Perspective Synthesis',
   chronicle: 'Chronicle Generation',
   palette: 'Trait Palette',
+  dynamics: 'Dynamics Generation',
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<LLMCallCategory, string> = {
@@ -237,6 +253,7 @@ export const CATEGORY_DESCRIPTIONS: Record<LLMCallCategory, string> = {
   perspective: 'Synthesize world perspective from entity constellation for chronicles',
   chronicle: 'Multi-step pipeline for long-form narrative documents',
   palette: 'AI-assisted curation of visual trait categories',
+  dynamics: 'Multi-turn synthesis of world dynamics from lore and entity data',
 };
 
 // Group call types by category
@@ -247,5 +264,6 @@ export function getCallTypesByCategory(): Record<LLMCallCategory, LLMCallType[]>
     perspective: ['perspective.synthesis'],
     chronicle: ['chronicle.generation', 'chronicle.edit', 'chronicle.validation', 'chronicle.summary', 'chronicle.imageRefs'],
     palette: ['palette.expansion'],
+    dynamics: ['dynamics.generation'],
   };
 }

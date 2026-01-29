@@ -737,7 +737,7 @@ function EditableList({ items, onChange, placeholder }) {
   );
 }
 
-export default function WorldContextEditor({ worldContext, onWorldContextChange, eras }) {
+export default function WorldContextEditor({ worldContext, onWorldContextChange, eras, onGenerateDynamics, isGeneratingDynamics }) {
   const updateField = useCallback(
     (field, value) => {
       onWorldContextChange({ [field]: value });
@@ -852,8 +852,18 @@ export default function WorldContextEditor({ worldContext, onWorldContextChange,
 
         {/* World Dynamics */}
         <div className="illuminator-card">
-          <div className="illuminator-card-header">
+          <div className="illuminator-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 className="illuminator-card-title">World Dynamics</h2>
+            {onGenerateDynamics && (
+              <button
+                onClick={onGenerateDynamics}
+                disabled={isGeneratingDynamics}
+                className="illuminator-button illuminator-button-secondary"
+                style={{ padding: '4px 12px', fontSize: '11px' }}
+              >
+                {isGeneratingDynamics ? 'Generating...' : 'Generate from Lore'}
+              </button>
+            )}
           </div>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
             Higher-level narrative context about inter-group forces and behaviors.

@@ -7,7 +7,7 @@
 
 import type { ChronicleFormat, ChronicleGenerationContext, ChronicleImageRefs, EraTemporalInfo } from './chronicleTypes';
 
-export type EnrichmentType = 'description' | 'image' | 'entityChronicle' | 'paletteExpansion';
+export type EnrichmentType = 'description' | 'image' | 'entityChronicle' | 'paletteExpansion' | 'dynamicsGeneration';
 
 export interface NetworkDebugInfo {
   request: string;

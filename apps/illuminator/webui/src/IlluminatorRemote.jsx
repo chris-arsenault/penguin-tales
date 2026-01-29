@@ -28,7 +28,10 @@ import StoragePanel from './components/StoragePanel';
 import TraitPaletteSection from './components/TraitPaletteSection';
 import StyleLibraryEditor from './components/StyleLibraryEditor';
 import StaticPagesPanel from './components/StaticPagesPanel';
+import DynamicsGenerationModal from './components/DynamicsGenerationModal';
 import { useEnrichmentQueue } from './hooks/useEnrichmentQueue';
+import { useDynamicsGeneration } from './hooks/useDynamicsGeneration';
+import { getPublishedStaticPagesForProject } from './lib/staticPageStorage';
 import { useStyleLibrary } from './hooks/useStyleLibrary';
 import {
   buildDescriptionPromptFromGuidance,
@@ -128,6 +131,21 @@ const normalizeEnrichmentConfig = (config) => {
   // Remove legacy model fields that have been migrated to per-call settings
   const { textModel, chronicleModel, textModal, chronicleModal, thinkingModel, thinkingBudget, useThinkingForDescriptions, ...rest } = config;
   return { ...DEFAULT_CONFIG, ...rest };
+};
+
+const buildSchemaContext = (schema) => {
+  if (!schema) return '';
+  const sections = [];
+  if (schema.entityKinds?.length) {
+    sections.push('Entity Kinds: ' + schema.entityKinds.map((k) => k.kind).join(', '));
+  }
+  if (schema.relationshipKinds?.length) {
+    sections.push('Relationship Kinds: ' + schema.relationshipKinds.map((k) => k.kind).join(', '));
+  }
+  if (schema.cultures?.length) {
+    sections.push('Cultures: ' + schema.cultures.map((c) => c.name || c.id).join(', '));
+  }
+  return sections.join('\n');
 };
 
 const resolveEntityEraId = (entity) => {
@@ -1105,6 +1123,80 @@ export default function IlluminatorRemote({
     };
   }, [onWorldContextChange]);
 
+  // Dynamics generation (multi-turn LLM flow for world dynamics)
+  const handleDynamicsAccepted = useCallback((proposedDynamics) => {
+    if (!proposedDynamics?.length) return;
+    const newDynamics = proposedDynamics.map((d, i) => ({
+      id: `dyn_gen_${Date.now()}_${i}`,
+      text: d.text,
+      cultures: d.cultures?.length ? d.cultures : undefined,
+      kinds: d.kinds?.length ? d.kinds : undefined,
+    }));
+    const existing = worldContext?.worldDynamics || [];
+    updateWorldContext({ worldDynamics: [...existing, ...newDynamics] });
+  }, [worldContext, updateWorldContext]);
+
+  const {
+    run: dynamicsRun,
+    isActive: isDynamicsActive,
+    startGeneration: startDynamicsGeneration,
+    submitFeedback: submitDynamicsFeedback,
+    acceptDynamics,
+    cancelGeneration: cancelDynamicsGeneration,
+  } = useDynamicsGeneration(enqueue, handleDynamicsAccepted);
+
+  const handleGenerateDynamics = useCallback(async () => {
+    if (!projectId || !simulationRunId) return;
+
+    // Load static pages for lore context
+    let staticPagesContext = '';
+    try {
+      const pages = await getPublishedStaticPagesForProject(projectId);
+      if (pages.length > 0) {
+        staticPagesContext = pages
+          .map((p) => `## ${p.title}\n\n${p.content}`)
+          .join('\n\n---\n\n');
+      }
+    } catch (err) {
+      console.warn('[Dynamics] Failed to load static pages:', err);
+    }
+
+    // Build schema context
+    const schemaContext = buildSchemaContext(worldSchema);
+
+    // Build entity context for search execution
+    const entityContexts = entities.map((e) => ({
+      id: e.id,
+      name: e.name,
+      kind: e.kind,
+      subtype: e.subtype || '',
+      culture: e.culture || '',
+      status: e.status || '',
+      summary: e.summary || '',
+      description: e.description || '',
+      tags: e.tags || {},
+      eraId: e.eraId,
+    }));
+
+    const relationships = (worldData?.relationships || []).map((r) => ({
+      src: r.src,
+      dst: r.dst,
+      kind: r.kind,
+      weight: r.weight,
+      srcName: entityById.get(r.src)?.name || r.src,
+      dstName: entityById.get(r.dst)?.name || r.dst,
+    }));
+
+    startDynamicsGeneration({
+      projectId,
+      simulationRunId,
+      staticPagesContext,
+      schemaContext,
+      entities: entityContexts,
+      relationships,
+    });
+  }, [projectId, simulationRunId, worldSchema, entities, worldData, entityById, startDynamicsGeneration]);
+
   if (!hasWorldData) {
     return (
       <div className="illuminator-empty-state">
@@ -1305,6 +1397,8 @@ export default function IlluminatorRemote({
               worldContext={worldContext}
               onWorldContextChange={updateWorldContext}
               eras={eraTemporalInfo}
+              onGenerateDynamics={handleGenerateDynamics}
+              isGeneratingDynamics={isDynamicsActive}
             />
           </div>
         )}
@@ -1408,6 +1502,15 @@ export default function IlluminatorRemote({
           </div>
         )}
       </div>
+
+      {/* Dynamics Generation Modal */}
+      <DynamicsGenerationModal
+        run={dynamicsRun}
+        isActive={isDynamicsActive}
+        onSubmitFeedback={submitDynamicsFeedback}
+        onAccept={acceptDynamics}
+        onCancel={cancelDynamicsGeneration}
+      />
     </div>
   );
 }
