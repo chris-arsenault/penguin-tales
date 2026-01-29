@@ -69,6 +69,10 @@ function categorizeCosts(summary) {
     actual: 0,
     count: 0,
   };
+  const revision = {
+    actual: 0,
+    count: 0,
+  };
 
   const textTypes = ['description'];
   const imageTypes = ['image', 'imagePrompt'];
@@ -80,6 +84,7 @@ function categorizeCosts(summary) {
     'chronicleV2',
   ];
   const dynamicsTypes = ['dynamicsGeneration'];
+  const revisionTypes = ['summaryRevision'];
 
   for (const [type, data] of Object.entries(summary.byType)) {
     if (textTypes.includes(type)) {
@@ -94,10 +99,13 @@ function categorizeCosts(summary) {
     } else if (dynamicsTypes.includes(type)) {
       dynamics.actual += data.actual;
       dynamics.count += data.count;
+    } else if (revisionTypes.includes(type)) {
+      revision.actual += data.actual;
+      revision.count += data.count;
     }
   }
 
-  return { text, image, chronicle, dynamics };
+  return { text, image, chronicle, dynamics, revision };
 }
 
 export default function CostsPanel({ queue, projectId, simulationRunId }) {
@@ -224,6 +232,11 @@ export default function CostsPanel({ queue, projectId, simulationRunId }) {
           <CostRow
             label={`  \u2514 ${simCategorized.dynamics.count} turns`}
             value={simCategorized.dynamics.actual}
+          />
+          <CostRow label="Summary revision" value={simCategorized.revision.actual} />
+          <CostRow
+            label={`  \u2514 ${simCategorized.revision.count} batches`}
+            value={simCategorized.revision.actual}
           />
           <CostRow
             label="Simulation Total"
