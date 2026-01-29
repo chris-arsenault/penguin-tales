@@ -435,9 +435,11 @@ export default function ChroniclePanel({
         summary: chronicle.summary,
         summaryGeneratedAt: chronicle.summaryGeneratedAt,
         summaryModel: chronicle.summaryModel,
+        summaryTargetVersionId: chronicle.summaryTargetVersionId,
         imageRefs: chronicle.imageRefs,
         imageRefsGeneratedAt: chronicle.imageRefsGeneratedAt,
         imageRefsModel: chronicle.imageRefsModel,
+        imageRefsTargetVersionId: chronicle.imageRefsTargetVersionId,
         validationStale: chronicle.validationStale,
 
         // Timestamps

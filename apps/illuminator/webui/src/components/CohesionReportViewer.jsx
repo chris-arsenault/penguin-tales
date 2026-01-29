@@ -214,6 +214,8 @@ export default function CohesionReportViewer({
   onUpdateChronicleImageSize = null,
   onUpdateChronicleImageJustification = null,
   chronicleText = null,
+  summaryIndicator = null,
+  imageRefsIndicator = null,
   // Style library integration props
   styleLibrary = null,
   cultures = null,
@@ -438,6 +440,11 @@ export default function CohesionReportViewer({
                   {summaryState.model ? ` - ${summaryState.model}` : ''}
                 </div>
               )}
+              {summaryIndicator && summaryState.generatedAt && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  {summaryIndicator}
+                </div>
+              )}
               {!summaryState.generatedAt && !summaryState.running && (
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
                   Not run yet
@@ -482,6 +489,11 @@ export default function CohesionReportViewer({
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
                   Done - {formatTimestamp(imageRefsState.generatedAt)}
                   {imageRefsState.model ? ` - ${imageRefsState.model}` : ''}
+                </div>
+              )}
+              {imageRefsIndicator && imageRefsState.generatedAt && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  {imageRefsIndicator}
                 </div>
               )}
               {!imageRefsState.generatedAt && !imageRefsState.running && (

@@ -116,6 +116,22 @@ async function executeEntityChronicleTask(
   return { success: false, error: `Unknown step: ${step}` };
 }
 
+function resolveTargetVersionContent(record: ChronicleRecord): { versionId: string; content: string } {
+  const currentVersionId = `current_${record.assembledAt ?? record.createdAt}`;
+  const activeVersionId = record.activeVersionId || currentVersionId;
+
+  if (activeVersionId === currentVersionId) {
+    return { versionId: activeVersionId, content: record.assembledContent || '' };
+  }
+
+  const match = record.generationHistory?.find((version) => version.versionId === activeVersionId);
+  if (match) {
+    return { versionId: match.versionId, content: match.content };
+  }
+
+  return { versionId: currentVersionId, content: record.assembledContent || '' };
+}
+
 /**
  * Regenerate chronicle content with a temperature override (no perspective synthesis).
  * Reuses stored prompts from the previous generation.
@@ -574,18 +590,28 @@ async function executeCompareStep(
 
   const comparePrompt = `You are comparing ${versions.length} versions of the same chronicle. Each was generated from the same prompt and narrative style but at different temperatures (creative latitude).
 
-Produce a comparative analysis covering:
+Your output must have THREE sections in this exact order. Keep the total output under 800 words.
 
-1. **Prose Quality**: Which version has more natural, engaging prose? Where does each feel templated or forced?
-2. **Structural Choices**: How do the versions differ in scene ordering, POV, pacing? Which makes more surprising or effective choices?
-3. **World-Building Detail**: Which invents richer names, places, customs, sensory details? Which feels more grounded in the world?
+## Comparative Analysis
+
+Cover each dimension in 2-3 sentences, naming the stronger version with one specific example:
+
+1. **Prose Quality**: Which has more natural, engaging prose? Where does each feel templated or forced?
+2. **Structural Choices**: How do versions differ in scene ordering, POV, pacing? Which makes more surprising or effective choices?
+3. **World-Building Detail**: Which invents richer names, places, customs, sensory details? Which feels more grounded?
 4. **Narrative Voice**: Which better adheres to the intended narrative style and entity directives?
 5. **Emotional Range**: Which has more varied emotional registers vs. falling into a single mood?
 6. **Dynamics Integration**: Which better reflects the world's political/social forces without name-dropping?
 
-For each dimension, name the stronger version and give a specific example.
+## Recommendation
 
-End with a **Recommendation**: which version you'd pick as the stronger overall draft, and why.
+State one of: **Keep Version [X]** (one version is clearly superior), or **Combine** (each version has distinct strengths worth merging). Explain why in 2-3 sentences.
+
+## Combine Instructions
+
+Write a SHORT paragraph (4-6 sentences) of revision guidance for a creative LLM that will combine these versions. This is not a merge spec — it is editorial direction for a skilled writer.
+
+Name the base version and its key strengths (structure, tone, arc). Name what the other version does better and should be drawn from (details, names, world-building, specific scenes). Note any tonal qualities from the base that should not be lost. Trust the writer to make specific decisions — do not prescribe line-by-line changes or integration points.
 
 ## Chronicle Versions
 
@@ -612,8 +638,16 @@ ${versionsBlock}`;
     };
   }
 
-  // Store the report on the chronicle record
-  await updateChronicleComparisonReport(chronicleId, compareCall.result.text);
+  // Parse out combine instructions from the report
+  const fullReport = compareCall.result.text;
+  const combineHeaderMatch = fullReport.match(/^## Combine Instructions\s*$/m);
+  let combineInstructions: string | undefined;
+  if (combineHeaderMatch && combineHeaderMatch.index != null) {
+    combineInstructions = fullReport.slice(combineHeaderMatch.index + combineHeaderMatch[0].length).trim();
+  }
+
+  // Store the report and combine instructions on the chronicle record
+  await updateChronicleComparisonReport(chronicleId, fullReport, combineInstructions);
 
   const compareCost = {
     estimated: compareCall.estimate.estimatedCost,
@@ -681,10 +715,19 @@ async function executeCombineStep(
   const narrativeStyle = chronicleRecord.narrativeStyle;
   const styleName = narrativeStyle ? `${narrativeStyle.name} (${narrativeStyle.format})` : 'unknown';
 
+  // Check for combine instructions from a prior compare step
+  const hasCombineInstructions = !!chronicleRecord.combineInstructions;
+
   const combinePrompt = `You are a narrative editor combining ${versions.length} versions of the same chronicle into a single final version. All versions follow the same prompt and narrative style — they differ in temperature (creative latitude).
 
 Your job is NOT to merge or average. Your job is to CHOOSE and REWRITE: take the stronger elements from each version and produce one polished chronicle.
+${hasCombineInstructions ? `
+## Revision Guidance from Comparative Analysis
 
+A prior analysis compared these versions and produced specific instructions for combining them. Follow this guidance closely — it identifies which version handles each section better and which specific elements to preserve:
+
+${chronicleRecord.combineInstructions}
+` : `
 ## Selection Criteria
 
 Prefer whichever version has:
@@ -695,7 +738,7 @@ Prefer whichever version has:
 - **Stronger emotional range** — not every beat should feel the same
 
 If one version has a better opening and another has a better middle, use each. If versions handle the same beat differently, pick the one that reads more naturally.
-
+`}
 ## Original System Prompt Context
 ${systemPrompt}
 
@@ -1014,13 +1057,14 @@ async function executeSummaryStep(
   if (!chronicleRecord) {
     return { success: false, error: 'Chronicle record missing for summary' };
   }
-  if (!chronicleRecord.assembledContent) {
+  const { versionId: summaryVersionId, content: summaryContent } = resolveTargetVersionContent(chronicleRecord);
+  if (!summaryContent) {
     return { success: false, error: 'Chronicle has no assembled content to summarize' };
   }
 
   const callConfig = getCallConfig(config, 'chronicle.summary');
   const chronicleId = chronicleRecord.chronicleId;
-  const summaryPrompt = buildSummaryPrompt(chronicleRecord.assembledContent);
+  const summaryPrompt = buildSummaryPrompt(summaryContent);
   const summaryCall = await runTextCall({
     llmClient,
     callType: 'chronicle.summary',
@@ -1066,7 +1110,7 @@ async function executeSummaryStep(
     outputTokens: summaryCall.usage.outputTokens,
   };
 
-  await updateChronicleSummary(chronicleId, summaryText, summaryCost, callConfig.model, title);
+  await updateChronicleSummary(chronicleId, summaryText, summaryCost, callConfig.model, title, summaryVersionId);
 
   await saveCostRecordWithDefaults({
     projectId: task.projectId,
@@ -1108,14 +1152,15 @@ async function executeImageRefsStep(
   if (!chronicleRecord) {
     return { success: false, error: 'Chronicle record missing for image refs' };
   }
-  if (!chronicleRecord.assembledContent) {
+  const { versionId: imageRefsVersionId, content: imageRefsContent } = resolveTargetVersionContent(chronicleRecord);
+  if (!imageRefsContent) {
     return { success: false, error: 'Chronicle has no assembled content for image refs' };
   }
 
   const callConfig = getCallConfig(config, 'chronicle.imageRefs');
   const chronicleId = chronicleRecord.chronicleId;
   const chronicleContext = task.chronicleContext!;
-  const imageRefsPrompt = buildImageRefsPrompt(chronicleRecord.assembledContent, chronicleContext);
+  const imageRefsPrompt = buildImageRefsPrompt(imageRefsContent, chronicleContext);
   const imageRefsCall = await runTextCall({
     llmClient,
     callType: 'chronicle.imageRefs',
@@ -1152,7 +1197,7 @@ async function executeImageRefsStep(
   }
 
   // Calculate anchorIndex for each ref based on position in assembled content
-  const assembledContent = chronicleRecord.assembledContent;
+  const assembledContent = imageRefsContent;
   for (const ref of parsedRefs) {
     if (ref.anchorText) {
       const anchorLower = ref.anchorText.toLowerCase();
@@ -1178,7 +1223,7 @@ async function executeImageRefsStep(
     outputTokens: imageRefsCall.usage.outputTokens,
   };
 
-  await updateChronicleImageRefs(chronicleId, imageRefs, imageRefsCost, callConfig.model);
+  await updateChronicleImageRefs(chronicleId, imageRefs, imageRefsCost, callConfig.model, imageRefsVersionId);
 
   await saveCostRecordWithDefaults({
     projectId: task.projectId,

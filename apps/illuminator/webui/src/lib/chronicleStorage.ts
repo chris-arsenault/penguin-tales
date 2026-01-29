@@ -135,14 +135,17 @@ export interface ChronicleRecord {
   // Version comparison report (user-triggered, text only)
   comparisonReport?: string;
   comparisonReportGeneratedAt?: number;
+  combineInstructions?: string;
 
   // Refinements
   summary?: string;
   summaryGeneratedAt?: number;
   summaryModel?: string;
+  summaryTargetVersionId?: string;
   imageRefs?: ChronicleImageRefs;
   imageRefsGeneratedAt?: number;
   imageRefsModel?: string;
+  imageRefsTargetVersionId?: string;
   validationStale?: boolean;
 
   // Revision tracking
@@ -463,9 +466,11 @@ export async function updateChronicleAssembly(
       record.summary = undefined;
       record.summaryGeneratedAt = undefined;
       record.summaryModel = undefined;
+      record.summaryTargetVersionId = undefined;
       record.imageRefs = undefined;
       record.imageRefsGeneratedAt = undefined;
       record.imageRefsModel = undefined;
+      record.imageRefsTargetVersionId = undefined;
       record.validationStale = false;
       record.updatedAt = Date.now();
 
@@ -556,9 +561,11 @@ export async function regenerateChronicleAssembly(
       record.summary = undefined;
       record.summaryGeneratedAt = undefined;
       record.summaryModel = undefined;
+      record.summaryTargetVersionId = undefined;
       record.imageRefs = undefined;
       record.imageRefsGeneratedAt = undefined;
       record.imageRefsModel = undefined;
+      record.imageRefsTargetVersionId = undefined;
       record.validationStale = false;
       record.editVersion = 0;
       record.editedAt = undefined;
@@ -717,7 +724,8 @@ export async function updateChronicleCohesion(
  */
 export async function updateChronicleComparisonReport(
   chronicleId: string,
-  report: string
+  report: string,
+  combineInstructions?: string
 ): Promise<void> {
   const db = await openChronicleDb();
 
@@ -735,6 +743,9 @@ export async function updateChronicleComparisonReport(
 
       record.comparisonReport = report;
       record.comparisonReportGeneratedAt = Date.now();
+      if (combineInstructions) {
+        record.combineInstructions = combineInstructions;
+      }
       record.updatedAt = Date.now();
 
       store.put(record);
@@ -753,7 +764,8 @@ export async function updateChronicleSummary(
   summary: string,
   cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number },
   model: string,
-  title?: string
+  title?: string,
+  targetVersionId?: string
 ): Promise<void> {
   const db = await openChronicleDb();
 
@@ -775,6 +787,7 @@ export async function updateChronicleSummary(
       }
       record.summaryGeneratedAt = Date.now();
       record.summaryModel = model;
+      record.summaryTargetVersionId = targetVersionId;
       record.totalEstimatedCost += cost.estimated;
       record.totalActualCost += cost.actual;
       record.totalInputTokens += cost.inputTokens;
@@ -796,7 +809,8 @@ export async function updateChronicleImageRefs(
   chronicleId: string,
   imageRefs: ChronicleImageRefs,
   cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number },
-  model: string
+  model: string,
+  targetVersionId?: string
 ): Promise<void> {
   const db = await openChronicleDb();
 
@@ -815,6 +829,7 @@ export async function updateChronicleImageRefs(
       record.imageRefs = imageRefs;
       record.imageRefsGeneratedAt = Date.now();
       record.imageRefsModel = model;
+      record.imageRefsTargetVersionId = targetVersionId;
       record.totalEstimatedCost += cost.estimated;
       record.totalActualCost += cost.actual;
       record.totalInputTokens += cost.inputTokens;

@@ -523,6 +523,9 @@ function RefinementOptionsPanel({
   cultures,
   cultureIdentities,
   worldContext,
+  summaryIndicator,
+  imageRefsIndicator,
+  imageRefsTargetContent,
 }) {
   const formatTimestamp = (timestamp) => new Date(timestamp).toLocaleString();
   const summaryState = refinements?.summary || {};
@@ -590,6 +593,11 @@ function RefinementOptionsPanel({
                 {summaryState.model ? ` - ${summaryState.model}` : ''}
               </div>
             )}
+            {summaryIndicator && summaryState.generatedAt && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                {summaryIndicator}
+              </div>
+            )}
             {!summaryState.generatedAt && !summaryState.running && (
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
                 Not run yet
@@ -636,6 +644,11 @@ function RefinementOptionsPanel({
                 {imageRefsState.model ? ` - ${imageRefsState.model}` : ''}
               </div>
             )}
+            {imageRefsIndicator && imageRefsState.generatedAt && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                {imageRefsIndicator}
+              </div>
+            )}
             {!imageRefsState.generatedAt && !imageRefsState.running && (
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
                 Not run yet
@@ -680,7 +693,7 @@ function RefinementOptionsPanel({
               onUpdateAnchorText={onUpdateChronicleAnchorText}
               onUpdateSize={onUpdateChronicleImageSize}
               onUpdateJustification={onUpdateChronicleImageJustification}
-              chronicleText={item.assembledContent}
+              chronicleText={imageRefsTargetContent || item.assembledContent}
               isGenerating={isGenerating}
               styleLibrary={styleLibrary}
               cultures={cultures}
@@ -1043,6 +1056,7 @@ export default function ChronicleReviewPanel({
         id: version.versionId,
         content: version.content,
         wordCount: version.wordCount,
+        shortLabel: `V${index + 1}`,
         label: `Version ${index + 1} • ${new Date(version.generatedAt).toLocaleString()} • temp ${tempLabel}`,
       };
     });
@@ -1055,6 +1069,7 @@ export default function ChronicleReviewPanel({
       id: currentVersionId,
       content: item.assembledContent,
       wordCount: wordCount(item.assembledContent),
+      shortLabel: 'Current',
       label: `Current • ${new Date(item.assembledAt ?? item.createdAt).toLocaleString()} • temp ${currentTempLabel}`,
     });
 
@@ -1078,6 +1093,36 @@ export default function ChronicleReviewPanel({
     () => versions.find((version) => version.id === selectedVersionId) || versions[versions.length - 1],
     [versions, selectedVersionId]
   );
+
+  const versionLabelMap = useMemo(() => {
+    const map = new Map();
+    for (const version of versions) {
+      map.set(version.id, version.shortLabel);
+    }
+    return map;
+  }, [versions]);
+
+  const versionContentMap = useMemo(() => {
+    const map = new Map();
+    for (const version of versions) {
+      map.set(version.id, version.content);
+    }
+    return map;
+  }, [versions]);
+
+  const getVersionLabel = (versionId) => versionLabelMap.get(versionId) || 'Unknown';
+
+  const formatTargetIndicator = (targetVersionId) => {
+    if (!targetVersionId) return null;
+    const targetLabel = getVersionLabel(targetVersionId);
+    const activeLabel = getVersionLabel(activeVersionId);
+    if (targetVersionId === activeVersionId) return null;
+    return `Targets ${targetLabel} • Active ${activeLabel}`;
+  };
+
+  const summaryIndicator = formatTargetIndicator(item.summaryTargetVersionId);
+  const imageRefsIndicator = formatTargetIndicator(item.imageRefsTargetVersionId);
+  const imageRefsTargetContent = versionContentMap.get(item.imageRefsTargetVersionId || activeVersionId) || item.assembledContent;
 
   const hasMultipleVersions = versions.length >= 2;
   const compareRunning = refinements?.compare?.running || false;
@@ -1266,11 +1311,35 @@ export default function ChronicleReviewPanel({
               <span style={{ fontSize: '13px', fontWeight: 500 }}>
                 Comparison Report
               </span>
-              {item.comparisonReportGeneratedAt && (
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  {new Date(item.comparisonReportGeneratedAt).toLocaleString()}
-                </span>
-              )}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {item.comparisonReportGeneratedAt && (
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {new Date(item.comparisonReportGeneratedAt).toLocaleString()}
+                  </span>
+                )}
+                <button
+                  onClick={() => {
+                    const blob = new Blob([item.comparisonReport], { type: 'text/markdown' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `comparison-report-${item.chronicleId.slice(0, 20)}-${Date.now()}.md`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  style={{
+                    padding: '2px 8px',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '4px',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                  }}
+                >
+                  Export
+                </button>
+              </div>
             </div>
             <div
               style={{
@@ -1306,6 +1375,9 @@ export default function ChronicleReviewPanel({
           cultures={cultures}
           cultureIdentities={cultureIdentities}
           worldContext={worldContext}
+          summaryIndicator={summaryIndicator}
+          imageRefsIndicator={imageRefsIndicator}
+          imageRefsTargetContent={imageRefsTargetContent}
         />
 
         {/* Perspective Synthesis (if used) */}
@@ -1396,7 +1468,9 @@ export default function ChronicleReviewPanel({
             onUpdateChronicleAnchorText={onUpdateChronicleAnchorText}
             onUpdateChronicleImageSize={onUpdateChronicleImageSize}
             onUpdateChronicleImageJustification={onUpdateChronicleImageJustification}
-            chronicleText={item.assembledContent}
+            chronicleText={imageRefsTargetContent}
+            summaryIndicator={summaryIndicator}
+            imageRefsIndicator={imageRefsIndicator}
             styleLibrary={styleLibrary}
             cultures={cultures}
             cultureIdentities={cultureIdentities}
