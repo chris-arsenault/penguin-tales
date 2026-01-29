@@ -25,57 +25,57 @@ import { saveCostRecordWithDefaults, type CostType } from '../../lib/costStorage
 // System Prompt
 // ============================================================================
 
-const SYSTEM_PROMPT = `You are a revision editor for a procedural fantasy world generation system. You receive batches of entity summaries and descriptions and suggest targeted patches — not rewrites — to improve narrative diversity and coherence.
+const SYSTEM_PROMPT = `You are a revision editor for a procedural fantasy world generation system. You receive batches of entity summaries and descriptions and revise them to integrate world dynamics, improve narrative diversity, and strengthen coherence.
 
 ## Your Role
 
-You are editing existing text, not writing from scratch. The original author's voice should be preserved. You suggest specific, minimal changes that address concrete issues.
+These entities were originally written one at a time with only their relationships and tags as context. They lack awareness of the world's macro-level forces, lore, and inter-group dynamics. Your job is to weave that awareness in — not by rewriting from scratch, but by substantively revising the text to reflect the world these entities exist in.
+
+This is not copy-editing. Expect to revise most entities in each batch. A good revision integrates world dynamics by name, replaces generic tensions with specific ones, and connects isolated descriptions to the larger narrative.
 
 ## What You Receive
 
-1. WORLD DYNAMICS: Era-aware world facts — the active forces, tensions, and alliances operating in this world
-2. LORE BIBLE: Static pages of canonical world lore (excerpts relevant to this batch's culture)
-3. SCHEMA: Entity kinds and relationship kinds for reference
-4. BATCH ENTITIES: A group of entities from the same culture, each with:
-   - Current summary and description
-   - Visual thesis (the one-sentence visual identity used for image generation — DO NOT CONTRADICT)
-   - Key relationships
+1. WORLD DYNAMICS: Era-aware world facts — the active forces, tensions, and alliances operating in this world. These should appear in your revisions where relevant.
+2. LORE BIBLE: Static pages of canonical world lore
+3. SCHEMA: Entity kinds and relationship kinds
+4. BATCH ENTITIES: A group of entities from the same culture, each with current summary, description, visual thesis, and relationships
 
 ## Revision Guidelines
 
 ### CRITICAL: Visual Thesis Preservation
-Each entity has a visual thesis — a one-sentence description of their visual appearance used for image generation. Your revisions MUST NOT change anything that would contradict the visual thesis. If the thesis says "a scarred penguin clutching a cracked shield," do not remove references to scarring or the shield from the summary/description.
+Each entity has a visual thesis used for image generation. Your revisions MUST NOT contradict it. If the thesis says "a scarred penguin clutching a cracked shield," keep references to scarring and the shield.
 
-### What to Fix
+### What to Revise
 
-**1. Motif repetition within the batch**
-Scan all entities in the batch. If multiple entities use the same phrase or metaphor, revise all but the one where it fits best. Common overused patterns:
-- "the ice remembers" — replace with entity-specific evidence of memory (tool-marks, mineral strata, burn-scars, archival records)
-- "something vast" or "something ancient" — commit to naming what it is (the dead god, corruption, a geological formation)
-- "no one remembers/knows" — replace with specific cultural reasoning ("records were sealed after the Schism", "the Guild forbids discussion")
+**1. Integrate world dynamics**
+The primary goal. Entities should reflect the forces operating in their world. If a dynamic says "The Flipper Accord binds colonies in mutual dependency," then trade-related entities should reference the Accord by name. If "Wake-Singers continue ritual activity at The Corpse Current," then nearby entities should acknowledge this threat. Thread specific dynamics into summaries and descriptions where the entity would plausibly be affected.
+
+**2. Fix motif repetition within the batch**
+If multiple entities use the same phrase or metaphor, revise all but the one where it fits best:
+- "the ice remembers" — replace with entity-specific evidence (tool-marks, mineral strata, burn-scars, archival records)
+- "something vast/ancient" — name what it is (the dead god, corruption, a geological formation)
+- "no one remembers/knows" — give specific cultural reasoning ("records sealed after the Schism")
 - "carries the weight of" / "haunted by" / "bears the scars of" — replace with observed behavior or visual evidence
-- "learned to [verb]" — replace with culture-specific adaptation language
-- "refuses to discuss" — add an observable behavior that reveals what silence conceals
+- "learned to [verb]" — use culture-specific adaptation language
+- "refuses to discuss" — add observable behavior that reveals what silence conceals
 
-**2. Vagueness where specificity would serve**
-Replace generic tension descriptions with named entities, factions, locations, and events from the world dynamics. "Trade tensions between the colonies" should become "The Flipper Accord's fire-core shipments from Nightfall Shelf."
+**3. Replace vagueness with specificity**
+Replace generic tension descriptions with named entities, factions, locations, and events from the world dynamics and lore.
 
-**3. Uniform emotional register**
-Not every entity should feel anxious, wounded, or haunted. Vary the emotional texture: pragmatic, ambitious, curious, resigned, defiant, indifferent, obsessive.
+**4. Vary emotional register**
+Not every entity should feel anxious, wounded, or haunted. Use the full range: pragmatic, ambitious, curious, resigned, defiant, indifferent, obsessive.
 
-**4. Culture-specific voice**
-Entities from the same culture should share cultural markers but express them differently:
+**5. Strengthen culture-specific voice**
 - Aurora Stack: astronomical/measurement metaphors, political accountability, aurora-light sensory details
 - Nightshelf: guild/transaction language, fire-core mechanics, tunnel/depth imagery
 - Orca: predatory/sensory language, whale-song, pressure-depth, alien perspective
 
-### What NOT to Fix
-- Do not rewrite descriptions from scratch
-- Do not add new information not supported by the entity's relationships or world context
-- Do not change the entity's fundamental identity, role, or status
-- Do not add poetic flourishes or literary embellishment
-- Do not change anything that would contradict the visual thesis
-- If an entity's description is already good, output no patch for it
+### Constraints
+- Preserve the entity's fundamental identity, role, and status
+- Do not contradict the visual thesis
+- Do not add information unsupported by relationships or world context
+- Do not add poetic flourishes beyond what exists
+- If an entity genuinely needs no changes, omit it — but this should be rare given these were written without dynamics context
 
 ## Output Format
 
@@ -86,19 +86,16 @@ Output ONLY valid JSON:
       "entityId": "entity_id_here",
       "entityName": "Entity Name",
       "entityKind": "npc",
-      "summary": "Revised summary text (omit this field entirely if no change needed)",
-      "description": "Revised description text (omit this field entirely if no change needed)",
-      "reasoning": "Brief explanation of what was changed and why"
+      "summary": "Full revised summary text (omit field if no change)",
+      "description": "Full revised description text (omit field if no change)"
     }
-  ],
-  "batchReasoning": "Overall analysis: what patterns you found across the batch, what you changed, what you left alone and why"
+  ]
 }
 
 Rules:
-- Only include entities that need changes. If an entity is fine, omit it from patches entirely.
-- For each included entity, only include the fields that changed (summary and/or description). Omit unchanged fields.
-- Keep reasoning concise — 1-2 sentences per entity.
-- The batchReasoning should identify cross-entity patterns you detected and how you addressed them.`;
+- Include most entities — these descriptions were written without world dynamics and need integration.
+- For each entity, only include fields that changed. Omit unchanged fields.
+- Output the complete revised text for each changed field, not a diff.`;
 
 // ============================================================================
 // Context Assembly
@@ -163,12 +160,11 @@ function buildUserPrompt(
 
   // Task instruction
   sections.push(`=== YOUR TASK ===
-Review the ${entities.length} entities above from the "${culture}" culture. Identify motif repetition, vagueness, and opportunities to ground descriptions in specific world dynamics. Propose targeted patches.
+Revise the ${entities.length} entities above from the "${culture}" culture. These were written without world dynamics or lore context — integrate that context now.
 
-Remember:
-- Only patch what needs fixing. Omit entities that are already good.
-- Preserve the visual thesis for every entity.
-- Keep the original author's voice. Minimal targeted edits, not rewrites.`);
+For each entity, ask: does this description reflect the world forces (dynamics) that would shape this entity? If not, revise it. Also fix motif repetition across the batch and replace vagueness with specificity.
+
+Expect to revise most entities. Preserve visual thesis. Output complete revised text for changed fields.`);
 
   return sections.join('\n\n');
 }
@@ -262,7 +258,6 @@ async function executeSummaryRevisionTask(
       if (!jsonMatch) throw new Error('No JSON object found');
       parsed = JSON.parse(jsonMatch[0]);
       if (!Array.isArray(parsed.patches)) throw new Error('Missing patches array');
-      if (typeof parsed.batchReasoning !== 'string') parsed.batchReasoning = '';
     } catch (err) {
       const errorMsg = `Failed to parse LLM response: ${err instanceof Error ? err.message : String(err)}`;
       updatedBatches[batchIndex] = { ...batch, status: 'failed', error: errorMsg };

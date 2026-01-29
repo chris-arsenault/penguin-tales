@@ -3,7 +3,7 @@
  *
  * Shows a modal with:
  * - Batch progress indicator
- * - Per-entity patches with inline diff view
+ * - Per-entity diff view (current vs proposed)
  * - Accept/reject toggles per entity
  * - Continue/cancel/apply controls
  */
@@ -11,32 +11,58 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 
 // ============================================================================
-// Inline Diff Display
+// Text Diff View
 // ============================================================================
 
-function InlineDiff({ original, revised, label }) {
-  if (!revised || revised === original) return null;
+function TextDiff({ current, proposed, label }) {
+  if (!proposed || proposed === current) return null;
 
   return (
-    <div style={{ marginBottom: '8px' }}>
-      <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+    <div style={{ marginBottom: '10px' }}>
+      <div style={{
+        fontSize: '10px',
+        fontWeight: 600,
+        color: 'var(--text-muted)',
+        marginBottom: '6px',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+      }}>
         {label}
       </div>
       <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '8px',
         fontSize: '11px',
         lineHeight: '1.6',
-        padding: '8px',
-        background: 'var(--bg-primary)',
-        borderRadius: '4px',
-        border: '1px solid var(--border-color)',
       }}>
-        <div style={{ marginBottom: '6px' }}>
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Current:</span>
-          <div style={{ color: 'var(--text-secondary)' }}>{original}</div>
+        <div style={{
+          padding: '8px 10px',
+          background: 'rgba(239, 68, 68, 0.06)',
+          borderRadius: '4px',
+          border: '1px solid rgba(239, 68, 68, 0.15)',
+          color: 'var(--text-secondary)',
+          maxHeight: '200px',
+          overflow: 'auto',
+        }}>
+          <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>
+            CURRENT
+          </div>
+          {current || '(empty)'}
         </div>
-        <div>
-          <span style={{ fontSize: '10px', color: 'var(--success-color, #22c55e)', fontStyle: 'italic' }}>Proposed:</span>
-          <div style={{ color: 'var(--text-primary)' }}>{revised}</div>
+        <div style={{
+          padding: '8px 10px',
+          background: 'rgba(34, 197, 94, 0.06)',
+          borderRadius: '4px',
+          border: '1px solid rgba(34, 197, 94, 0.15)',
+          color: 'var(--text-primary)',
+          maxHeight: '200px',
+          overflow: 'auto',
+        }}>
+          <div style={{ fontSize: '9px', color: 'var(--success-color, #22c55e)', marginBottom: '4px', fontWeight: 600 }}>
+            PROPOSED
+          </div>
+          {proposed}
         </div>
       </div>
     </div>
@@ -47,33 +73,50 @@ function InlineDiff({ original, revised, label }) {
 // Patch Card
 // ============================================================================
 
-function PatchCard({ patch, accepted, onToggle }) {
-  const hasChanges = patch.summary || patch.description;
+function PatchCard({ patch, currentEntity, accepted, onToggle, expanded, onToggleExpand }) {
+  const hasSummaryChange = patch.summary && patch.summary !== currentEntity?.summary;
+  const hasDescChange = patch.description && patch.description !== currentEntity?.description;
 
   return (
     <div style={{
-      padding: '10px 12px',
       background: 'var(--bg-secondary)',
       borderRadius: '6px',
-      marginBottom: '8px',
+      marginBottom: '6px',
       borderLeft: `3px solid ${accepted !== false ? 'var(--success-color, #22c55e)' : 'var(--text-muted)'}`,
-      opacity: accepted === false ? 0.6 : 1,
+      opacity: accepted === false ? 0.5 : 1,
     }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: hasChanges ? '8px' : '0',
-      }}>
-        <div>
+      {/* Header — always visible */}
+      <div
+        onClick={onToggleExpand}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '8px 12px',
+          cursor: 'pointer',
+          userSelect: 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            {expanded ? '\u25BC' : '\u25B6'}
+          </span>
           <span style={{ fontWeight: 600, fontSize: '12px' }}>{patch.entityName}</span>
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: '8px' }}>
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
             {patch.entityKind}
+          </span>
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+            {[
+              hasSummaryChange && 'summary',
+              hasDescChange && 'description',
+            ].filter(Boolean).join(' + ')}
           </span>
         </div>
         <button
-          onClick={() => onToggle(patch.entityId, accepted === false)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle(patch.entityId, accepted === false);
+          }}
           style={{
             padding: '2px 8px',
             fontSize: '10px',
@@ -88,18 +131,25 @@ function PatchCard({ patch, accepted, onToggle }) {
         </button>
       </div>
 
-      {/* Diffs */}
-      {patch.summary && (
-        <InlineDiff original="" revised={patch.summary} label="Summary" />
+      {/* Expanded diff view */}
+      {expanded && (
+        <div style={{ padding: '0 12px 10px' }}>
+          {hasSummaryChange && (
+            <TextDiff
+              current={currentEntity?.summary || ''}
+              proposed={patch.summary}
+              label="Summary"
+            />
+          )}
+          {hasDescChange && (
+            <TextDiff
+              current={currentEntity?.description || ''}
+              proposed={patch.description}
+              label="Description"
+            />
+          )}
+        </div>
       )}
-      {patch.description && (
-        <InlineDiff original="" revised={patch.description} label="Description" />
-      )}
-
-      {/* Reasoning */}
-      <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '4px' }}>
-        {patch.reasoning}
-      </div>
     </div>
   );
 }
@@ -119,11 +169,29 @@ export default function SummaryRevisionModal({
   getEntityContexts,
 }) {
   const scrollRef = useRef(null);
+  const [expandedIds, setExpandedIds] = useState(new Set());
 
   // Auto-scroll on new content
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [run?.batches?.length, run?.currentBatchIndex, run?.status]);
+
+  // Reset expanded state when batch changes
+  useEffect(() => {
+    setExpandedIds(new Set());
+  }, [run?.currentBatchIndex, run?.status]);
+
+  // Build entity lookup from entity contexts
+  const entityLookup = useMemo(() => {
+    if (!run || !getEntityContexts) return new Map();
+    const allIds = run.batches.flatMap((b) => b.entityIds);
+    const contexts = getEntityContexts(allIds);
+    const map = new Map();
+    for (const ctx of contexts) {
+      if (ctx) map.set(ctx.id, ctx);
+    }
+    return map;
+  }, [run, getEntityContexts]);
 
   if (!isActive || !run) return null;
 
@@ -136,12 +204,29 @@ export default function SummaryRevisionModal({
   const totalBatches = run.batches.length;
   const completedBatches = run.batches.filter((b) => b.status === 'complete' || b.status === 'failed').length;
 
-  // Collect all patches across all completed batches for run_reviewing
+  // Collect patches for display
   const allPatches = isRunReviewing
     ? run.batches.flatMap((b) => b.patches || [])
     : (currentBatch?.patches || []);
 
   const acceptedCount = allPatches.filter((p) => run.patchDecisions[p.entityId] !== false).length;
+
+  const toggleExpand = (entityId) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(entityId)) next.delete(entityId);
+      else next.add(entityId);
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    setExpandedIds(new Set(allPatches.map((p) => p.entityId)));
+  };
+
+  const collapseAll = () => {
+    setExpandedIds(new Set());
+  };
 
   return (
     <div style={{
@@ -157,9 +242,9 @@ export default function SummaryRevisionModal({
         background: 'var(--bg-primary)',
         borderRadius: '12px',
         border: '1px solid var(--border-color)',
-        width: '800px',
-        maxWidth: '90vw',
-        maxHeight: '85vh',
+        width: '900px',
+        maxWidth: '95vw',
+        maxHeight: '90vh',
         display: 'flex',
         flexDirection: 'column',
         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
@@ -175,7 +260,7 @@ export default function SummaryRevisionModal({
         }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '16px' }}>
-              Summary Revision
+              Batch Revision
               {currentBatch && !isRunReviewing && (
                 <span style={{ fontWeight: 400, fontSize: '13px', color: 'var(--text-muted)', marginLeft: '8px' }}>
                   {currentBatch.culture}
@@ -247,23 +332,57 @@ export default function SummaryRevisionModal({
           {allPatches.length > 0 && (
             <div>
               <div style={{
-                fontWeight: 600,
-                fontSize: '13px',
-                marginBottom: '10px',
                 display: 'flex',
                 justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '10px',
               }}>
-                <span>Proposed Patches ({allPatches.length})</span>
-                <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)' }}>
-                  {acceptedCount} accepted
+                <span style={{ fontWeight: 600, fontSize: '13px' }}>
+                  {allPatches.length} entities revised
+                  <span style={{ fontWeight: 400, fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                    {acceptedCount} accepted
+                  </span>
                 </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={expandAll}
+                    style={{
+                      padding: '2px 8px',
+                      fontSize: '10px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '4px',
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Expand all
+                  </button>
+                  <button
+                    onClick={collapseAll}
+                    style={{
+                      padding: '2px 8px',
+                      fontSize: '10px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '4px',
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Collapse all
+                  </button>
+                </div>
               </div>
               {allPatches.map((patch) => (
                 <PatchCard
                   key={patch.entityId}
                   patch={patch}
+                  currentEntity={entityLookup.get(patch.entityId)}
                   accepted={run.patchDecisions[patch.entityId]}
                   onToggle={onTogglePatch}
+                  expanded={expandedIds.has(patch.entityId)}
+                  onToggleExpand={() => toggleExpand(patch.entityId)}
                 />
               ))}
             </div>
@@ -276,7 +395,7 @@ export default function SummaryRevisionModal({
               color: 'var(--text-muted)',
               textAlign: 'center',
             }}>
-              No changes suggested for this batch. All entities look good.
+              No changes suggested for this batch.
             </div>
           )}
 

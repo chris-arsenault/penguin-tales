@@ -34,8 +34,6 @@ export interface SummaryRevisionPatch {
   summary?: string;
   /** Revised description — undefined means no change suggested */
   description?: string;
-  /** Why this change was suggested */
-  reasoning: string;
 }
 
 // =============================================================================
@@ -70,10 +68,7 @@ export interface SummaryRevisionLLMResponse {
     entityKind: string;
     summary?: string;
     description?: string;
-    reasoning: string;
   }>;
-  /** Overall reasoning about the batch */
-  batchReasoning: string;
 }
 
 // =============================================================================
