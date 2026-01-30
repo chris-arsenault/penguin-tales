@@ -23,6 +23,7 @@ export type LLMCallType =
   | 'chronicle.combine'          // Synthesize multiple drafts into one
   | 'chronicle.summary'          // Title + summary
   | 'chronicle.imageRefs'        // Image reference extraction
+  | 'chronicle.coverImageScene'  // Cover image scene/montage description
 
   // Palette
   | 'palette.expansion'          // Trait palette curation
@@ -31,7 +32,13 @@ export type LLMCallType =
   | 'dynamics.generation'        // Multi-turn world dynamics synthesis
 
   // Summary Revision
-  | 'revision.summary';          // Batch summary/description revision
+  | 'revision.summary'           // Batch summary/description revision
+
+  // Chronicle Lore Backport
+  | 'revision.loreBackport'      // Extract lore from chronicle and backport to cast entities
+
+  // Description Copy Edit
+  | 'description.copyEdit';      // Readability copy edit for a single entity description
 
 export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'description.narrative',
@@ -44,9 +51,12 @@ export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'chronicle.combine',
   'chronicle.summary',
   'chronicle.imageRefs',
+  'chronicle.coverImageScene',
   'palette.expansion',
   'dynamics.generation',
   'revision.summary',
+  'revision.loreBackport',
+  'description.copyEdit',
 ];
 
 export type LLMCallCategory = 'description' | 'image' | 'perspective' | 'chronicle' | 'palette' | 'dynamics' | 'revision';
@@ -218,6 +228,17 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
     },
     recommendedModels: ['claude-haiku-4-5-20251001'],
   },
+  'chronicle.coverImageScene': {
+    label: 'Cover Image Scene',
+    description: 'Generates a montage-style scene description for the chronicle cover image',
+    category: 'chronicle',
+    defaults: {
+      model: 'claude-haiku-4-5-20251001',
+      thinkingBudget: 0,
+      maxTokens: 512,
+    },
+    recommendedModels: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'],
+  },
   'palette.expansion': {
     label: 'Palette Expansion',
     description: 'Curates visual trait categories with extended reasoning',
@@ -251,6 +272,28 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
     },
     recommendedModels: ['claude-opus-4-5-20251101', 'claude-sonnet-4-5-20250929'],
   },
+  'revision.loreBackport': {
+    label: 'Lore Backport',
+    description: 'Extracts lore from published chronicles and backports to entity summaries/descriptions',
+    category: 'revision',
+    defaults: {
+      model: 'claude-sonnet-4-5-20250929',
+      thinkingBudget: 4096,
+      maxTokens: 8192,
+    },
+    recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
+  },
+  'description.copyEdit': {
+    label: 'Copy Edit',
+    description: 'Readability copy edit for a single entity description — fixes pronoun ambiguity, unexplained references, dense prose',
+    category: 'description',
+    defaults: {
+      model: 'claude-sonnet-4-5-20250929',
+      thinkingBudget: 4096,
+      maxTokens: 4096,
+    },
+    recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
+  },
 };
 
 export const CATEGORY_LABELS: Record<LLMCallCategory, string> = {
@@ -276,12 +319,12 @@ export const CATEGORY_DESCRIPTIONS: Record<LLMCallCategory, string> = {
 // Group call types by category
 export function getCallTypesByCategory(): Record<LLMCallCategory, LLMCallType[]> {
   return {
-    description: ['description.narrative', 'description.visualThesis', 'description.visualTraits'],
+    description: ['description.narrative', 'description.visualThesis', 'description.visualTraits', 'description.copyEdit'],
     image: ['image.promptFormatting'],
     perspective: ['perspective.synthesis'],
-    chronicle: ['chronicle.generation', 'chronicle.compare', 'chronicle.combine', 'chronicle.summary', 'chronicle.imageRefs'],
+    chronicle: ['chronicle.generation', 'chronicle.compare', 'chronicle.combine', 'chronicle.summary', 'chronicle.imageRefs', 'chronicle.coverImageScene'],
     palette: ['palette.expansion'],
     dynamics: ['dynamics.generation'],
-    revision: ['revision.summary'],
+    revision: ['revision.summary', 'revision.loreBackport'],
   };
 }

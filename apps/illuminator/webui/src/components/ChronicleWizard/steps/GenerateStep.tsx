@@ -7,11 +7,14 @@
 import { useWizard } from '../WizardContext';
 
 interface GenerateStepProps {
-  onGenerate: () => void;
+  onGenerate: (temperatureOverride?: number) => void;
 }
 
 export default function GenerateStep({ onGenerate }: GenerateStepProps) {
-  const { state } = useWizard();
+  const { state, setTemperatureOverride } = useWizard();
+  const styleDefault = state.narrativeStyle?.temperature ?? 0.85;
+  const temperature = state.temperatureOverride ?? styleDefault;
+  const setTemperature = (t: number) => setTemperatureOverride(t);
 
   // Count primary vs supporting roles
   const primaryCount = state.roleAssignments.filter(a => a.isPrimary).length;
@@ -121,6 +124,73 @@ export default function GenerateStep({ onGenerate }: GenerateStepProps) {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Temperature Control */}
+      <div style={{
+        padding: '16px 20px',
+        background: 'var(--bg-secondary)',
+        borderRadius: '12px',
+        marginBottom: '24px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+              Temperature
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Style default: {styleDefault}
+              {state.temperatureOverride !== null && (
+                <button
+                  onClick={() => setTemperatureOverride(null)}
+                  style={{
+                    marginLeft: '8px',
+                    padding: '1px 6px',
+                    fontSize: '10px',
+                    background: 'transparent',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '3px',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+          <input
+            type="number"
+            value={temperature}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (!isNaN(v)) setTemperature(Math.max(0, Math.min(1, v)));
+            }}
+            step={0.01}
+            min={0}
+            max={1}
+            style={{
+              width: '60px',
+              padding: '4px 6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              textAlign: 'center',
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '4px',
+              color: 'inherit',
+            }}
+          />
+        </div>
+        <input
+          type="range"
+          value={temperature}
+          onChange={(e) => setTemperature(parseFloat(e.target.value))}
+          step={0.05}
+          min={0}
+          max={1}
+          style={{ width: '100%', cursor: 'pointer' }}
+        />
       </div>
 
       {/* Info Box */}

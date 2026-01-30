@@ -60,6 +60,8 @@ export interface WizardGenerateConfig {
   selectedRelationshipIds: string[];
   /** Temporal context computed from selected events and eras */
   temporalContext: ChronicleTemporalContext | null;
+  /** Optional temperature override (if not set, uses narrative style default) */
+  temperatureOverride?: number;
 }
 
 // =============================================================================
@@ -184,6 +186,7 @@ function InnerWizard({
       selectedEventIds: Array.from(state.selectedEventIds),
       selectedRelationshipIds: Array.from(state.selectedRelationshipIds),
       temporalContext,
+      temperatureOverride: state.temperatureOverride ?? undefined,
     };
 
     onGenerate(config);

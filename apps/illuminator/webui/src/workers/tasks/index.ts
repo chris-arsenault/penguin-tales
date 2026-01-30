@@ -7,6 +7,8 @@ import { chronicleTask } from './chronicleTask';
 import { paletteExpansionTask } from './paletteExpansionTask';
 import { dynamicsGenerationTask } from './dynamicsGenerationTask';
 import { summaryRevisionTask } from './summaryRevisionTask';
+import { chronicleLoreBackportTask } from './chronicleLoreBackportTask';
+import { copyEditTask } from './copyEditTask';
 
 export const TASK_HANDLERS = {
   description: descriptionTask,
@@ -15,6 +17,8 @@ export const TASK_HANDLERS = {
   paletteExpansion: paletteExpansionTask,
   dynamicsGeneration: dynamicsGenerationTask,
   summaryRevision: summaryRevisionTask,
+  chronicleLoreBackport: chronicleLoreBackportTask,
+  copyEdit: copyEditTask,
 } satisfies TaskHandlerMap;
 
 export async function executeTask<TType extends WorkerTask['type']>(
@@ -32,4 +36,6 @@ export {
   paletteExpansionTask,
   dynamicsGenerationTask,
   summaryRevisionTask,
+  chronicleLoreBackportTask,
+  copyEditTask,
 };

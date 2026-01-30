@@ -9,7 +9,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import ImageModal from './ImageModal';
 import ImagePickerModal from './ImagePickerModal';
-import EntityDetailsModal from './EntityDetailsModal';
+import EntityDetailView from './EntityDetailView';
 import StyleSelector from './StyleSelector';
 import { useImageUrl } from '../hooks/useImageUrl';
 import {
@@ -415,6 +415,10 @@ export default function EntityBrowser({
   prominenceScale,
   onStartRevision,
   isRevising,
+  onUpdateBackrefs,
+  onUndoDescription,
+  onCopyEdit,
+  isCopyEditActive,
 }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [filters, setFilters] = useState({
@@ -422,6 +426,7 @@ export default function EntityBrowser({
     prominence: 'all',
     status: 'all',
     culture: 'all',
+    chronicleImage: 'all',
   });
   const effectiveProminenceScale = useMemo(() => {
     if (prominenceScale) return prominenceScale;
@@ -432,7 +437,7 @@ export default function EntityBrowser({
   }, [prominenceScale, entities]);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [imageModal, setImageModal] = useState({ open: false, imageId: '', title: '' });
-  const [entityModal, setEntityModal] = useState({ open: false, entity: null });
+  const [selectedEntityId, setSelectedEntityId] = useState(null);
   const [imagePickerEntity, setImagePickerEntity] = useState(null);
   const imageModel = config.imageModel || 'dall-e-3';
   const sizeOptions = useMemo(() => getSizeOptions(imageModel), [imageModel]);
@@ -509,6 +514,20 @@ export default function EntityBrowser({
         }
         if (filters.status === 'error' && descStatus !== 'error' && imgStatus !== 'error') {
           return false;
+        }
+      }
+
+      // Chronicle image filter
+      if (filters.chronicleImage !== 'all') {
+        const backrefs = entity.enrichment?.chronicleBackrefs || [];
+        if (filters.chronicleImage === 'none' && backrefs.length > 0) return false;
+        if (filters.chronicleImage === 'unconfigured') {
+          if (backrefs.length === 0) return false;
+          if (!backrefs.some((b) => b.imageSource === undefined)) return false;
+        }
+        if (filters.chronicleImage === 'configured') {
+          if (backrefs.length === 0) return false;
+          if (backrefs.some((b) => b.imageSource === undefined)) return false;
         }
       }
 
@@ -787,9 +806,9 @@ export default function EntityBrowser({
     setImagePickerEntity(entity);
   }, []);
 
-  // Open entity details modal
+  // Select entity for detail view
   const openEntityModal = useCallback((entity) => {
-    setEntityModal({ open: true, entity });
+    setSelectedEntityId(entity.id);
   }, []);
 
   // Download debug info for selected entities
@@ -949,6 +968,17 @@ export default function EntityBrowser({
               ))}
             </select>
           )}
+
+          <select
+            value={filters.chronicleImage}
+            onChange={(e) => setFilters((prev) => ({ ...prev, chronicleImage: e.target.value }))}
+            className="illuminator-select"
+          >
+            <option value="all">Chronicle Img</option>
+            <option value="none">No Backrefs</option>
+            <option value="unconfigured">Unconfigured</option>
+            <option value="configured">Configured</option>
+          </select>
 
           <label
             style={{
@@ -1212,76 +1242,90 @@ export default function EntityBrowser({
         </div>
       )}
 
-      {/* Entity list - scrollable */}
-      <div className="illuminator-card" style={{ padding: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        {/* Header row - sticky */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '8px 12px',
-            borderBottom: '1px solid var(--border-color)',
-            background: 'var(--bg-tertiary)',
-            flexShrink: 0,
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={selectedIds.size === filteredEntities.length && filteredEntities.length > 0}
-            onChange={(e) => (e.target.checked ? selectAll() : clearSelection())}
-            style={{ cursor: 'pointer' }}
-          />
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Select all
-          </span>
-        </div>
+      {/* Entity detail view OR entity list */}
+      {selectedEntityId && entities.find((e) => e.id === selectedEntityId) ? (
+        <EntityDetailView
+          entity={entities.find((e) => e.id === selectedEntityId)}
+          entities={entities}
+          queue={queue}
+          onBack={() => setSelectedEntityId(null)}
+          prominenceScale={effectiveProminenceScale}
+          onUpdateBackrefs={onUpdateBackrefs}
+          onUndoDescription={onUndoDescription}
+          onCopyEdit={onCopyEdit}
+          isCopyEditActive={isCopyEditActive}
+        />
+      ) : (
+        <div className="illuminator-card" style={{ padding: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {/* Header row - sticky */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '8px 12px',
+              borderBottom: '1px solid var(--border-color)',
+              background: 'var(--bg-tertiary)',
+              flexShrink: 0,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={selectedIds.size === filteredEntities.length && filteredEntities.length > 0}
+              onChange={(e) => (e.target.checked ? selectAll() : clearSelection())}
+              style={{ cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Select all
+            </span>
+          </div>
 
-        {/* Entity rows - scrollable container */}
-        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-          {filteredEntities.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              No entities match the current filters.
-            </div>
-          ) : (
-            filteredEntities.map((entity) => {
-              const descStatus = getStatus(entity, 'description');
-              const imgStatus = getStatus(entity, 'image');
-              const enrichment = entity.enrichment || {};
-              return (
-                <EntityRow
-                  key={entity.id}
-                  entity={entity}
-                  descStatus={descStatus}
-                  imgStatus={imgStatus}
-                  selected={selectedIds.has(entity.id)}
-                  onToggleSelect={() => toggleSelect(entity.id)}
-                  onQueueDesc={() => queueItem(entity, 'description')}
-                  onQueueImg={() => queueItem(entity, 'image')}
-                  onCancelDesc={() => cancelItem(entity, 'description')}
-                  onCancelImg={() => cancelItem(entity, 'image')}
-                  onAssignImage={() => openImagePicker(entity)}
-                  canQueueImage={
-                    prominenceAtLeast(entity.prominence, config.minProminenceForImage, effectiveProminenceScale) &&
-                    (!config.requireDescription ||
-                      (entity.summary && entity.description))
-                  }
-                  needsDescription={
-                    prominenceAtLeast(entity.prominence, config.minProminenceForImage, effectiveProminenceScale) &&
-                    config.requireDescription &&
-                    !(entity.summary && entity.description)
-                  }
-                  onImageClick={openImageModal}
-                  onEntityClick={() => openEntityModal(entity)}
-                  descCost={getEntityCostDisplay(entity, 'description', descStatus, config, enrichment, buildPrompt)}
-                  imgCost={getEntityCostDisplay(entity, 'image', imgStatus, config, enrichment, buildPrompt)}
-                  prominenceScale={effectiveProminenceScale}
-                />
-              );
-            })
-          )}
+          {/* Entity rows - scrollable container */}
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            {filteredEntities.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No entities match the current filters.
+              </div>
+            ) : (
+              filteredEntities.map((entity) => {
+                const descStatus = getStatus(entity, 'description');
+                const imgStatus = getStatus(entity, 'image');
+                const enrichment = entity.enrichment || {};
+                return (
+                  <EntityRow
+                    key={entity.id}
+                    entity={entity}
+                    descStatus={descStatus}
+                    imgStatus={imgStatus}
+                    selected={selectedIds.has(entity.id)}
+                    onToggleSelect={() => toggleSelect(entity.id)}
+                    onQueueDesc={() => queueItem(entity, 'description')}
+                    onQueueImg={() => queueItem(entity, 'image')}
+                    onCancelDesc={() => cancelItem(entity, 'description')}
+                    onCancelImg={() => cancelItem(entity, 'image')}
+                    onAssignImage={() => openImagePicker(entity)}
+                    canQueueImage={
+                      prominenceAtLeast(entity.prominence, config.minProminenceForImage, effectiveProminenceScale) &&
+                      (!config.requireDescription ||
+                        (entity.summary && entity.description))
+                    }
+                    needsDescription={
+                      prominenceAtLeast(entity.prominence, config.minProminenceForImage, effectiveProminenceScale) &&
+                      config.requireDescription &&
+                      !(entity.summary && entity.description)
+                    }
+                    onImageClick={openImageModal}
+                    onEntityClick={() => openEntityModal(entity)}
+                    descCost={getEntityCostDisplay(entity, 'description', descStatus, config, enrichment, buildPrompt)}
+                    imgCost={getEntityCostDisplay(entity, 'image', imgStatus, config, enrichment, buildPrompt)}
+                    prominenceScale={effectiveProminenceScale}
+                  />
+                );
+              })
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Image Modal */}
       <ImageModal
@@ -1299,15 +1343,6 @@ export default function EntityBrowser({
         entityKind={imagePickerEntity?.kind}
         entityCulture={imagePickerEntity?.culture}
         currentImageId={imagePickerEntity?.enrichment?.image?.imageId}
-      />
-
-      {/* Entity Details Modal */}
-      <EntityDetailsModal
-        isOpen={entityModal.open}
-        entity={entityModal.entity}
-        queue={queue}
-        onClose={() => setEntityModal({ open: false, entity: null })}
-        prominenceScale={effectiveProminenceScale}
       />
     </div>
   );

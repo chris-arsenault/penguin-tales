@@ -34,8 +34,10 @@ import RevisionFilterModal from './components/RevisionFilterModal';
 import { useEnrichmentQueue } from './hooks/useEnrichmentQueue';
 import { useDynamicsGeneration } from './hooks/useDynamicsGeneration';
 import { useSummaryRevision } from './hooks/useSummaryRevision';
+import { useChronicleLoreBackport } from './hooks/useChronicleLoreBackport';
+import { useCopyEdit } from './hooks/useCopyEdit';
 import { getPublishedStaticPagesForProject } from './lib/staticPageStorage';
-import { getEntityUsageStats } from './lib/chronicleStorage';
+import { getEntityUsageStats, getChronicle, updateChronicleLoreBackported } from './lib/chronicleStorage';
 import { useStyleLibrary } from './hooks/useStyleLibrary';
 import {
   buildDescriptionPromptFromGuidance,
@@ -51,6 +53,7 @@ import { exportImagePrompts, downloadImagePromptExport } from './lib/workerStora
 import { getEnrichmentResults } from './lib/enrichmentStorage';
 import { applyEnrichmentResult } from './lib/enrichmentTypes';
 import { getResolvedLLMCallSettings } from './lib/llmModelSettings';
+import { resolveAnchorPhrase, extractWordsAroundIndex } from './lib/fuzzyAnchor';
 import {
   buildProminenceScale,
   DEFAULT_PROMINENCE_DISTRIBUTION,
@@ -369,6 +372,7 @@ export default function IlluminatorRemote({
     return '';
   });
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [chronicleRefreshTrigger, setChronicleRefreshTrigger] = useState(0);
 
   // Persist API keys when enabled
   useEffect(() => {
@@ -725,18 +729,66 @@ export default function IlluminatorRemote({
     );
   }, []);
 
+  // Push current description to version history before overwriting
+  function pushDescriptionHistory(entity, source) {
+    if (!entity.description) return entity.enrichment || {};
+    const history = [...(entity.enrichment?.descriptionHistory || [])];
+    history.push({
+      description: entity.description,
+      replacedAt: Date.now(),
+      source,
+    });
+    return { ...entity.enrichment, descriptionHistory: history };
+  }
+
   // Handle entity enrichment update from queue
   // output is ApplyEnrichmentOutput with { enrichment, summary?, description? }
   const handleEntityUpdate = useCallback((entityId, output) => {
+    setEntities((prev) =>
+      prev.map((entity) => {
+        if (entity.id !== entityId) return entity;
+        // Push history if description is being overwritten
+        const baseEnrichment = output.description !== undefined && entity.description
+          ? pushDescriptionHistory(entity, 'description-task')
+          : entity.enrichment;
+        return {
+          ...entity,
+          enrichment: { ...baseEnrichment, ...output.enrichment },
+          ...(output.summary !== undefined && { summary: output.summary }),
+          ...(output.description !== undefined && { description: output.description }),
+        };
+      })
+    );
+  }, []);
+
+  // Undo last description change — pop from history
+  const handleUndoDescription = useCallback((entityId) => {
+    setEntities((prev) =>
+      prev.map((entity) => {
+        if (entity.id !== entityId) return entity;
+        const history = [...(entity.enrichment?.descriptionHistory || [])];
+        if (history.length === 0) return entity;
+        const previous = history.pop();
+        return {
+          ...entity,
+          description: previous.description,
+          enrichment: { ...entity.enrichment, descriptionHistory: history },
+        };
+      })
+    );
+  }, []);
+
+  // Handle backref image config update
+  const handleUpdateBackrefs = useCallback((entityId, updatedBackrefs) => {
     setEntities((prev) =>
       prev.map((entity) =>
         entity.id === entityId
           ? {
               ...entity,
-              enrichment: { ...entity.enrichment, ...output.enrichment },
-              // Apply entity field updates from text enrichment
-              ...(output.summary !== undefined && { summary: output.summary }),
-              ...(output.description !== undefined && { description: output.description }),
+              enrichment: {
+                ...entity.enrichment,
+                chronicleBackrefs: updatedBackrefs,
+              },
             }
           : entity
       )
@@ -1166,6 +1218,14 @@ export default function IlluminatorRemote({
         };
       });
 
+      // Collect existing backref anchor phrases so the LLM can preserve them
+      const existingAnchorPhrases = (entity.enrichment?.chronicleBackrefs || [])
+        .map((br) => br.anchorPhrase)
+        .filter(Boolean);
+
+      // Per-kind description focus from entity guidance config
+      const kindFocus = entityGuidance[entity.kind]?.focus || '';
+
       return {
         id: entity.id,
         name: entity.name,
@@ -1178,19 +1238,25 @@ export default function IlluminatorRemote({
         description: entity.description || '',
         visualThesis: entity.enrichment?.text?.visualThesis || '',
         relationships: rels,
+        ...(existingAnchorPhrases.length > 0 ? { existingAnchorPhrases } : {}),
+        ...(kindFocus ? { kindFocus } : {}),
       };
     }).filter(Boolean);
-  }, [entityById, relationshipsByEntity, prominenceScale]);
+  }, [entityById, relationshipsByEntity, prominenceScale, entityGuidance]);
 
-  const handleRevisionApplied = useCallback((patches) => {
+  const handleRevisionApplied = useCallback((patches, source = 'summary-revision') => {
     if (!patches?.length) return;
     // Apply patches to entities
     setEntities((prev) =>
       prev.map((entity) => {
         const patch = patches.find((p) => p.entityId === entity.id);
         if (!patch) return entity;
+        const enrichment = patch.description !== undefined && entity.description
+          ? pushDescriptionHistory(entity, source)
+          : entity.enrichment;
         return {
           ...entity,
+          enrichment,
           ...(patch.summary !== undefined ? { summary: patch.summary } : {}),
           ...(patch.description !== undefined ? { description: patch.description } : {}),
         };
@@ -1319,6 +1385,214 @@ export default function IlluminatorRemote({
     const patches = applyAcceptedPatches();
     handleRevisionApplied(patches);
   }, [applyAcceptedPatches, handleRevisionApplied]);
+
+  // Chronicle lore backport (extract lore from published chronicles into cast entity descriptions)
+  const {
+    run: backportRun,
+    isActive: isBackportActive,
+    chronicleId: backportChronicleId,
+    startBackport,
+    togglePatchDecision: toggleBackportPatchDecision,
+    updateAnchorPhrase: updateBackportAnchorPhrase,
+    applyAccepted: applyAcceptedBackportPatches,
+    cancelBackport,
+  } = useChronicleLoreBackport(enqueue, getEntityContextsForRevision);
+
+  const handleBackportLore = useCallback(async (chronicleId) => {
+    if (!projectId || !simulationRunId || !chronicleId) return;
+
+    const chronicle = await getChronicle(chronicleId);
+    if (!chronicle?.finalContent) {
+      console.warn('[Backport] Chronicle not found or has no final content:', chronicleId);
+      return;
+    }
+
+    // Build entity contexts for the cast
+    const castEntityIds = (chronicle.roleAssignments || []).map((r) => r.entityId);
+    const castContexts = getEntityContextsForRevision(castEntityIds);
+    if (castContexts.length === 0) {
+      console.warn('[Backport] No valid cast entities found for chronicle:', chronicleId);
+      return;
+    }
+
+    // Extract perspective synthesis output
+    let perspectiveSynthesisJson = '';
+    const ps = chronicle.perspectiveSynthesis;
+    if (ps) {
+      perspectiveSynthesisJson = JSON.stringify({
+        brief: ps.brief || '',
+        facets: ps.facets || [],
+        narrativeVoice: ps.narrativeVoice || {},
+        entityDirectives: ps.entityDirectives || [],
+        suggestedMotifs: ps.suggestedMotifs || [],
+        chronicleFormat: chronicle.format || '',
+      });
+    }
+
+    startBackport({
+      projectId,
+      simulationRunId,
+      chronicleId,
+      chronicleText: chronicle.finalContent,
+      perspectiveSynthesisJson,
+      entities: castContexts,
+    });
+  }, [projectId, simulationRunId, getEntityContextsForRevision, startBackport]);
+
+  const handleAcceptBackport = useCallback(() => {
+    const cId = backportChronicleId;
+    const patches = applyAcceptedBackportPatches();
+    handleRevisionApplied(patches, 'lore-backport');
+
+    // Save new chronicle backrefs and revalidate existing ones against updated descriptions
+    if (cId) {
+      const now = Date.now();
+      setEntities((prev) =>
+        prev.map((entity) => {
+          const patch = patches.find((p) => p.entityId === entity.id);
+          if (!patch) return entity;
+
+          const desc = patch.description || entity.description || '';
+          let backrefs = [...(entity.enrichment?.chronicleBackrefs || [])];
+
+          // Revalidate existing backrefs: re-resolve anchor phrases against updated description
+          if (patch.description && backrefs.length > 0) {
+            backrefs = backrefs.map((br) => {
+              // Check if existing anchor still resolves
+              const resolved = resolveAnchorPhrase(br.anchorPhrase, desc);
+              if (!resolved) return br; // keep as-is (LLM was told to preserve)
+              // Update to the resolved verbatim phrase (may have shifted)
+              return resolved.phrase !== br.anchorPhrase
+                ? { ...br, anchorPhrase: resolved.phrase }
+                : br;
+            });
+          }
+
+          // Add new backref for this chronicle's patch
+          if (patch.anchorPhrase) {
+            const resolved = resolveAnchorPhrase(patch.anchorPhrase, desc);
+            if (resolved) {
+              backrefs.push({
+                entityId: entity.id,
+                chronicleId: cId,
+                anchorPhrase: resolved.phrase,
+                createdAt: now,
+              });
+            }
+          }
+
+          return {
+            ...entity,
+            enrichment: {
+              ...entity.enrichment,
+              chronicleBackrefs: backrefs,
+            },
+          };
+        })
+      );
+      // Mark chronicle as backported and refresh the chronicle list
+      updateChronicleLoreBackported(cId, true).then(() => {
+        setChronicleRefreshTrigger((n) => n + 1);
+      }).catch((err) => {
+        console.warn('[Backport] Failed to set loreBackported flag:', err);
+      });
+    }
+  }, [applyAcceptedBackportPatches, handleRevisionApplied, backportChronicleId]);
+
+  // Description copy edit (single-entity readability pass)
+  const {
+    run: copyEditRun,
+    isActive: isCopyEditActive,
+    startCopyEdit,
+    togglePatchDecision: toggleCopyEditPatchDecision,
+    applyAccepted: applyAcceptedCopyEditPatches,
+    cancelCopyEdit,
+  } = useCopyEdit(enqueue);
+
+  const handleCopyEdit = useCallback((entityId) => {
+    if (!projectId || !simulationRunId || !entityId) return;
+
+    const entity = entityById.get(entityId);
+    if (!entity?.description) {
+      console.warn('[CopyEdit] Entity not found or has no description:', entityId);
+      return;
+    }
+
+    // Build relationships
+    const rels = (relationshipsByEntity.get(entity.id) || []).slice(0, 12).map((rel) => {
+      const targetId = rel.src === entity.id ? rel.dst : rel.src;
+      const target = entityById.get(targetId);
+      return {
+        kind: rel.kind,
+        targetName: target?.name || targetId,
+        targetKind: target?.kind || 'unknown',
+      };
+    });
+
+    const kindFocus = entityGuidance[entity.kind]?.focus || '';
+    const visualThesis = entity.enrichment?.text?.visualThesis || '';
+
+    startCopyEdit({
+      projectId,
+      simulationRunId,
+      entityId: entity.id,
+      entityName: entity.name,
+      entityKind: entity.kind,
+      entitySubtype: entity.subtype || '',
+      entityCulture: entity.culture || '',
+      entityProminence: prominenceLabelFromScale(entity.prominence, prominenceScale),
+      description: entity.description,
+      summary: entity.summary || '',
+      kindFocus,
+      visualThesis,
+      relationships: rels,
+    });
+  }, [projectId, simulationRunId, entityById, relationshipsByEntity, entityGuidance, prominenceScale, startCopyEdit]);
+
+  const handleAcceptCopyEdit = useCallback(() => {
+    const patches = applyAcceptedCopyEditPatches();
+    handleRevisionApplied(patches, 'copy-edit');
+
+    // Revalidate existing backrefs against updated descriptions
+    setEntities((prev) =>
+      prev.map((entity) => {
+        const patch = patches.find((p) => p.entityId === entity.id);
+        if (!patch?.description) return entity;
+
+        const desc = patch.description;
+        let backrefs = [...(entity.enrichment?.chronicleBackrefs || [])];
+        if (backrefs.length === 0) return entity;
+
+        // Re-resolve anchor phrases against new description text
+        backrefs = backrefs.map((br) => {
+          const resolved = resolveAnchorPhrase(br.anchorPhrase, desc);
+          if (!resolved) {
+            // Fuzzy match failed — try proportional index fallback
+            const oldIndex = entity.description ? entity.description.indexOf(br.anchorPhrase) : -1;
+            if (oldIndex >= 0 && entity.description) {
+              const newIndex = Math.round(oldIndex / entity.description.length * desc.length);
+              const fallbackPhrase = extractWordsAroundIndex(desc, newIndex, 5);
+              if (fallbackPhrase) {
+                return { ...br, anchorPhrase: fallbackPhrase };
+              }
+            }
+            return br; // keep as-is if all fallbacks fail
+          }
+          return resolved.phrase !== br.anchorPhrase
+            ? { ...br, anchorPhrase: resolved.phrase }
+            : br;
+        });
+
+        return {
+          ...entity,
+          enrichment: {
+            ...entity.enrichment,
+            chronicleBackrefs: backrefs,
+          },
+        };
+      })
+    );
+  }, [applyAcceptedCopyEditPatches, handleRevisionApplied]);
 
   const handleGenerateDynamics = useCallback(async () => {
     if (!projectId || !simulationRunId) return;
@@ -1535,6 +1809,10 @@ export default function IlluminatorRemote({
               prominenceScale={prominenceScale}
               onStartRevision={handleOpenRevisionFilter}
               isRevising={isRevisionActive}
+              onUpdateBackrefs={handleUpdateBackrefs}
+              onUndoDescription={handleUndoDescription}
+              onCopyEdit={handleCopyEdit}
+              isCopyEditActive={isCopyEditActive}
             />
           </div>
         )}
@@ -1555,6 +1833,8 @@ export default function IlluminatorRemote({
               styleSelection={styleSelection}
               entityGuidance={entityGuidance}
               cultureIdentities={cultureIdentities}
+              onBackportLore={handleBackportLore}
+              refreshTrigger={chronicleRefreshTrigger}
             />
           </div>
         )}
@@ -1707,6 +1987,27 @@ export default function IlluminatorRemote({
         onTogglePatch={togglePatchDecision}
         onAccept={handleAcceptRevision}
         onCancel={cancelRevision}
+        getEntityContexts={getEntityContextsForRevision}
+      />
+
+      {/* Chronicle Lore Backport Modal */}
+      <SummaryRevisionModal
+        run={backportRun}
+        isActive={isBackportActive}
+        onTogglePatch={toggleBackportPatchDecision}
+        onAccept={handleAcceptBackport}
+        onCancel={cancelBackport}
+        getEntityContexts={getEntityContextsForRevision}
+        onUpdateAnchorPhrase={updateBackportAnchorPhrase}
+      />
+
+      {/* Description Copy Edit Modal */}
+      <SummaryRevisionModal
+        run={copyEditRun}
+        isActive={isCopyEditActive}
+        onTogglePatch={toggleCopyEditPatchDecision}
+        onAccept={handleAcceptCopyEdit}
+        onCancel={cancelCopyEdit}
         getEntityContexts={getEntityContextsForRevision}
       />
     </div>

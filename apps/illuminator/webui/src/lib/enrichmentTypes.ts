@@ -7,7 +7,37 @@
 
 import type { ChronicleFormat, ChronicleGenerationContext, ChronicleImageRefs, EraTemporalInfo } from './chronicleTypes';
 
-export type EnrichmentType = 'description' | 'image' | 'entityChronicle' | 'paletteExpansion' | 'dynamicsGeneration' | 'summaryRevision';
+export type EnrichmentType = 'description' | 'image' | 'entityChronicle' | 'paletteExpansion' | 'dynamicsGeneration' | 'summaryRevision' | 'chronicleLoreBackport' | 'copyEdit';
+
+/**
+ * Which image to display at a chronicle backref anchor in an entity description.
+ * - 'cover': Use the chronicle's cover image
+ * - 'image_ref': Use a specific image ref from the chronicle's imageRefs
+ * - 'entity': Use an entity's portrait image
+ */
+export type BackrefImageSource =
+  | { source: 'cover' }
+  | { source: 'image_ref'; refId: string }
+  | { source: 'entity'; entityId: string };
+
+/**
+ * Links an anchor phrase in an entity's description to the source chronicle
+ * that introduced the lore. Stored separately from description text so that
+ * description prose stays clean for LLM prompting.
+ */
+export interface ChronicleBackref {
+  entityId: string;
+  chronicleId: string;
+  /** A phrase from the entity's description that the chronicle introduced */
+  anchorPhrase: string;
+  createdAt: number;
+  /** Image to display at this backref anchor. undefined = legacy fallback (cover), null = no image */
+  imageSource?: BackrefImageSource | null;
+  /** Display size for the backref image */
+  imageSize?: 'small' | 'medium' | 'large' | 'full-width';
+  /** Float alignment for the backref image */
+  imageAlignment?: 'left' | 'right';
+}
 
 export interface NetworkDebugInfo {
   request: string;
@@ -129,6 +159,14 @@ export interface EntityEnrichment {
     outputTokens?: number;
   };
   chronicles?: AcceptedChronicle[];
+  /** Provenance links from description text to source chronicles */
+  chronicleBackrefs?: ChronicleBackref[];
+  /** Version history for descriptions — previous versions pushed here before overwrite */
+  descriptionHistory?: Array<{
+    description: string;
+    replacedAt: number;
+    source: string;  // 'description-task' | 'lore-backport' | 'summary-revision' | 'manual'
+  }>;
 }
 
 /**
@@ -232,7 +270,9 @@ export type ChronicleStep =
   | 'validate'
   | 'edit'
   | 'summary'
-  | 'image_refs';
+  | 'image_refs'
+  | 'cover_image_scene'  // Generate cover image scene description
+  | 'cover_image';  // Generate cover image from scene description
 
 /**
  * Worker task - what we send to the worker (single task)

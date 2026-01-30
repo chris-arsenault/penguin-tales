@@ -82,7 +82,7 @@ export interface UseChronicleGenerationReturn {
   chronicles: Map<string, ChronicleRecord>;
 
   // Actions (chronicle-first: use chronicleId, not entityId)
-  generateV2: (chronicleId: string, context: ChronicleGenerationContext, metadata?: ChronicleMetadata) => void;
+  generateV2: (chronicleId: string, context: ChronicleGenerationContext, metadata?: ChronicleMetadata, temperatureOverride?: number) => void;
 
   // Post-generation refinements
   generateSummary: (chronicleId: string, context: ChronicleGenerationContext) => void;
@@ -208,7 +208,7 @@ export function useChronicleGeneration(
   // -------------------------------------------------------------------------
 
   const generateV2 = useCallback(
-    (chronicleId: string, context: ChronicleGenerationContext, metadata?: ChronicleMetadata) => {
+    (chronicleId: string, context: ChronicleGenerationContext, metadata?: ChronicleMetadata, temperatureOverride?: number) => {
       if (!context.focus) {
         console.error('[Chronicle V2] Focus context required');
         return;
@@ -261,6 +261,7 @@ export function useChronicleGeneration(
         chronicleStep: 'generate_v2',
         chronicleId: metadata?.chronicleId || chronicleId,
         chronicleMetadata: metadata,
+        chronicleTemperature: temperatureOverride,
       }]);
     },
     [onEnqueue]

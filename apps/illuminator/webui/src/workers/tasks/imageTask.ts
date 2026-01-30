@@ -25,11 +25,16 @@ interface ImagePromptFormatResult {
  */
 async function formatImagePromptWithClaude(
   originalPrompt: string,
-  config: { useClaudeForImagePrompt?: boolean; claudeImagePromptTemplate?: string; imageModel?: string; globalImageRules?: string },
+  config: { useClaudeForImagePrompt?: boolean; claudeImagePromptTemplate?: string; claudeCoverImagePromptTemplate?: string; imageModel?: string; globalImageRules?: string },
   llmClient: LLMClient,
-  callConfig: ResolvedLLMCallConfig
+  callConfig: ResolvedLLMCallConfig,
+  isCoverImage?: boolean
 ): Promise<ImagePromptFormatResult> {
-  if (!config.useClaudeForImagePrompt || !config.claudeImagePromptTemplate) {
+  const templateSource = isCoverImage && config.claudeCoverImagePromptTemplate
+    ? config.claudeCoverImagePromptTemplate
+    : config.claudeImagePromptTemplate;
+
+  if (!config.useClaudeForImagePrompt || !templateSource) {
     return { prompt: originalPrompt };
   }
 
@@ -40,7 +45,7 @@ async function formatImagePromptWithClaude(
 
   const imageModel = config.imageModel || 'dall-e-3';
   const globalRules = config.globalImageRules || '';
-  const formattingPrompt = config.claudeImagePromptTemplate
+  const formattingPrompt = templateSource
     .replace(/\{\{modelName\}\}/g, imageModel)
     .replace(/\{\{prompt\}\}/g, originalPrompt)
     .replace(/\{\{globalImageRules\}\}/g, globalRules);
@@ -95,7 +100,8 @@ export const imageTask = {
     // Store original prompt before any refinement
     const originalPrompt = task.prompt;
     const formattingConfig = getCallConfig(config, 'image.promptFormatting');
-    const formatResult = await formatImagePromptWithClaude(originalPrompt, config, llmClient, formattingConfig);
+    const isCoverImage = task.imageRefId === '__cover_image__';
+    const formatResult = await formatImagePromptWithClaude(originalPrompt, config, llmClient, formattingConfig, isCoverImage);
     const finalPrompt = formatResult.prompt;
 
     // Save imagePrompt cost record if Claude was used

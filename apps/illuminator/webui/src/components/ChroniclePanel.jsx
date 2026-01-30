@@ -18,20 +18,15 @@ import {
   updateChronicleImageRef,
   updateChronicleTemporalContext,
   updateChronicleActiveVersion,
+  updateChronicleCoverImageStatus,
   generateChronicleId,
   deriveTitleFromRoles,
   createChronicleShell,
 } from '../lib/chronicleStorage';
 import { downloadChronicleExport } from '../lib/chronicleExport';
 
-const REFINEMENT_STEPS = new Set(['summary', 'image_refs', 'compare', 'combine']);
+const REFINEMENT_STEPS = new Set(['summary', 'image_refs', 'compare', 'combine', 'cover_image_scene', 'cover_image']);
 const NAV_PAGE_SIZE = 10;
-
-// Badge colors for chronicle-first display
-const FOCUS_TYPE_COLORS = {
-  single: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6', border: 'rgba(59, 130, 246, 0.3)' },
-  ensemble: { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7', border: 'rgba(168, 85, 247, 0.3)' },
-};
 
 const SORT_OPTIONS = [
   { value: 'created_desc', label: 'Newest created' },
@@ -111,31 +106,50 @@ function ChronicleItemCard({ item, isSelected, onClick }) {
     }
   };
 
-  // Build chronicle-first badges
-  const badges = useMemo(() => {
-    const b = [];
+  // Inline symbols for title row
+  const inlineSymbols = useMemo(() => {
+    const syms = [];
 
-    // Focus type badge (single/ensemble)
-    if (item.focusType) {
-      const colors = FOCUS_TYPE_COLORS[item.focusType] || FOCUS_TYPE_COLORS.single;
-      b.push({ label: item.focusType, colors });
+    // Focus type: ◆ solo, ◇◇ ensemble, ○ no primary
+    if (item.focusType === 'ensemble') {
+      syms.push({ symbol: '\u25C7\u25C7', title: 'Ensemble', color: '#a855f7' });
+    } else if (item.primaryCount > 0) {
+      syms.push({ symbol: '\u25C6', title: 'Single focus', color: '#3b82f6' });
+    } else {
+      syms.push({ symbol: '\u25CB', title: 'No primary entity', color: 'var(--text-muted)' });
     }
 
-    // Role count badge (shows cast composition)
-    if (item.primaryCount > 0 || item.supportingCount > 0) {
-      const roleLabel = item.primaryCount > 0 && item.supportingCount > 0
-        ? `${item.primaryCount} primary, ${item.supportingCount} supporting`
-        : item.primaryCount > 0
-        ? `${item.primaryCount} primary`
-        : `${item.supportingCount} supporting`;
-      b.push({
-        label: roleLabel,
-        colors: { bg: 'rgba(34, 197, 94, 0.15)', text: '#22c55e', border: 'rgba(34, 197, 94, 0.3)' },
-      });
+    // Perspective synthesis
+    if (item.perspectiveSynthesis) {
+      syms.push({ symbol: '\u2726', title: 'Perspective synthesis', color: '#06b6d4' });
     }
 
-    return b;
-  }, [item.focusType, item.primaryCount, item.supportingCount]);
+    // Combined versions
+    if (item.combineInstructions) {
+      syms.push({ symbol: '\u2727', title: 'Versions combined', color: '#f59e0b' });
+    }
+
+    // Cover image generated
+    if (item.coverImage?.status === 'complete') {
+      syms.push({ symbol: '\u25A3', title: 'Cover image generated', color: '#10b981' });
+    }
+
+    // Lore backported
+    if (item.loreBackported) {
+      syms.push({ symbol: '\u21C4', title: 'Lore backported to cast', color: 'var(--text-secondary)' });
+    }
+
+    return syms;
+  }, [item.focusType, item.primaryCount, item.perspectiveSynthesis, item.combineInstructions, item.coverImage?.status, item.loreBackported]);
+
+  // Compact numeric badge: cast count + scene image count
+  const castCount = (item.primaryCount || 0) + (item.supportingCount || 0);
+  const sceneCount = item.imageRefs?.refs?.filter(r => r.type === 'prompt_request' && r.status === 'complete').length || 0;
+  const hasCover = item.coverImage?.status === 'complete';
+  const imageCount = sceneCount + (hasCover ? 1 : 0);
+
+  // Narrative style name for subtitle
+  const styleName = item.narrativeStyle?.name || null;
 
   const status = getStatusLabel();
 
@@ -152,35 +166,47 @@ function ChronicleItemCard({ item, isSelected, onClick }) {
         transition: 'all 0.15s',
       }}
     >
+      {/* Title row with inline symbols */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-        <span style={{ fontWeight: 500, fontSize: '14px', flex: 1 }}>{item.name}</span>
+        <span style={{ fontWeight: 500, fontSize: '14px', flex: 1 }}>
+          {item.name}
+          {inlineSymbols.map((sym, i) => (
+            <span
+              key={i}
+              title={sym.title}
+              style={{ marginLeft: '5px', fontSize: '11px', color: sym.color, opacity: 0.85 }}
+            >{sym.symbol}</span>
+          ))}
+        </span>
         <span style={{ fontSize: '11px', color: status.color, fontWeight: 500, whiteSpace: 'nowrap' }}>
           {status.label}
         </span>
       </div>
 
-      {/* Chronicle metadata badges */}
-      {badges.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
-          {badges.map((badge, idx) => (
-            <span
-              key={idx}
-              style={{
-                display: 'inline-block',
-                padding: '2px 6px',
-                fontSize: '10px',
-                fontWeight: 500,
-                background: badge.colors.bg,
-                color: badge.colors.text,
-                border: `1px solid ${badge.colors.border}`,
-                borderRadius: '4px',
-              }}
-            >
-              {badge.label}
-            </span>
-          ))}
-        </div>
-      )}
+      {/* Subtitle: narrative style + numeric counts */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+        {styleName ? (
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+            {styleName}
+          </span>
+        ) : (
+          <span />
+        )}
+        {(castCount > 0 || imageCount > 0) && (
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', gap: '8px', whiteSpace: 'nowrap' }}>
+            {castCount > 0 && (
+              <span title={`${item.primaryCount || 0} primary, ${item.supportingCount || 0} supporting`}>
+                <span style={{ opacity: 0.6 }}>{'\u2630'}</span> {castCount}
+              </span>
+            )}
+            {imageCount > 0 && (
+              <span title={`${hasCover ? 'Cover + ' : ''}${sceneCount} scene image${sceneCount !== 1 ? 's' : ''}`}>
+                <span style={{ opacity: 0.6 }}>{'\u25A3'}</span> {imageCount}
+              </span>
+            )}
+          </span>
+        )}
+      </div>
 
     </div>
   );
@@ -250,6 +276,8 @@ export default function ChroniclePanel({
   styleSelection,
   entityGuidance,
   cultureIdentities,
+  onBackportLore,
+  refreshTrigger,
 }) {
   const [selectedItemId, setSelectedItemId] = useState(() => {
     const saved = localStorage.getItem('illuminator:chronicle:selectedItemId');
@@ -305,6 +333,11 @@ export default function ChroniclePanel({
     isGenerating,
     refresh,
   } = useChronicleGeneration(projectId, simulationRunId, queue, onEnqueue);
+
+  // External refresh trigger (e.g. after lore backport)
+  useEffect(() => {
+    if (refreshTrigger > 0) refresh();
+  }, [refreshTrigger, refresh]);
 
   // Build entity map for lookups
   const entityMap = useMemo(() => {
@@ -430,6 +463,7 @@ export default function ChroniclePanel({
         // Comparison report
         comparisonReport: chronicle.comparisonReport,
         comparisonReportGeneratedAt: chronicle.comparisonReportGeneratedAt,
+        combineInstructions: chronicle.combineInstructions,
 
         // Refinement fields
         summary: chronicle.summary,
@@ -440,7 +474,13 @@ export default function ChroniclePanel({
         imageRefsGeneratedAt: chronicle.imageRefsGeneratedAt,
         imageRefsModel: chronicle.imageRefsModel,
         imageRefsTargetVersionId: chronicle.imageRefsTargetVersionId,
+        coverImage: chronicle.coverImage,
+        coverImageGeneratedAt: chronicle.coverImageGeneratedAt,
+        coverImageModel: chronicle.coverImageModel,
         validationStale: chronicle.validationStale,
+
+        // Lore backport
+        loreBackported: chronicle.loreBackported,
 
         // Timestamps
         createdAt: chronicle.createdAt,
@@ -751,6 +791,100 @@ export default function ChroniclePanel({
     generateImageRefs(selectedItem.chronicleId, generationContext);
   }, [selectedItem, generationContext, generateImageRefs]);
 
+  // Cover image scene generation (LLM generates scene description)
+  const handleGenerateCoverImageScene = useCallback(() => {
+    if (!selectedItem || !generationContext) return;
+    // Dispatch as a chronicle task with step 'cover_image_scene'
+    const primaryEntity = selectedItem.roleAssignments?.[0];
+    onEnqueue([
+      {
+        entity: {
+          id: primaryEntity?.entityId || selectedItem.chronicleId,
+          name: primaryEntity?.entityName || selectedItem.name,
+          kind: primaryEntity?.entityKind || 'chronicle',
+        },
+        type: 'entityChronicle',
+        chronicleId: selectedItem.chronicleId,
+        chronicleStep: 'cover_image_scene',
+        chronicleContext: generationContext,
+      },
+    ]);
+  }, [selectedItem, generationContext, onEnqueue]);
+
+  // Cover image generation (image model generates from scene description)
+  const handleGenerateCoverImage = useCallback(() => {
+    if (!selectedItem?.coverImage?.sceneDescription) return;
+
+    const coverImage = selectedItem.coverImage;
+
+    // Mark as generating
+    updateChronicleCoverImageStatus(selectedItem.chronicleId, { status: 'generating' })
+      .then(() => refresh());
+
+    // Build the image prompt using the same pipeline as chronicle scene images
+    const involvedEntities = (coverImage.involvedEntityIds || [])
+      .map((id) => {
+        const entity = entities?.find((e) => e.id === id);
+        if (!entity) return null;
+        return {
+          id: entity.id,
+          name: entity.name,
+          kind: entity.kind,
+          visualThesis: entity.enrichment?.text?.visualThesis,
+          visualTraits: entity.enrichment?.text?.visualTraits,
+        };
+      })
+      .filter(Boolean);
+
+    // Force the chronicle-overview composition style
+    const primaryCulture = selectedItem.roleAssignments?.[0]?.entityCulture;
+    const cultureVisual = primaryCulture ? cultureIdentities?.visual?.[primaryCulture] : undefined;
+
+    const styleInfo = {
+      compositionPromptFragment: 'cinematic montage composition, overlapping character silhouettes and scene elements, layered movie-poster layout, multiple focal points at different scales, dramatic depth layering, figures and settings blending into each other, NO TEXT NO TITLES NO LETTERING',
+      artisticPromptFragment: styleSelection?.artisticStyleId
+        ? styleLibrary?.artisticStyles?.find((s) => s.id === styleSelection.artisticStyleId)?.promptFragment
+        : undefined,
+      colorPalettePromptFragment: styleSelection?.colorPaletteId
+        ? styleLibrary?.colorPalettes?.find((s) => s.id === styleSelection.colorPaletteId)?.promptFragment
+        : undefined,
+      visualIdentity: cultureVisual && Object.keys(cultureVisual).length > 0 ? cultureVisual : undefined,
+    };
+
+    const prompt = buildChronicleImagePrompt(
+      {
+        sceneDescription: coverImage.sceneDescription,
+        size: 'medium',
+        chronicleTitle: selectedItem.title || selectedItem.name,
+        culture: primaryCulture,
+        world: worldContext ? {
+          name: worldContext.name,
+          description: worldContext.description,
+          speciesConstraint: worldContext.speciesConstraint,
+        } : undefined,
+        involvedEntities,
+      },
+      styleInfo
+    );
+
+    // Enqueue the image generation task
+    onEnqueue([
+      {
+        entity: {
+          id: selectedItem.chronicleId,
+          name: selectedItem.name || 'Chronicle',
+          kind: 'chronicle',
+        },
+        type: 'image',
+        prompt,
+        chronicleId: selectedItem.chronicleId,
+        imageRefId: '__cover_image__',
+        sceneDescription: coverImage.sceneDescription,
+        imageType: 'chronicle',
+      },
+    ]);
+  }, [selectedItem, entities, styleLibrary, styleSelection, worldContext, cultureIdentities, onEnqueue, refresh]);
+
   const handleRegenerateWithTemperature = useCallback((temperature) => {
     if (!selectedItem) return;
     const clamped = Math.min(1, Math.max(0, Number(temperature)));
@@ -1038,7 +1172,7 @@ export default function ChroniclePanel({
     }
 
     // Generate the chronicle
-    generateV2(chronicleId, context, chronicleMetadata);
+    generateV2(chronicleId, context, chronicleMetadata, wizardConfig.temperatureOverride);
 
     // Select the newly generated chronicle by its chronicleId
     setSelectedItemId(chronicleId);
@@ -1223,11 +1357,19 @@ export default function ChroniclePanel({
         // Mark as processed to avoid duplicate updates
         processedChronicleImageTasksRef.current.add(task.id);
 
-        // Update the chronicle's image ref with the generated image ID
-        updateChronicleImageRef(task.chronicleId, task.imageRefId, {
-          status: 'complete',
-          generatedImageId: task.result.imageId,
-        }).then(() => refresh());
+        if (task.imageRefId === '__cover_image__') {
+          // Update cover image status
+          updateChronicleCoverImageStatus(task.chronicleId, {
+            status: 'complete',
+            generatedImageId: task.result.imageId,
+          }).then(() => refresh());
+        } else {
+          // Update the chronicle's image ref with the generated image ID
+          updateChronicleImageRef(task.chronicleId, task.imageRefId, {
+            status: 'complete',
+            generatedImageId: task.result.imageId,
+          }).then(() => refresh());
+        }
       }
 
       // Also handle failed chronicle image tasks
@@ -1241,10 +1383,17 @@ export default function ChroniclePanel({
       ) {
         processedChronicleImageTasksRef.current.add(task.id);
 
-        updateChronicleImageRef(task.chronicleId, task.imageRefId, {
-          status: 'failed',
-          error: task.error || 'Image generation failed',
-        }).then(() => refresh());
+        if (task.imageRefId === '__cover_image__') {
+          updateChronicleCoverImageStatus(task.chronicleId, {
+            status: 'failed',
+            error: task.error || 'Image generation failed',
+          }).then(() => refresh());
+        } else {
+          updateChronicleImageRef(task.chronicleId, task.imageRefId, {
+            status: 'failed',
+            error: task.error || 'Image generation failed',
+          }).then(() => refresh());
+        }
       }
     }
   }, [queue, refresh]);
@@ -1597,6 +1746,8 @@ export default function ChroniclePanel({
                   onRegenerate={handleRegenerate}
                   onGenerateSummary={handleGenerateSummary}
                   onGenerateImageRefs={handleGenerateImageRefs}
+                  onGenerateCoverImageScene={handleGenerateCoverImageScene}
+                  onGenerateCoverImage={handleGenerateCoverImage}
                   onRegenerateWithTemperature={handleRegenerateWithTemperature}
                   onCompareVersions={handleCompareVersions}
                   onCombineVersions={handleCombineVersions}
@@ -1608,6 +1759,7 @@ export default function ChroniclePanel({
                   onUpdateChronicleTemporalContext={handleUpdateChronicleTemporalContext}
                   onUpdateChronicleActiveVersion={handleUpdateChronicleActiveVersion}
                   onExport={handleExport}
+                  onBackportLore={onBackportLore ? () => onBackportLore(selectedItem.chronicleId) : undefined}
                   isGenerating={isGenerating}
                   refinements={refinementState}
                   entities={entities}

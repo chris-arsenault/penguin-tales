@@ -286,6 +286,18 @@ Run `./scripts/check-escape-hatches.sh` before committing. It checks for:
 - @deprecated markers (code should be deleted)
 - Legacy API usage
 
+## UI Style: Dense Information Display
+
+The north star for communicating dense metadata in list/card UIs is the **inline symbol + compact subtitle** pattern used in ChroniclePanel's card list. Prefer this over badge/pill components.
+
+**Principles:**
+- **Inline symbols** next to titles for boolean/categorical state (e.g. `◆` single focus, `◇◇` ensemble, `✦` perspective used, `⇄` backported). Colored, small, with hover `title` for discoverability.
+- **Subtitle row** for the most useful textual label (e.g. narrative style name) on the left, **numeric counts** on the right using a symbol + number pattern (`☰ 5  ▣ 3`).
+- **No badge boxes** unless the information is truly categorical with distinct groups. Symbols and compact text communicate the same info with far less visual weight.
+- **Hover titles on everything** - symbols are terse by design, tooltips provide the full explanation.
+
+**Reference implementation:** `ChronicleItemCard` in `apps/illuminator/webui/src/components/ChroniclePanel.jsx`.
+
 ## Debugging Tips
 
 1. Set small distribution targets first (lower subtype targets in `distributionTargets`)

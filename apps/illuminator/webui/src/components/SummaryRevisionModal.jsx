@@ -3,19 +3,24 @@
  *
  * Shows a modal with:
  * - Batch progress indicator
- * - Per-entity diff view (current vs proposed)
+ * - Per-entity inline diff view (word-level, git-style)
  * - Accept/reject toggles per entity
+ * - Export button for review
  * - Continue/cancel/apply controls
  */
 
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { diffWords } from 'diff';
+import { resolveAnchorPhrase } from '../lib/fuzzyAnchor';
 
 // ============================================================================
-// Text Diff View
+// Inline Diff View (word-level, git-style)
 // ============================================================================
 
-function TextDiff({ current, proposed, label }) {
+function InlineDiff({ current, proposed, label }) {
   if (!proposed || proposed === current) return null;
+
+  const changes = diffWords(current || '', proposed);
 
   return (
     <div style={{ marginBottom: '10px' }}>
@@ -30,40 +35,46 @@ function TextDiff({ current, proposed, label }) {
         {label}
       </div>
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '8px',
+        padding: '10px 12px',
+        background: 'var(--bg-tertiary)',
+        borderRadius: '4px',
+        border: '1px solid var(--border-color)',
         fontSize: '11px',
-        lineHeight: '1.6',
+        lineHeight: '1.8',
+        maxHeight: '300px',
+        overflow: 'auto',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
       }}>
-        <div style={{
-          padding: '8px 10px',
-          background: 'rgba(239, 68, 68, 0.06)',
-          borderRadius: '4px',
-          border: '1px solid rgba(239, 68, 68, 0.15)',
-          color: 'var(--text-secondary)',
-          maxHeight: '200px',
-          overflow: 'auto',
-        }}>
-          <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>
-            CURRENT
-          </div>
-          {current || '(empty)'}
-        </div>
-        <div style={{
-          padding: '8px 10px',
-          background: 'rgba(34, 197, 94, 0.06)',
-          borderRadius: '4px',
-          border: '1px solid rgba(34, 197, 94, 0.15)',
-          color: 'var(--text-primary)',
-          maxHeight: '200px',
-          overflow: 'auto',
-        }}>
-          <div style={{ fontSize: '9px', color: 'var(--success-color, #22c55e)', marginBottom: '4px', fontWeight: 600 }}>
-            PROPOSED
-          </div>
-          {proposed}
-        </div>
+        {changes.map((part, i) => {
+          if (part.added) {
+            return (
+              <span key={i} style={{
+                background: 'rgba(34, 197, 94, 0.2)',
+                color: 'var(--text-primary)',
+                borderRadius: '2px',
+                padding: '0 1px',
+                textDecoration: 'none',
+              }}>
+                {part.value}
+              </span>
+            );
+          }
+          if (part.removed) {
+            return (
+              <span key={i} style={{
+                background: 'rgba(239, 68, 68, 0.2)',
+                color: 'var(--text-secondary)',
+                borderRadius: '2px',
+                padding: '0 1px',
+                textDecoration: 'line-through',
+              }}>
+                {part.value}
+              </span>
+            );
+          }
+          return <span key={i}>{part.value}</span>;
+        })}
       </div>
     </div>
   );
@@ -73,7 +84,149 @@ function TextDiff({ current, proposed, label }) {
 // Patch Card
 // ============================================================================
 
-function PatchCard({ patch, currentEntity, accepted, onToggle, expanded, onToggleExpand }) {
+// ============================================================================
+// Anchor Phrase Editor (for chronicle backref linking)
+// ============================================================================
+
+function AnchorPhraseEditor({ patch, onUpdate }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(patch.anchorPhrase || '');
+
+  // Sync when patch updates externally
+  useEffect(() => {
+    setValue(patch.anchorPhrase || '');
+  }, [patch.anchorPhrase]);
+
+  if (!patch.anchorPhrase && !editing) return null;
+
+  const phraseInDescription = patch.anchorPhrase && patch.description &&
+    resolveAnchorPhrase(patch.anchorPhrase, patch.description) !== null;
+
+  if (editing) {
+    return (
+      <div style={{ marginBottom: '10px' }}>
+        <div style={{
+          fontSize: '10px',
+          fontWeight: 600,
+          color: 'var(--text-muted)',
+          marginBottom: '4px',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+        }}>
+          Anchor Phrase
+        </div>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '4px 8px',
+              fontSize: '11px',
+              border: '1px solid var(--border-color)',
+              borderRadius: '4px',
+              background: 'var(--bg-tertiary)',
+              color: 'var(--text-primary)',
+            }}
+          />
+          <button
+            onClick={() => {
+              onUpdate(patch.entityId, value);
+              setEditing(false);
+            }}
+            style={{
+              padding: '3px 8px',
+              fontSize: '10px',
+              border: '1px solid var(--border-color)',
+              borderRadius: '4px',
+              background: 'var(--bg-tertiary)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+            }}
+          >
+            Save
+          </button>
+          <button
+            onClick={() => {
+              setValue(patch.anchorPhrase || '');
+              setEditing(false);
+            }}
+            style={{
+              padding: '3px 8px',
+              fontSize: '10px',
+              border: '1px solid var(--border-color)',
+              borderRadius: '4px',
+              background: 'var(--bg-tertiary)',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginBottom: '10px' }}>
+      <div style={{
+        fontSize: '10px',
+        fontWeight: 600,
+        color: 'var(--text-muted)',
+        marginBottom: '4px',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+      }}>
+        Anchor Phrase
+        {!phraseInDescription && (
+          <span style={{ color: 'var(--warning, #f59e0b)', marginLeft: '6px', fontWeight: 400 }}>
+            not found in description
+          </span>
+        )}
+      </div>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '4px 8px',
+        background: 'var(--bg-tertiary)',
+        borderRadius: '4px',
+        border: '1px solid var(--border-color)',
+        fontSize: '11px',
+      }}>
+        <span style={{
+          flex: 1,
+          fontStyle: 'italic',
+          color: phraseInDescription ? 'var(--text-primary)' : 'var(--warning, #f59e0b)',
+        }}>
+          &ldquo;{patch.anchorPhrase}&rdquo;
+        </span>
+        <button
+          onClick={() => setEditing(true)}
+          style={{
+            padding: '2px 6px',
+            fontSize: '9px',
+            border: '1px solid var(--border-color)',
+            borderRadius: '3px',
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-muted)',
+            cursor: 'pointer',
+          }}
+        >
+          Edit
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Patch Card
+// ============================================================================
+
+function PatchCard({ patch, currentEntity, accepted, onToggle, expanded, onToggleExpand, onUpdateAnchorPhrase }) {
   const hasSummaryChange = patch.summary && patch.summary !== currentEntity?.summary;
   const hasDescChange = patch.description && patch.description !== currentEntity?.description;
 
@@ -135,23 +288,81 @@ function PatchCard({ patch, currentEntity, accepted, onToggle, expanded, onToggl
       {expanded && (
         <div style={{ padding: '0 12px 10px' }}>
           {hasSummaryChange && (
-            <TextDiff
+            <InlineDiff
               current={currentEntity?.summary || ''}
               proposed={patch.summary}
               label="Summary"
             />
           )}
           {hasDescChange && (
-            <TextDiff
+            <InlineDiff
               current={currentEntity?.description || ''}
               proposed={patch.description}
               label="Description"
             />
           )}
+          {onUpdateAnchorPhrase && hasDescChange && (
+            <AnchorPhraseEditor patch={patch} onUpdate={onUpdateAnchorPhrase} />
+          )}
         </div>
       )}
     </div>
   );
+}
+
+// ============================================================================
+// Export Helpers
+// ============================================================================
+
+function buildExportText(allPatches, entityLookup, patchDecisions) {
+  const lines = [];
+  for (const patch of allPatches) {
+    const current = entityLookup.get(patch.entityId);
+    const accepted = patchDecisions[patch.entityId] !== false;
+    lines.push(`=== ${patch.entityName} (${patch.entityKind}) [${accepted ? 'ACCEPTED' : 'REJECTED'}] ===`);
+    lines.push('');
+
+    const hasSummaryChange = patch.summary && patch.summary !== current?.summary;
+    const hasDescChange = patch.description && patch.description !== current?.description;
+
+    if (hasSummaryChange) {
+      lines.push('--- Summary ---');
+      lines.push('CURRENT:');
+      lines.push(current?.summary || '(empty)');
+      lines.push('');
+      lines.push('PROPOSED:');
+      lines.push(patch.summary);
+      lines.push('');
+    }
+
+    if (hasDescChange) {
+      lines.push('--- Description ---');
+      lines.push('CURRENT:');
+      lines.push(current?.description || '(empty)');
+      lines.push('');
+      lines.push('PROPOSED:');
+      lines.push(patch.description);
+      lines.push('');
+    }
+
+    if (!hasSummaryChange && !hasDescChange) {
+      lines.push('(no changes)');
+      lines.push('');
+    }
+
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+function downloadText(content, filename) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ============================================================================
@@ -167,6 +378,7 @@ export default function SummaryRevisionModal({
   onAccept,
   onCancel,
   getEntityContexts,
+  onUpdateAnchorPhrase,
 }) {
   const scrollRef = useRef(null);
   const [expandedIds, setExpandedIds] = useState(new Set());
@@ -226,6 +438,12 @@ export default function SummaryRevisionModal({
 
   const collapseAll = () => {
     setExpandedIds(new Set());
+  };
+
+  const handleExport = () => {
+    const text = buildExportText(allPatches, entityLookup, run.patchDecisions);
+    const timestamp = Date.now();
+    downloadText(text, `revision-patches-${timestamp}.txt`);
   };
 
   return (
@@ -345,6 +563,20 @@ export default function SummaryRevisionModal({
                 </span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
+                    onClick={handleExport}
+                    style={{
+                      padding: '2px 8px',
+                      fontSize: '10px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '4px',
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Export
+                  </button>
+                  <button
                     onClick={expandAll}
                     style={{
                       padding: '2px 8px',
@@ -383,6 +615,7 @@ export default function SummaryRevisionModal({
                   onToggle={onTogglePatch}
                   expanded={expandedIds.has(patch.entityId)}
                   onToggleExpand={() => toggleExpand(patch.entityId)}
+                  onUpdateAnchorPhrase={onUpdateAnchorPhrase}
                 />
               ))}
             </div>

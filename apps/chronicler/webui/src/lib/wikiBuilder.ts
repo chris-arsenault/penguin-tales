@@ -43,9 +43,99 @@ import {
   prominenceLabelFromScale,
   type ProminenceScale,
 } from '@canonry/world-schema';
+import { resolveAnchorPhrase } from './fuzzyAnchor.ts';
 
 // Re-export for backwards compatibility
 export { applyWikiLinks };
+
+import type { ChronicleBackref } from '../types/world.ts';
+
+/**
+ * Resolve the image ID for a chronicle backref based on its imageSource config.
+ *
+ * - imageSource undefined (legacy): fallback to cover image
+ * - imageSource null: no image
+ * - { source: 'cover' }: chronicle cover image
+ * - { source: 'image_ref', refId }: specific image ref from chronicle
+ * - { source: 'entity', entityId }: entity portrait
+ */
+function resolveBackrefImageId(
+  backref: ChronicleBackref,
+  chronicle: ChronicleRecord,
+  entities: HardState[],
+): string | null {
+  const { imageSource } = backref;
+
+  // Explicitly no image
+  if (imageSource === null) return null;
+
+  // Legacy fallback: use cover image
+  if (imageSource === undefined) {
+    if (chronicle.coverImage?.status === 'complete' && chronicle.coverImage.generatedImageId) {
+      return chronicle.coverImage.generatedImageId;
+    }
+    return null;
+  }
+
+  if (imageSource.source === 'cover') {
+    if (chronicle.coverImage?.status === 'complete' && chronicle.coverImage.generatedImageId) {
+      return chronicle.coverImage.generatedImageId;
+    }
+    return null;
+  }
+
+  if (imageSource.source === 'image_ref') {
+    const ref = chronicle.imageRefs?.refs?.find((r) => r.refId === imageSource.refId);
+    if (!ref) return null;
+    if (ref.type === 'prompt_request' && ref.status === 'complete' && ref.generatedImageId) {
+      return ref.generatedImageId;
+    }
+    if (ref.type === 'entity_ref' && ref.entityId) {
+      const entity = entities.find((e) => e.id === ref.entityId);
+      return entity?.enrichment?.image?.imageId || null;
+    }
+    return null;
+  }
+
+  if (imageSource.source === 'entity') {
+    const entity = entities.find((e) => e.id === imageSource.entityId);
+    return entity?.enrichment?.image?.imageId || null;
+  }
+
+  return null;
+}
+
+/**
+ * Inject subtle footnote markers at chronicle backref anchor positions.
+ * Each anchor phrase gets a superscript link to the source chronicle page.
+ * If the anchor phrase isn't found in the text, it's silently skipped.
+ */
+function injectBackrefFootnotes(
+  content: string,
+  backrefs: ChronicleBackref[],
+): string {
+  if (!backrefs.length) return content;
+
+  // Process backrefs in reverse order of position to avoid offset shifts
+  const positioned: Array<{ backref: ChronicleBackref; index: number; phraseLength: number }> = [];
+  for (const backref of backrefs) {
+    const resolved = resolveAnchorPhrase(backref.anchorPhrase, content);
+    if (resolved) {
+      positioned.push({ backref, index: resolved.index, phraseLength: resolved.phrase.length });
+    }
+  }
+  // Sort by position descending so insertions don't shift earlier indices
+  positioned.sort((a, b) => b.index - a.index);
+
+  let result = content;
+  for (const { backref, index, phraseLength } of positioned) {
+    const insertAt = index + phraseLength;
+    // Use wiki link syntax [[display|pageId]] which MarkdownSection already handles
+    const footnote = `<sup>[[↗|${backref.chronicleId}]]</sup>`;
+    result = result.slice(0, insertAt) + footnote + result.slice(insertAt);
+  }
+  return result;
+}
 
 /**
  * Chronicle image ref types (matching illuminator/chronicleTypes.ts)
@@ -91,7 +181,7 @@ export function buildWikiPages(
 
   // Build entity pages
   for (const entity of worldData.hardState) {
-    const page = buildEntityPage(entity, worldData, loreIndex, imageIndex, aliasIndex, resolvedProminenceScale);
+    const page = buildEntityPage(entity, worldData, loreIndex, imageIndex, aliasIndex, resolvedProminenceScale, chronicles);
     pages.push(page);
   }
 
@@ -584,7 +674,7 @@ export function buildPageById(
   if (indexEntry.type === 'entity' || indexEntry.type === 'era') {
     const entity = worldData.hardState.find(e => e.id === pageId);
     if (!entity) return null;
-    return buildEntityPage(entity, worldData, loreIndex, imageIndex, aliasIndex, resolvedProminenceScale);
+    return buildEntityPage(entity, worldData, loreIndex, imageIndex, aliasIndex, resolvedProminenceScale, chronicles);
   }
 
   // Chronicle page - look up in ChronicleRecords
@@ -696,6 +786,9 @@ function buildChroniclePageFromChronicle(
     content: {
       sections,
       summary: summary || undefined,
+      coverImageId: chronicle.coverImage?.status === 'complete' && chronicle.coverImage?.generatedImageId
+        ? chronicle.coverImage.generatedImageId
+        : undefined,
     },
     categories: [],
     linkedEntities,
@@ -1002,10 +1095,9 @@ function findSectionForAnchor(
     return sections.length > 0 ? sections[0] : null;
   }
 
-  // Direct search: find which section contains the anchor text
-  const anchorLower = anchorText.toLowerCase();
+  // Fuzzy search: find which section contains the anchor text (handles LLM paraphrases)
   for (const section of sections) {
-    if (section.content.toLowerCase().includes(anchorLower)) {
+    if (resolveAnchorPhrase(anchorText, section.content)) {
       return section;
     }
   }
@@ -1108,7 +1200,8 @@ function buildEntityPage(
   loreIndex: Map<string, LoreRecord[]>,
   imageIndex: Map<string, ImageInfo>,
   aliasIndex: Map<string, string>,
-  prominenceScale: ProminenceScale
+  prominenceScale: ProminenceScale,
+  chronicles: ChronicleRecord[] = []
 ): WikiPage {
   const entityLore = loreIndex.get(entity.id) || [];
   // Summary and description are now directly on entity
@@ -1146,11 +1239,34 @@ function buildEntityPage(
     }
   } else if (entity.description) {
     // Use entity's description field (now stored directly on entity)
+    const backrefs = entity.enrichment?.chronicleBackrefs || [];
+
+    // Attach images from backref chronicles using per-backref config
+    const backrefImages: WikiSectionImage[] = [];
+    for (const backref of backrefs) {
+      const chronicle = chronicles.find(c => c.chronicleId === backref.chronicleId);
+      if (!chronicle) continue;
+
+      const imageId = resolveBackrefImageId(backref, chronicle, worldData.hardState);
+      if (imageId) {
+        backrefImages.push({
+          refId: `backref-${backref.chronicleId}`,
+          type: 'chronicle_image',
+          imageId,
+          anchorText: backref.anchorPhrase,
+          size: backref.imageSize || 'medium',
+          justification: backref.imageAlignment || 'left',
+          caption: chronicle.title,
+        });
+      }
+    }
+
     sections.push({
       id: `section-${sectionIndex++}`,
       heading: 'Overview',
       level: 2,
-      content: entity.description,
+      content: injectBackrefFootnotes(entity.description, backrefs),
+      images: backrefImages.length > 0 ? backrefImages : undefined,
     });
   }
 

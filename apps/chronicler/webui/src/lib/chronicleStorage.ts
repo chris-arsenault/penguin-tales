@@ -75,6 +75,15 @@ export interface ChronicleRecord {
     model: string;
   };
 
+  // Cover image (montage-style chronicle overview)
+  coverImage?: {
+    sceneDescription: string;
+    involvedEntityIds: string[];
+    status: 'pending' | 'generating' | 'complete' | 'failed';
+    generatedImageId?: string;
+    error?: string;
+  };
+
   // Timestamps
   acceptedAt?: number;
   createdAt: number;

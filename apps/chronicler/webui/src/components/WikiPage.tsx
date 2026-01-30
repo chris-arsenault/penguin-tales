@@ -13,6 +13,7 @@ import MDEditor from '@uiw/react-md-editor';
 import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, ImageLoader, DisambiguationEntry, ImageAspect } from '../types/world.ts';
 import { SeedModal, type ChronicleSeedData } from './ChronicleSeedViewer.tsx';
 import { applyWikiLinks } from '../lib/wikiBuilder.ts';
+import { resolveAnchorPhrase } from '../lib/fuzzyAnchor.ts';
 import EntityTimeline from './EntityTimeline.tsx';
 import ProminenceTimeline from './ProminenceTimeline.tsx';
 import ImageLightbox from './ImageLightbox.tsx';
@@ -222,15 +223,15 @@ function SectionWithImages({
   }
 
   const content = section.content;
-  const contentLower = content.toLowerCase();
 
   // Find anchor position for ALL images and sort by position
   const positionedImages: Array<{ image: WikiSectionImage; position: number }> = [];
 
   for (const img of images) {
-    const anchorLower = img.anchorText?.toLowerCase() || '';
-    let position = anchorLower ? contentLower.indexOf(anchorLower) : -1;
-    // Use anchorIndex as fallback if text not found
+    // Fuzzy anchor resolution: handles LLM paraphrases
+    const resolved = img.anchorText ? resolveAnchorPhrase(img.anchorText, content) : null;
+    let position = resolved ? resolved.index : -1;
+    // Use anchorIndex as fallback if fuzzy match fails
     if (position < 0 && img.anchorIndex !== undefined && img.anchorIndex < content.length) {
       position = img.anchorIndex;
     }
@@ -1006,7 +1007,26 @@ export default function WikiPageView({
         )}
 
         {page.content.summary && (
-          <div className={styles.summary}>{page.content.summary}</div>
+          <div className={styles.summary}>
+            {page.content.coverImageId && (
+              <ChronicleImage
+                image={{
+                  refId: 'cover',
+                  type: 'chronicle_image',
+                  imageId: page.content.coverImageId,
+                  anchorText: '',
+                  size: 'medium',
+                  justification: 'left',
+                  caption: page.title,
+                }}
+                imageData={imageData}
+                imageLoader={imageLoader}
+                onOpen={(url, img) => setActiveImage({ url, title: img.caption || page.title })}
+              />
+            )}
+            {page.content.summary}
+            {page.content.coverImageId && <div className={styles.clearfix} />}
+          </div>
         )}
         {seedData && (
           <button

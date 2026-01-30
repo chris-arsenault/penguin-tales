@@ -579,6 +579,24 @@ export interface ChronicleImageRefs {
 }
 
 // =============================================================================
+// Chronicle Cover Image - First-class cover montage for chronicles
+// =============================================================================
+
+/** Cover image for a chronicle (montage-style overview) */
+export interface ChronicleCoverImage {
+  /** LLM-generated scene description for the cover montage */
+  sceneDescription: string;
+  /** Entity IDs involved in the cover scene (for visual identity compositing) */
+  involvedEntityIds: string[];
+  /** Generation state */
+  status: 'pending' | 'generating' | 'complete' | 'failed';
+  /** Generated imageId (after image generation) */
+  generatedImageId?: string;
+  /** Error message if generation failed */
+  error?: string;
+}
+
+// =============================================================================
 // Chronicle Temporal Context - Era and time anchoring for chronicles
 // =============================================================================
 

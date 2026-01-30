@@ -660,6 +660,7 @@ export interface ChronicleImageContext {
     name: string;
     description?: string;
     tone?: string;
+    speciesConstraint?: string;
   };
   /** Entities involved in this scene with their visual identity */
   involvedEntities?: InvolvedEntityVisual[];
@@ -741,6 +742,11 @@ export function buildChronicleImagePrompt(
     ? `WORLD: ${world.name}${world.description ? ` - ${world.description}` : ''}`
     : '';
 
+  // Species constraint
+  const speciesSection = world?.speciesConstraint
+    ? `SPECIES REQUIREMENT: ${world.speciesConstraint}`
+    : '';
+
   // Involved entities visual identity
   const involvedEntitiesSection = buildInvolvedEntitiesSection(involvedEntities);
 
@@ -752,6 +758,7 @@ export function buildChronicleImagePrompt(
     chronicleTitle ? `FROM: "${chronicleTitle}"` : '',
     '',
     worldSection,
+    speciesSection,
     '',
     involvedEntitiesSection,
     '',
@@ -760,7 +767,7 @@ export function buildChronicleImagePrompt(
     '',
     compositionSection,
     '',
-    'AVOID: Modern elements, anachronistic technology, text overlays, watermarks',
+    'AVOID: Human figures, humanoid hands or fingers, human body proportions. Modern elements, anachronistic technology, text overlays, watermarks',
   ];
 
   return parts.filter(Boolean).join('\n').replace(/\n{3,}/g, '\n\n').trim();

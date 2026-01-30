@@ -13,6 +13,20 @@ import type {
   WorldRelationship as CanonryWorldRelationship,
 } from '@canonry/world-schema';
 
+/** Links an anchor phrase in an entity's description to a source chronicle */
+export interface ChronicleBackref {
+  entityId: string;
+  chronicleId: string;
+  anchorPhrase: string;
+  createdAt: number;
+  /** Image to display at this backref anchor. undefined = legacy fallback (cover), null = no image */
+  imageSource?: { source: 'cover' } | { source: 'image_ref'; refId: string } | { source: 'entity'; entityId: string } | null;
+  /** Display size for the backref image */
+  imageSize?: 'small' | 'medium' | 'large' | 'full-width';
+  /** Float alignment for the backref image */
+  imageAlignment?: 'left' | 'right';
+}
+
 export type HardState = CanonryWorldEntity & {
   enrichment?: {
     image?: {
@@ -25,6 +39,7 @@ export type HardState = CanonryWorldEntity & {
       generatedAt?: number;
       model?: string;
     };
+    chronicleBackrefs?: ChronicleBackref[];
   };
 };
 export type WorldState = Omit<CanonryWorldOutput, 'hardState'> & {
@@ -260,6 +275,8 @@ export interface WikiPage {
 export interface WikiContent {
   sections: WikiSection[];
   summary?: string;
+  /** Cover image ID for chronicle pages */
+  coverImageId?: string;
   infobox?: WikiInfobox;
 }
 

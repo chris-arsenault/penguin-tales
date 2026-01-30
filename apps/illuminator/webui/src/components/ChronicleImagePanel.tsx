@@ -12,6 +12,7 @@
  */
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { resolveAnchorPhrase } from '../lib/fuzzyAnchor';
 import { useImageUrl } from '../hooks/useImageUrl';
 import StyleSelector, { resolveStyleSelection, CULTURE_DEFAULT_ID } from './StyleSelector';
 import { buildChronicleImagePrompt } from '../lib/promptBuilders';
@@ -271,7 +272,7 @@ function EntityImageRefCard({
   const anchorMissing = Boolean(
     chronicleText &&
     imageRef.anchorText &&
-    !chronicleText.includes(imageRef.anchorText)
+    !resolveAnchorPhrase(imageRef.anchorText, chronicleText)
   );
   const deferThumbnail = hasImage && !isVisible;
 
@@ -461,7 +462,7 @@ function PromptRequestCard({
   const anchorMissing = Boolean(
     chronicleText &&
     imageRef.anchorText &&
-    !chronicleText.includes(imageRef.anchorText)
+    !resolveAnchorPhrase(imageRef.anchorText, chronicleText)
   );
   const deferThumbnail = Boolean(imageRef.generatedImageId) && !isVisible;
 

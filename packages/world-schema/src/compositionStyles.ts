@@ -337,4 +337,11 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
     promptFragment: 'panoramic scene, sweeping vista, layered depth, cinematic horizon, spacious composition, chapter heading framing',
     targetCategory: 'event',
   },
+  {
+    id: 'chronicle-overview',
+    name: 'Chronicle Overview',
+    description: 'Montage-style overview for chronicle cover images, overlapping elements like a movie poster',
+    promptFragment: 'cinematic montage composition, overlapping character silhouettes and scene elements, layered movie-poster layout, multiple focal points at different scales, dramatic depth layering, figures and settings blending into each other, NO TEXT NO TITLES NO LETTERING',
+    targetCategory: 'event',
+  },
 ];

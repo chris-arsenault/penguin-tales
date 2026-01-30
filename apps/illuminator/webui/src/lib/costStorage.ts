@@ -18,11 +18,13 @@ export type CostType =
   | 'chronicleRevision'
   | 'chronicleSummary'
   | 'chronicleImageRefs'
+  | 'chronicleCoverImageScene'
   | 'chronicleV2'          // Single-shot V2 pipeline generation
   | 'chroniclePerspective' // Perspective synthesis for chronicle
   | 'paletteExpansion'     // Trait palette expansion/deduplication
   | 'dynamicsGeneration'  // World dynamics synthesis turn
-  | 'summaryRevision';   // Batch summary/description revision
+  | 'summaryRevision'    // Batch summary/description revision
+  | 'chronicleLoreBackport'; // Chronicle lore backport to cast entities
 
 export interface CostRecord {
   id: string;

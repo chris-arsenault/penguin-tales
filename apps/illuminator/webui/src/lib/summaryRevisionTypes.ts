@@ -34,6 +34,8 @@ export interface SummaryRevisionPatch {
   summary?: string;
   /** Revised description — undefined means no change suggested */
   description?: string;
+  /** Anchor phrase for chronicle backref linking (lore backport only) */
+  anchorPhrase?: string;
 }
 
 // =============================================================================
@@ -67,7 +69,9 @@ export interface SummaryRevisionLLMResponse {
     entityName: string;
     entityKind: string;
     summary?: string;
-    description?: string;
+    /** LLM returns description as string[] (paragraphs); normalized to string during parsing */
+    description?: string | string[];
+    anchorPhrase?: string;
   }>;
 }
 
@@ -129,4 +133,8 @@ export interface RevisionEntityContext {
     targetName: string;
     targetKind: string;
   }>;
+  /** Existing chronicle backref anchor phrases that must be preserved in the description */
+  existingAnchorPhrases?: string[];
+  /** Per-kind description focus guidance (from entityGuidance config) */
+  kindFocus?: string;
 }

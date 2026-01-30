@@ -15,6 +15,7 @@ import {
   type PerspectiveSynthesisResult,
 } from '../../lib/perspectiveSynthesizer';
 import type { PerspectiveSynthesisRecord } from '../../lib/chronicleTypes';
+import type { ChronicleCoverImage } from '../../lib/chronicleTypes';
 import {
   createChronicle,
   type ChronicleRecord,
@@ -22,10 +23,13 @@ import {
   updateChronicleComparisonReport,
   updateChronicleSummary,
   updateChronicleImageRefs,
+  updateChronicleCoverImage,
+  updateChronicleCoverImageStatus,
   updateChronicleFailure,
   getChronicle,
 } from '../../lib/chronicleStorage';
 import { saveCostRecordWithDefaults, type CostType } from '../../lib/costStorage';
+import { resolveAnchorPhrase } from '../../lib/fuzzyAnchor';
 import {
   selectEntitiesV2,
   buildV2Prompt,
@@ -111,6 +115,14 @@ async function executeEntityChronicleTask(
       return { success: false, error: 'Chronicle context required for image refs step' };
     }
     return executeImageRefsStep(task, chronicleRecord, context);
+  }
+
+  if (step === 'cover_image_scene') {
+    return executeCoverImageSceneStep(task, chronicleRecord, context);
+  }
+
+  if (step === 'cover_image') {
+    return executeCoverImageStep(task, chronicleRecord, context);
   }
 
   return { success: false, error: `Unknown step: ${step}` };
@@ -401,7 +413,7 @@ async function executeV2GenerationStep(
       callConfig,
       systemPrompt,
       prompt,
-      temperature: narrativeStyle.temperature ?? 0.85,
+      temperature: task.chronicleTemperature ?? narrativeStyle.temperature ?? 0.85,
       autoMaxTokens: styleMaxTokens,
     });
   const result = generationCall.result;
@@ -584,12 +596,32 @@ async function executeCompareStep(
   const callConfig = getCallConfig(config, 'chronicle.compare');
   console.log(`[Worker] Comparing ${versions.length} versions, model=${callConfig.model}...`);
 
+  const narrativeStyle = chronicleRecord.narrativeStyle;
+  const narrativeStyleName = narrativeStyle?.name || chronicleRecord.narrativeStyleId || 'unknown';
+
+  // Build narrative style context block for the comparison agent
+  let narrativeStyleBlock = '';
+  if (narrativeStyle) {
+    const parts: string[] = [`**${narrativeStyle.name}** (${narrativeStyle.format})`];
+    if (narrativeStyle.description) parts.push(narrativeStyle.description);
+    if ('narrativeInstructions' in narrativeStyle && narrativeStyle.narrativeInstructions) {
+      parts.push(`Structure: ${(narrativeStyle.narrativeInstructions as string).slice(0, 500)}`);
+    }
+    if ('proseInstructions' in narrativeStyle && narrativeStyle.proseInstructions) {
+      parts.push(`Prose: ${(narrativeStyle.proseInstructions as string).slice(0, 500)}`);
+    }
+    if ('documentInstructions' in narrativeStyle && narrativeStyle.documentInstructions) {
+      parts.push(`Document: ${(narrativeStyle.documentInstructions as string).slice(0, 500)}`);
+    }
+    narrativeStyleBlock = parts.join('\n');
+  }
+
   const versionsBlock = versions.map((v) =>
     `## ${v.label}\nWord count: ${v.wordCount}\n\n${v.content}`
   ).join('\n\n---\n\n');
 
-  const comparePrompt = `You are comparing ${versions.length} versions of the same chronicle. Each was generated from the same prompt and narrative style but at different temperatures (creative latitude).
-
+  const comparePrompt = `You are comparing ${versions.length} versions of the same chronicle. Each was generated from the same prompt and narrative style (${narrativeStyleName}) but at different temperatures (creative latitude).
+${narrativeStyleBlock ? `\n## Narrative Style Reference\n${narrativeStyleBlock}\n` : ''}
 Your output must have THREE sections in this exact order. Keep the total output under 800 words.
 
 ## Comparative Analysis
@@ -599,9 +631,9 @@ Cover each dimension in 2-3 sentences, naming the stronger version with one spec
 1. **Prose Quality**: Which has more natural, engaging prose? Where does each feel templated or forced?
 2. **Structural Choices**: How do versions differ in scene ordering, POV, pacing? Which makes more surprising or effective choices?
 3. **World-Building Detail**: Which invents richer names, places, customs, sensory details? Which feels more grounded?
-4. **Narrative Voice**: Which better adheres to the intended narrative style and entity directives?
+4. **Narrative Style Adherence (${narrativeStyleName})**: Evaluate against the narrative style above — its required structure, prose techniques, and specific instructions. Which better fulfills these? Which better follows entity directives?
 5. **Emotional Range**: Which has more varied emotional registers vs. falling into a single mood?
-6. **Dynamics Integration**: Which better reflects the world's political/social forces without name-dropping?
+6. **Perspective Integration**: Which better integrates the perspective synthesis outputs — narrative voice (synthesized prose guidance), entity directives (per-character writing guidance), faceted facts (world truths with chronicle-specific interpretations), and cultural identities? Which feels inhabited vs. described from outside?
 
 ## Recommendation
 
@@ -1200,11 +1232,11 @@ async function executeImageRefsStep(
   const assembledContent = imageRefsContent;
   for (const ref of parsedRefs) {
     if (ref.anchorText) {
-      const anchorLower = ref.anchorText.toLowerCase();
-      const contentLower = assembledContent.toLowerCase();
-      const index = contentLower.indexOf(anchorLower);
-      if (index >= 0) {
-        ref.anchorIndex = index;
+      const resolved = resolveAnchorPhrase(ref.anchorText, assembledContent);
+      if (resolved) {
+        // Use the verbatim phrase from the text and its index
+        ref.anchorText = resolved.phrase;
+        ref.anchorIndex = resolved.index;
       }
     }
   }
@@ -1253,6 +1285,171 @@ async function executeImageRefsStep(
     },
     debug,
   };
+}
+
+// ============================================================================
+// Cover Image Scene Step (LLM generates scene description for montage cover)
+// ============================================================================
+
+function buildCoverImageScenePrompt(content: string, title: string, roleAssignments: Array<{ entityName: string; entityKind: string; role: string; isPrimary: boolean }>): string {
+  const castList = roleAssignments
+    .map((r) => `- ${r.entityName} (${r.entityKind}, ${r.role}${r.isPrimary ? ', primary' : ''})`)
+    .join('\n');
+
+  return `Generate a visual scene description for a cinematic montage-style cover image for this chronicle. The cover image should work like a movie poster (but with NO TEXT): overlapping visual elements showing key figures and settings from the chronicle, with dramatic layering and depth.
+
+## Chronicle Title
+${title}
+
+## Cast
+${castList}
+
+## Chronicle Content
+${content}
+
+## Instructions
+Write a vivid visual description of a montage composition that captures the essence of this chronicle. Describe:
+- Which key figures should be prominent and at what scale (foreground, midground, background)
+- What settings, objects, or atmospheric elements should appear
+- The overall mood and lighting
+- How elements overlap and layer (movie-poster style, NOT a single coherent scene)
+
+Reference entities by name so their visual identity can be composited into the image.
+
+Return ONLY valid JSON:
+{"coverImageScene": "...", "involvedEntityNames": ["name1", "name2"]}`;
+}
+
+async function executeCoverImageSceneStep(
+  task: WorkerTask,
+  chronicleRecord: ChronicleRecord,
+  context: TaskContext
+): Promise<TaskResult> {
+  const { config, llmClient, isAborted } = context;
+
+  const { content } = resolveTargetVersionContent(chronicleRecord);
+  if (!content) {
+    return { success: false, error: 'Chronicle has no assembled content for cover image scene' };
+  }
+
+  const callConfig = getCallConfig(config, 'chronicle.coverImageScene');
+  const chronicleId = chronicleRecord.chronicleId;
+
+  const scenePrompt = buildCoverImageScenePrompt(
+    content,
+    chronicleRecord.title,
+    chronicleRecord.roleAssignments
+  );
+
+  const sceneCall = await runTextCall({
+    llmClient,
+    callType: 'chronicle.coverImageScene',
+    callConfig,
+    systemPrompt: 'You are a visual art director creating montage compositions. Always respond with valid JSON.',
+    prompt: scenePrompt,
+    temperature: 0.5,
+  });
+
+  const sceneResult = sceneCall.result;
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted', debug: sceneResult.debug };
+  }
+
+  if (sceneResult.error || !sceneResult.text) {
+    return { success: false, error: `Cover image scene failed: ${sceneResult.error || 'Empty response'}`, debug: sceneResult.debug };
+  }
+
+  let sceneDescription: string;
+  let involvedEntityIds: string[];
+
+  try {
+    const parsed = parseJsonObject<Record<string, unknown>>(sceneResult.text, 'cover image scene response');
+    sceneDescription = typeof parsed.coverImageScene === 'string' ? parsed.coverImageScene.trim() : '';
+    if (!sceneDescription) {
+      return { success: false, error: 'Cover image scene response missing coverImageScene field', debug: sceneResult.debug };
+    }
+
+    // Resolve entity names to IDs from role assignments
+    const involvedNames = Array.isArray(parsed.involvedEntityNames)
+      ? parsed.involvedEntityNames.filter((n): n is string => typeof n === 'string')
+      : [];
+    involvedEntityIds = chronicleRecord.roleAssignments
+      .filter((r) => involvedNames.some((name) => r.entityName.toLowerCase() === name.toLowerCase()))
+      .map((r) => r.entityId);
+    // Fallback: if no names matched, use all primary entities
+    if (involvedEntityIds.length === 0) {
+      involvedEntityIds = chronicleRecord.roleAssignments
+        .filter((r) => r.isPrimary)
+        .map((r) => r.entityId);
+    }
+  } catch {
+    return { success: false, error: 'Failed to parse cover image scene response', debug: sceneResult.debug };
+  }
+
+  const coverImage: ChronicleCoverImage = {
+    sceneDescription,
+    involvedEntityIds,
+    status: 'pending',
+  };
+
+  const sceneCost = {
+    estimated: sceneCall.estimate.estimatedCost,
+    actual: sceneCall.usage.actualCost,
+    inputTokens: sceneCall.usage.inputTokens,
+    outputTokens: sceneCall.usage.outputTokens,
+  };
+
+  await updateChronicleCoverImage(chronicleId, coverImage, sceneCost, callConfig.model);
+
+  await saveCostRecordWithDefaults({
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    chronicleId,
+    type: 'chronicleCoverImageScene' as CostType,
+    model: callConfig.model,
+    estimatedCost: sceneCost.estimated,
+    actualCost: sceneCost.actual,
+    inputTokens: sceneCost.inputTokens,
+    outputTokens: sceneCost.outputTokens,
+  });
+
+  return {
+    success: true,
+    result: {
+      chronicleId,
+      generatedAt: Date.now(),
+      model: callConfig.model,
+      estimatedCost: sceneCost.estimated,
+      actualCost: sceneCost.actual,
+      inputTokens: sceneCost.inputTokens,
+      outputTokens: sceneCost.outputTokens,
+    },
+    debug: sceneResult.debug,
+  };
+}
+
+// ============================================================================
+// Cover Image Generation Step
+// ============================================================================
+// Note: Cover image generation is dispatched from the UI as a standard image
+// task (same pipeline as prompt_request images in ChronicleImagePanel).
+// The cover_image step is reserved for future use if server-side generation
+// is needed. For now, the UI handles: build prompt → dispatch image task →
+// update cover image status via updateChronicleCoverImageStatus.
+
+async function executeCoverImageStep(
+  _task: WorkerTask,
+  chronicleRecord: ChronicleRecord,
+  _context: TaskContext
+): Promise<TaskResult> {
+  if (!chronicleRecord.coverImage) {
+    return { success: false, error: 'Chronicle has no cover image scene description' };
+  }
+  return { success: false, error: 'Cover image generation is handled via the image task pipeline from the UI' };
 }
 
 export const chronicleTask = {

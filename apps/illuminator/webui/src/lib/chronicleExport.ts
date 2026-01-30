@@ -152,6 +152,18 @@ export interface ChronicleExport {
 
   // All generation versions (history + current)
   versions?: ExportChronicleVersion[];
+
+  // Cover image (if generated)
+  coverImage?: {
+    sceneDescription: string;
+    involvedEntityIds: string[];
+    status: string;
+    generatedImageId?: string;
+  };
+
+  // Comparison analysis (if compare was run)
+  comparisonReport?: string;
+  combineInstructions?: string;
 }
 
 // =============================================================================
@@ -341,6 +353,24 @@ export function buildChronicleExport(chronicle: ChronicleRecord): ChronicleExpor
     exportData.perspectiveSynthesis = exportPerspectiveSynthesis(
       chronicle.perspectiveSynthesis
     );
+  }
+
+  // Add cover image if present
+  if (chronicle.coverImage) {
+    exportData.coverImage = {
+      sceneDescription: chronicle.coverImage.sceneDescription,
+      involvedEntityIds: chronicle.coverImage.involvedEntityIds,
+      status: chronicle.coverImage.status,
+      generatedImageId: chronicle.coverImage.generatedImageId,
+    };
+  }
+
+  // Add comparison analysis if present
+  if (chronicle.comparisonReport) {
+    exportData.comparisonReport = chronicle.comparisonReport;
+  }
+  if (chronicle.combineInstructions) {
+    exportData.combineInstructions = chronicle.combineInstructions;
   }
 
   return exportData;

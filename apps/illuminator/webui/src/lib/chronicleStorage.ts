@@ -12,6 +12,7 @@ import type {
   ChronicleFocusType,
   ChronicleStatus,
   ChronicleImageRefs,
+  ChronicleCoverImage,
   CohesionReport,
   ChronicleTemporalContext,
   PerspectiveSynthesisRecord,
@@ -146,6 +147,9 @@ export interface ChronicleRecord {
   imageRefsGeneratedAt?: number;
   imageRefsModel?: string;
   imageRefsTargetVersionId?: string;
+  coverImage?: ChronicleCoverImage;
+  coverImageGeneratedAt?: number;
+  coverImageModel?: string;
   validationStale?: boolean;
 
   // Revision tracking
@@ -155,6 +159,9 @@ export interface ChronicleRecord {
   // Final content
   finalContent?: string;
   acceptedAt?: number;
+
+  /** Whether lore from this chronicle has been backported to cast entity descriptions */
+  loreBackported?: boolean;
 
   // Cost tracking (aggregated across all LLM calls)
   totalEstimatedCost: number;
@@ -471,6 +478,9 @@ export async function updateChronicleAssembly(
       record.imageRefsGeneratedAt = undefined;
       record.imageRefsModel = undefined;
       record.imageRefsTargetVersionId = undefined;
+      record.coverImage = undefined;
+      record.coverImageGeneratedAt = undefined;
+      record.coverImageModel = undefined;
       record.validationStale = false;
       record.updatedAt = Date.now();
 
@@ -566,6 +576,9 @@ export async function regenerateChronicleAssembly(
       record.imageRefsGeneratedAt = undefined;
       record.imageRefsModel = undefined;
       record.imageRefsTargetVersionId = undefined;
+      record.coverImage = undefined;
+      record.coverImageGeneratedAt = undefined;
+      record.coverImageModel = undefined;
       record.validationStale = false;
       record.editVersion = 0;
       record.editedAt = undefined;
@@ -619,6 +632,9 @@ export async function updateChronicleEdit(
       record.imageRefs = undefined;
       record.imageRefsGeneratedAt = undefined;
       record.imageRefsModel = undefined;
+      record.coverImage = undefined;
+      record.coverImageGeneratedAt = undefined;
+      record.coverImageModel = undefined;
       record.validationStale = false;
       record.status = 'editing';
       record.failureStep = undefined;
@@ -942,6 +958,92 @@ export async function updateChronicleImageRef(
 }
 
 /**
+ * Update chronicle with cover image scene description
+ */
+export async function updateChronicleCoverImage(
+  chronicleId: string,
+  coverImage: ChronicleCoverImage,
+  cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number },
+  model: string
+): Promise<void> {
+  const db = await openChronicleDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as ChronicleRecord | undefined;
+      if (!record) {
+        reject(new Error(`Chronicle ${chronicleId} not found`));
+        return;
+      }
+
+      record.coverImage = coverImage;
+      record.coverImageGeneratedAt = Date.now();
+      record.coverImageModel = model;
+      record.totalEstimatedCost += cost.estimated;
+      record.totalActualCost += cost.actual;
+      record.totalInputTokens += cost.inputTokens;
+      record.totalOutputTokens += cost.outputTokens;
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle cover image'));
+  });
+}
+
+/**
+ * Update cover image generation status (after image generation completes)
+ */
+export async function updateChronicleCoverImageStatus(
+  chronicleId: string,
+  updates: {
+    status: 'pending' | 'generating' | 'complete' | 'failed';
+    generatedImageId?: string;
+    error?: string;
+  }
+): Promise<void> {
+  const db = await openChronicleDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as ChronicleRecord | undefined;
+      if (!record) {
+        reject(new Error(`Chronicle ${chronicleId} not found`));
+        return;
+      }
+      if (!record.coverImage) {
+        reject(new Error(`Chronicle ${chronicleId} has no cover image`));
+        return;
+      }
+
+      record.coverImage.status = updates.status;
+      if (updates.generatedImageId !== undefined) {
+        record.coverImage.generatedImageId = updates.generatedImageId || undefined;
+      }
+      if (updates.error !== undefined) {
+        record.coverImage.error = updates.error || undefined;
+      }
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle cover image status'));
+  });
+}
+
+/**
  * Update chronicle temporal context (e.g., post-publish corrections)
  */
 export async function updateChronicleTemporalContext(
@@ -1037,6 +1139,38 @@ export async function updateChronicleActiveVersion(
 
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle active version'));
+  });
+}
+
+/**
+ * Mark a chronicle as having had its lore backported to cast entity descriptions.
+ */
+export async function updateChronicleLoreBackported(
+  chronicleId: string,
+  loreBackported: boolean
+): Promise<void> {
+  const db = await openChronicleDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as ChronicleRecord | undefined;
+      if (!record) {
+        reject(new Error(`Chronicle ${chronicleId} not found`));
+        return;
+      }
+
+      record.loreBackported = loreBackported;
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle lore backported'));
   });
 }
 

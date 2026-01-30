@@ -8,6 +8,49 @@ import { useMemo, useState, useEffect } from 'react';
 import CohesionReportViewer from './CohesionReportViewer';
 import ChronicleImagePanel from './ChronicleImagePanel';
 import { ExpandableSeedSection } from './ChronicleSeedViewer';
+import { useImageUrl } from '../hooks/useImageUrl';
+
+// ============================================================================
+// Cover Image Preview
+// ============================================================================
+
+function CoverImagePreview({ imageId }) {
+  const { url, loading, error } = useImageUrl(imageId);
+
+  if (!imageId) return null;
+
+  if (loading) {
+    return (
+      <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
+        Loading image...
+      </div>
+    );
+  }
+
+  if (error || !url) {
+    return (
+      <div style={{ marginTop: '8px', fontSize: '11px', color: '#ef4444' }}>
+        Failed to load image{error ? `: ${error}` : ''}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: '10px' }}>
+      <img
+        src={url}
+        alt="Cover image"
+        style={{
+          maxWidth: '100%',
+          maxHeight: '300px',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color)',
+          objectFit: 'contain',
+        }}
+      />
+    </div>
+  );
+}
 
 // ============================================================================
 // Perspective Synthesis Viewer
@@ -511,6 +554,8 @@ function RefinementOptionsPanel({
   onValidate,
   onGenerateSummary,
   onGenerateImageRefs,
+  onGenerateCoverImageScene,
+  onGenerateCoverImage,
   onGenerateChronicleImage,
   onResetChronicleImage,
   onUpdateChronicleAnchorText,
@@ -545,41 +590,6 @@ function RefinementOptionsPanel({
         Refinement Options
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {/* Validate (optional for V2) */}
-        {onValidate && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 500 }}>Validate</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                Run quality validation to check narrative coherence.
-              </div>
-              {item.cohesionReport && (
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Done - Score: {item.cohesionReport.overallScore}/100
-                </div>
-              )}
-            </div>
-            <button
-              onClick={onValidate}
-              disabled={isGenerating}
-              style={{
-                padding: '8px 14px',
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '6px',
-                color: 'var(--text-secondary)',
-                cursor: isGenerating ? 'not-allowed' : 'pointer',
-                opacity: isGenerating ? 0.6 : 1,
-                fontSize: '12px',
-                height: '32px',
-                alignSelf: 'center',
-              }}
-            >
-              {item.cohesionReport ? 'Revalidate' : 'Validate'}
-            </button>
-          </div>
-        )}
-
         {/* Summary */}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
           <div>
@@ -629,6 +639,89 @@ function RefinementOptionsPanel({
               {summaryState.generatedAt ? 'Regenerate' : 'Generate'}
             </button>
           )}
+        </div>
+
+        {/* Cover Image */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: 500 }}>Cover Image</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Generate a montage-style cover image for this chronicle.
+            </div>
+            {!item.coverImage && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Not run yet
+              </div>
+            )}
+            {item.coverImage && item.coverImage.status === 'pending' && (
+              <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px' }}>
+                Scene ready - click Generate Image to create
+              </div>
+            )}
+            {item.coverImage && item.coverImage.status === 'generating' && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Generating image...
+              </div>
+            )}
+            {item.coverImage && item.coverImage.status === 'complete' && (
+              <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
+                Complete
+              </div>
+            )}
+            {item.coverImage && item.coverImage.status === 'failed' && (
+              <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>
+                Failed{item.coverImage.error ? `: ${item.coverImage.error}` : ''}
+              </div>
+            )}
+            {item.coverImage?.sceneDescription && (
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px', fontStyle: 'italic', lineHeight: 1.4, maxWidth: '500px' }}>
+                {item.coverImage.sceneDescription}
+              </div>
+            )}
+            <CoverImagePreview imageId={item.coverImage?.generatedImageId} />
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-start' }}>
+            {onGenerateCoverImageScene && (
+              <button
+                onClick={onGenerateCoverImageScene}
+                disabled={isGenerating}
+                style={{
+                  padding: '8px 14px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  cursor: isGenerating ? 'not-allowed' : 'pointer',
+                  opacity: isGenerating ? 0.6 : 1,
+                  fontSize: '12px',
+                  height: '32px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {item.coverImage ? 'Regen Scene' : 'Gen Scene'}
+              </button>
+            )}
+            {onGenerateCoverImage && item.coverImage && (item.coverImage.status === 'pending' || item.coverImage.status === 'complete' || item.coverImage.status === 'failed') && (
+              <button
+                onClick={onGenerateCoverImage}
+                disabled={isGenerating}
+                style={{
+                  padding: '8px 14px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  cursor: isGenerating ? 'not-allowed' : 'pointer',
+                  opacity: isGenerating ? 0.6 : 1,
+                  fontSize: '12px',
+                  height: '32px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {item.coverImage.status === 'complete' ? 'Regen Image' : 'Gen Image'}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Image Refs */}
@@ -701,6 +794,41 @@ function RefinementOptionsPanel({
               worldContext={worldContext}
               chronicleTitle={item.name}
             />
+          </div>
+        )}
+
+        {/* Validate (optional quality check — last in refinements) */}
+        {onValidate && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 500 }}>Validate</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Run quality validation to check narrative coherence.
+              </div>
+              {item.cohesionReport && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Done - Score: {item.cohesionReport.overallScore}/100
+                </div>
+              )}
+            </div>
+            <button
+              onClick={onValidate}
+              disabled={isGenerating}
+              style={{
+                padding: '8px 14px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                cursor: isGenerating ? 'not-allowed' : 'pointer',
+                opacity: isGenerating ? 0.6 : 1,
+                fontSize: '12px',
+                height: '32px',
+                alignSelf: 'center',
+              }}
+            >
+              {item.cohesionReport ? 'Revalidate' : 'Validate'}
+            </button>
           </div>
         )}
       </div>
@@ -1015,12 +1143,19 @@ export default function ChronicleReviewPanel({
   onUpdateChronicleTemporalContext,
   onUpdateChronicleActiveVersion,
 
+  // Cover image
+  onGenerateCoverImageScene,
+  onGenerateCoverImage,
+
   // Image layout edits
   onUpdateChronicleImageSize,
   onUpdateChronicleImageJustification,
 
   // Export
   onExport,
+
+  // Lore backport
+  onBackportLore,
 
   // State
   isGenerating,
@@ -1147,12 +1282,33 @@ export default function ChronicleReviewPanel({
   if (item.status === 'assembly_ready' && item.assembledContent) {
     return (
       <div style={{ maxWidth: '900px' }}>
-        {/* Header with primary actions */}
+        {/* 1. Content + Versions — READ FIRST */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0, fontSize: '16px' }}>Content</h3>
+            <ChronicleVersionSelector
+              versions={versions}
+              selectedVersionId={selectedVersionId}
+              activeVersionId={activeVersionId}
+              onSelectVersion={setSelectedVersionId}
+              onSetActiveVersion={onUpdateChronicleActiveVersion}
+              disabled={isGenerating}
+            />
+          </div>
+          <AssembledContentViewer
+            content={selectedVersion?.content || item.assembledContent}
+            wordCount={selectedVersion?.wordCount ?? wordCount(item.assembledContent)}
+            onCopy={() => copyToClipboard(selectedVersion?.content || item.assembledContent)}
+          />
+        </div>
+
+        {/* 2. Primary Actions Bar — DECIDE */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            marginTop: '24px',
             marginBottom: '24px',
             padding: '24px',
             background: 'var(--bg-secondary)',
@@ -1224,6 +1380,7 @@ export default function ChronicleReviewPanel({
           </div>
         </div>
 
+        {/* 3. Version Management — ITERATE */}
         <TemperatureRegenerationControl
           item={item}
           onRegenerateWithTemperature={onRegenerateWithTemperature}
@@ -1283,6 +1440,16 @@ export default function ChronicleReviewPanel({
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
               Compare produces an analysis report. Combine synthesizes all drafts into a new version.
+              {item.comparisonReport && !item.combineInstructions && (
+                <span style={{ color: 'var(--warning-color, #e6a700)' }}>
+                  {' '}Combine instructions missing — combine will use generic criteria.
+                </span>
+              )}
+              {item.combineInstructions && (
+                <span style={{ color: 'var(--success-color, #4caf50)' }}>
+                  {' '}Combine instructions ready from last comparison.
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -1310,6 +1477,11 @@ export default function ChronicleReviewPanel({
             >
               <span style={{ fontSize: '13px', fontWeight: 500 }}>
                 Comparison Report
+                {!item.combineInstructions && (
+                  <span style={{ marginLeft: '8px', fontSize: '11px', color: 'var(--warning-color, #e6a700)', fontWeight: 400 }}>
+                    (combine instructions not parsed)
+                  </span>
+                )}
               </span>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 {item.comparisonReportGeneratedAt && (
@@ -1357,12 +1529,14 @@ export default function ChronicleReviewPanel({
           </div>
         )}
 
-        {/* Refinement Options */}
+        {/* 4. Refinements — ENRICH */}
         <RefinementOptionsPanel
           item={item}
           onValidate={onValidate}
           onGenerateSummary={onGenerateSummary}
           onGenerateImageRefs={onGenerateImageRefs}
+          onGenerateCoverImageScene={onGenerateCoverImageScene}
+          onGenerateCoverImage={onGenerateCoverImage}
           onGenerateChronicleImage={onGenerateChronicleImage}
           onResetChronicleImage={onResetChronicleImage}
           onUpdateChronicleAnchorText={onUpdateChronicleAnchorText}
@@ -1380,33 +1554,12 @@ export default function ChronicleReviewPanel({
           imageRefsTargetContent={imageRefsTargetContent}
         />
 
-        {/* Perspective Synthesis (if used) */}
+        {/* 5. Reference — CONTEXT (collapsed by default) */}
         {item.perspectiveSynthesis && (
           <PerspectiveSynthesisViewer synthesis={item.perspectiveSynthesis} />
         )}
 
-        {/* Generation Context (expandable) */}
         <ExpandableSeedSection seed={seedData} defaultExpanded={false} />
-
-        {/* Content Preview */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>Content</h3>
-            <ChronicleVersionSelector
-              versions={versions}
-              selectedVersionId={selectedVersionId}
-              activeVersionId={activeVersionId}
-              onSelectVersion={setSelectedVersionId}
-              onSetActiveVersion={onUpdateChronicleActiveVersion}
-              disabled={isGenerating}
-            />
-          </div>
-          <AssembledContentViewer
-            content={selectedVersion?.content || item.assembledContent}
-            wordCount={selectedVersion?.wordCount ?? wordCount(item.assembledContent)}
-            onCopy={() => copyToClipboard(selectedVersion?.content || item.assembledContent)}
-          />
-        </div>
       </div>
     );
   }
@@ -1511,6 +1664,43 @@ export default function ChronicleReviewPanel({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 style={{ margin: 0, fontSize: '16px' }}>Completed Chronicle</h3>
           <div style={{ display: 'flex', gap: '8px' }}>
+            {onBackportLore && (
+              <button
+                onClick={onBackportLore}
+                disabled={isGenerating}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '12px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '4px',
+                  cursor: isGenerating ? 'not-allowed' : 'pointer',
+                  color: 'var(--text-secondary)',
+                  opacity: isGenerating ? 0.6 : 1,
+                }}
+                title={item.loreBackported
+                  ? "Re-run lore backport for this chronicle"
+                  : "Extract new lore from this chronicle and update cast member summaries/descriptions"}
+              >
+                {item.loreBackported ? 'Re-backport Lore' : 'Backport Lore to Cast'}
+              </button>
+            )}
+{item.loreBackported && (
+              <span
+                style={{
+                  padding: '8px 12px',
+                  fontSize: '11px',
+                  color: '#10b981',
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                title="Lore from this chronicle has been backported to cast"
+              >
+                &#x21C4; Backported
+              </span>
+            )}
             {onExport && (
               <button
                 onClick={onExport}
@@ -1550,17 +1740,95 @@ export default function ChronicleReviewPanel({
           onCopy={() => copyToClipboard(item.finalContent)}
         />
 
-        {/* Perspective Synthesis (if used) */}
-        {item.perspectiveSynthesis && (
-          <PerspectiveSynthesisViewer synthesis={item.perspectiveSynthesis} />
+        {/* 3. Visual Assets — IMAGES (grouped) */}
+        {/* Cover Image */}
+        {(onGenerateCoverImageScene || onGenerateCoverImage) && (
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '13px', fontWeight: 600 }}>Cover Image</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Generate a montage-style cover image for this chronicle.
+                </div>
+                {!item.coverImage && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Not run yet
+                  </div>
+                )}
+                {item.coverImage && item.coverImage.status === 'pending' && (
+                  <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px' }}>
+                    Scene ready - click Generate Image to create
+                  </div>
+                )}
+                {item.coverImage && item.coverImage.status === 'generating' && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Generating image...
+                  </div>
+                )}
+                {item.coverImage && item.coverImage.status === 'complete' && (
+                  <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
+                    Complete
+                  </div>
+                )}
+                {item.coverImage && item.coverImage.status === 'failed' && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>
+                    Failed{item.coverImage.error ? `: ${item.coverImage.error}` : ''}
+                  </div>
+                )}
+                {item.coverImage?.sceneDescription && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px', fontStyle: 'italic', lineHeight: 1.4, maxWidth: '500px' }}>
+                    {item.coverImage.sceneDescription}
+                  </div>
+                )}
+                <CoverImagePreview imageId={item.coverImage?.generatedImageId} />
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-start' }}>
+                {onGenerateCoverImageScene && (
+                  <button
+                    onClick={onGenerateCoverImageScene}
+                    disabled={isGenerating}
+                    style={{
+                      padding: '8px 14px',
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '6px',
+                      color: 'var(--text-secondary)',
+                      cursor: isGenerating ? 'not-allowed' : 'pointer',
+                      opacity: isGenerating ? 0.6 : 1,
+                      fontSize: '12px',
+                      height: '32px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {item.coverImage ? 'Regen Scene' : 'Gen Scene'}
+                  </button>
+                )}
+                {onGenerateCoverImage && item.coverImage && (item.coverImage.status === 'pending' || item.coverImage.status === 'complete' || item.coverImage.status === 'failed') && (
+                  <button
+                    onClick={onGenerateCoverImage}
+                    disabled={isGenerating}
+                    style={{
+                      padding: '8px 14px',
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '6px',
+                      color: 'var(--text-secondary)',
+                      cursor: isGenerating ? 'not-allowed' : 'pointer',
+                      opacity: isGenerating ? 0.6 : 1,
+                      fontSize: '12px',
+                      height: '32px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {item.coverImage.status === 'complete' ? 'Regen Image' : 'Gen Image'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
-        <TemporalContextEditor
-          item={item}
-          eras={eras}
-          onUpdateTemporalContext={onUpdateChronicleTemporalContext}
-          isGenerating={isGenerating}
-        />
+        {/* Image Anchors */}
         {item.imageRefs && entityMap && (
           <div style={{ marginTop: '20px' }}>
             <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
@@ -1582,6 +1850,19 @@ export default function ChronicleReviewPanel({
               chronicleTitle={item.name}
             />
           </div>
+        )}
+
+        {/* 4. Metadata — WORLD CONTEXT */}
+        <TemporalContextEditor
+          item={item}
+          eras={eras}
+          onUpdateTemporalContext={onUpdateChronicleTemporalContext}
+          isGenerating={isGenerating}
+        />
+
+        {/* 5. Reference — CONTEXT */}
+        {item.perspectiveSynthesis && (
+          <PerspectiveSynthesisViewer synthesis={item.perspectiveSynthesis} />
         )}
       </div>
     );
