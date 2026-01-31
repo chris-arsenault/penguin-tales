@@ -10,11 +10,7 @@
 
 import LLMCallConfigPanel from './LLMCallConfigPanel';
 import { LocalTextArea } from '@penguin-tales/shared-components';
-import {
-  IMAGE_MODELS,
-  IMAGE_SIZES_BY_MODEL,
-  IMAGE_QUALITY_BY_MODEL,
-} from '../lib/imageSettings';
+import { IMAGE_MODELS } from '../lib/imageSettings';
 
 const DEFAULT_IMAGE_PROMPT_TEMPLATE = `Transform the structured prompt below into a single, coherent image prompt for {{modelName}}. Do NOT simply reformat—actively synthesize and reshape:
 
@@ -40,28 +36,25 @@ Condense to a single, authoritative prompt: Output should be 150-300 words, read
 Original prompt:
 {{prompt}}`;
 
+const DEFAULT_CHRONICLE_IMAGE_PROMPT_TEMPLATE = `Synthesize the structured prompt below into a single, coherent image prompt for {{modelName}}.
+
+The SCENE describes what to depict. Do not invent new elements or characters not in the scene.
+
+Apply the rendering directives:
+- STYLE defines the artistic rendering approach — apply it to the entire image
+- COLOR PALETTE defines the dominant color language — it overrides any colors the scene describes
+- COMPOSITION defines framing, perspective, and spatial arrangement
+
+Maintain all SPECIES and AVOID constraints absolutely.
+
+Output 150-250 words of concrete visual direction. Write as unified artistic direction, not sections or lists.
+{{globalImageRules}}
+Original prompt:
+{{prompt}}`;
+
 export default function ConfigPanel({ config, onConfigChange }) {
-  const sizeOptions = IMAGE_SIZES_BY_MODEL[config.imageModel] || IMAGE_SIZES_BY_MODEL['dall-e-3'];
-  const qualityOptions = IMAGE_QUALITY_BY_MODEL[config.imageModel] || IMAGE_QUALITY_BY_MODEL['dall-e-3'];
-
-  // When model changes, reset size and quality to first valid option for that model
   const handleModelChange = (newModel) => {
-    const newSizes = IMAGE_SIZES_BY_MODEL[newModel] || IMAGE_SIZES_BY_MODEL['dall-e-3'];
-    const newQualities = IMAGE_QUALITY_BY_MODEL[newModel] || IMAGE_QUALITY_BY_MODEL['dall-e-3'];
-
-    const updates = { imageModel: newModel };
-
-    // Reset size if current value isn't valid for new model
-    if (!newSizes.some((s) => s.value === config.imageSize)) {
-      updates.imageSize = newSizes[0].value;
-    }
-
-    // Reset quality if current value isn't valid for new model
-    if (!newQualities.some((q) => q.value === config.imageQuality)) {
-      updates.imageQuality = newQualities[0].value;
-    }
-
-    onConfigChange(updates);
+    onConfigChange({ imageModel: newModel });
   };
 
   return (
@@ -89,35 +82,9 @@ export default function ConfigPanel({ config, onConfigChange }) {
           </select>
         </div>
 
-        <div className="illuminator-form-group">
-          <label className="illuminator-label">Image size</label>
-          <select
-            value={config.imageSize}
-            onChange={(e) => onConfigChange({ imageSize: e.target.value })}
-            className="illuminator-select"
-          >
-            {sizeOptions.map((size) => (
-              <option key={size.value} value={size.value}>
-                {size.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="illuminator-form-group">
-          <label className="illuminator-label">Quality</label>
-          <select
-            value={config.imageQuality}
-            onChange={(e) => onConfigChange({ imageQuality: e.target.value })}
-            className="illuminator-select"
-          >
-            {qualityOptions.map((quality) => (
-              <option key={quality.value} value={quality.value}>
-                {quality.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          Size and quality settings are in the Image Settings panel (sidebar).
+        </p>
       </div>
 
       <div className="illuminator-card">
@@ -172,7 +139,7 @@ export default function ConfigPanel({ config, onConfigChange }) {
               </p>
             </div>
             <div className="illuminator-form-group" style={{ marginLeft: '24px' }}>
-              <label className="illuminator-label">Claude formatting prompt</label>
+              <label className="illuminator-label">Entity image prompt template</label>
               <LocalTextArea
                 value={config.claudeImagePromptTemplate || DEFAULT_IMAGE_PROMPT_TEMPLATE}
                 onChange={(value) => onConfigChange({ claudeImagePromptTemplate: value })}
@@ -180,7 +147,19 @@ export default function ConfigPanel({ config, onConfigChange }) {
                 placeholder={DEFAULT_IMAGE_PROMPT_TEMPLATE}
               />
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Use {'{{modelName}}'} for the image model name, {'{{prompt}}'} for the original prompt, and {'{{globalImageRules}}'} for the global rules above.
+                Used for entity portrait images. Use {'{{modelName}}'} for the image model name, {'{{prompt}}'} for the original prompt, and {'{{globalImageRules}}'} for the global rules above.
+              </p>
+            </div>
+            <div className="illuminator-form-group" style={{ marginLeft: '24px' }}>
+              <label className="illuminator-label">Chronicle image prompt template</label>
+              <LocalTextArea
+                value={config.claudeChronicleImagePromptTemplate || DEFAULT_CHRONICLE_IMAGE_PROMPT_TEMPLATE}
+                onChange={(value) => onConfigChange({ claudeChronicleImagePromptTemplate: value })}
+                className="illuminator-template-textarea"
+                placeholder={DEFAULT_CHRONICLE_IMAGE_PROMPT_TEMPLATE}
+              />
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Used for chronicle cover and scene images. Use {'{{modelName}}'} for the image model name, {'{{prompt}}'} for the original prompt, and {'{{globalImageRules}}'} for the global rules above.
               </p>
             </div>
           </>

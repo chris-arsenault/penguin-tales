@@ -11,7 +11,7 @@ import { ChronicleWizard } from './ChronicleWizard';
 import { buildChronicleContext } from '../lib/chronicleContextBuilder';
 import { generateNameBank, extractCultureIds } from '../lib/chronicle/nameBank';
 import { useChronicleGeneration, deriveStatus } from '../hooks/useChronicleGeneration';
-import { buildChronicleImagePrompt } from '../lib/promptBuilders';
+import { buildChronicleScenePrompt } from '../lib/promptBuilders';
 import { resolveStyleSelection } from './StyleSelector';
 import { getCoverImageConfig } from '../lib/coverImageStyles';
 import { computeTemporalContext } from '../lib/chronicle/selectionWizard';
@@ -274,13 +274,16 @@ export default function ChroniclePanel({
   simulationRunId,
   buildPrompt,
   styleLibrary,
-  styleSelection,
+  imageGenSettings,
   entityGuidance,
   cultureIdentities,
   onBackportLore,
+  autoBackportQueue,
+  onStartAutoBackport,
+  onCancelAutoBackport,
   refreshTrigger,
-  defaultImageQuality,
   imageModel,
+  onOpenImageSettings,
 }) {
   const [selectedItemId, setSelectedItemId] = useState(() => {
     const saved = localStorage.getItem('illuminator:chronicle:selectedItemId');
@@ -314,18 +317,14 @@ export default function ChroniclePanel({
   // Seed for restarting with previous settings
   const [wizardSeed, setWizardSeed] = useState(null);
 
-  // Cover image size preference (landscape by default for cinematic montage)
-  const [chronicleImageSize, setChronicleImageSize] = useState('1792x1024');
-
-  // Image quality preference (defaults to project config)
-  const [chronicleImageQuality, setChronicleImageQuality] = useState(defaultImageQuality || 'auto');
-
-  // Chronicle-local style selection (shared by scene images and cover images)
-  const [chronicleStyleSelection, setChronicleStyleSelection] = useState({
-    artisticStyleId: 'random',
-    compositionStyleId: 'random',
-    colorPaletteId: 'random',
-  });
+  // Derive style/size/quality from global imageGenSettings
+  const chronicleImageSize = imageGenSettings.imageSize;
+  const chronicleImageQuality = imageGenSettings.imageQuality;
+  const chronicleStyleSelection = {
+    artisticStyleId: imageGenSettings.artisticStyleId,
+    compositionStyleId: imageGenSettings.compositionStyleId,
+    colorPaletteId: imageGenSettings.colorPaletteId,
+  };
 
   // Name bank for invented characters (culture ID -> array of names)
   const [nameBank, setNameBank] = useState({});
@@ -339,7 +338,6 @@ export default function ChroniclePanel({
     chronicles,
     generateV2,
     generateSummary,
-    generateImageRefs,
     regenerateWithTemperature,
     compareVersions,
     combineVersions,
@@ -818,14 +816,74 @@ export default function ChroniclePanel({
 
   const handleGenerateImageRefs = useCallback(() => {
     if (!selectedItem || !generationContext) return;
-    generateImageRefs(selectedItem.chronicleId, generationContext);
-  }, [selectedItem, generationContext, generateImageRefs]);
+    const primaryEntity = selectedItem.roleAssignments?.[0];
+
+    // Build visual identities so the image refs LLM includes them in scene descriptions
+    const visualIdentities = {};
+    for (const entityCtx of generationContext.entities || []) {
+      const entity = entities?.find((e) => e.id === entityCtx.id);
+      if (entity?.enrichment?.text?.visualThesis) {
+        visualIdentities[entityCtx.id] = entity.enrichment.text.visualThesis;
+      }
+    }
+
+    onEnqueue([{
+      entity: {
+        id: primaryEntity?.entityId || selectedItem.chronicleId,
+        name: primaryEntity?.entityName || selectedItem.name,
+        kind: primaryEntity?.entityKind || 'chronicle',
+      },
+      type: 'entityChronicle',
+      chronicleId: selectedItem.chronicleId,
+      chronicleStep: 'image_refs',
+      chronicleContext: generationContext,
+      visualIdentities,
+    }]);
+  }, [selectedItem, generationContext, onEnqueue, entities]);
+
+  const handleRegenerateDescription = useCallback((ref) => {
+    if (!selectedItem || !generationContext) return;
+    const primaryEntity = selectedItem.roleAssignments?.[0];
+
+    // Build visual identities for involved entities
+    const visualIdentities = {};
+    for (const entityId of ref.involvedEntityIds || []) {
+      const entity = entities?.find((e) => e.id === entityId);
+      if (entity?.enrichment?.text?.visualThesis) {
+        visualIdentities[entityId] = entity.enrichment.text.visualThesis;
+      }
+    }
+
+    onEnqueue([{
+      entity: {
+        id: primaryEntity?.entityId || selectedItem.chronicleId,
+        name: primaryEntity?.entityName || selectedItem.name,
+        kind: primaryEntity?.entityKind || 'chronicle',
+      },
+      type: 'entityChronicle',
+      chronicleId: selectedItem.chronicleId,
+      chronicleStep: 'regenerate_scene_description',
+      chronicleContext: generationContext,
+      imageRefId: ref.refId,
+      visualIdentities,
+    }]);
+  }, [selectedItem, generationContext, onEnqueue, entities]);
 
   // Cover image scene generation (LLM generates scene description)
   const handleGenerateCoverImageScene = useCallback(() => {
     if (!selectedItem || !generationContext) return;
     // Dispatch as a chronicle task with step 'cover_image_scene'
     const primaryEntity = selectedItem.roleAssignments?.[0];
+
+    // Build visual identities map so the scene LLM can include them in the cast list
+    const visualIdentities = {};
+    for (const ra of selectedItem.roleAssignments || []) {
+      const entity = entities?.find((e) => e.id === ra.entityId);
+      if (entity?.enrichment?.text?.visualThesis) {
+        visualIdentities[ra.entityId] = entity.enrichment.text.visualThesis;
+      }
+    }
+
     onEnqueue([
       {
         entity: {
@@ -837,9 +895,10 @@ export default function ChroniclePanel({
         chronicleId: selectedItem.chronicleId,
         chronicleStep: 'cover_image_scene',
         chronicleContext: generationContext,
+        visualIdentities,
       },
     ]);
-  }, [selectedItem, generationContext, onEnqueue]);
+  }, [selectedItem, generationContext, onEnqueue, entities]);
 
   // Cover image generation (image model generates from scene description)
   const handleGenerateCoverImage = useCallback(() => {
@@ -850,21 +909,6 @@ export default function ChroniclePanel({
     // Mark as generating
     updateChronicleCoverImageStatus(selectedItem.chronicleId, { status: 'generating' })
       .then(() => refresh());
-
-    // Build the image prompt using the same pipeline as chronicle scene images
-    const involvedEntities = (coverImage.involvedEntityIds || [])
-      .map((id) => {
-        const entity = entities?.find((e) => e.id === id);
-        if (!entity) return null;
-        return {
-          id: entity.id,
-          name: entity.name,
-          kind: entity.kind,
-          visualThesis: entity.enrichment?.text?.visualThesis,
-          visualTraits: entity.enrichment?.text?.visualTraits,
-        };
-      })
-      .filter(Boolean);
 
     // Resolve user's style selections (handles random/none properly)
     const resolved = resolveStyleSelection({
@@ -877,28 +921,22 @@ export default function ChroniclePanel({
     const coverConfig = getCoverImageConfig(selectedItem.narrativeStyleId || 'epic-drama');
     const coverComposition = styleLibrary?.compositionStyles?.find((s) => s.id === coverConfig.compositionStyleId);
 
-    const primaryCulture = selectedItem.roleAssignments?.[0]?.entityCulture;
-    const cultureVisual = primaryCulture ? cultureIdentities?.visual?.[primaryCulture] : undefined;
-
     const styleInfo = {
       compositionPromptFragment: coverComposition?.promptFragment || 'cinematic montage composition, overlapping character silhouettes and scene elements, layered movie-poster layout, multiple focal points at different scales, dramatic depth layering, figures and settings blending into each other, NO TEXT NO TITLES NO LETTERING',
       artisticPromptFragment: resolved.artisticStyle?.promptFragment,
       colorPalettePromptFragment: resolved.colorPalette?.promptFragment,
-      visualIdentity: cultureVisual && Object.keys(cultureVisual).length > 0 ? cultureVisual : undefined,
     };
 
-    const prompt = buildChronicleImagePrompt(
+    const prompt = buildChronicleScenePrompt(
       {
         sceneDescription: coverImage.sceneDescription,
         size: 'medium',
         chronicleTitle: selectedItem.title || selectedItem.name,
-        culture: primaryCulture,
         world: worldContext ? {
           name: worldContext.name,
           description: worldContext.description,
           speciesConstraint: worldContext.speciesConstraint,
         } : undefined,
-        involvedEntities,
       },
       styleInfo
     );
@@ -921,7 +959,7 @@ export default function ChroniclePanel({
         imageQuality: chronicleImageQuality,
       },
     ]);
-  }, [selectedItem, entities, styleLibrary, chronicleStyleSelection, worldContext, cultureIdentities, onEnqueue, refresh, chronicleImageSize, chronicleImageQuality]);
+  }, [selectedItem, styleLibrary, chronicleStyleSelection, worldContext, onEnqueue, refresh, chronicleImageSize, chronicleImageQuality]);
 
   const handleRegenerateWithTemperature = useCallback((temperature) => {
     if (!selectedItem) return;
@@ -1481,6 +1519,37 @@ export default function ChroniclePanel({
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               {stats.complete} / {chronicleItems.length} complete
             </span>
+            {autoBackportQueue ? (
+              <button
+                onClick={onCancelAutoBackport}
+                className="illuminator-button"
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                Backporting {autoBackportQueue.total - autoBackportQueue.ids.length + 1}/{autoBackportQueue.total}
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  ({autoBackportQueue.ids.length - 1} left)
+                </span>
+                <span style={{ fontSize: '11px', color: 'var(--accent-color)' }}>cancel</span>
+              </button>
+            ) : (
+              <button
+                onClick={onStartAutoBackport}
+                className="illuminator-button"
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                }}
+                title="Backport lore from all published chronicles to cast entities (auto-accept)"
+              >
+                Backport All
+              </button>
+            )}
             <button
               onClick={() => setShowWizard(true)}
               disabled={!styleLibrary || !entities?.length}
@@ -1789,17 +1858,17 @@ export default function ChroniclePanel({
                   onGenerateCoverImageScene={handleGenerateCoverImageScene}
                   onGenerateCoverImage={handleGenerateCoverImage}
                   styleSelection={chronicleStyleSelection}
-                  onStyleSelectionChange={setChronicleStyleSelection}
                   imageSize={chronicleImageSize}
-                  onImageSizeChange={setChronicleImageSize}
                   imageQuality={chronicleImageQuality}
-                  onImageQualityChange={setChronicleImageQuality}
                   imageModel={imageModel}
+                  imageGenSettings={imageGenSettings}
+                  onOpenImageSettings={onOpenImageSettings}
                   onRegenerateWithTemperature={handleRegenerateWithTemperature}
                   onCompareVersions={handleCompareVersions}
                   onCombineVersions={handleCombineVersions}
                   onGenerateChronicleImage={handleGenerateChronicleImage}
                   onResetChronicleImage={handleResetChronicleImage}
+                  onRegenerateDescription={handleRegenerateDescription}
                   onUpdateChronicleAnchorText={handleUpdateChronicleAnchorText}
                   onUpdateChronicleImageSize={handleUpdateChronicleImageSize}
                   onUpdateChronicleImageJustification={handleUpdateChronicleImageJustification}

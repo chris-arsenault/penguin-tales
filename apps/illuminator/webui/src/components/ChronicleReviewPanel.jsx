@@ -4,9 +4,10 @@
  * Renders the review screen for single-shot chronicle generation.
  */
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import CohesionReportViewer from './CohesionReportViewer';
 import ChronicleImagePanel from './ChronicleImagePanel';
+import ImageModal from './ImageModal';
 import { ExpandableSeedSection } from './ChronicleSeedViewer';
 import { useImageUrl } from '../hooks/useImageUrl';
 
@@ -14,7 +15,7 @@ import { useImageUrl } from '../hooks/useImageUrl';
 // Cover Image Preview
 // ============================================================================
 
-function CoverImagePreview({ imageId }) {
+function CoverImagePreview({ imageId, onImageClick }) {
   const { url, loading, error } = useImageUrl(imageId);
 
   if (!imageId) return null;
@@ -40,12 +41,14 @@ function CoverImagePreview({ imageId }) {
       <img
         src={url}
         alt="Cover image"
+        onClick={onImageClick ? () => onImageClick(imageId, 'Cover Image') : undefined}
         style={{
           maxWidth: '100%',
           maxHeight: '300px',
           borderRadius: '8px',
           border: '1px solid var(--border-color)',
           objectFit: 'contain',
+          cursor: onImageClick ? 'pointer' : undefined,
         }}
       />
     </div>
@@ -60,6 +63,7 @@ function CoverImageControls({
   item,
   onGenerateCoverImageScene,
   onGenerateCoverImage,
+  onImageClick,
   isGenerating,
   labelWeight = 500,
 }) {
@@ -100,7 +104,7 @@ function CoverImageControls({
             {item.coverImage.sceneDescription}
           </div>
         )}
-        <CoverImagePreview imageId={item.coverImage?.generatedImageId} />
+        <CoverImagePreview imageId={item.coverImage?.generatedImageId} onImageClick={onImageClick} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignSelf: 'flex-start' }}>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -655,9 +659,7 @@ function RefinementOptionsPanel({
   onGenerateCoverImageScene,
   onGenerateCoverImage,
   imageSize,
-  onImageSizeChange,
   imageQuality,
-  onImageQualityChange,
   imageModel,
   onGenerateChronicleImage,
   onResetChronicleImage,
@@ -750,6 +752,7 @@ function RefinementOptionsPanel({
           onGenerateCoverImageScene={onGenerateCoverImageScene}
           onGenerateCoverImage={onGenerateCoverImage}
           isGenerating={isGenerating}
+          onImageClick={handleImageClick}
         />
 
         {/* Image Refs */}
@@ -811,6 +814,7 @@ function RefinementOptionsPanel({
               entities={entityMap}
               onGenerateImage={onGenerateChronicleImage}
               onResetImage={onResetChronicleImage}
+              onRegenerateDescription={onRegenerateDescription}
               onUpdateAnchorText={onUpdateChronicleAnchorText}
               onUpdateSize={onUpdateChronicleImageSize}
               onUpdateJustification={onUpdateChronicleImageJustification}
@@ -818,16 +822,15 @@ function RefinementOptionsPanel({
               isGenerating={isGenerating}
               styleLibrary={styleLibrary}
               styleSelection={styleSelection}
-              onStyleSelectionChange={onStyleSelectionChange}
               cultures={cultures}
               cultureIdentities={cultureIdentities}
               worldContext={worldContext}
               chronicleTitle={item.name}
               imageSize={imageSize}
-              onImageSizeChange={onImageSizeChange}
               imageQuality={imageQuality}
-              onImageQualityChange={onImageQualityChange}
               imageModel={imageModel}
+              imageGenSettings={imageGenSettings}
+              onOpenImageSettings={onOpenImageSettings}
             />
           </div>
         )}
@@ -1174,6 +1177,7 @@ export default function ChronicleReviewPanel({
   onRevalidate,
   onGenerateChronicleImage,
   onResetChronicleImage,
+  onRegenerateDescription,
   onUpdateChronicleAnchorText,
   onUpdateChronicleTemporalContext,
   onUpdateChronicleActiveVersion,
@@ -1182,12 +1186,11 @@ export default function ChronicleReviewPanel({
   onGenerateCoverImageScene,
   onGenerateCoverImage,
   styleSelection,
-  onStyleSelectionChange,
   imageSize,
-  onImageSizeChange,
   imageQuality,
-  onImageQualityChange,
   imageModel,
+  imageGenSettings,
+  onOpenImageSettings,
 
   // Image layout edits
   onUpdateChronicleImageSize,
@@ -1217,6 +1220,21 @@ export default function ChronicleReviewPanel({
     if (!entities) return new Map();
     return new Map(entities.map((e) => [e.id, e]));
   }, [entities]);
+
+  // Image modal state for full-size viewing
+  const [imageModal, setImageModal] = useState({ open: false, imageId: '', title: '' });
+  const handleImageClick = useCallback((imageId, title) => {
+    setImageModal({ open: true, imageId, title });
+  }, []);
+
+  const renderImageModal = () => (
+    <ImageModal
+      isOpen={imageModal.open}
+      imageId={imageModal.imageId}
+      title={imageModal.title}
+      onClose={() => setImageModal({ open: false, imageId: '', title: '' })}
+    />
+  );
 
   if (!item) return null;
 
@@ -1580,9 +1598,7 @@ export default function ChronicleReviewPanel({
           onGenerateCoverImageScene={onGenerateCoverImageScene}
           onGenerateCoverImage={onGenerateCoverImage}
           imageSize={imageSize}
-          onImageSizeChange={onImageSizeChange}
           imageQuality={imageQuality}
-          onImageQualityChange={onImageQualityChange}
           imageModel={imageModel}
           onGenerateChronicleImage={onGenerateChronicleImage}
           onResetChronicleImage={onResetChronicleImage}
@@ -1607,6 +1623,7 @@ export default function ChronicleReviewPanel({
         )}
 
         <ExpandableSeedSection seed={seedData} defaultExpanded={false} />
+        {renderImageModal()}
       </div>
     );
   }
@@ -1698,6 +1715,7 @@ export default function ChronicleReviewPanel({
             />
           </div>
         )}
+        {renderImageModal()}
       </div>
     );
   }
@@ -1797,6 +1815,7 @@ export default function ChronicleReviewPanel({
               onGenerateCoverImage={onGenerateCoverImage}
               isGenerating={isGenerating}
               labelWeight={600}
+              onImageClick={handleImageClick}
             />
           </div>
         )}
@@ -1812,22 +1831,23 @@ export default function ChronicleReviewPanel({
               entities={entityMap}
               onGenerateImage={onGenerateChronicleImage}
               onResetImage={onResetChronicleImage}
+              onRegenerateDescription={onRegenerateDescription}
               onUpdateAnchorText={onUpdateChronicleAnchorText}
               onUpdateSize={onUpdateChronicleImageSize}
               onUpdateJustification={onUpdateChronicleImageJustification}
+              chronicleText={item.finalContent || imageRefsTargetContent || item.assembledContent}
               isGenerating={isGenerating}
               styleLibrary={styleLibrary}
               styleSelection={styleSelection}
-              onStyleSelectionChange={onStyleSelectionChange}
               cultures={cultures}
               cultureIdentities={cultureIdentities}
               worldContext={worldContext}
               chronicleTitle={item.name}
               imageSize={imageSize}
-              onImageSizeChange={onImageSizeChange}
               imageQuality={imageQuality}
-              onImageQualityChange={onImageQualityChange}
               imageModel={imageModel}
+              imageGenSettings={imageGenSettings}
+              onOpenImageSettings={onOpenImageSettings}
             />
           </div>
         )}
@@ -1844,6 +1864,7 @@ export default function ChronicleReviewPanel({
         {item.perspectiveSynthesis && (
           <PerspectiveSynthesisViewer synthesis={item.perspectiveSynthesis} />
         )}
+        {renderImageModal()}
       </div>
     );
   }

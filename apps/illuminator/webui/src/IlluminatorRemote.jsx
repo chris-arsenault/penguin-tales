@@ -37,8 +37,10 @@ import { useSummaryRevision } from './hooks/useSummaryRevision';
 import { useChronicleLoreBackport } from './hooks/useChronicleLoreBackport';
 import { useCopyEdit } from './hooks/useCopyEdit';
 import { getPublishedStaticPagesForProject } from './lib/staticPageStorage';
-import { getEntityUsageStats, getChronicle, updateChronicleLoreBackported } from './lib/chronicleStorage';
+import { getEntityUsageStats, getChronicle, getChroniclesForSimulation, updateChronicleLoreBackported } from './lib/chronicleStorage';
 import { useStyleLibrary } from './hooks/useStyleLibrary';
+import { useImageGenSettings } from './hooks/useImageGenSettings';
+import ImageSettingsDrawer, { ImageSettingsTrigger } from './components/ImageSettingsDrawer';
 import {
   buildDescriptionPromptFromGuidance,
   buildImagePromptFromGuidance,
@@ -119,8 +121,6 @@ Original prompt:
 // and configured in the LLMCallConfigPanel. Only image-related settings remain here.
 const DEFAULT_CONFIG = {
   imageModel: 'gpt-image-1.5',
-  imageSize: 'auto',
-  imageQuality: 'auto',
   minProminenceForImage: 'mythic',
   numWorkers: 4,
   // Multishot prompting options
@@ -360,62 +360,27 @@ export default function IlluminatorRemote({
     }
   }, [localConfig, onEnrichmentConfigChange]);
 
-  // Style selection - use external prop if provided, else localStorage fallback
-  // Default to 'random' for all style types to encourage visual variety
-  const DEFAULT_STYLE_SELECTION = { artisticStyleId: 'random', compositionStyleId: 'random', colorPaletteId: 'random' };
-  const [localStyleSelection, setLocalStyleSelection] = useState(() => {
-    // Prefer external style selection, fall back to localStorage
-    if (externalStyleSelection) {
-      return externalStyleSelection;
-    }
-    try {
-      const saved = localStorage.getItem('illuminator:styleSelection');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch {}
-    return DEFAULT_STYLE_SELECTION;
-  });
-  const pendingStyleSelectionSyncRef = useRef(null);
-  const skipStyleSelectionSyncRef = useRef(false);
+  // Global image generation settings (style, composition, palette, size, quality)
+  // Backed by localStorage via useImageGenSettings hook
+  const [imageGenSettings, updateImageGenSettings] = useImageGenSettings(
+    onStyleSelectionChange ? (settings) => {
+      onStyleSelectionChange({
+        artisticStyleId: settings.artisticStyleId,
+        compositionStyleId: settings.compositionStyleId,
+        colorPaletteId: settings.colorPaletteId,
+      });
+    } : undefined
+  );
 
-  // Sync from external style selection when it changes
-  useEffect(() => {
-    if (externalStyleSelection) {
-      skipStyleSelectionSyncRef.current = true;
-      setLocalStyleSelection(externalStyleSelection);
-    }
-  }, [externalStyleSelection]);
+  // Derive a styleSelection-shaped object for backward compat with buildPrompt etc.
+  const styleSelection = useMemo(() => ({
+    artisticStyleId: imageGenSettings.artisticStyleId,
+    compositionStyleId: imageGenSettings.compositionStyleId,
+    colorPaletteId: imageGenSettings.colorPaletteId,
+  }), [imageGenSettings.artisticStyleId, imageGenSettings.compositionStyleId, imageGenSettings.colorPaletteId]);
 
-  // Use the local style selection as the active one
-  const styleSelection = localStyleSelection;
-
-  // Wrapper to update style selection and sync to parent
-  const setStyleSelection = useCallback((updater) => {
-    setLocalStyleSelection((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      pendingStyleSelectionSyncRef.current = next;
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (skipStyleSelectionSyncRef.current) {
-      skipStyleSelectionSyncRef.current = false;
-      pendingStyleSelectionSyncRef.current = null;
-      return;
-    }
-    const pending = pendingStyleSelectionSyncRef.current;
-    if (!pending) return;
-    pendingStyleSelectionSyncRef.current = null;
-    if (onStyleSelectionChange) {
-      onStyleSelectionChange(pending);
-    } else {
-      try {
-        localStorage.setItem('illuminator:styleSelection', JSON.stringify(pending));
-      } catch {}
-    }
-  }, [localStyleSelection, onStyleSelectionChange]);
+  // Image settings drawer open state
+  const [imageSettingsOpen, setImageSettingsOpen] = useState(false);
 
   // Style library - loaded from IndexedDB or defaults from world-schema
   const {
@@ -742,8 +707,8 @@ export default function IlluminatorRemote({
         anthropicApiKey,
         openaiApiKey,
         imageModel: config.imageModel,
-        imageSize: config.imageSize,
-        imageQuality: config.imageQuality,
+        imageSize: imageGenSettings.imageSize,
+        imageQuality: imageGenSettings.imageQuality,
         // Multishot prompting options
         useClaudeForImagePrompt: config.useClaudeForImagePrompt,
         claudeImagePromptTemplate: config.claudeImagePromptTemplate,
@@ -752,7 +717,7 @@ export default function IlluminatorRemote({
         llmCallSettings: getResolvedLLMCallSettings(),
       });
     }
-  }, [anthropicApiKey, openaiApiKey, config, initializeWorker]);
+  }, [anthropicApiKey, openaiApiKey, config, imageGenSettings.imageSize, imageGenSettings.imageQuality, initializeWorker]);
 
   // Persist local entity changes back to worldData via onEnrichmentComplete.
   // Uses reference equality — any setEntities call creates new objects,
@@ -1143,9 +1108,14 @@ export default function IlluminatorRemote({
         const enrichment = patch.description !== undefined && entity.description
           ? pushDescriptionHistory(entity, source)
           : entity.enrichment;
+        // Bump text.generatedAt so mergePersistedResults won't overwrite
+        // with the older IndexedDB enrichment record on next reload
+        const bumpedEnrichment = patch.description !== undefined && enrichment?.text
+          ? { ...enrichment, text: { ...enrichment.text, generatedAt: Date.now() } }
+          : enrichment;
         return {
           ...entity,
-          enrichment,
+          enrichment: bumpedEnrichment,
           ...(patch.summary !== undefined ? { summary: patch.summary } : {}),
           ...(patch.description !== undefined ? { description: patch.description } : {}),
         };
@@ -1397,6 +1367,62 @@ export default function IlluminatorRemote({
     }
   }, [applyAcceptedBackportPatches, handleRevisionApplied, backportChronicleId]);
 
+  // ---- Auto-backport all chronicles ----
+  const [autoBackportQueue, setAutoBackportQueue] = useState(null); // { ids: string[], total: number } | null
+  const autoBackportRef = useRef(false); // tracks whether we're in auto-backport mode
+
+  const handleStartAutoBackport = useCallback(async () => {
+    if (!simulationRunId) return;
+    const allChronicles = await getChroniclesForSimulation(simulationRunId);
+    const eligible = allChronicles
+      .filter((c) => !c.loreBackported && c.finalContent)
+      .map((c) => c.chronicleId);
+    if (eligible.length === 0) {
+      alert('No chronicles eligible for backport (all already backported or unpublished).');
+      return;
+    }
+    console.log(`[Auto-Backport] Starting: ${eligible.length} chronicles eligible`, eligible);
+    autoBackportRef.current = true;
+    setAutoBackportQueue({ ids: eligible, total: eligible.length });
+    // Kick off the first one
+    await handleBackportLore(eligible[0]);
+  }, [simulationRunId, handleBackportLore]);
+
+  const handleCancelAutoBackport = useCallback(() => {
+    autoBackportRef.current = false;
+    setAutoBackportQueue(null);
+    cancelBackport();
+  }, [cancelBackport]);
+
+  // Watch backportRun — when results arrive in auto mode, accept and advance
+  useEffect(() => {
+    if (!autoBackportRef.current || !autoBackportQueue) return;
+    if (!backportRun) return;
+    const status = backportRun.status;
+    if (status !== 'batch_reviewing' && status !== 'run_reviewing') return;
+
+    // Auto-accept
+    console.log(`[Auto-Backport] Auto-accepting results for chronicle ${autoBackportQueue.ids[0]}`);
+    handleAcceptBackport();
+
+    // Advance to next
+    const remaining = autoBackportQueue.ids.slice(1);
+    if (remaining.length === 0) {
+      console.log('[Auto-Backport] Complete — all chronicles backported');
+      autoBackportRef.current = false;
+      setAutoBackportQueue(null);
+      return;
+    }
+    setAutoBackportQueue({ ids: remaining, total: autoBackportQueue.total });
+    // Delay to let state settle before starting next
+    setTimeout(() => {
+      if (autoBackportRef.current) {
+        console.log(`[Auto-Backport] Starting next: ${remaining[0]} (${remaining.length} remaining)`);
+        handleBackportLore(remaining[0]);
+      }
+    }, 1000);
+  }, [backportRun?.status, autoBackportQueue, handleAcceptBackport, handleBackportLore]);
+
   // Description copy edit (single-entity readability pass)
   const {
     run: copyEditRun,
@@ -1601,6 +1627,15 @@ export default function IlluminatorRemote({
           ))}
         </nav>
 
+        {/* Image Settings trigger */}
+        <div style={{ padding: '0 8px', marginTop: 'auto' }}>
+          <ImageSettingsTrigger
+            settings={imageGenSettings}
+            styleLibrary={styleLibrary}
+            onClick={() => setImageSettingsOpen(true)}
+          />
+        </div>
+
         {/* API Key section */}
         <div className="illuminator-api-section">
           <button
@@ -1702,8 +1737,8 @@ export default function IlluminatorRemote({
               buildPrompt={buildPrompt}
               getVisualConfig={getVisualConfig}
               styleLibrary={styleLibrary}
-              styleSelection={styleSelection}
-              onStyleSelectionChange={setStyleSelection}
+              imageGenSettings={imageGenSettings}
+              onOpenImageSettings={() => setImageSettingsOpen(true)}
               prominenceScale={prominenceScale}
               onStartRevision={handleOpenRevisionFilter}
               isRevising={isRevisionActive}
@@ -1728,13 +1763,16 @@ export default function IlluminatorRemote({
               simulationRunId={simulationRunId}
               buildPrompt={buildPrompt}
               styleLibrary={styleLibrary}
-              styleSelection={styleSelection}
+              imageGenSettings={imageGenSettings}
               entityGuidance={entityGuidance}
               cultureIdentities={cultureIdentities}
               onBackportLore={handleBackportLore}
+              autoBackportQueue={autoBackportQueue}
+              onStartAutoBackport={handleStartAutoBackport}
+              onCancelAutoBackport={handleCancelAutoBackport}
               refreshTrigger={chronicleRefreshTrigger}
-              defaultImageQuality={config.imageQuality}
               imageModel={config.imageModel}
+              onOpenImageSettings={() => setImageSettingsOpen(true)}
             />
           </div>
         )}
@@ -1859,6 +1897,17 @@ export default function IlluminatorRemote({
           </div>
         )}
       </div>
+
+      {/* Image Settings Drawer */}
+      <ImageSettingsDrawer
+        isOpen={imageSettingsOpen}
+        onClose={() => setImageSettingsOpen(false)}
+        settings={imageGenSettings}
+        onSettingsChange={updateImageGenSettings}
+        styleLibrary={styleLibrary}
+        cultures={worldSchema?.cultures}
+        imageModel={config.imageModel}
+      />
 
       {/* Dynamics Generation Modal */}
       <DynamicsGenerationModal

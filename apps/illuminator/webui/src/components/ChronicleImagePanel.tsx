@@ -12,11 +12,14 @@
  */
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { resolveAnchorPhrase } from '../lib/fuzzyAnchor';
 import { useImageUrl } from '../hooks/useImageUrl';
-import StyleSelector, { resolveStyleSelection } from './StyleSelector';
-import { buildChronicleImagePrompt } from '../lib/promptBuilders';
-import { getQualityOptions } from '../lib/imageSettings';
+import ImageModal from './ImageModal';
+import { resolveStyleSelection } from './StyleSelector';
+import { ImageSettingsSummary } from './ImageSettingsDrawer';
+import { buildChronicleScenePrompt } from '../lib/promptBuilders';
+// imageSettings import removed - controls now in ImageSettingsDrawer
 import type { ChronicleImageRefs, EntityImageRef, PromptRequestRef } from '../lib/chronicleTypes';
 import type { StyleInfo } from '../lib/promptBuilders';
 
@@ -68,6 +71,8 @@ interface ChronicleImagePanelProps {
   onGenerateImage?: (ref: PromptRequestRef, prompt: string, styleInfo: StyleInfo) => void;
   /** Callback to reset a failed image ref back to pending */
   onResetImage?: (ref: PromptRequestRef) => void;
+  /** Callback to regenerate a single scene description via LLM */
+  onRegenerateDescription?: (ref: PromptRequestRef) => void;
   /** Callback to update anchor text for a ref */
   onUpdateAnchorText?: (ref: EntityImageRef | PromptRequestRef, anchorText: string) => void;
   /** Callback to update size for a ref */
@@ -79,9 +84,8 @@ interface ChronicleImagePanelProps {
   isGenerating?: boolean;
   /** Style library for style selection */
   styleLibrary?: StyleLibrary;
-  /** Current style selection from parent (optional - uses local state if not provided) */
+  /** Current style selection from parent */
   styleSelection?: { artisticStyleId?: string; compositionStyleId?: string; colorPaletteId?: string };
-  onStyleSelectionChange?: (selection: { artisticStyleId?: string; compositionStyleId?: string; colorPaletteId?: string }) => void;
   /** Available cultures for visual identity */
   cultures?: Culture[];
   /** Culture identities containing visual identity data */
@@ -92,12 +96,14 @@ interface ChronicleImagePanelProps {
   chronicleTitle?: string;
   /** Image size for generation */
   imageSize?: string;
-  onImageSizeChange?: (size: string) => void;
   /** Image quality for generation */
   imageQuality?: string;
-  onImageQualityChange?: (quality: string) => void;
   /** Image model (for quality option lookup) */
   imageModel?: string;
+  /** Global image generation settings (for summary display) */
+  imageGenSettings?: import('../hooks/useImageGenSettings').ImageGenSettings;
+  /** Callback to open the image settings drawer */
+  onOpenImageSettings?: () => void;
 }
 
 // Size display names
@@ -154,16 +160,110 @@ function useLazyImageUrl(imageId: string | null | undefined) {
   return { containerRef, url, loading, error, metadata, isVisible };
 }
 
+function AnchorContextTooltip({
+  anchorText,
+  anchorIndex,
+  chronicleText,
+  children,
+}: {
+  anchorText: string;
+  anchorIndex?: number;
+  chronicleText?: string;
+  children: React.ReactNode;
+}) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const triggerRef = useRef<HTMLSpanElement>(null);
+
+  // Compute context snippet (may be null if no chronicle text or anchor not found)
+  const snippet = useMemo(() => {
+    if (!chronicleText) return null;
+    const idx = anchorIndex != null && anchorIndex >= 0
+      ? anchorIndex
+      : chronicleText.indexOf(anchorText);
+    if (idx < 0) return null;
+
+    const CONTEXT_CHARS = 300;
+    const start = Math.max(0, idx - CONTEXT_CHARS);
+    const end = Math.min(chronicleText.length, idx + anchorText.length + CONTEXT_CHARS);
+    return {
+      before: chronicleText.substring(start, idx),
+      match: chronicleText.substring(idx, idx + anchorText.length),
+      after: chronicleText.substring(idx + anchorText.length, end),
+      hasPrefix: start > 0,
+      hasSuffix: end < chronicleText.length,
+    };
+  }, [chronicleText, anchorText, anchorIndex]);
+
+  if (!snippet) return <>{children}</>;
+
+  const handleMouseEnter = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setTooltipPos({ x: rect.left, y: rect.bottom + 4 });
+    }
+    setShowTooltip(true);
+  };
+
+  return (
+    <span
+      ref={triggerRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setShowTooltip(false)}
+      style={{ cursor: 'help' }}
+    >
+      {children}
+      {showTooltip && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            left: Math.min(tooltipPos.x, window.innerWidth - 420),
+            top: tooltipPos.y,
+            width: '400px',
+            maxHeight: '260px',
+            overflowY: 'auto',
+            padding: '10px 12px',
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '6px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+            fontSize: '11px',
+            lineHeight: 1.5,
+            color: 'var(--text-secondary)',
+            zIndex: 1000,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            pointerEvents: 'none',
+          }}
+        >
+          {snippet.hasPrefix && '...'}
+          {snippet.before}
+          <mark style={{ background: 'rgba(168, 85, 247, 0.3)', color: 'var(--text-primary)', borderRadius: '2px', padding: '0 1px' }}>
+            {snippet.match}
+          </mark>
+          {snippet.after}
+          {snippet.hasSuffix && '...'}
+        </div>,
+        document.body
+      )}
+    </span>
+  );
+}
+
 function AnchorTextEditor({
   anchorText,
   onSave,
   disabled = false,
   previewLength = 40,
+  anchorIndex,
+  chronicleText,
 }: {
   anchorText: string;
   onSave?: (next: string) => void;
   disabled?: boolean;
   previewLength?: number;
+  anchorIndex?: number;
+  chronicleText?: string;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(anchorText);
@@ -178,6 +278,14 @@ function AnchorTextEditor({
     ? `${anchorText.slice(0, previewLength)}...`
     : anchorText;
 
+  const anchorLabel = (
+    <AnchorContextTooltip anchorText={anchorText} anchorIndex={anchorIndex} chronicleText={chronicleText}>
+      <span style={{ textDecoration: 'underline dotted', textUnderlineOffset: '2px' }}>
+        &quot;{preview}&quot;
+      </span>
+    </AnchorContextTooltip>
+  );
+
   if (!onSave) {
     return (
       <div
@@ -188,7 +296,7 @@ function AnchorTextEditor({
           fontStyle: 'italic',
         }}
       >
-        Anchor: &quot;{preview}&quot;
+        Anchor: {anchorLabel}
       </div>
     );
   }
@@ -197,7 +305,7 @@ function AnchorTextEditor({
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-          Anchor: &quot;{preview}&quot;
+          Anchor: {anchorLabel}
         </span>
         <button
           type="button"
@@ -258,6 +366,7 @@ function AnchorTextEditor({
 function EntityImageRefCard({
   imageRef,
   entity,
+  onImageClick,
   onUpdateAnchorText,
   onUpdateSize,
   onUpdateJustification,
@@ -266,6 +375,7 @@ function EntityImageRefCard({
 }: {
   imageRef: EntityImageRef;
   entity: EntityContext | undefined;
+  onImageClick?: (imageId: string, title: string) => void;
   onUpdateAnchorText?: (next: string) => void;
   onUpdateSize?: (size: EntityImageRef['size']) => void;
   onUpdateJustification?: (justification: 'left' | 'right') => void;
@@ -316,7 +426,8 @@ function EntityImageRefCard({
             src={url}
             alt={entity?.name || 'Entity image'}
             loading="lazy"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onClick={imageId && onImageClick ? () => onImageClick(imageId, entity?.name || 'Entity image') : undefined}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: imageId && onImageClick ? 'pointer' : undefined }}
           />
         ) : (
           <span style={{ fontSize: '20px', color: 'var(--text-muted)' }}>
@@ -368,6 +479,8 @@ function EntityImageRefCard({
           anchorText={imageRef.anchorText}
           onSave={onUpdateAnchorText}
           disabled={isGenerating}
+          anchorIndex={imageRef.anchorIndex}
+          chronicleText={chronicleText}
         />
         {anchorMissing && (
           <div
@@ -443,6 +556,8 @@ function PromptRequestCard({
   imageRef,
   onGenerate,
   onReset,
+  onRegenerateDescription,
+  onImageClick,
   onUpdateAnchorText,
   onUpdateSize,
   onUpdateJustification,
@@ -453,6 +568,8 @@ function PromptRequestCard({
   imageRef: PromptRequestRef;
   onGenerate?: () => void;
   onReset?: () => void;
+  onRegenerateDescription?: () => void;
+  onImageClick?: (imageId: string, title: string) => void;
   onUpdateAnchorText?: (next: string) => void;
   onUpdateSize?: (size: PromptRequestRef['size']) => void;
   onUpdateJustification?: (justification: 'left' | 'right') => void;
@@ -511,7 +628,8 @@ function PromptRequestCard({
             src={url}
             alt="Generated image"
             loading="lazy"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onClick={imageRef.generatedImageId && onImageClick ? () => onImageClick(imageRef.generatedImageId!, imageRef.sceneDescription.slice(0, 60)) : undefined}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: imageRef.generatedImageId && onImageClick ? 'pointer' : undefined }}
           />
         ) : (
           <span style={{ fontSize: '20px', color: 'var(--text-muted)' }}>
@@ -569,14 +687,33 @@ function PromptRequestCard({
             lineHeight: 1.4,
           }}
         >
-          {imageRef.sceneDescription.slice(0, 120)}
-          {imageRef.sceneDescription.length > 120 ? '...' : ''}
+          {imageRef.sceneDescription}
         </div>
+
+        {onRegenerateDescription && !isGenerating && (
+          <button
+            onClick={onRegenerateDescription}
+            style={{
+              marginBottom: '4px',
+              padding: '3px 8px',
+              fontSize: '10px',
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '4px',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+            }}
+          >
+            Regenerate Description
+          </button>
+        )}
 
         <AnchorTextEditor
           anchorText={imageRef.anchorText}
           onSave={onUpdateAnchorText}
           disabled={isGenerating}
+          anchorIndex={imageRef.anchorIndex}
+          chronicleText={chronicleText}
         />
         {anchorMissing && (
           <div
@@ -737,6 +874,7 @@ export default function ChronicleImagePanel({
   entities,
   onGenerateImage,
   onResetImage,
+  onRegenerateDescription,
   onUpdateAnchorText,
   onUpdateSize,
   onUpdateJustification,
@@ -744,36 +882,31 @@ export default function ChronicleImagePanel({
   isGenerating = false,
   styleLibrary,
   styleSelection: externalStyleSelection,
-  onStyleSelectionChange,
   cultures,
   cultureIdentities,
   worldContext,
   chronicleTitle,
   imageSize,
-  onImageSizeChange,
   imageQuality,
-  onImageQualityChange,
   imageModel,
+  imageGenSettings,
+  onOpenImageSettings,
 }: ChronicleImagePanelProps) {
-  // Local style selection state (used if not controlled externally)
-  const [localStyleSelection, setLocalStyleSelection] = useState({
+  // Use external style selection directly (managed globally by ImageSettingsDrawer)
+  const styleSelection = externalStyleSelection || {
     artisticStyleId: 'random',
     compositionStyleId: 'random',
     colorPaletteId: 'random',
-  });
+  };
 
-  // Use external or local style selection
-  const styleSelection = externalStyleSelection || localStyleSelection;
-  const handleStyleChange = useCallback((newSelection: typeof localStyleSelection) => {
-    if (onStyleSelectionChange) {
-      onStyleSelectionChange(newSelection);
-    } else {
-      setLocalStyleSelection(newSelection);
-    }
-  }, [onStyleSelectionChange]);
+  // Image modal state
+  const [imageModal, setImageModal] = useState<{ open: boolean; imageId: string; title: string }>({ open: false, imageId: '', title: '' });
+  const handleImageClick = useCallback((imageId: string, title: string) => {
+    setImageModal({ open: true, imageId, title });
+  }, []);
 
-  // Local culture selection for visual identity
-  const [selectedCultureId, setSelectedCultureId] = useState<string>('');
+  // Culture selection from global settings
+  const selectedCultureId = imageGenSettings?.selectedCultureId || '';
 
   // Derive primary culture from chronicle entities if not manually selected
   const derivedCultureId = useMemo(() => {
@@ -853,8 +986,6 @@ export default function ChronicleImagePanel({
       artisticPromptFragment: resolved.artisticStyle?.promptFragment,
       compositionPromptFragment: resolved.compositionStyle?.promptFragment,
       colorPalettePromptFragment: resolved.colorPalette?.promptFragment,
-      cultureKeywords: resolved.cultureKeywords,
-      visualIdentity: Object.keys(filteredVisualIdentity).length > 0 ? filteredVisualIdentity : undefined,
     };
   }, [styleSelection, derivedCultureId, cultures, styleLibrary, cultureIdentities]);
 
@@ -864,39 +995,22 @@ export default function ChronicleImagePanel({
 
     const styleInfo = buildStyleInfo();
 
-    // Look up involved entities and extract their visual identity
-    const involvedEntities = ref.involvedEntityIds
-      ?.map(id => {
-        const entity = entities.get(id);
-        if (!entity) return null;
-        return {
-          id: entity.id,
-          name: entity.name,
-          kind: entity.kind,
-          visualThesis: entity.enrichment?.text?.visualThesis,
-          visualTraits: entity.enrichment?.text?.visualTraits,
-        };
-      })
-      .filter((e): e is NonNullable<typeof e> => e !== null);
-
-    const prompt = buildChronicleImagePrompt(
+    const prompt = buildChronicleScenePrompt(
       {
         sceneDescription: ref.sceneDescription,
         size: ref.size,
         chronicleTitle,
-        culture: derivedCultureId,
         world: worldContext ? {
           name: worldContext.name || 'Unknown World',
           description: worldContext.description,
-          tone: worldContext.toneFragments?.core,
+          speciesConstraint: worldContext.speciesConstraint,
         } : undefined,
-        involvedEntities,
       },
       styleInfo
     );
 
     onGenerateImage(ref, prompt, styleInfo);
-  }, [onGenerateImage, buildStyleInfo, chronicleTitle, derivedCultureId, worldContext, entities]);
+  }, [onGenerateImage, buildStyleInfo, chronicleTitle, worldContext]);
 
   // No image refs yet
   if (!imageRefs) {
@@ -971,102 +1085,13 @@ export default function ChronicleImagePanel({
         </div>
       </div>
 
-      {/* Style Selection - show when there are scene images (for generation/regeneration) */}
-      {hasSceneImages && (
-        <div
-          style={{
-            marginBottom: '16px',
-            padding: '12px',
-            background: 'var(--bg-tertiary)',
-            borderRadius: '6px',
-            border: '1px solid var(--border-color)',
-          }}
-        >
-          <div style={{ fontSize: '12px', fontWeight: 500, marginBottom: '8px' }}>
-            Generation Settings
-          </div>
-
-          {/* Style Selector - only show when styleLibrary is available */}
-          {styleLibrary ? (
-            <div style={{ marginBottom: '12px' }}>
-              <StyleSelector
-                styleLibrary={styleLibrary}
-                selectedArtisticStyleId={styleSelection.artisticStyleId}
-                selectedCompositionStyleId={styleSelection.compositionStyleId}
-                selectedColorPaletteId={styleSelection.colorPaletteId}
-                onArtisticStyleChange={(id: string) => handleStyleChange({ ...styleSelection, artisticStyleId: id })}
-                onCompositionStyleChange={(id: string) => handleStyleChange({ ...styleSelection, compositionStyleId: id })}
-                onColorPaletteChange={(id: string) => handleStyleChange({ ...styleSelection, colorPaletteId: id })}
-                compact
-              />
-            </div>
-          ) : (
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-              Loading style options...
-            </div>
-          )}
-
-          {/* Culture Selection */}
-          {cultures && cultures.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Culture:</span>
-              <select
-                value={selectedCultureId}
-                onChange={(e) => setSelectedCultureId(e.target.value)}
-                className="illuminator-select"
-                style={{ width: 'auto', minWidth: '140px' }}
-              >
-                <option value="">Auto-detect ({derivedCultureId || 'none'})</option>
-                {cultures.map((culture) => (
-                  <option key={culture.id} value={culture.id}>
-                    {culture.name}
-                  </option>
-                ))}
-              </select>
-              {derivedCultureId && cultureIdentities?.visual?.[derivedCultureId] && (
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                  ({Object.keys(cultureIdentities.visual[derivedCultureId]).length} visual identity keys)
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Size & Quality */}
-          {(onImageSizeChange || onImageQualityChange) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-              {onImageSizeChange && (
-                <>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Size:</span>
-                  <select
-                    value={imageSize || '1792x1024'}
-                    onChange={(e) => onImageSizeChange(e.target.value)}
-                    className="illuminator-select"
-                    style={{ width: 'auto', minWidth: '120px' }}
-                  >
-                    <option value="1792x1024">Landscape</option>
-                    <option value="1024x1024">Square</option>
-                    <option value="1024x1792">Portrait</option>
-                  </select>
-                </>
-              )}
-              {onImageQualityChange && (
-                <>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Quality:</span>
-                  <select
-                    value={imageQuality || 'auto'}
-                    onChange={(e) => onImageQualityChange(e.target.value)}
-                    className="illuminator-select"
-                    style={{ width: 'auto', minWidth: '100px' }}
-                  >
-                    {getQualityOptions(imageModel || 'gpt-image-1.5').map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+      {/* Image Settings Summary - show when there are scene images */}
+      {hasSceneImages && imageGenSettings && onOpenImageSettings && (
+        <ImageSettingsSummary
+          settings={imageGenSettings}
+          styleLibrary={styleLibrary || null}
+          onOpenSettings={onOpenImageSettings}
+        />
       )}
 
       {/* Entity Refs Section */}
@@ -1090,6 +1115,7 @@ export default function ChronicleImagePanel({
                 key={ref.refId}
                 imageRef={ref}
                 entity={entities.get(ref.entityId)}
+                onImageClick={handleImageClick}
                 onUpdateAnchorText={onUpdateAnchorText ? (next) => onUpdateAnchorText(ref, next) : undefined}
                 onUpdateSize={onUpdateSize ? (size) => onUpdateSize(ref, size) : undefined}
                 onUpdateJustification={onUpdateJustification ? (justification) => onUpdateJustification(ref, justification) : undefined}
@@ -1123,6 +1149,8 @@ export default function ChronicleImagePanel({
                 imageRef={ref}
                 onGenerate={() => handleGenerateImage(ref)}
                 onReset={onResetImage ? () => onResetImage(ref) : undefined}
+                onRegenerateDescription={onRegenerateDescription ? () => onRegenerateDescription(ref) : undefined}
+                onImageClick={handleImageClick}
                 onUpdateAnchorText={onUpdateAnchorText ? (next) => onUpdateAnchorText(ref, next) : undefined}
                 onUpdateSize={onUpdateSize ? (size) => onUpdateSize(ref, size) : undefined}
                 onUpdateJustification={onUpdateJustification ? (justification) => onUpdateJustification(ref, justification) : undefined}
@@ -1148,6 +1176,13 @@ export default function ChronicleImagePanel({
       >
         Generated: {new Date(imageRefs.generatedAt).toLocaleString()} • Model: {imageRefs.model}
       </div>
+
+      <ImageModal
+        isOpen={imageModal.open}
+        imageId={imageModal.imageId}
+        title={imageModal.title}
+        onClose={() => setImageModal({ open: false, imageId: '', title: '' })}
+      />
     </div>
   );
 }
