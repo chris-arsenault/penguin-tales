@@ -14,7 +14,7 @@ import type { ImageGenSettings } from '../hooks/useImageGenSettings';
 // ─── Types ───────────────────────────────────────────────────────────────
 
 interface StyleLibrary {
-  artisticStyles: Array<{ id: string; name: string; description?: string; promptFragment?: string }>;
+  artisticStyles: Array<{ id: string; name: string; description?: string; promptFragment?: string; category?: string }>;
   compositionStyles: Array<{ id: string; name: string; description?: string; promptFragment?: string; targetCategory?: string }>;
   colorPalettes: Array<{ id: string; name: string; description?: string; promptFragment?: string; swatchColors?: string[] }>;
 }
@@ -39,8 +39,10 @@ interface ImageSettingsDrawerProps {
 const RANDOM_ID = 'random';
 const NONE_ID = 'none';
 
-const CATEGORY_LABELS: Record<string, string> = {
+const COMPOSITION_CATEGORY_LABELS: Record<string, string> = {
   character: 'Character',
+  pair: 'Pair',
+  pose: 'Pose',
   collective: 'Collective',
   place: 'Place',
   object: 'Object',
@@ -48,7 +50,18 @@ const CATEGORY_LABELS: Record<string, string> = {
   event: 'Event',
 };
 
-const CATEGORY_ORDER = ['character', 'collective', 'place', 'object', 'concept', 'event'];
+const COMPOSITION_CATEGORY_ORDER = ['character', 'pair', 'pose', 'collective', 'place', 'object', 'concept', 'event'];
+
+const ARTISTIC_CATEGORY_LABELS: Record<string, string> = {
+  painting: 'Painting',
+  'ink-print': 'Ink & Print',
+  digital: 'Digital',
+  camera: 'Camera',
+  experimental: 'Experimental',
+  document: 'Document',
+};
+
+const ARTISTIC_CATEGORY_ORDER = ['painting', 'ink-print', 'digital', 'camera', 'experimental', 'document'];
 
 const PALETTE_GROUPS: Array<{ label: string; ids: string[] }> = [
   {
@@ -224,8 +237,9 @@ export default function ImageSettingsDrawer({
     onSettingsChange({ collapsedSections: Array.from(next) });
   }, [collapsedSet, onSettingsChange]);
 
-  // Active composition category tab
-  const [activeCategory, setActiveCategory] = useState('character');
+  // Active category tabs
+  const [activeCompositionCategory, setActiveCompositionCategory] = useState('character');
+  const [activeArtisticCategory, setActiveArtisticCategory] = useState('painting');
 
   // Group compositions by category
   const groupedCompositions = useMemo(() => {
@@ -239,10 +253,26 @@ export default function ImageSettingsDrawer({
     return map;
   }, [styleLibrary]);
 
+  // Group artistic styles by category
+  const groupedArtisticStyles = useMemo(() => {
+    if (!styleLibrary) return new Map<string, typeof styleLibrary.artisticStyles>();
+    const map = new Map<string, typeof styleLibrary.artisticStyles>();
+    for (const style of styleLibrary.artisticStyles) {
+      const cat = style.category || 'other';
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(style);
+    }
+    return map;
+  }, [styleLibrary]);
+
   // Available category tabs (only those with styles)
-  const availableCategories = useMemo(() => {
-    return CATEGORY_ORDER.filter((cat) => groupedCompositions.has(cat));
+  const availableCompositionCategories = useMemo(() => {
+    return COMPOSITION_CATEGORY_ORDER.filter((cat) => groupedCompositions.has(cat));
   }, [groupedCompositions]);
+
+  const availableArtisticCategories = useMemo(() => {
+    return ARTISTIC_CATEGORY_ORDER.filter((cat) => groupedArtisticStyles.has(cat));
+  }, [groupedArtisticStyles]);
 
   // Resolve display names for badge
   const artisticName = useMemo(() => {
@@ -366,14 +396,45 @@ export default function ImageSettingsDrawer({
                   value={isSpecialArtistic ? settings.artisticStyleId : ''}
                   onChange={(id) => onSettingsChange({ artisticStyleId: id })}
                 />
+
+                {/* Artistic category tabs */}
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '4px',
-                  maxHeight: '220px',
+                  display: 'flex',
+                  gap: '2px',
+                  marginBottom: '8px',
+                  flexWrap: 'wrap',
+                }}>
+                  {availableArtisticCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setActiveArtisticCategory(cat)}
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '10px',
+                        borderRadius: '3px',
+                        border: '1px solid',
+                        borderColor: activeArtisticCategory === cat ? 'var(--accent-color)' : 'var(--border-color)',
+                        background: activeArtisticCategory === cat ? 'rgba(168, 85, 247, 0.15)' : 'transparent',
+                        color: activeArtisticCategory === cat ? 'var(--accent-color)' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        fontWeight: activeArtisticCategory === cat ? 600 : 400,
+                      }}
+                    >
+                      {ARTISTIC_CATEGORY_LABELS[cat] || cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Artistic style list for active category */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '3px',
+                  maxHeight: '200px',
                   overflowY: 'auto',
                 }}>
-                  {styleLibrary.artisticStyles.map((style) => {
+                  {(groupedArtisticStyles.get(activeArtisticCategory) || []).map((style) => {
                     const isSelected = settings.artisticStyleId === style.id;
                     return (
                       <button
@@ -381,36 +442,38 @@ export default function ImageSettingsDrawer({
                         onClick={() => onSettingsChange({ artisticStyleId: style.id })}
                         title={style.promptFragment}
                         style={{
-                          padding: '6px 8px',
+                          display: 'flex',
+                          alignItems: 'baseline',
+                          gap: '8px',
+                          padding: '5px 8px',
                           borderRadius: '4px',
                           border: '1px solid',
-                          borderColor: isSelected ? 'var(--accent-color)' : 'var(--border-color)',
-                          background: isSelected ? 'rgba(168, 85, 247, 0.15)' : 'var(--bg-tertiary)',
+                          borderColor: isSelected ? 'var(--accent-color)' : 'transparent',
+                          background: isSelected ? 'rgba(168, 85, 247, 0.12)' : 'transparent',
                           cursor: 'pointer',
                           textAlign: 'left',
                           transition: 'all 0.15s ease',
+                          width: '100%',
                         }}
                       >
-                        <div style={{
+                        <span style={{
                           fontSize: '11px',
                           fontWeight: 500,
                           color: isSelected ? 'var(--accent-color)' : 'var(--text-color)',
-                          lineHeight: 1.2,
+                          flexShrink: 0,
                         }}>
                           {style.name}
-                        </div>
+                        </span>
                         {style.description && (
-                          <div style={{
+                          <span style={{
                             fontSize: '10px',
                             color: 'var(--text-muted)',
-                            lineHeight: 1.3,
-                            marginTop: '2px',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                           }}>
                             {style.description}
-                          </div>
+                          </span>
                         )}
                       </button>
                     );
@@ -440,7 +503,7 @@ export default function ImageSettingsDrawer({
                   marginBottom: '8px',
                   flexWrap: 'wrap',
                 }}>
-                  {availableCategories.map((cat) => (
+                  {availableCompositionCategories.map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
@@ -449,15 +512,15 @@ export default function ImageSettingsDrawer({
                         fontSize: '10px',
                         borderRadius: '3px',
                         border: '1px solid',
-                        borderColor: activeCategory === cat ? 'var(--accent-color)' : 'var(--border-color)',
-                        background: activeCategory === cat ? 'rgba(168, 85, 247, 0.15)' : 'transparent',
-                        color: activeCategory === cat ? 'var(--accent-color)' : 'var(--text-muted)',
+                        borderColor: activeCompositionCategory === cat ? 'var(--accent-color)' : 'var(--border-color)',
+                        background: activeCompositionCategory === cat ? 'rgba(168, 85, 247, 0.15)' : 'transparent',
+                        color: activeCompositionCategory === cat ? 'var(--accent-color)' : 'var(--text-muted)',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
-                        fontWeight: activeCategory === cat ? 600 : 400,
+                        fontWeight: activeCompositionCategory === cat ? 600 : 400,
                       }}
                     >
-                      {CATEGORY_LABELS[cat] || cat}
+                      {COMPOSITION_CATEGORY_LABELS[cat] || cat}
                     </button>
                   ))}
                 </div>
@@ -470,7 +533,7 @@ export default function ImageSettingsDrawer({
                   maxHeight: '200px',
                   overflowY: 'auto',
                 }}>
-                  {(groupedCompositions.get(activeCategory) || []).map((style) => {
+                  {(groupedCompositions.get(activeCompositionCategory) || []).map((style) => {
                     const isSelected = settings.compositionStyleId === style.id;
                     return (
                       <button
@@ -783,36 +846,55 @@ export function ImageSettingsTrigger({
   styleLibrary: StyleLibrary | null;
   onClick: () => void;
 }) {
+  const resolve = (id: string, list: Array<{ id: string; name: string }> | undefined) => {
+    if (id === RANDOM_ID) return 'Random';
+    if (id === NONE_ID) return '—';
+    return list?.find((s) => s.id === id)?.name || id;
+  };
+
+  const artistic = resolve(settings.artisticStyleId, styleLibrary?.artisticStyles);
+  const palette = resolve(settings.colorPaletteId, styleLibrary?.colorPalettes);
   const currentPalette = styleLibrary?.colorPalettes.find((p) => p.id === settings.colorPaletteId);
   const swatchColors = currentPalette?.swatchColors;
-  const isRandom = settings.colorPaletteId === RANDOM_ID;
 
   return (
     <button
       onClick={onClick}
       style={{
         display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
+        flexDirection: 'column',
+        gap: '4px',
         width: '100%',
-        padding: '8px 12px',
+        padding: '8px 10px',
         background: 'var(--bg-secondary)',
         border: '1px solid var(--border-color)',
         borderRadius: '4px',
         color: 'var(--text-secondary)',
-        fontSize: '12px',
+        fontSize: '11px',
         cursor: 'pointer',
         transition: 'all 0.15s ease',
-        marginBottom: '8px',
+        textAlign: 'left',
       }}
       title="Open image generation settings"
     >
-      {swatchColors && !isRandom ? (
-        <SwatchStrip colors={swatchColors.slice(0, 3)} />
-      ) : (
-        <span style={{ fontSize: '14px' }}>⚄</span>
-      )}
-      <span>Image Settings</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
+        <span style={{ fontSize: '12px', fontWeight: 500 }}>Image Settings</span>
+      </div>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontSize: '10px',
+        color: 'var(--text-muted)',
+        overflow: 'hidden',
+      }}>
+        {swatchColors && settings.colorPaletteId !== RANDOM_ID && settings.colorPaletteId !== NONE_ID ? (
+          <SwatchStrip colors={swatchColors.slice(0, 3)} />
+        ) : null}
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {artistic} · {palette}
+        </span>
+      </div>
     </button>
   );
 }

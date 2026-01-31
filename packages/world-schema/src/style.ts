@@ -14,11 +14,11 @@
 // =============================================================================
 
 // Artistic Styles (image rendering approaches)
-export type { ArtisticStyle } from './artisticStyles.js';
+export type { ArtisticStyle, ArtisticStyleCategory } from './artisticStyles.js';
 export { DEFAULT_ARTISTIC_STYLES } from './artisticStyles.js';
 
 // Composition Styles (framing and visual arrangement)
-export type { CompositionStyle } from './compositionStyles.js';
+export type { CompositionStyle, CompositionCategory } from './compositionStyles.js';
 export { DEFAULT_COMPOSITION_STYLES } from './compositionStyles.js';
 
 // Color Palettes
