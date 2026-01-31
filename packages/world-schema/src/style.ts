@@ -21,6 +21,15 @@ export { DEFAULT_ARTISTIC_STYLES } from './artisticStyles.js';
 export type { CompositionStyle, CompositionCategory } from './compositionStyles.js';
 export { DEFAULT_COMPOSITION_STYLES } from './compositionStyles.js';
 
+// Style Exclusions (random selection filtering)
+export type { RandomExclusionRule } from './styleExclusions.js';
+export {
+  DEFAULT_RANDOM_EXCLUSIONS,
+  isExcludedPair,
+  filterStylesForComposition,
+  filterCompositionsForStyle,
+} from './styleExclusions.js';
+
 // Color Palettes
 export type { ColorPalette } from './colorPalettes.js';
 export { DEFAULT_COLOR_PALETTES } from './colorPalettes.js';

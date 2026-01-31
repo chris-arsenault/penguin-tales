@@ -57,7 +57,9 @@ export type { DomainUIConfig } from './ui.js';
 // Style library types
 export type {
   ArtisticStyle,
+  ArtisticStyleCategory,
   CompositionStyle,
+  CompositionCategory,
   ColorPalette,
   StoryNarrativeStyle,
   DocumentNarrativeStyle,
@@ -67,6 +69,7 @@ export type {
   PacingConfig,
   StyleLibrary,
   StyleSelection,
+  RandomExclusionRule,
 } from './style.js';
 
 
@@ -76,11 +79,15 @@ export {
   DEFAULT_COLOR_PALETTES,
   DEFAULT_NARRATIVE_STYLES,
   DEFAULT_DOCUMENT_STYLES,
+  DEFAULT_RANDOM_EXCLUSIONS,
   createDefaultStyleLibrary,
   findArtisticStyle,
   findCompositionStyle,
   findColorPalette,
   findNarrativeStyle,
+  isExcludedPair,
+  filterStylesForComposition,
+  filterCompositionsForStyle,
 } from './style.js';
 
 // Seed data types

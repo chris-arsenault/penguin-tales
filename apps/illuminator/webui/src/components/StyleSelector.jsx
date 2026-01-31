@@ -12,6 +12,7 @@
  */
 
 import { useMemo } from 'react';
+import { DEFAULT_RANDOM_EXCLUSIONS } from '@canonry/world-schema';
 
 const RANDOM_ID = 'random';
 const NONE_ID = 'none';
@@ -323,7 +324,7 @@ function pickRandom(arr) {
 
 /**
  * Resolve style selection to actual style definitions
- * Handles culture defaults, random selection, and fallbacks
+ * Handles culture defaults, random selection, exclusion filtering, and fallbacks
  */
 export function resolveStyleSelection({
   selection,
@@ -331,6 +332,7 @@ export function resolveStyleSelection({
   entityKind,
   cultures,
   styleLibrary,
+  exclusionRules = DEFAULT_RANDOM_EXCLUSIONS,
 }) {
   const result = {
     artisticStyle: null,
@@ -344,6 +346,7 @@ export function resolveStyleSelection({
   const artisticStyles = styleLibrary.artisticStyles || [];
   const compositionStyles = styleLibrary.compositionStyles || [];
   const colorPalettes = styleLibrary.colorPalettes || [];
+  const rules = exclusionRules || [];
 
   // Filter composition styles by entity kind
   const filteredCompositionStyles = entityKind
@@ -352,31 +355,58 @@ export function resolveStyleSelection({
       )
     : compositionStyles;
 
-  // Resolve artistic style
-  if (selection.artisticStyleId === NONE_ID) {
-    result.artisticStyle = null;
-  } else if (selection.artisticStyleId === RANDOM_ID || !selection.artisticStyleId) {
-    result.artisticStyle = pickRandom(artisticStyles);
-  } else {
-    result.artisticStyle = artisticStyles.find(
-      (s) => s.id === selection.artisticStyleId
-    );
-  }
+  const styleIsRandom = selection.artisticStyleId === RANDOM_ID || !selection.artisticStyleId;
+  const compIsRandom = selection.compositionStyleId === RANDOM_ID || !selection.compositionStyleId;
 
-  // Resolve composition style
-  if (selection.compositionStyleId === NONE_ID) {
-    result.compositionStyle = null;
-  } else if (selection.compositionStyleId === RANDOM_ID || !selection.compositionStyleId) {
+  if (styleIsRandom && compIsRandom && selection.artisticStyleId !== NONE_ID && selection.compositionStyleId !== NONE_ID) {
+    // Both random: pick composition first, then filter styles for that composition
     result.compositionStyle = pickRandom(filteredCompositionStyles);
+    if (result.compositionStyle && rules.length > 0) {
+      const filteredStyles = filterByExclusion(artisticStyles, result.compositionStyle.id, rules, artisticStyles, compositionStyles, 'style');
+      result.artisticStyle = pickRandom(filteredStyles);
+    } else {
+      result.artisticStyle = pickRandom(artisticStyles);
+    }
   } else {
-    result.compositionStyle = compositionStyles.find(
-      (s) => s.id === selection.compositionStyleId
-    );
+    // Resolve artistic style
+    if (selection.artisticStyleId === NONE_ID) {
+      result.artisticStyle = null;
+    } else if (styleIsRandom) {
+      // Style is random, composition is fixed — filter styles for fixed composition
+      const fixedCompId = selection.compositionStyleId;
+      if (fixedCompId && fixedCompId !== NONE_ID && rules.length > 0) {
+        const filteredStyles = filterByExclusion(artisticStyles, fixedCompId, rules, artisticStyles, compositionStyles, 'style');
+        result.artisticStyle = pickRandom(filteredStyles);
+      } else {
+        result.artisticStyle = pickRandom(artisticStyles);
+      }
+    } else {
+      result.artisticStyle = artisticStyles.find(
+        (s) => s.id === selection.artisticStyleId
+      );
+    }
+
+    // Resolve composition style
+    if (selection.compositionStyleId === NONE_ID) {
+      result.compositionStyle = null;
+    } else if (compIsRandom) {
+      // Composition is random, style is fixed — filter compositions for fixed style
+      const fixedStyleId = selection.artisticStyleId;
+      if (fixedStyleId && fixedStyleId !== NONE_ID && rules.length > 0) {
+        const filteredComps = filterByExclusion(filteredCompositionStyles, fixedStyleId, rules, artisticStyles, compositionStyles, 'composition');
+        result.compositionStyle = pickRandom(filteredComps);
+      } else {
+        result.compositionStyle = pickRandom(filteredCompositionStyles);
+      }
+    } else {
+      result.compositionStyle = compositionStyles.find(
+        (s) => s.id === selection.compositionStyleId
+      );
+    }
   }
 
   // Resolve color palette (no culture default for palettes)
   if (selection.colorPaletteId === NONE_ID) {
-    // Explicitly no color palette - leave as null
     result.colorPalette = null;
   } else if (selection.colorPaletteId === RANDOM_ID || !selection.colorPaletteId) {
     result.colorPalette = pickRandom(colorPalettes);
@@ -393,6 +423,53 @@ export function resolveStyleSelection({
   }
 
   return result;
+}
+
+/**
+ * Filter items by exclusion rules.
+ * axis: 'style' means we're filtering styles given a fixed compositionId,
+ *        'composition' means we're filtering compositions given a fixed styleId.
+ */
+function filterByExclusion(items, fixedId, rules, artisticStyles, compositionStyles, axis) {
+  return items.filter((item) => {
+    const styleId = axis === 'style' ? item.id : fixedId;
+    const compId = axis === 'style' ? fixedId : item.id;
+    return !isExcludedPairLocal(styleId, compId, rules, artisticStyles, compositionStyles);
+  });
+}
+
+/**
+ * Local JS implementation of isExcludedPair (avoids importing TS from world-schema at runtime).
+ */
+function isExcludedPairLocal(styleId, compositionId, rules, artisticStyles, compositionStyles) {
+  for (const rule of rules) {
+    const excludedStyles = expandPatterns(rule.styles, artisticStyles, (s) => s.category);
+    const excludedComps = expandPatterns(rule.compositions, compositionStyles, (c) => c.targetCategory);
+    if (excludedStyles.has(styleId) && excludedComps.has(compositionId)) {
+      if (rule.allow?.some(([s, c]) => s === styleId && c === compositionId)) {
+        continue;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+function expandPatterns(patterns, items, getCategoryFn) {
+  const ids = new Set();
+  for (const pattern of patterns) {
+    if (pattern.startsWith('cat:')) {
+      const cat = pattern.slice(4);
+      for (const item of items) {
+        if (getCategoryFn(item) === cat) {
+          ids.add(item.id);
+        }
+      }
+    } else {
+      ids.add(pattern);
+    }
+  }
+  return ids;
 }
 
 export { RANDOM_ID, NONE_ID };

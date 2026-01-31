@@ -9,6 +9,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getSizeOptions, getQualityOptions } from '../lib/imageSettings';
+import { DEFAULT_RANDOM_EXCLUSIONS, filterStylesForComposition, filterCompositionsForStyle } from '@canonry/world-schema';
 import type { ImageGenSettings } from '../hooks/useImageGenSettings';
 
 // ─── Types ───────────────────────────────────────────────────────────────
@@ -87,12 +88,14 @@ const PALETTE_GROUPS: Array<{ label: string; ids: string[] }> = [
 function SpecialToggle({
   value,
   onChange,
+  poolInfo,
 }: {
   value: string;
   onChange: (id: string) => void;
+  poolInfo?: string;
 }) {
   return (
-    <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+    <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', alignItems: 'center' }}>
       {[
         { id: RANDOM_ID, label: '⚄ Random' },
         { id: NONE_ID, label: '— None' },
@@ -115,6 +118,11 @@ function SpecialToggle({
           {opt.label}
         </button>
       ))}
+      {poolInfo && value === RANDOM_ID && (
+        <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: '4px' }}>
+          {poolInfo}
+        </span>
+      )}
     </div>
   );
 }
@@ -312,6 +320,31 @@ export default function ImageSettingsDrawer({
   const isSpecialComposition = settings.compositionStyleId === RANDOM_ID || settings.compositionStyleId === NONE_ID;
   const isSpecialPalette = settings.colorPaletteId === RANDOM_ID || settings.colorPaletteId === NONE_ID;
 
+  // Pool count info for random selection with exclusion filtering
+  const artisticPoolInfo = useMemo(() => {
+    if (!styleLibrary || isSpecialComposition) return undefined;
+    const total = styleLibrary.artisticStyles.length;
+    const filtered = filterStylesForComposition(
+      styleLibrary.artisticStyles as any,
+      settings.compositionStyleId,
+      DEFAULT_RANDOM_EXCLUSIONS,
+      styleLibrary.compositionStyles as any,
+    );
+    return filtered.length < total ? `(${filtered.length}/${total})` : undefined;
+  }, [styleLibrary, settings.compositionStyleId, isSpecialComposition]);
+
+  const compositionPoolInfo = useMemo(() => {
+    if (!styleLibrary || isSpecialArtistic) return undefined;
+    const total = styleLibrary.compositionStyles.length;
+    const filtered = filterCompositionsForStyle(
+      styleLibrary.compositionStyles as any,
+      settings.artisticStyleId,
+      DEFAULT_RANDOM_EXCLUSIONS,
+      styleLibrary.artisticStyles as any,
+    );
+    return filtered.length < total ? `(${filtered.length}/${total})` : undefined;
+  }, [styleLibrary, settings.artisticStyleId, isSpecialArtistic]);
+
   if (!isOpen) return null;
 
   return createPortal(
@@ -395,6 +428,7 @@ export default function ImageSettingsDrawer({
                 <SpecialToggle
                   value={isSpecialArtistic ? settings.artisticStyleId : ''}
                   onChange={(id) => onSettingsChange({ artisticStyleId: id })}
+                  poolInfo={artisticPoolInfo}
                 />
 
                 {/* Artistic category tabs */}
@@ -494,6 +528,7 @@ export default function ImageSettingsDrawer({
                 <SpecialToggle
                   value={isSpecialComposition ? settings.compositionStyleId : ''}
                   onChange={(id) => onSettingsChange({ compositionStyleId: id })}
+                  poolInfo={compositionPoolInfo}
                 />
 
                 {/* Category tabs */}
