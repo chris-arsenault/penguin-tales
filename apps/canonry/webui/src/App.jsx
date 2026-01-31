@@ -246,6 +246,10 @@ function collectReferencedImageIds(worldData, chronicles, staticPages) {
   }
   if (Array.isArray(chronicles)) {
     for (const chronicle of chronicles) {
+      // Cover image
+      const coverImageId = chronicle?.coverImage?.generatedImageId;
+      if (coverImageId) ids.add(coverImageId);
+      // Inline scene images
       const refs = chronicle?.imageRefs?.refs || [];
       for (const ref of refs) {
         const imageId = ref?.generatedImageId;

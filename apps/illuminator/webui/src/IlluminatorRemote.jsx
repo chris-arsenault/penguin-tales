@@ -237,90 +237,6 @@ const DEFAULT_WORLD_CONTEXT = {
 };
 
 // Fields in enrichment.text (summary/description are now on entity directly)
-const TEXT_ENRICHMENT_FIELDS = [
-  'aliases',
-  'visualThesis',
-  'visualTraits',
-  'generatedAt',
-  'model',
-  'estimatedCost',
-  'actualCost',
-  'inputTokens',
-  'outputTokens',
-];
-const IMAGE_FIELDS = [
-  'url',
-  'generatedAt',
-  'model',
-  'revisedPrompt',
-  'estimatedCost',
-  'actualCost',
-];
-const CHRONICLE_FIELDS = [
-  'chronicleId',
-  'generatedAt',
-  'model',
-  'estimatedCost',
-  'actualCost',
-  'inputTokens',
-  'outputTokens',
-];
-
-const isSectionEqual = (left, right, fields) => {
-  if (left === right) return true;
-  if (!left || !right) return false;
-  for (const field of fields) {
-    const leftValue = left[field];
-    const rightValue = right[field];
-    if (Array.isArray(leftValue) || Array.isArray(rightValue)) {
-      if (!Array.isArray(leftValue) || !Array.isArray(rightValue)) return false;
-      if (leftValue.length !== rightValue.length) return false;
-      for (let i = 0; i < leftValue.length; i += 1) {
-        if (leftValue[i] !== rightValue[i]) return false;
-      }
-      continue;
-    }
-    if (leftValue !== rightValue) return false;
-  }
-  return true;
-};
-
-const isChroniclesEqual = (left, right) => {
-  if (left === right) return true;
-  if (!left && !right) return true;
-  if (!Array.isArray(left) || !Array.isArray(right)) return false;
-  if (left.length !== right.length) return false;
-
-  const normalize = (chronicles) => chronicles
-    .map((entry) => ({
-      chronicleId: entry.chronicleId,
-      title: entry.title,
-      format: entry.format,
-      content: entry.content,
-      summary: entry.summary,
-      imageRefs: entry.imageRefs,
-      entrypointId: entry.entrypointId,
-      acceptedAt: entry.acceptedAt,
-      generatedAt: entry.generatedAt,
-      model: entry.model,
-      entityIds: Array.isArray(entry.entityIds) ? [...entry.entityIds].sort() : [],
-    }))
-    .sort((a, b) => (a.chronicleId || '').localeCompare(b.chronicleId || ''));
-
-  return JSON.stringify(normalize(left)) === JSON.stringify(normalize(right));
-};
-
-const isEnrichmentEqual = (left, right) => {
-  if (left === right) return true;
-  if (!left || !right) return false;
-  return (
-    isSectionEqual(left.text, right.text, TEXT_ENRICHMENT_FIELDS) &&
-    isSectionEqual(left.image, right.image, IMAGE_FIELDS) &&
-    isSectionEqual(left.entityChronicle, right.entityChronicle, CHRONICLE_FIELDS) &&
-    isChroniclesEqual(left.chronicles, right.chronicles)
-  );
-};
-
 export default function IlluminatorRemote({
   projectId,
   schema,
@@ -545,8 +461,6 @@ export default function IlluminatorRemote({
   const cultureIdentities = localCultureIdentities;
   const pendingEntityGuidanceRef = useRef(localEntityGuidance);
   const pendingCultureIdentitiesRef = useRef(localCultureIdentities);
-  const lastWorldDataRef = useRef(null);
-
   // Sync entity guidance from external prop
   useEffect(() => {
     if (externalEntityGuidance === undefined) return;
@@ -566,55 +480,28 @@ export default function IlluminatorRemote({
   // Entities with enrichment state
   const [entities, setEntities] = useState([]);
   const persistedEnrichmentRef = useRef({ projectId: null, simulationRunId: null });
-  const lastSimulationRunIdRef = useRef(null);
+  // Track which simulation run we've initialized — after init, local state is authoritative
+  const initializedRunIdRef = useRef(null);
 
-  // Initialize entities from worldData
-  // NOTE: Enrichment is persisted in worldData itself (via onEnrichmentComplete callback).
-  // If entities have same IDs but come from different simulation runs, they should
-  // NOT share enrichment - the enrichment belongs to the specific simulation.
-  // However, when worldData reference changes during the same session, we preserve
-  // local enrichment state (summary, description, enrichment) to avoid flash.
+  // Initialize entities from worldData (one-shot per simulation run).
+  // After initialization, local setEntities calls are authoritative. The persistence
+  // hook handles syncing local → worldData. We never overwrite local state from worldData.
   useEffect(() => {
     if (!worldData?.hardState) {
       setEntities([]);
-      lastSimulationRunIdRef.current = null;
+      initializedRunIdRef.current = null;
       return;
     }
 
-    const nextRunId = worldData?.metadata?.simulationRunId || null;
-    const shouldPreserve = nextRunId && lastSimulationRunIdRef.current === nextRunId;
-    lastSimulationRunIdRef.current = nextRunId;
+    const runId = worldData.metadata?.simulationRunId || null;
 
-    setEntities((prev) => {
-      // If no previous state, use worldData directly
-      if (!prev.length || !shouldPreserve) {
-        return worldData.hardState;
-      }
+    // Already initialized for this run — skip (local state is authoritative)
+    if (runId && initializedRunIdRef.current === runId) return;
 
-      // Build map of previous entities with their enrichment
-      const prevById = new Map(prev.map((e) => [e.id, e]));
+    initializedRunIdRef.current = runId;
 
-      // Merge worldData with preserved enrichment from previous state
-      return worldData.hardState.map((entity) => {
-        const prevEntity = prevById.get(entity.id);
-        if (!prevEntity) return entity;
-
-        // Preserve local enrichment state if it's newer or missing in worldData
-        const hasLocalEnrichment = prevEntity.enrichment?.text?.generatedAt;
-        const hasWorldEnrichment = entity.enrichment?.text?.generatedAt;
-
-        if (hasLocalEnrichment && (!hasWorldEnrichment || prevEntity.enrichment.text.generatedAt > entity.enrichment.text.generatedAt)) {
-          return {
-            ...entity,
-            enrichment: prevEntity.enrichment,
-            summary: prevEntity.summary,
-            description: prevEntity.description,
-          };
-        }
-
-        return entity;
-      });
-    });
+    // Fresh initialization from worldData (includes persisted enrichment from last session)
+    setEntities(worldData.hardState);
   }, [worldData]);
 
   const entityById = useMemo(() => buildEntityIndex(entities), [entities]);
@@ -867,26 +754,29 @@ export default function IlluminatorRemote({
     }
   }, [anthropicApiKey, openaiApiKey, config, initializeWorker]);
 
-  // Save enriched entities to IndexedDB when they change
+  // Persist local entity changes back to worldData via onEnrichmentComplete.
+  // Uses reference equality — any setEntities call creates new objects,
+  // so !== catches all changes without field-by-field comparison.
   useEffect(() => {
     if (!worldData?.hardState?.length || !onEnrichmentComplete) return;
-    if (worldData !== lastWorldDataRef.current) {
-      lastWorldDataRef.current = worldData;
-      return;
-    }
+    // Don't persist before initialization
+    if (!initializedRunIdRef.current) return;
 
     let didChange = false;
-    const enrichedHardState = worldData.hardState.map((entity) => {
-      const local = entityById.get(entity.id);
-      if (!local) return entity;
-      // Check for changes in enrichment, summary, or description
-      const enrichmentChanged = local.enrichment && !isEnrichmentEqual(local.enrichment, entity.enrichment);
-      const summaryChanged = local.summary !== entity.summary;
-      const descriptionChanged = local.description !== entity.description;
-      if (!enrichmentChanged && !summaryChanged && !descriptionChanged) return entity;
+    const enrichedHardState = worldData.hardState.map((worldEntity) => {
+      const local = entityById.get(worldEntity.id);
+      if (!local) return worldEntity;
+
+      // Compare by reference — any setEntities call creates new objects
+      if (local.enrichment === worldEntity.enrichment &&
+          local.summary === worldEntity.summary &&
+          local.description === worldEntity.description) {
+        return worldEntity;
+      }
+
       didChange = true;
       return {
-        ...entity,
+        ...worldEntity,
         enrichment: local.enrichment,
         summary: local.summary,
         description: local.description,
@@ -895,7 +785,7 @@ export default function IlluminatorRemote({
 
     if (!didChange) return;
 
-    const enrichedWorld = {
+    onEnrichmentComplete({
       ...worldData,
       hardState: enrichedHardState,
       metadata: {
@@ -903,8 +793,7 @@ export default function IlluminatorRemote({
         enriched: true,
         enrichedAt: Date.now(),
       },
-    };
-    onEnrichmentComplete(enrichedWorld);
+    });
   }, [entityById, worldData, onEnrichmentComplete]);
 
   // Build world schema from props
@@ -1468,16 +1357,25 @@ export default function IlluminatorRemote({
             });
           }
 
-          // Add new backref for this chronicle's patch
+          // Upsert backref for this chronicle (one per chronicle per entity)
           if (patch.anchorPhrase) {
             const resolved = resolveAnchorPhrase(patch.anchorPhrase, desc);
             if (resolved) {
-              backrefs.push({
-                entityId: entity.id,
-                chronicleId: cId,
-                anchorPhrase: resolved.phrase,
-                createdAt: now,
-              });
+              const existingIdx = backrefs.findIndex((br) => br.chronicleId === cId);
+              if (existingIdx >= 0) {
+                // Update existing backref's anchor, preserve image config
+                backrefs[existingIdx] = {
+                  ...backrefs[existingIdx],
+                  anchorPhrase: resolved.phrase,
+                };
+              } else {
+                backrefs.push({
+                  entityId: entity.id,
+                  chronicleId: cId,
+                  anchorPhrase: resolved.phrase,
+                  createdAt: now,
+                });
+              }
             }
           }
 
@@ -1835,6 +1733,8 @@ export default function IlluminatorRemote({
               cultureIdentities={cultureIdentities}
               onBackportLore={handleBackportLore}
               refreshTrigger={chronicleRefreshTrigger}
+              defaultImageQuality={config.imageQuality}
+              imageModel={config.imageModel}
             />
           </div>
         )}

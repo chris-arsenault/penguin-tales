@@ -520,7 +520,9 @@ export function buildImagePromptFromGuidance(
     : '';
 
   const colorPaletteSection = styleInfo?.colorPalettePromptFragment
-    ? `COLOR PALETTE: ${styleInfo.colorPalettePromptFragment}`
+    ? (styleInfo.colorPalettePromptFragment.startsWith('COLOR PALETTE')
+        ? styleInfo.colorPalettePromptFragment
+        : `COLOR PALETTE: ${styleInfo.colorPalettePromptFragment}`)
     : '';
 
   const compositionSection = styleInfo?.compositionPromptFragment
@@ -718,7 +720,9 @@ export function buildChronicleImagePrompt(
 
   // Build color palette section
   const colorPaletteSection = styleInfo?.colorPalettePromptFragment
-    ? `COLOR PALETTE: ${styleInfo.colorPalettePromptFragment}`
+    ? (styleInfo.colorPalettePromptFragment.startsWith('COLOR PALETTE')
+        ? styleInfo.colorPalettePromptFragment
+        : `COLOR PALETTE: ${styleInfo.colorPalettePromptFragment}`)
     : '';
 
   // Build composition section - prefer explicit style, fall back to size-based hint

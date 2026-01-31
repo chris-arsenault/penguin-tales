@@ -11,6 +11,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { LocalTextArea } from '@penguin-tales/shared-components';
+import { SCENE_PROMPT_TEMPLATES, getCoverImageConfig } from '../lib/coverImageStyles';
 
 /**
  * Generate a unique ID for a new style
@@ -191,7 +192,7 @@ function StyleEditModal({ style, type, onSave, onCancel }) {
 /**
  * Narrative style card component
  */
-function NarrativeStyleCard({ style, onEdit, onDelete }) {
+function NarrativeStyleCard({ style, compositionStyles, onEdit, onDelete }) {
   const isDocument = style.format === 'document';
 
   // Extract a short preview of instructions for display
@@ -206,6 +207,11 @@ function NarrativeStyleCard({ style, onEdit, onDelete }) {
   const wordCountMax = isDocument
     ? (style.pacing?.wordCount?.max || 800)
     : (style.pacing?.totalWordCount?.max || 2000);
+
+  // Cover image config
+  const coverConfig = getCoverImageConfig(style.id);
+  const sceneTemplate = SCENE_PROMPT_TEMPLATES.find((t) => t.id === coverConfig.scenePromptId);
+  const coverComposition = compositionStyles?.find((c) => c.id === coverConfig.compositionStyleId);
 
   return (
     <div className="illuminator-style-card">
@@ -281,6 +287,20 @@ function NarrativeStyleCard({ style, onEdit, onDelete }) {
             {style.roles.length} roles
           </span>
         )}
+        {/* Cover image scene prompt badge */}
+        {sceneTemplate && (
+          <span
+            style={{
+              fontSize: '10px',
+              padding: '2px 6px',
+              background: 'var(--bg-tertiary)',
+              borderRadius: '4px',
+            }}
+            title={`Cover scene: ${sceneTemplate.name}`}
+          >
+            cover: {sceneTemplate.name}
+          </span>
+        )}
       </div>
       {/* Instructions preview */}
       {instructionsPreview && (
@@ -300,9 +320,48 @@ function NarrativeStyleCard({ style, onEdit, onDelete }) {
 }
 
 /**
+ * Shared read-only section showing cover image config for a narrative style
+ */
+function CoverImageConfigSection({ styleId, compositionStyles }) {
+  const coverConfig = getCoverImageConfig(styleId);
+  const sceneTemplate = SCENE_PROMPT_TEMPLATES.find((t) => t.id === coverConfig.scenePromptId);
+  const coverComposition = compositionStyles?.find((c) => c.id === coverConfig.compositionStyleId);
+
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Cover Image</div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '8px',
+      }}>
+        <div style={{
+          padding: '10px',
+          background: 'var(--bg-tertiary)',
+          borderRadius: '6px',
+          border: '1px solid var(--border-color)',
+        }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Scene Prompt</div>
+          <div style={{ fontSize: '13px', fontWeight: 500 }}>{sceneTemplate?.name || coverConfig.scenePromptId}</div>
+        </div>
+        <div style={{
+          padding: '10px',
+          background: 'var(--bg-tertiary)',
+          borderRadius: '6px',
+          border: '1px solid var(--border-color)',
+        }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Composition</div>
+          <div style={{ fontSize: '13px', fontWeight: 500 }}>{coverComposition?.name || coverConfig.compositionStyleId}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Modal for viewing/editing a document-format narrative style (read-only for now)
  */
-function DocumentStyleViewModal({ style, onCancel }) {
+function DocumentStyleViewModal({ style, compositionStyles, onCancel }) {
   const mouseDownOnOverlay = useRef(false);
 
   const handleOverlayMouseDown = (e) => {
@@ -391,6 +450,9 @@ function DocumentStyleViewModal({ style, onCancel }) {
             </div>
           )}
 
+          {/* Cover Image Config */}
+          <CoverImageConfigSection styleId={style.id} compositionStyles={compositionStyles} />
+
           {/* Tags */}
           {style.tags?.length > 0 && (
             <div>
@@ -438,7 +500,7 @@ function DocumentStyleViewModal({ style, onCancel }) {
  * - roles: Cast positions with counts
  * - pacing: Word/scene counts
  */
-function NarrativeStyleEditModal({ style, onSave, onCancel }) {
+function NarrativeStyleEditModal({ style, compositionStyles, onSave, onCancel }) {
   const isNew = !style?.id;
   const mouseDownOnOverlay = useRef(false);
 
@@ -454,7 +516,7 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
 
   // If this is a document format, show view-only modal
   if (style?.format === 'document') {
-    return <DocumentStyleViewModal style={style} onCancel={onCancel} />;
+    return <DocumentStyleViewModal style={style} compositionStyles={compositionStyles} onCancel={onCancel} />;
   }
 
   // Default roles for new styles
@@ -682,6 +744,10 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
                     </div>
                   </div>
                 </div>
+                {/* Cover image config (read-only, derived from style ID) */}
+                {!isNew && (
+                  <CoverImageConfigSection styleId={formData.id} compositionStyles={compositionStyles} />
+                )}
               </>
             )}
 
@@ -1107,6 +1173,7 @@ export default function StyleLibraryEditor({
             <NarrativeStyleCard
               key={style.id}
               style={style}
+              compositionStyles={styleLibrary.compositionStyles}
               onEdit={handleEditNarrative}
               onDelete={handleDeleteNarrative}
             />
@@ -1118,6 +1185,37 @@ export default function StyleLibraryEditor({
             No narrative styles defined. Add one to get started.
           </p>
         )}
+      </div>
+
+      {/* Scene Prompt Templates */}
+      <div className="illuminator-card">
+        <div className="illuminator-card-header">
+          <h2 className="illuminator-card-title">
+            Cover Image Scene Prompts
+            <span style={{ fontWeight: 400, fontSize: '14px', color: 'var(--text-muted)', marginLeft: '8px' }}>
+              ({SCENE_PROMPT_TEMPLATES.length})
+            </span>
+          </h2>
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          Scene prompt templates direct the LLM on what kind of cover image scene to describe. Each narrative style maps to one of these templates.
+        </p>
+
+        <div className="illuminator-style-grid">
+          {SCENE_PROMPT_TEMPLATES.map((template) => (
+            <div key={template.id} className="illuminator-style-card">
+              <div className="illuminator-style-card-header">
+                <div className="illuminator-style-card-title">{template.name}</div>
+              </div>
+              <div className="illuminator-style-card-prompt">
+                <strong>Framing:</strong> {template.framing}
+              </div>
+              <div className="illuminator-style-card-prompt" style={{ marginTop: '8px' }}>
+                <strong>Instructions:</strong> {template.instructions}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Edit Modal for Artistic/Composition */}
@@ -1134,6 +1232,7 @@ export default function StyleLibraryEditor({
       {editingStyle && editingType === 'narrative' && (
         <NarrativeStyleEditModal
           style={editingStyle}
+          compositionStyles={styleLibrary.compositionStyles}
           onSave={handleSaveStyle}
           onCancel={handleCloseModal}
         />

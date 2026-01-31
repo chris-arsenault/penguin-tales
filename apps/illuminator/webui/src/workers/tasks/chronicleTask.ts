@@ -16,6 +16,7 @@ import {
 } from '../../lib/perspectiveSynthesizer';
 import type { PerspectiveSynthesisRecord } from '../../lib/chronicleTypes';
 import type { ChronicleCoverImage } from '../../lib/chronicleTypes';
+import { getCoverImageConfig, getScenePromptTemplate } from '../../lib/coverImageStyles';
 import {
   createChronicle,
   type ChronicleRecord,
@@ -1288,15 +1289,21 @@ async function executeImageRefsStep(
 }
 
 // ============================================================================
-// Cover Image Scene Step (LLM generates scene description for montage cover)
+// Cover Image Scene Step (LLM generates scene description for cover image)
 // ============================================================================
 
-function buildCoverImageScenePrompt(content: string, title: string, roleAssignments: Array<{ entityName: string; entityKind: string; role: string; isPrimary: boolean }>): string {
+function buildCoverImageScenePrompt(
+  content: string,
+  title: string,
+  roleAssignments: Array<{ entityName: string; entityKind: string; role: string; isPrimary: boolean }>,
+  sceneFraming: string,
+  sceneInstructions: string
+): string {
   const castList = roleAssignments
     .map((r) => `- ${r.entityName} (${r.entityKind}, ${r.role}${r.isPrimary ? ', primary' : ''})`)
     .join('\n');
 
-  return `Generate a visual scene description for a cinematic montage-style cover image for this chronicle. The cover image should work like a movie poster (but with NO TEXT): overlapping visual elements showing key figures and settings from the chronicle, with dramatic layering and depth.
+  return `${sceneFraming}
 
 ## Chronicle Title
 ${title}
@@ -1308,13 +1315,11 @@ ${castList}
 ${content}
 
 ## Instructions
-Write a vivid visual description of a montage composition that captures the essence of this chronicle. Describe:
-- Which key figures should be prominent and at what scale (foreground, midground, background)
-- What settings, objects, or atmospheric elements should appear
-- The overall mood and lighting
-- How elements overlap and layer (movie-poster style, NOT a single coherent scene)
+${sceneInstructions}
 
 Reference entities by name so their visual identity can be composited into the image.
+
+IMPORTANT: Keep the scene description to 100-150 words. Be vivid but concise — every word should carry visual weight. This description will be combined with style, composition, and color directives, so focus on WHAT TO SHOW, not how to render it.
 
 Return ONLY valid JSON:
 {"coverImageScene": "...", "involvedEntityNames": ["name1", "name2"]}`;
@@ -1335,17 +1340,23 @@ async function executeCoverImageSceneStep(
   const callConfig = getCallConfig(config, 'chronicle.coverImageScene');
   const chronicleId = chronicleRecord.chronicleId;
 
+  const narrativeStyleId = task.chronicleContext?.narrativeStyle?.id || 'epic-drama';
+  const coverConfig = getCoverImageConfig(narrativeStyleId);
+  const sceneTemplate = getScenePromptTemplate(coverConfig.scenePromptId);
+
   const scenePrompt = buildCoverImageScenePrompt(
     content,
     chronicleRecord.title,
-    chronicleRecord.roleAssignments
+    chronicleRecord.roleAssignments,
+    sceneTemplate.framing,
+    sceneTemplate.instructions
   );
 
   const sceneCall = await runTextCall({
     llmClient,
     callType: 'chronicle.coverImageScene',
     callConfig,
-    systemPrompt: 'You are a visual art director creating montage compositions. Always respond with valid JSON.',
+    systemPrompt: 'You are a visual art director creating cover image compositions. Always respond with valid JSON.',
     prompt: scenePrompt,
     temperature: 0.5,
   });

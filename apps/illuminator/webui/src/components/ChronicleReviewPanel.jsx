@@ -53,6 +53,104 @@ function CoverImagePreview({ imageId }) {
 }
 
 // ============================================================================
+// Cover Image Controls (shared between refinement and published views)
+// ============================================================================
+
+function CoverImageControls({
+  item,
+  onGenerateCoverImageScene,
+  onGenerateCoverImage,
+  isGenerating,
+  labelWeight = 500,
+}) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: '13px', fontWeight: labelWeight }}>Cover Image</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+          Generate a montage-style cover image for this chronicle.
+        </div>
+        {!item.coverImage && (
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Not run yet
+          </div>
+        )}
+        {item.coverImage && item.coverImage.status === 'pending' && (
+          <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px' }}>
+            Scene ready - click Generate Image to create
+          </div>
+        )}
+        {item.coverImage && item.coverImage.status === 'generating' && (
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Generating image...
+          </div>
+        )}
+        {item.coverImage && item.coverImage.status === 'complete' && (
+          <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
+            Complete
+          </div>
+        )}
+        {item.coverImage && item.coverImage.status === 'failed' && (
+          <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>
+            Failed{item.coverImage.error ? `: ${item.coverImage.error}` : ''}
+          </div>
+        )}
+        {item.coverImage?.sceneDescription && (
+          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px', fontStyle: 'italic', lineHeight: 1.4, maxWidth: '500px' }}>
+            {item.coverImage.sceneDescription}
+          </div>
+        )}
+        <CoverImagePreview imageId={item.coverImage?.generatedImageId} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignSelf: 'flex-start' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {onGenerateCoverImageScene && (
+            <button
+              onClick={onGenerateCoverImageScene}
+              disabled={isGenerating}
+              style={{
+                padding: '8px 14px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                cursor: isGenerating ? 'not-allowed' : 'pointer',
+                opacity: isGenerating ? 0.6 : 1,
+                fontSize: '12px',
+                height: '32px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {item.coverImage ? 'Regen Scene' : 'Gen Scene'}
+            </button>
+          )}
+          {onGenerateCoverImage && item.coverImage && (item.coverImage.status === 'pending' || item.coverImage.status === 'complete' || item.coverImage.status === 'failed') && (
+            <button
+              onClick={onGenerateCoverImage}
+              disabled={isGenerating}
+              style={{
+                padding: '8px 14px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                cursor: isGenerating ? 'not-allowed' : 'pointer',
+                opacity: isGenerating ? 0.6 : 1,
+                fontSize: '12px',
+                height: '32px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {item.coverImage.status === 'complete' ? 'Regen Image' : 'Gen Image'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // Perspective Synthesis Viewer
 // ============================================================================
 
@@ -556,6 +654,11 @@ function RefinementOptionsPanel({
   onGenerateImageRefs,
   onGenerateCoverImageScene,
   onGenerateCoverImage,
+  imageSize,
+  onImageSizeChange,
+  imageQuality,
+  onImageQualityChange,
+  imageModel,
   onGenerateChronicleImage,
   onResetChronicleImage,
   onUpdateChronicleAnchorText,
@@ -642,87 +745,12 @@ function RefinementOptionsPanel({
         </div>
 
         {/* Cover Image */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '13px', fontWeight: 500 }}>Cover Image</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Generate a montage-style cover image for this chronicle.
-            </div>
-            {!item.coverImage && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Not run yet
-              </div>
-            )}
-            {item.coverImage && item.coverImage.status === 'pending' && (
-              <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px' }}>
-                Scene ready - click Generate Image to create
-              </div>
-            )}
-            {item.coverImage && item.coverImage.status === 'generating' && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Generating image...
-              </div>
-            )}
-            {item.coverImage && item.coverImage.status === 'complete' && (
-              <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
-                Complete
-              </div>
-            )}
-            {item.coverImage && item.coverImage.status === 'failed' && (
-              <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>
-                Failed{item.coverImage.error ? `: ${item.coverImage.error}` : ''}
-              </div>
-            )}
-            {item.coverImage?.sceneDescription && (
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px', fontStyle: 'italic', lineHeight: 1.4, maxWidth: '500px' }}>
-                {item.coverImage.sceneDescription}
-              </div>
-            )}
-            <CoverImagePreview imageId={item.coverImage?.generatedImageId} />
-          </div>
-          <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-start' }}>
-            {onGenerateCoverImageScene && (
-              <button
-                onClick={onGenerateCoverImageScene}
-                disabled={isGenerating}
-                style={{
-                  padding: '8px 14px',
-                  background: 'var(--bg-tertiary)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  color: 'var(--text-secondary)',
-                  cursor: isGenerating ? 'not-allowed' : 'pointer',
-                  opacity: isGenerating ? 0.6 : 1,
-                  fontSize: '12px',
-                  height: '32px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {item.coverImage ? 'Regen Scene' : 'Gen Scene'}
-              </button>
-            )}
-            {onGenerateCoverImage && item.coverImage && (item.coverImage.status === 'pending' || item.coverImage.status === 'complete' || item.coverImage.status === 'failed') && (
-              <button
-                onClick={onGenerateCoverImage}
-                disabled={isGenerating}
-                style={{
-                  padding: '8px 14px',
-                  background: 'var(--bg-tertiary)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  color: 'var(--text-secondary)',
-                  cursor: isGenerating ? 'not-allowed' : 'pointer',
-                  opacity: isGenerating ? 0.6 : 1,
-                  fontSize: '12px',
-                  height: '32px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {item.coverImage.status === 'complete' ? 'Regen Image' : 'Gen Image'}
-              </button>
-            )}
-          </div>
-        </div>
+        <CoverImageControls
+          item={item}
+          onGenerateCoverImageScene={onGenerateCoverImageScene}
+          onGenerateCoverImage={onGenerateCoverImage}
+          isGenerating={isGenerating}
+        />
 
         {/* Image Refs */}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
@@ -789,10 +817,17 @@ function RefinementOptionsPanel({
               chronicleText={imageRefsTargetContent || item.assembledContent}
               isGenerating={isGenerating}
               styleLibrary={styleLibrary}
+              styleSelection={styleSelection}
+              onStyleSelectionChange={onStyleSelectionChange}
               cultures={cultures}
               cultureIdentities={cultureIdentities}
               worldContext={worldContext}
               chronicleTitle={item.name}
+              imageSize={imageSize}
+              onImageSizeChange={onImageSizeChange}
+              imageQuality={imageQuality}
+              onImageQualityChange={onImageQualityChange}
+              imageModel={imageModel}
             />
           </div>
         )}
@@ -1146,6 +1181,13 @@ export default function ChronicleReviewPanel({
   // Cover image
   onGenerateCoverImageScene,
   onGenerateCoverImage,
+  styleSelection,
+  onStyleSelectionChange,
+  imageSize,
+  onImageSizeChange,
+  imageQuality,
+  onImageQualityChange,
+  imageModel,
 
   // Image layout edits
   onUpdateChronicleImageSize,
@@ -1537,6 +1579,11 @@ export default function ChronicleReviewPanel({
           onGenerateImageRefs={onGenerateImageRefs}
           onGenerateCoverImageScene={onGenerateCoverImageScene}
           onGenerateCoverImage={onGenerateCoverImage}
+          imageSize={imageSize}
+          onImageSizeChange={onImageSizeChange}
+          imageQuality={imageQuality}
+          onImageQualityChange={onImageQualityChange}
+          imageModel={imageModel}
           onGenerateChronicleImage={onGenerateChronicleImage}
           onResetChronicleImage={onResetChronicleImage}
           onUpdateChronicleAnchorText={onUpdateChronicleAnchorText}
@@ -1744,87 +1791,13 @@ export default function ChronicleReviewPanel({
         {/* Cover Image */}
         {(onGenerateCoverImageScene || onGenerateCoverImage) && (
           <div style={{ marginTop: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '13px', fontWeight: 600 }}>Cover Image</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  Generate a montage-style cover image for this chronicle.
-                </div>
-                {!item.coverImage && (
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Not run yet
-                  </div>
-                )}
-                {item.coverImage && item.coverImage.status === 'pending' && (
-                  <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px' }}>
-                    Scene ready - click Generate Image to create
-                  </div>
-                )}
-                {item.coverImage && item.coverImage.status === 'generating' && (
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Generating image...
-                  </div>
-                )}
-                {item.coverImage && item.coverImage.status === 'complete' && (
-                  <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
-                    Complete
-                  </div>
-                )}
-                {item.coverImage && item.coverImage.status === 'failed' && (
-                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>
-                    Failed{item.coverImage.error ? `: ${item.coverImage.error}` : ''}
-                  </div>
-                )}
-                {item.coverImage?.sceneDescription && (
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px', fontStyle: 'italic', lineHeight: 1.4, maxWidth: '500px' }}>
-                    {item.coverImage.sceneDescription}
-                  </div>
-                )}
-                <CoverImagePreview imageId={item.coverImage?.generatedImageId} />
-              </div>
-              <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-start' }}>
-                {onGenerateCoverImageScene && (
-                  <button
-                    onClick={onGenerateCoverImageScene}
-                    disabled={isGenerating}
-                    style={{
-                      padding: '8px 14px',
-                      background: 'var(--bg-tertiary)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '6px',
-                      color: 'var(--text-secondary)',
-                      cursor: isGenerating ? 'not-allowed' : 'pointer',
-                      opacity: isGenerating ? 0.6 : 1,
-                      fontSize: '12px',
-                      height: '32px',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {item.coverImage ? 'Regen Scene' : 'Gen Scene'}
-                  </button>
-                )}
-                {onGenerateCoverImage && item.coverImage && (item.coverImage.status === 'pending' || item.coverImage.status === 'complete' || item.coverImage.status === 'failed') && (
-                  <button
-                    onClick={onGenerateCoverImage}
-                    disabled={isGenerating}
-                    style={{
-                      padding: '8px 14px',
-                      background: 'var(--bg-tertiary)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '6px',
-                      color: 'var(--text-secondary)',
-                      cursor: isGenerating ? 'not-allowed' : 'pointer',
-                      opacity: isGenerating ? 0.6 : 1,
-                      fontSize: '12px',
-                      height: '32px',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {item.coverImage.status === 'complete' ? 'Regen Image' : 'Gen Image'}
-                  </button>
-                )}
-              </div>
-            </div>
+            <CoverImageControls
+              item={item}
+              onGenerateCoverImageScene={onGenerateCoverImageScene}
+              onGenerateCoverImage={onGenerateCoverImage}
+              isGenerating={isGenerating}
+              labelWeight={600}
+            />
           </div>
         )}
 
@@ -1844,10 +1817,17 @@ export default function ChronicleReviewPanel({
               onUpdateJustification={onUpdateChronicleImageJustification}
               isGenerating={isGenerating}
               styleLibrary={styleLibrary}
+              styleSelection={styleSelection}
+              onStyleSelectionChange={onStyleSelectionChange}
               cultures={cultures}
               cultureIdentities={cultureIdentities}
               worldContext={worldContext}
               chronicleTitle={item.name}
+              imageSize={imageSize}
+              onImageSizeChange={onImageSizeChange}
+              imageQuality={imageQuality}
+              onImageQualityChange={onImageQualityChange}
+              imageModel={imageModel}
             />
           </div>
         )}

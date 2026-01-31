@@ -8,12 +8,11 @@
  *
  * Supports:
  * - "Random" option (default) - picks a random style at generation time
- * - "Culture Default" - uses the entity's culture default at generation time
+ * - "None" - no style/composition constraint, let the prompt decide
  */
 
 import { useMemo } from 'react';
 
-const CULTURE_DEFAULT_ID = 'culture-default';
 const RANDOM_ID = 'random';
 const NONE_ID = 'none';
 
@@ -134,7 +133,7 @@ export default function StyleSelector({
           title={selectedArtistic?.description || 'Select artistic style'}
         >
           <option value={RANDOM_ID}>Random</option>
-          <option value={CULTURE_DEFAULT_ID}>Culture Default</option>
+          <option value={NONE_ID}>None</option>
           {artisticStyles.map((style) => (
             <option key={style.id} value={style.id}>
               {style.name}
@@ -150,7 +149,7 @@ export default function StyleSelector({
           title={selectedComposition?.description || 'Select composition style'}
         >
           <option value={RANDOM_ID}>Random</option>
-          <option value={CULTURE_DEFAULT_ID}>Culture Default</option>
+          <option value={NONE_ID}>None</option>
           {groupedCompositions.map((group) => (
             <optgroup key={group.category} label={group.label}>
               {group.styles.map((style) => (
@@ -207,7 +206,7 @@ export default function StyleSelector({
           className="illuminator-select"
         >
           <option value={RANDOM_ID}>Random</option>
-          <option value={CULTURE_DEFAULT_ID}>Culture Default</option>
+          <option value={NONE_ID}>None</option>
           {artisticStyles.map((style) => (
             <option key={style.id} value={style.id}>
               {style.name}
@@ -245,7 +244,7 @@ export default function StyleSelector({
           className="illuminator-select"
         >
           <option value={RANDOM_ID}>Random</option>
-          <option value={CULTURE_DEFAULT_ID}>Culture Default</option>
+          <option value={NONE_ID}>None</option>
           {groupedCompositions.map((group) => (
             <optgroup key={group.category} label={group.label}>
               {group.styles.map((style) => (
@@ -354,20 +353,10 @@ export function resolveStyleSelection({
     : compositionStyles;
 
   // Resolve artistic style
-  if (selection.artisticStyleId === RANDOM_ID || !selection.artisticStyleId) {
+  if (selection.artisticStyleId === NONE_ID) {
+    result.artisticStyle = null;
+  } else if (selection.artisticStyleId === RANDOM_ID || !selection.artisticStyleId) {
     result.artisticStyle = pickRandom(artisticStyles);
-  } else if (selection.artisticStyleId === CULTURE_DEFAULT_ID) {
-    // Look up culture default
-    const culture = cultures?.find((c) => c.id === entityCultureId);
-    if (culture?.defaultArtisticStyleId) {
-      result.artisticStyle = artisticStyles.find(
-        (s) => s.id === culture.defaultArtisticStyleId
-      );
-    }
-    // Fallback to random if culture default not found
-    if (!result.artisticStyle) {
-      result.artisticStyle = pickRandom(artisticStyles);
-    }
   } else {
     result.artisticStyle = artisticStyles.find(
       (s) => s.id === selection.artisticStyleId
@@ -375,21 +364,10 @@ export function resolveStyleSelection({
   }
 
   // Resolve composition style
-  if (selection.compositionStyleId === RANDOM_ID || !selection.compositionStyleId) {
+  if (selection.compositionStyleId === NONE_ID) {
+    result.compositionStyle = null;
+  } else if (selection.compositionStyleId === RANDOM_ID || !selection.compositionStyleId) {
     result.compositionStyle = pickRandom(filteredCompositionStyles);
-  } else if (selection.compositionStyleId === CULTURE_DEFAULT_ID) {
-    // Look up culture default for this entity kind
-    const culture = cultures?.find((c) => c.id === entityCultureId);
-    const defaultStyleId = culture?.defaultCompositionStyles?.[entityKind];
-    if (defaultStyleId) {
-      result.compositionStyle = compositionStyles.find(
-        (s) => s.id === defaultStyleId
-      );
-    }
-    // Fallback to random if culture default not found
-    if (!result.compositionStyle) {
-      result.compositionStyle = pickRandom(filteredCompositionStyles);
-    }
   } else {
     result.compositionStyle = compositionStyles.find(
       (s) => s.id === selection.compositionStyleId
@@ -417,4 +395,4 @@ export function resolveStyleSelection({
   return result;
 }
 
-export { CULTURE_DEFAULT_ID, RANDOM_ID, NONE_ID };
+export { RANDOM_ID, NONE_ID };

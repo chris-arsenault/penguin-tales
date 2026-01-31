@@ -14,8 +14,9 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { resolveAnchorPhrase } from '../lib/fuzzyAnchor';
 import { useImageUrl } from '../hooks/useImageUrl';
-import StyleSelector, { resolveStyleSelection, CULTURE_DEFAULT_ID } from './StyleSelector';
+import StyleSelector, { resolveStyleSelection } from './StyleSelector';
 import { buildChronicleImagePrompt } from '../lib/promptBuilders';
+import { getQualityOptions } from '../lib/imageSettings';
 import type { ChronicleImageRefs, EntityImageRef, PromptRequestRef } from '../lib/chronicleTypes';
 import type { StyleInfo } from '../lib/promptBuilders';
 
@@ -39,8 +40,6 @@ interface Culture {
   id: string;
   name: string;
   styleKeywords?: string[];
-  defaultArtisticStyleId?: string;
-  defaultCompositionStyles?: Record<string, string>;
 }
 
 interface StyleLibrary {
@@ -91,6 +90,14 @@ interface ChronicleImagePanelProps {
   worldContext?: WorldContext;
   /** Chronicle title for prompt context */
   chronicleTitle?: string;
+  /** Image size for generation */
+  imageSize?: string;
+  onImageSizeChange?: (size: string) => void;
+  /** Image quality for generation */
+  imageQuality?: string;
+  onImageQualityChange?: (quality: string) => void;
+  /** Image model (for quality option lookup) */
+  imageModel?: string;
 }
 
 // Size display names
@@ -742,6 +749,11 @@ export default function ChronicleImagePanel({
   cultureIdentities,
   worldContext,
   chronicleTitle,
+  imageSize,
+  onImageSizeChange,
+  imageQuality,
+  onImageQualityChange,
+  imageModel,
 }: ChronicleImagePanelProps) {
   // Local style selection state (used if not controlled externally)
   const [localStyleSelection, setLocalStyleSelection] = useState({
@@ -1015,6 +1027,42 @@ export default function ChronicleImagePanel({
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                   ({Object.keys(cultureIdentities.visual[derivedCultureId]).length} visual identity keys)
                 </span>
+              )}
+            </div>
+          )}
+
+          {/* Size & Quality */}
+          {(onImageSizeChange || onImageQualityChange) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+              {onImageSizeChange && (
+                <>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Size:</span>
+                  <select
+                    value={imageSize || '1792x1024'}
+                    onChange={(e) => onImageSizeChange(e.target.value)}
+                    className="illuminator-select"
+                    style={{ width: 'auto', minWidth: '120px' }}
+                  >
+                    <option value="1792x1024">Landscape</option>
+                    <option value="1024x1024">Square</option>
+                    <option value="1024x1792">Portrait</option>
+                  </select>
+                </>
+              )}
+              {onImageQualityChange && (
+                <>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Quality:</span>
+                  <select
+                    value={imageQuality || 'auto'}
+                    onChange={(e) => onImageQualityChange(e.target.value)}
+                    className="illuminator-select"
+                    style={{ width: 'auto', minWidth: '100px' }}
+                  >
+                    {getQualityOptions(imageModel || 'gpt-image-1.5').map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </>
               )}
             </div>
           )}
