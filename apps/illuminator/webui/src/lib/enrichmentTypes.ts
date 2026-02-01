@@ -6,8 +6,9 @@
  */
 
 import type { ChronicleFormat, ChronicleGenerationContext, ChronicleImageRefs, EraTemporalInfo } from './chronicleTypes';
+import type { HistorianNote } from './historianTypes';
 
-export type EnrichmentType = 'description' | 'image' | 'entityChronicle' | 'paletteExpansion' | 'dynamicsGeneration' | 'summaryRevision' | 'chronicleLoreBackport' | 'copyEdit';
+export type EnrichmentType = 'description' | 'image' | 'entityChronicle' | 'paletteExpansion' | 'dynamicsGeneration' | 'summaryRevision' | 'chronicleLoreBackport' | 'copyEdit' | 'historianReview';
 
 /**
  * Which image to display at a chronicle backref anchor in an entity description.
@@ -167,6 +168,8 @@ export interface EntityEnrichment {
     replacedAt: number;
     source: string;  // 'description-task' | 'lore-backport' | 'summary-revision' | 'manual'
   }>;
+  /** Historian annotations — scholarly margin notes anchored to description text */
+  historianNotes?: HistorianNote[];
 }
 
 /**

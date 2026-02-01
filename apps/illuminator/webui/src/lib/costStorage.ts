@@ -24,7 +24,8 @@ export type CostType =
   | 'paletteExpansion'     // Trait palette expansion/deduplication
   | 'dynamicsGeneration'  // World dynamics synthesis turn
   | 'summaryRevision'    // Batch summary/description revision
-  | 'chronicleLoreBackport'; // Chronicle lore backport to cast entities
+  | 'chronicleLoreBackport' // Chronicle lore backport to cast entities
+  | 'historianReview';      // Historian scholarly annotations
 
 export interface CostRecord {
   id: string;

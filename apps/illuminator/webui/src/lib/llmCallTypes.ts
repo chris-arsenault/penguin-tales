@@ -39,7 +39,11 @@ export type LLMCallType =
   | 'revision.loreBackport'      // Extract lore from chronicle and backport to cast entities
 
   // Description Copy Edit
-  | 'description.copyEdit';      // Readability copy edit for a single entity description
+  | 'description.copyEdit'       // Readability copy edit for a single entity description
+
+  // Historian Review
+  | 'historian.entityReview'     // Historian annotations for entity description
+  | 'historian.chronicleReview'; // Historian annotations for chronicle narrative
 
 export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'description.narrative',
@@ -59,9 +63,11 @@ export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'revision.summary',
   'revision.loreBackport',
   'description.copyEdit',
+  'historian.entityReview',
+  'historian.chronicleReview',
 ];
 
-export type LLMCallCategory = 'description' | 'image' | 'perspective' | 'chronicle' | 'palette' | 'dynamics' | 'revision';
+export type LLMCallCategory = 'description' | 'image' | 'perspective' | 'chronicle' | 'palette' | 'dynamics' | 'revision' | 'historian';
 
 export interface LLMCallDefaults {
   model: string;
@@ -307,6 +313,28 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
     },
     recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
   },
+  'historian.entityReview': {
+    label: 'Entity Review',
+    description: 'Historian annotations for an entity description — scholarly commentary, factual corrections, tongue-in-cheek observations',
+    category: 'historian',
+    defaults: {
+      model: 'claude-sonnet-4-5-20250929',
+      thinkingBudget: 4096,
+      maxTokens: 4096,
+    },
+    recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
+  },
+  'historian.chronicleReview': {
+    label: 'Chronicle Review',
+    description: 'Historian annotations for a chronicle narrative — scholarly footnotes, disputed accounts, color commentary',
+    category: 'historian',
+    defaults: {
+      model: 'claude-sonnet-4-5-20250929',
+      thinkingBudget: 4096,
+      maxTokens: 8192,
+    },
+    recommendedModels: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20251101'],
+  },
 };
 
 export const CATEGORY_LABELS: Record<LLMCallCategory, string> = {
@@ -317,6 +345,7 @@ export const CATEGORY_LABELS: Record<LLMCallCategory, string> = {
   palette: 'Trait Palette',
   dynamics: 'Dynamics Generation',
   revision: 'Summary Revision',
+  historian: 'Historian Review',
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<LLMCallCategory, string> = {
@@ -327,6 +356,7 @@ export const CATEGORY_DESCRIPTIONS: Record<LLMCallCategory, string> = {
   palette: 'AI-assisted curation of visual trait categories',
   dynamics: 'Multi-turn synthesis of world dynamics from lore and entity data',
   revision: 'Batch revision of entity summaries and descriptions using world dynamics',
+  historian: 'Scholarly annotations with personality — commentary, corrections, and tongue-in-cheek observations',
 };
 
 // Group call types by category
@@ -339,5 +369,6 @@ export function getCallTypesByCategory(): Record<LLMCallCategory, LLMCallType[]>
     palette: ['palette.expansion'],
     dynamics: ['dynamics.generation'],
     revision: ['revision.summary', 'revision.loreBackport'],
+    historian: ['historian.entityReview', 'historian.chronicleReview'],
   };
 }

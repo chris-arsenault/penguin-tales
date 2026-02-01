@@ -419,6 +419,9 @@ export default function EntityBrowser({
   onUndoDescription,
   onCopyEdit,
   isCopyEditActive,
+  onHistorianReview,
+  isHistorianActive,
+  historianConfigured,
 }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [filters, setFilters] = useState({
@@ -1191,6 +1194,9 @@ export default function EntityBrowser({
           onUndoDescription={onUndoDescription}
           onCopyEdit={onCopyEdit}
           isCopyEditActive={isCopyEditActive}
+          onHistorianReview={onHistorianReview}
+          isHistorianActive={isHistorianActive}
+          historianConfigured={historianConfigured}
         />
       ) : (
         <div className="illuminator-card" style={{ padding: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>

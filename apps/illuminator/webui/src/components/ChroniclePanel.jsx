@@ -19,6 +19,8 @@ import {
   updateChronicleImageRef,
   updateChronicleTemporalContext,
   updateChronicleActiveVersion,
+  updateChronicleCombineInstructions,
+  unpublishChronicle,
   updateChronicleCoverImageStatus,
   generateChronicleId,
   deriveTitleFromRoles,
@@ -289,6 +291,9 @@ export default function ChroniclePanel({
   refreshTrigger,
   imageModel,
   onOpenImageSettings,
+  onHistorianReview,
+  isHistorianActive,
+  historianConfigured,
 }) {
   const [selectedItemId, setSelectedItemId] = useState(() => {
     const saved = localStorage.getItem('illuminator:chronicle:selectedItemId');
@@ -500,6 +505,9 @@ export default function ChroniclePanel({
 
         // Lore backport
         loreBackported: chronicle.loreBackported,
+
+        // Historian notes
+        historianNotes: chronicle.historianNotes,
 
         // Timestamps
         createdAt: chronicle.createdAt,
@@ -1415,6 +1423,19 @@ export default function ChroniclePanel({
     [selectedItem, refresh]
   );
 
+  const handleUpdateCombineInstructions = useCallback(
+    (instructions) => {
+      if (!selectedItem?.chronicleId) return;
+      updateChronicleCombineInstructions(selectedItem.chronicleId, instructions || undefined).then(() => refresh());
+    },
+    [selectedItem, refresh]
+  );
+
+  const handleUnpublish = useCallback(() => {
+    if (!selectedItem?.chronicleId) return;
+    unpublishChronicle(selectedItem.chronicleId).then(() => refresh());
+  }, [selectedItem, refresh]);
+
   // Handle export of completed chronicle
   // Uses ONLY stored data from the chronicle record - no reconstruction
   const handleExport = useCallback(() => {
@@ -1889,8 +1910,12 @@ export default function ChroniclePanel({
                   onUpdateChronicleImageJustification={handleUpdateChronicleImageJustification}
                   onUpdateChronicleTemporalContext={handleUpdateChronicleTemporalContext}
                   onUpdateChronicleActiveVersion={handleUpdateChronicleActiveVersion}
+                  onUpdateCombineInstructions={handleUpdateCombineInstructions}
+                  onUnpublish={handleUnpublish}
                   onExport={handleExport}
                   onBackportLore={onBackportLore ? () => onBackportLore(selectedItem.chronicleId) : undefined}
+                  onHistorianReview={onHistorianReview && historianConfigured ? () => onHistorianReview(selectedItem.chronicleId) : undefined}
+                  isHistorianActive={isHistorianActive}
                   isGenerating={isGenerating}
                   refinements={refinementState}
                   entities={entities}

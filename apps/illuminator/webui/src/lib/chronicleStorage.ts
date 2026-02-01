@@ -19,6 +19,7 @@ import type {
   PerspectiveSynthesisRecord,
 } from './chronicleTypes';
 import type { ChronicleStep } from './enrichmentTypes';
+import type { HistorianNote } from './historianTypes';
 import type { NarrativeStyle } from '@canonry/world-schema';
 
 // ============================================================================
@@ -166,6 +167,9 @@ export interface ChronicleRecord {
 
   /** Whether lore from this chronicle has been backported to cast entity descriptions */
   loreBackported?: boolean;
+
+  /** Historian annotations — scholarly margin notes anchored to chronicle text */
+  historianNotes?: HistorianNote[];
 
   // Cost tracking (aggregated across all LLM calls)
   totalEstimatedCost: number;
@@ -1120,6 +1124,37 @@ export async function acceptChronicle(chronicleId: string, finalContent?: string
 }
 
 /**
+ * Unpublish a completed chronicle, reverting it to assembly_ready.
+ */
+export async function unpublishChronicle(chronicleId: string): Promise<void> {
+  const db = await openChronicleDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as ChronicleRecord | undefined;
+      if (!record) {
+        reject(new Error(`Chronicle ${chronicleId} not found`));
+        return;
+      }
+
+      delete record.finalContent;
+      delete record.acceptedAt;
+      record.status = 'assembly_ready';
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to unpublish chronicle'));
+  });
+}
+
+/**
  * Update which generation version should be published when accepting.
  */
 export async function updateChronicleActiveVersion(
@@ -1152,6 +1187,42 @@ export async function updateChronicleActiveVersion(
 }
 
 /**
+ * Manually set or update combine instructions for a chronicle.
+ */
+export async function updateChronicleCombineInstructions(
+  chronicleId: string,
+  combineInstructions: string | undefined
+): Promise<void> {
+  const db = await openChronicleDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as ChronicleRecord | undefined;
+      if (!record) {
+        reject(new Error(`Chronicle ${chronicleId} not found`));
+        return;
+      }
+
+      if (combineInstructions) {
+        record.combineInstructions = combineInstructions;
+      } else {
+        delete record.combineInstructions;
+      }
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to update combine instructions'));
+  });
+}
+
+/**
  * Mark a chronicle as having had its lore backported to cast entity descriptions.
  */
 export async function updateChronicleLoreBackported(
@@ -1180,6 +1251,38 @@ export async function updateChronicleLoreBackported(
 
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle lore backported'));
+  });
+}
+
+/**
+ * Update historian notes on a chronicle.
+ */
+export async function updateChronicleHistorianNotes(
+  chronicleId: string,
+  historianNotes: HistorianNote[]
+): Promise<void> {
+  const db = await openChronicleDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as ChronicleRecord | undefined;
+      if (!record) {
+        reject(new Error(`Chronicle ${chronicleId} not found`));
+        return;
+      }
+
+      record.historianNotes = historianNotes;
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle historian notes'));
   });
 }
 

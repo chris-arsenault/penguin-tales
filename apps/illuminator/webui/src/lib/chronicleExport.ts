@@ -11,6 +11,7 @@ import type {
   PerspectiveSynthesisRecord,
   ChronicleImageRefs,
 } from './chronicleTypes';
+import type { HistorianNote } from './historianTypes';
 
 // =============================================================================
 // Export Types
@@ -166,6 +167,9 @@ export interface ChronicleExport {
   // Comparison analysis (if compare was run)
   comparisonReport?: string;
   combineInstructions?: string;
+
+  // Historian annotations
+  historianNotes?: HistorianNote[];
 }
 
 // =============================================================================
@@ -374,6 +378,10 @@ export function buildChronicleExport(chronicle: ChronicleRecord): ChronicleExpor
   }
   if (chronicle.combineInstructions) {
     exportData.combineInstructions = chronicle.combineInstructions;
+  }
+
+  if (chronicle.historianNotes && chronicle.historianNotes.length > 0) {
+    exportData.historianNotes = chronicle.historianNotes;
   }
 
   return exportData;

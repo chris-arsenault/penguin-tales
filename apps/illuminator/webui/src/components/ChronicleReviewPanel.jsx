@@ -5,10 +5,12 @@
  */
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
+import { diffWords } from 'diff';
 import CohesionReportViewer from './CohesionReportViewer';
 import ChronicleImagePanel from './ChronicleImagePanel';
 import ImageModal from './ImageModal';
 import { ExpandableSeedSection } from './ChronicleSeedViewer';
+import HistorianMarginNotes from './HistorianMarginNotes';
 import { useImageUrl } from '../hooks/useImageUrl';
 
 // ============================================================================
@@ -592,7 +594,12 @@ function PerspectiveSynthesisViewer({ synthesis }) {
 // Assembled Content Viewer
 // ============================================================================
 
-function AssembledContentViewer({ content, wordCount, onCopy }) {
+function AssembledContentViewer({ content, wordCount, onCopy, compareContent, compareLabel }) {
+  const diffParts = useMemo(() => {
+    if (!compareContent) return null;
+    return diffWords(compareContent, content);
+  }, [content, compareContent]);
+
   return (
     <div
       style={{
@@ -614,6 +621,17 @@ function AssembledContentViewer({ content, wordCount, onCopy }) {
       >
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           {wordCount.toLocaleString()} words
+          {diffParts && (
+            <span style={{ marginLeft: '8px' }}>
+              — diff vs {compareLabel}
+              <span style={{ marginLeft: '6px', color: 'rgba(34, 197, 94, 0.8)' }}>
+                +{diffParts.filter(p => p.added).reduce((n, p) => n + p.value.split(/\s+/).filter(Boolean).length, 0)}
+              </span>
+              <span style={{ marginLeft: '4px', color: 'rgba(239, 68, 68, 0.8)' }}>
+                -{diffParts.filter(p => p.removed).reduce((n, p) => n + p.value.split(/\s+/).filter(Boolean).length, 0)}
+              </span>
+            </span>
+          )}
         </span>
         <button
           onClick={onCopy}
@@ -641,7 +659,38 @@ function AssembledContentViewer({ content, wordCount, onCopy }) {
           color: 'var(--text-primary)',
         }}
       >
-        {content}
+        {diffParts ? (
+          diffParts.map((part, i) => {
+            if (part.added) {
+              return (
+                <span key={i} style={{
+                  background: 'rgba(34, 197, 94, 0.2)',
+                  color: 'var(--text-primary)',
+                  borderRadius: '2px',
+                  padding: '0 1px',
+                }}>
+                  {part.value}
+                </span>
+              );
+            }
+            if (part.removed) {
+              return (
+                <span key={i} style={{
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  color: 'var(--text-secondary)',
+                  borderRadius: '2px',
+                  padding: '0 1px',
+                  textDecoration: 'line-through',
+                }}>
+                  {part.value}
+                </span>
+              );
+            }
+            return <span key={i}>{part.value}</span>;
+          })
+        ) : (
+          content
+        )}
       </div>
     </div>
   );
@@ -1105,7 +1154,9 @@ function ChronicleVersionSelector({
   versions,
   selectedVersionId,
   activeVersionId,
+  compareToVersionId,
   onSelectVersion,
+  onSelectCompareVersion,
   onSetActiveVersion,
   disabled,
 }) {
@@ -1122,6 +1173,19 @@ function ChronicleVersionSelector({
       >
         {versions.map((version) => (
           <option key={version.id} value={version.id}>{version.label}</option>
+        ))}
+      </select>
+      <select
+        value={compareToVersionId}
+        onChange={(e) => onSelectCompareVersion(e.target.value)}
+        disabled={disabled}
+        className="illuminator-select"
+        style={{ width: 'auto', minWidth: '160px', fontSize: '12px', padding: '4px 6px' }}
+        title="Select a version to diff against"
+      >
+        <option value="">Compare to...</option>
+        {versions.filter(v => v.id !== selectedVersionId).map((version) => (
+          <option key={version.id} value={version.id}>{version.shortLabel || version.label}</option>
         ))}
       </select>
       {isActive ? (
@@ -1186,6 +1250,8 @@ export default function ChronicleReviewPanel({
   onUpdateChronicleAnchorText,
   onUpdateChronicleTemporalContext,
   onUpdateChronicleActiveVersion,
+  onUpdateCombineInstructions,
+  onUnpublish,
 
   // Cover image
   onGenerateCoverImageScene,
@@ -1207,6 +1273,10 @@ export default function ChronicleReviewPanel({
   // Lore backport
   onBackportLore,
 
+  // Historian review
+  onHistorianReview,
+  isHistorianActive,
+
   // State
   isGenerating,
   refinements,
@@ -1225,6 +1295,10 @@ export default function ChronicleReviewPanel({
     if (!entities) return new Map();
     return new Map(entities.map((e) => [e.id, e]));
   }, [entities]);
+
+  // Combine instructions editing state
+  const [editingCombineInstructions, setEditingCombineInstructions] = useState(false);
+  const [combineInstructionsDraft, setCombineInstructionsDraft] = useState('');
 
   // Image modal state for full-size viewing
   const [imageModal, setImageModal] = useState({ open: false, imageId: '', title: '' });
@@ -1284,14 +1358,21 @@ export default function ChronicleReviewPanel({
   ]);
 
   const [selectedVersionId, setSelectedVersionId] = useState(activeVersionId);
+  const [compareToVersionId, setCompareToVersionId] = useState('');
 
   useEffect(() => {
     setSelectedVersionId(activeVersionId);
+    setCompareToVersionId('');
   }, [activeVersionId, item.chronicleId]);
 
   const selectedVersion = useMemo(
     () => versions.find((version) => version.id === selectedVersionId) || versions[versions.length - 1],
     [versions, selectedVersionId]
+  );
+
+  const compareToVersion = useMemo(
+    () => compareToVersionId ? versions.find((version) => version.id === compareToVersionId) : null,
+    [versions, compareToVersionId]
   );
 
   const versionLabelMap = useMemo(() => {
@@ -1355,7 +1436,12 @@ export default function ChronicleReviewPanel({
               versions={versions}
               selectedVersionId={selectedVersionId}
               activeVersionId={activeVersionId}
-              onSelectVersion={setSelectedVersionId}
+              compareToVersionId={compareToVersionId}
+              onSelectVersion={(id) => {
+                setSelectedVersionId(id);
+                if (id === compareToVersionId) setCompareToVersionId('');
+              }}
+              onSelectCompareVersion={setCompareToVersionId}
               onSetActiveVersion={onUpdateChronicleActiveVersion}
               disabled={isGenerating}
             />
@@ -1364,6 +1450,8 @@ export default function ChronicleReviewPanel({
             content={selectedVersion?.content || item.assembledContent}
             wordCount={selectedVersion?.wordCount ?? wordCount(item.assembledContent)}
             onCopy={() => copyToClipboard(selectedVersion?.content || item.assembledContent)}
+            compareContent={compareToVersion?.content}
+            compareLabel={compareToVersion?.shortLabel}
           />
         </div>
 
@@ -1508,14 +1596,129 @@ export default function ChronicleReviewPanel({
               {item.comparisonReport && !item.combineInstructions && (
                 <span style={{ color: 'var(--warning-color, #e6a700)' }}>
                   {' '}Combine instructions missing — combine will use generic criteria.
+                  {onUpdateCombineInstructions && (
+                    <button
+                      onClick={() => {
+                        setCombineInstructionsDraft('');
+                        setEditingCombineInstructions(true);
+                      }}
+                      style={{
+                        marginLeft: '6px',
+                        padding: '1px 6px',
+                        background: 'none',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '3px',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                      }}
+                    >
+                      Set manually
+                    </button>
+                  )}
                 </span>
               )}
               {item.combineInstructions && (
                 <span style={{ color: 'var(--success-color, #4caf50)' }}>
-                  {' '}Combine instructions ready from last comparison.
+                  {' '}Combine instructions ready.
+                  {onUpdateCombineInstructions && (
+                    <button
+                      onClick={() => {
+                        setCombineInstructionsDraft(item.combineInstructions);
+                        setEditingCombineInstructions(true);
+                      }}
+                      style={{
+                        marginLeft: '6px',
+                        padding: '1px 6px',
+                        background: 'none',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '3px',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                      }}
+                    >
+                      Edit
+                    </button>
+                  )}
                 </span>
               )}
             </div>
+            {editingCombineInstructions && (
+              <div style={{ marginTop: '8px' }}>
+                <textarea
+                  value={combineInstructionsDraft}
+                  onChange={(e) => setCombineInstructionsDraft(e.target.value)}
+                  placeholder="Enter combine instructions — editorial direction for how to merge versions..."
+                  style={{
+                    width: '100%',
+                    minHeight: '80px',
+                    padding: '8px',
+                    fontSize: '12px',
+                    lineHeight: 1.5,
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '4px',
+                    color: 'var(--text-primary)',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                  <button
+                    onClick={() => {
+                      onUpdateCombineInstructions(combineInstructionsDraft.trim());
+                      setEditingCombineInstructions(false);
+                    }}
+                    disabled={!combineInstructionsDraft.trim()}
+                    style={{
+                      padding: '3px 10px',
+                      background: combineInstructionsDraft.trim() ? 'var(--accent-color, #6366f1)' : 'var(--bg-tertiary)',
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: combineInstructionsDraft.trim() ? '#fff' : 'var(--text-muted)',
+                      cursor: combineInstructionsDraft.trim() ? 'pointer' : 'not-allowed',
+                      fontSize: '11px',
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingCombineInstructions(false)}
+                    style={{
+                      padding: '3px 10px',
+                      background: 'none',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '4px',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  {item.combineInstructions && (
+                    <button
+                      onClick={() => {
+                        onUpdateCombineInstructions('');
+                        setEditingCombineInstructions(false);
+                      }}
+                      style={{
+                        padding: '3px 10px',
+                        background: 'none',
+                        border: '1px solid var(--error-color, #ef4444)',
+                        borderRadius: '4px',
+                        color: 'var(--error-color, #ef4444)',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                      }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1544,7 +1747,30 @@ export default function ChronicleReviewPanel({
                 Comparison Report
                 {!item.combineInstructions && (
                   <span style={{ marginLeft: '8px', fontSize: '11px', color: 'var(--warning-color, #e6a700)', fontWeight: 400 }}>
-                    (combine instructions not parsed)
+                    (combine instructions not parsed —{' '}
+                    {onUpdateCombineInstructions ? (
+                      <button
+                        onClick={() => {
+                          setCombineInstructionsDraft('');
+                          setEditingCombineInstructions(true);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--warning-color, #e6a700)',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: 400,
+                          padding: 0,
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        set manually
+                      </button>
+                    ) : (
+                      'set manually via edit'
+                    )}
+                    )
                   </span>
                 )}
               </span>
@@ -1713,7 +1939,12 @@ export default function ChronicleReviewPanel({
                 versions={versions}
                 selectedVersionId={selectedVersionId}
                 activeVersionId={activeVersionId}
-                onSelectVersion={setSelectedVersionId}
+                compareToVersionId={compareToVersionId}
+                onSelectVersion={(id) => {
+                  setSelectedVersionId(id);
+                  if (id === compareToVersionId) setCompareToVersionId('');
+                }}
+                onSelectCompareVersion={setCompareToVersionId}
                 onSetActiveVersion={onUpdateChronicleActiveVersion}
                 disabled={isGenerating}
               />
@@ -1722,6 +1953,8 @@ export default function ChronicleReviewPanel({
               content={selectedVersion?.content || item.assembledContent}
               wordCount={selectedVersion?.wordCount ?? wordCount(item.assembledContent)}
               onCopy={() => copyToClipboard(selectedVersion?.content || item.assembledContent)}
+              compareContent={compareToVersion?.content}
+              compareLabel={compareToVersion?.shortLabel}
             />
           </div>
         )}
@@ -1739,6 +1972,27 @@ export default function ChronicleReviewPanel({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 style={{ margin: 0, fontSize: '16px' }}>Completed Chronicle</h3>
           <div style={{ display: 'flex', gap: '8px' }}>
+            {onHistorianReview && (
+              <button
+                onClick={onHistorianReview}
+                disabled={isGenerating || isHistorianActive}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '12px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '4px',
+                  cursor: isGenerating || isHistorianActive ? 'not-allowed' : 'pointer',
+                  color: isHistorianActive ? 'var(--text-muted)' : '#8b7355',
+                  opacity: isGenerating || isHistorianActive ? 0.6 : 1,
+                }}
+                title={item.historianNotes?.length
+                  ? "Re-generate historian annotations for this chronicle"
+                  : "Generate scholarly margin notes from the historian"}
+              >
+                {item.historianNotes?.length ? 'Re-annotate' : 'Historian Notes'}
+              </button>
+            )}
             {onBackportLore && (
               <button
                 onClick={onBackportLore}
@@ -1793,6 +2047,23 @@ export default function ChronicleReviewPanel({
                 Export
               </button>
             )}
+            {onUnpublish && (
+              <button
+                onClick={onUnpublish}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '12px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                }}
+                title="Revert to assembly review without discarding content"
+              >
+                Unpublish
+              </button>
+            )}
             <button
               onClick={onRegenerate}
               style={{
@@ -1814,6 +2085,15 @@ export default function ChronicleReviewPanel({
           wordCount={wordCount(item.finalContent)}
           onCopy={() => copyToClipboard(item.finalContent)}
         />
+
+        {item.historianNotes?.length > 0 && (
+          <div style={{ marginTop: '16px' }}>
+            <HistorianMarginNotes
+              text={item.finalContent}
+              notes={item.historianNotes}
+            />
+          </div>
+        )}
 
         {/* 3. Visual Assets — IMAGES (grouped) */}
         {/* Cover Image */}

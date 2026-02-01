@@ -9,6 +9,7 @@ import { dynamicsGenerationTask } from './dynamicsGenerationTask';
 import { summaryRevisionTask } from './summaryRevisionTask';
 import { chronicleLoreBackportTask } from './chronicleLoreBackportTask';
 import { copyEditTask } from './copyEditTask';
+import { historianReviewTask } from './historianReviewTask';
 
 export const TASK_HANDLERS = {
   description: descriptionTask,
@@ -19,6 +20,7 @@ export const TASK_HANDLERS = {
   summaryRevision: summaryRevisionTask,
   chronicleLoreBackport: chronicleLoreBackportTask,
   copyEdit: copyEditTask,
+  historianReview: historianReviewTask,
 } satisfies TaskHandlerMap;
 
 export async function executeTask<TType extends WorkerTask['type']>(
@@ -38,4 +40,5 @@ export {
   summaryRevisionTask,
   chronicleLoreBackportTask,
   copyEditTask,
+  historianReviewTask,
 };

@@ -36,8 +36,12 @@ import { useDynamicsGeneration } from './hooks/useDynamicsGeneration';
 import { useSummaryRevision } from './hooks/useSummaryRevision';
 import { useChronicleLoreBackport } from './hooks/useChronicleLoreBackport';
 import { useCopyEdit } from './hooks/useCopyEdit';
+import { useHistorianReview } from './hooks/useHistorianReview';
+import HistorianReviewModal from './components/HistorianReviewModal';
+import HistorianConfigEditor from './components/HistorianConfigEditor';
+import { DEFAULT_HISTORIAN_CONFIG, isHistorianConfigured } from './lib/historianTypes';
 import { getPublishedStaticPagesForProject } from './lib/staticPageStorage';
-import { getEntityUsageStats, getChronicle, getChroniclesForSimulation, updateChronicleLoreBackported } from './lib/chronicleStorage';
+import { getEntityUsageStats, getChronicle, getChroniclesForSimulation, updateChronicleLoreBackported, updateChronicleHistorianNotes } from './lib/chronicleStorage';
 import { useStyleLibrary } from './hooks/useStyleLibrary';
 import { useImageGenSettings } from './hooks/useImageGenSettings';
 import ImageSettingsDrawer, { ImageSettingsTrigger } from './components/ImageSettingsDrawer';
@@ -89,6 +93,7 @@ const TABS = [
   { id: 'costs', label: 'Costs' },           // 10. Track spending
   { id: 'storage', label: 'Storage' },       // 11. Manage images
   { id: 'traits', label: 'Traits' },         // 12. Visual trait palettes
+  { id: 'historian', label: 'Historian' },   // 13. Historian persona config
 ];
 
 // Default image prompt template for Claude formatting
@@ -441,6 +446,23 @@ export default function IlluminatorRemote({
     pendingCultureIdentitiesRef.current = nextCultureIdentities;
     setLocalCultureIdentities(nextCultureIdentities);
   }, [externalCultureIdentities]);
+
+  // Historian config - project-level persona definition
+  const [localHistorianConfig, setLocalHistorianConfig] = useState(() => {
+    // Try to load from localStorage as a cross-session fallback
+    try {
+      const stored = localStorage.getItem('illuminator:historianConfig');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return DEFAULT_HISTORIAN_CONFIG;
+  });
+  const historianConfig = localHistorianConfig;
+  const updateHistorianConfig = useCallback((next) => {
+    setLocalHistorianConfig(next);
+    try {
+      localStorage.setItem('illuminator:historianConfig', JSON.stringify(next));
+    } catch {}
+  }, []);
 
   // Entities with enrichment state
   const [entities, setEntities] = useState([]);
@@ -1274,6 +1296,14 @@ export default function IlluminatorRemote({
       return;
     }
 
+    // Include lens entity if present (marked specially for different prompt treatment)
+    if (chronicle.lens && !castEntityIds.includes(chronicle.lens.entityId)) {
+      const lensContexts = getEntityContextsForRevision([chronicle.lens.entityId]);
+      if (lensContexts.length > 0) {
+        castContexts.push({ ...lensContexts[0], isLens: true });
+      }
+    }
+
     // Extract perspective synthesis output
     let perspectiveSynthesisJson = '';
     const ps = chronicle.perspectiveSynthesis;
@@ -1518,6 +1548,206 @@ export default function IlluminatorRemote({
     );
   }, [applyAcceptedCopyEditPatches, handleRevisionApplied]);
 
+  // Historian review (scholarly annotations for entities and chronicles)
+  const {
+    run: historianRun,
+    isActive: isHistorianActive,
+    startReview: startHistorianReview,
+    toggleNoteDecision: toggleHistorianNoteDecision,
+    applyAccepted: applyAcceptedHistorianNotes,
+    cancelReview: cancelHistorianReview,
+  } = useHistorianReview(enqueue);
+
+  // Collect previous historian notes for memory/continuity (sample from all entities)
+  const collectPreviousNotes = useCallback(() => {
+    const allNotes = [];
+    for (const entity of entities) {
+      const notes = entity.enrichment?.historianNotes || [];
+      for (const note of notes) {
+        allNotes.push({
+          targetName: entity.name,
+          anchorPhrase: note.anchorPhrase,
+          text: note.text,
+          type: note.type,
+        });
+      }
+    }
+    // Take a representative sample (max 15, biased toward variety)
+    const sample = [];
+    const byType = {};
+    for (const note of allNotes) {
+      if (!byType[note.type]) byType[note.type] = [];
+      byType[note.type].push(note);
+    }
+    const types = Object.keys(byType);
+    let idx = 0;
+    while (sample.length < 15 && idx < allNotes.length) {
+      const type = types[idx % types.length];
+      const bucket = byType[type];
+      if (bucket && bucket.length > 0) {
+        sample.push(bucket.shift());
+      }
+      idx++;
+    }
+    return sample;
+  }, [entities]);
+
+  const handleHistorianReview = useCallback((entityId) => {
+    if (!projectId || !simulationRunId || !entityId) return;
+    if (!isHistorianConfigured(historianConfig)) return;
+
+    const entity = entityById.get(entityId);
+    if (!entity?.description) return;
+
+    // Build relationships
+    const rels = (relationshipsByEntity.get(entity.id) || []).slice(0, 12).map((rel) => {
+      const targetId = rel.src === entity.id ? rel.dst : rel.src;
+      const target = entityById.get(targetId);
+      return {
+        kind: rel.kind,
+        targetName: target?.name || targetId,
+        targetKind: target?.kind || 'unknown',
+      };
+    });
+
+    // Get neighbor summaries (from relationships)
+    const neighborSummaries = (relationshipsByEntity.get(entity.id) || []).slice(0, 5).map((rel) => {
+      const targetId = rel.src === entity.id ? rel.dst : rel.src;
+      const target = entityById.get(targetId);
+      if (!target) return null;
+      return {
+        name: target.name,
+        kind: target.kind,
+        summary: target.summary || target.description?.slice(0, 200) || '',
+      };
+    }).filter(Boolean);
+
+    // Assemble context
+    const contextJson = JSON.stringify({
+      entityId: entity.id,
+      entityName: entity.name,
+      entityKind: entity.kind,
+      entitySubtype: entity.subtype || '',
+      entityCulture: entity.culture || '',
+      entityProminence: prominenceLabelFromScale(entity.prominence, prominenceScale),
+      summary: entity.summary || '',
+      relationships: rels,
+      neighborSummaries,
+      canonFacts: (worldContext.canonFactsWithMetadata || []).map((f) => f.text),
+      worldDynamics: (worldContext.worldDynamics || []).map((d) => d.text),
+    });
+
+    const previousNotes = collectPreviousNotes();
+
+    startHistorianReview({
+      projectId,
+      simulationRunId,
+      targetType: 'entity',
+      targetId: entity.id,
+      targetName: entity.name,
+      sourceText: entity.description,
+      contextJson,
+      previousNotesJson: JSON.stringify(previousNotes),
+      historianConfig,
+    });
+  }, [projectId, simulationRunId, entityById, relationshipsByEntity, worldContext, historianConfig, prominenceScale, collectPreviousNotes, startHistorianReview]);
+
+  const handleChronicleHistorianReview = useCallback(async (chronicleId) => {
+    if (!projectId || !simulationRunId || !chronicleId) return;
+    if (!isHistorianConfigured(historianConfig)) return;
+
+    const chronicle = await getChronicle(chronicleId);
+    if (!chronicle) return;
+
+    const content = chronicle.finalContent || chronicle.assembledContent;
+    if (!content) return;
+
+    // Build cast summaries
+    const castSummaries = (chronicle.roleAssignments || []).slice(0, 10).map((ra) => {
+      const entity = entityById.get(ra.entityId);
+      if (!entity) return null;
+      return {
+        name: entity.name,
+        kind: entity.kind,
+        summary: entity.summary || entity.description?.slice(0, 200) || '',
+      };
+    }).filter(Boolean);
+
+    const cast = (chronicle.roleAssignments || []).map((ra) => {
+      const entity = entityById.get(ra.entityId);
+      return {
+        entityName: entity?.name || ra.entityId,
+        role: ra.role,
+        kind: entity?.kind || 'unknown',
+      };
+    });
+
+    const contextJson = JSON.stringify({
+      chronicleId: chronicle.chronicleId,
+      title: chronicle.title || 'Untitled',
+      format: chronicle.format,
+      narrativeStyleId: chronicle.narrativeStyleId || '',
+      cast,
+      castSummaries,
+      canonFacts: (worldContext.canonFactsWithMetadata || []).map((f) => f.text),
+      worldDynamics: (worldContext.worldDynamics || []).map((d) => d.text),
+    });
+
+    const previousNotes = collectPreviousNotes();
+
+    startHistorianReview({
+      projectId,
+      simulationRunId,
+      targetType: 'chronicle',
+      targetId: chronicleId,
+      targetName: chronicle.title || 'Untitled Chronicle',
+      sourceText: content,
+      contextJson,
+      previousNotesJson: JSON.stringify(previousNotes),
+      historianConfig,
+    });
+  }, [projectId, simulationRunId, entityById, worldContext, historianConfig, collectPreviousNotes, startHistorianReview]);
+
+  const handleAcceptHistorianNotes = useCallback(async () => {
+    const targetId = historianRun?.targetId;
+    const targetType = historianRun?.targetType;
+    const notes = applyAcceptedHistorianNotes();
+    if (notes.length === 0) return;
+
+    if (targetType === 'entity' && targetId) {
+      setEntities((prev) =>
+        prev.map((entity) => {
+          if (entity.id !== targetId) return entity;
+          return {
+            ...entity,
+            enrichment: {
+              ...entity.enrichment,
+              historianNotes: notes,
+            },
+          };
+        })
+      );
+    } else if (targetType === 'chronicle' && targetId) {
+      try {
+        await updateChronicleHistorianNotes(targetId, notes);
+      } catch (err) {
+        console.error('[Historian] Failed to save chronicle notes:', err);
+      }
+    }
+  }, [applyAcceptedHistorianNotes, historianRun]);
+
+  const handleEditHistorianNoteText = useCallback((noteId, newText) => {
+    if (!historianRun) return;
+    const updatedNotes = historianRun.notes.map((n) =>
+      n.noteId === noteId ? { ...n, text: newText } : n
+    );
+    // Update local state (the run object in the hook)
+    // We need to update via the storage to keep in sync
+    import('./lib/historianStorage').then(({ updateHistorianRun: updateRun }) => {
+      updateRun(historianRun.runId, { notes: updatedNotes });
+    });
+  }, [historianRun]);
+
   const handleGenerateDynamics = useCallback(async () => {
     if (!projectId || !simulationRunId) return;
 
@@ -1748,6 +1978,9 @@ export default function IlluminatorRemote({
               onUndoDescription={handleUndoDescription}
               onCopyEdit={handleCopyEdit}
               isCopyEditActive={isCopyEditActive}
+              onHistorianReview={handleHistorianReview}
+              isHistorianActive={isHistorianActive}
+              historianConfigured={isHistorianConfigured(historianConfig)}
             />
           </div>
         )}
@@ -1775,6 +2008,9 @@ export default function IlluminatorRemote({
               refreshTrigger={chronicleRefreshTrigger}
               imageModel={config.imageModel}
               onOpenImageSettings={() => setImageSettingsOpen(true)}
+              onHistorianReview={handleChronicleHistorianReview}
+              isHistorianActive={isHistorianActive}
+              historianConfigured={isHistorianConfigured(historianConfig)}
             />
           </div>
         )}
@@ -1898,6 +2134,15 @@ export default function IlluminatorRemote({
             <ConfigPanel config={config} onConfigChange={updateConfig} worldSchema={worldSchema} />
           </div>
         )}
+
+        {activeTab === 'historian' && (
+          <div className="illuminator-content">
+            <HistorianConfigEditor
+              config={historianConfig}
+              onChange={updateHistorianConfig}
+            />
+          </div>
+        )}
       </div>
 
       {/* Image Settings Drawer */}
@@ -1960,6 +2205,16 @@ export default function IlluminatorRemote({
         onAccept={handleAcceptCopyEdit}
         onCancel={cancelCopyEdit}
         getEntityContexts={getEntityContextsForRevision}
+      />
+
+      {/* Historian Review Modal */}
+      <HistorianReviewModal
+        run={historianRun}
+        isActive={isHistorianActive}
+        onToggleNote={toggleHistorianNoteDecision}
+        onEditNoteText={handleEditHistorianNoteText}
+        onAccept={handleAcceptHistorianNotes}
+        onCancel={cancelHistorianReview}
       />
     </div>
   );

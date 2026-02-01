@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { QueueItem, NetworkDebugInfo, DescriptionChainDebug, ChronicleBackref } from '../lib/enrichmentTypes';
+import HistorianMarginNotes from './HistorianMarginNotes';
 import {
   buildProminenceScale,
   DEFAULT_PROMINENCE_DISTRIBUTION,
@@ -67,6 +68,9 @@ interface EntityDetailViewProps {
   onUndoDescription?: (entityId: string) => void;
   onCopyEdit?: (entityId: string) => void;
   isCopyEditActive?: boolean;
+  onHistorianReview?: (entityId: string) => void;
+  isHistorianActive?: boolean;
+  historianConfigured?: boolean;
 }
 
 function formatDate(timestamp: number | undefined): string {
@@ -222,6 +226,9 @@ export default function EntityDetailView({
   onUndoDescription,
   onCopyEdit,
   isCopyEditActive,
+  onHistorianReview,
+  isHistorianActive,
+  historianConfigured,
 }: EntityDetailViewProps) {
   const effectiveProminenceScale = useMemo(() => {
     if (prominenceScale) return prominenceScale;
@@ -402,16 +409,45 @@ export default function EntityDetailView({
                     Copy Edit
                   </button>
                 )}
+                {onHistorianReview && historianConfigured && (
+                  <button
+                    onClick={() => onHistorianReview(entity.id)}
+                    disabled={isHistorianActive}
+                    title="Generate scholarly margin notes from the historian"
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-color)',
+                      color: isHistorianActive ? 'var(--text-muted)' : '#8b7355',
+                      fontSize: '10px',
+                      padding: '1px 6px',
+                      borderRadius: '3px',
+                      cursor: isHistorianActive ? 'not-allowed' : 'pointer',
+                      textTransform: 'none',
+                      letterSpacing: 'normal',
+                      opacity: isHistorianActive ? 0.5 : 1,
+                    }}
+                  >
+                    Historian
+                  </button>
+                )}
               </div>
-              <p style={{
-                fontSize: '14px',
-                color: 'var(--text-secondary)',
-                lineHeight: '1.7',
-                margin: 0,
-                whiteSpace: 'pre-wrap',
-              }}>
-                {entity.description}
-              </p>
+              {enrichment?.historianNotes && enrichment.historianNotes.length > 0 ? (
+                <HistorianMarginNotes
+                  text={entity.description}
+                  notes={enrichment.historianNotes}
+                  style={{ margin: 0 }}
+                />
+              ) : (
+                <p style={{
+                  fontSize: '14px',
+                  color: 'var(--text-secondary)',
+                  lineHeight: '1.7',
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {entity.description}
+                </p>
+              )}
             </div>
           )}
 
