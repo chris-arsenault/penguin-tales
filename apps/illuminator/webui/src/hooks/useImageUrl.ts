@@ -127,49 +127,55 @@ export function useImageUrls(imageIds: (string | null | undefined)[]): Map<strin
     }
     setResults(initialResults);
 
-    // Load all images from Dexie
-    Promise.all(
-      validIds.map((id) =>
-        db.images.get(id)
-          .then((record) => ({ id, record, error: null }))
-          .catch((err) => ({ id, record: null, error: err.message }))
-      )
-    ).then((loadResults) => {
-      const newResults = new Map<string, UseImageUrlResult>();
+    // Load all images in a single Dexie transaction (bulkGet)
+    db.images.bulkGet(validIds)
+      .then((records) => {
+        const newResults = new Map<string, UseImageUrlResult>();
 
-      for (const { id, record, error } of loadResults) {
-        if (record?.blob) {
-          const objectUrl = URL.createObjectURL(record.blob);
-          urlsRef.current.set(id, objectUrl);
-          newResults.set(id, {
-            url: objectUrl,
-            loading: false,
-            error: null,
-            metadata: {
-              entityId: record.entityId,
-              entityName: record.entityName,
-              entityKind: record.entityKind,
-              entityCulture: record.entityCulture,
-              originalPrompt: record.originalPrompt,
-              finalPrompt: record.finalPrompt,
-              generatedAt: record.generatedAt,
-              model: record.model,
-              revisedPrompt: record.revisedPrompt,
-              size: record.size,
-            },
-          });
-        } else {
-          newResults.set(id, {
-            url: null,
-            loading: false,
-            error: error || 'Image not found',
-            metadata: null,
-          });
+        for (let i = 0; i < validIds.length; i++) {
+          const id = validIds[i];
+          const record = records[i];
+
+          if (record?.blob) {
+            const objectUrl = URL.createObjectURL(record.blob);
+            urlsRef.current.set(id, objectUrl);
+            newResults.set(id, {
+              url: objectUrl,
+              loading: false,
+              error: null,
+              metadata: {
+                entityId: record.entityId,
+                entityName: record.entityName,
+                entityKind: record.entityKind,
+                entityCulture: record.entityCulture,
+                originalPrompt: record.originalPrompt,
+                finalPrompt: record.finalPrompt,
+                generatedAt: record.generatedAt,
+                model: record.model,
+                revisedPrompt: record.revisedPrompt,
+                size: record.size,
+              },
+            });
+          } else {
+            newResults.set(id, {
+              url: null,
+              loading: false,
+              error: 'Image not found',
+              metadata: null,
+            });
+          }
         }
-      }
 
-      setResults(newResults);
-    });
+        setResults(newResults);
+      })
+      .catch(() => {
+        // Fallback: mark all as errored
+        const errorResults = new Map<string, UseImageUrlResult>();
+        for (const id of validIds) {
+          errorResults.set(id, { url: null, loading: false, error: 'Failed to load', metadata: null });
+        }
+        setResults(errorResults);
+      });
 
     // Cleanup on unmount
     return () => {
