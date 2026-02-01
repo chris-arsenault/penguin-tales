@@ -277,7 +277,7 @@ export const DEFAULT_ARTISTIC_STYLES: ArtisticStyle[] = [
     id: 'encyclopedia-plate',
     name: 'Encyclopedia Illustration',
     description: 'Scientific encyclopedia plate with detailed technical rendering',
-    promptFragment: 'encyclopedia illustration plate, detailed technical drawing, scientific accuracy, annotated diagram style, naturalist illustration, cross-section views, precise linework, educational illustration, Victorian-era scientific plate aesthetic',
+    promptFragment: 'encyclopedia illustration plate, detailed technical drawing, scientific accuracy, naturalist illustration, cross-section views, precise linework, Victorian-era scientific plate aesthetic, annotation arrows with numbers and symbols only, no readable English text',
     keywords: ['encyclopedia', 'scientific', 'technical', 'detailed'],
     category: 'document',
   },
