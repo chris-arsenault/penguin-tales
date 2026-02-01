@@ -352,6 +352,14 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
     targetCategory: 'landscape',
   },
 
+  {
+    id: 'sacred-earth',
+    name: 'Sacred Earth',
+    description: 'Reverential natural landscape as visual tone poem',
+    promptFragment: 'reverential landscape, visual tone poem, luminous ethereal natural environment, 70mm clarity and depth, sacred contemplative framing, the land as eternal presence, shadows flowing across undulating curves, rapturous stillness, no human context, the permanence of nature communing with the viewer, a world beyond words',
+    targetCategory: 'landscape',
+  },
+
   // ===========================
   // OBJECT compositions
   // ===========================
