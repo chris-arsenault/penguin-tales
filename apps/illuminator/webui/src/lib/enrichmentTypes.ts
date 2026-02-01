@@ -195,6 +195,8 @@ export interface EnrichmentTaskBase {
   imageRefId?: string;
   sceneDescription?: string;
   imageType?: 'entity' | 'chronicle';
+  /** Visual thesis per entity ID, for cover image scene generation */
+  visualIdentities?: Record<string, string>;
   // For palette expansion tasks
   paletteEntityKind?: string;
   paletteWorldContext?: string;
@@ -272,7 +274,8 @@ export type ChronicleStep =
   | 'summary'
   | 'image_refs'
   | 'cover_image_scene'  // Generate cover image scene description
-  | 'cover_image';  // Generate cover image from scene description
+  | 'cover_image'  // Generate cover image from scene description
+  | 'regenerate_scene_description';  // Regenerate a single image ref's scene description
 
 /**
  * Worker task - what we send to the worker (single task)

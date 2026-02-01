@@ -24,6 +24,7 @@ import {
   updateChronicleComparisonReport,
   updateChronicleSummary,
   updateChronicleImageRefs,
+  updateChronicleImageRef,
   updateChronicleCoverImage,
   updateChronicleCoverImageStatus,
   updateChronicleFailure,
@@ -120,6 +121,10 @@ async function executeEntityChronicleTask(
 
   if (step === 'cover_image_scene') {
     return executeCoverImageSceneStep(task, chronicleRecord, context);
+  }
+
+  if (step === 'regenerate_scene_description') {
+    return executeRegenerateSceneDescriptionStep(task, chronicleRecord, context);
   }
 
   if (step === 'cover_image') {
@@ -464,6 +469,7 @@ async function executeV2GenerationStep(
       narrativeStyleId: existingChronicle?.narrativeStyleId || narrativeStyle.id,
       narrativeStyle: existingChronicle?.narrativeStyle || narrativeStyle,
       roleAssignments,
+      lens: existingChronicle?.lens ?? focus?.lens,
       selectedEntityIds,
       selectedEventIds,
       selectedRelationshipIds,
@@ -871,11 +877,21 @@ Return ONLY valid JSON in this exact format:
 {"title": "...", "summary": "..."}`;
 }
 
-function formatImageRefEntities(chronicleContext: ChronicleGenerationContext): string {
+function formatImageRefEntities(
+  chronicleContext: ChronicleGenerationContext,
+  visualIdentities?: Record<string, string>
+): string {
   if (chronicleContext.entities.length === 0) return '(none)';
 
   return chronicleContext.entities
-    .map((entity) => `- ${entity.id}: ${entity.name} (${entity.kind})`)
+    .map((entity) => {
+      let line = `- ${entity.id}: ${entity.name} (${entity.kind})`;
+      const visual = visualIdentities?.[entity.id];
+      if (visual) {
+        line += `\n  Visual: ${visual}`;
+      }
+      return line;
+    })
     .join('\n');
 }
 
@@ -947,9 +963,10 @@ function splitIntoChunks(content: string): Array<{ index: number; text: string; 
 
 function buildImageRefsPrompt(
   content: string,
-  chronicleContext: ChronicleGenerationContext
+  chronicleContext: ChronicleGenerationContext,
+  visualIdentities?: Record<string, string>
 ): string {
-  const entityList = formatImageRefEntities(chronicleContext);
+  const entityList = formatImageRefEntities(chronicleContext, visualIdentities);
   const chunks = splitIntoChunks(content);
 
   // Build chunk display with markers (full text, no truncation)
@@ -975,6 +992,7 @@ For each image, choose one type:
 2. **Prompt Request** (type: "prompt_request") - Use for scenes involving multiple entities or environments
    - Best for: Multi-entity scenes, locations, action moments, atmospheric shots
    - REQUIRED: Include involvedEntityIds with at least one entity that appears in the scene
+   - In sceneDescription, incorporate the Visual identity of involved entities so the image generator knows what figures look like
 
 ## Output Format
 Return a JSON object. For each image placement, provide an entry with anchorText from the relevant chunk:
@@ -1193,7 +1211,7 @@ async function executeImageRefsStep(
   const callConfig = getCallConfig(config, 'chronicle.imageRefs');
   const chronicleId = chronicleRecord.chronicleId;
   const chronicleContext = task.chronicleContext!;
-  const imageRefsPrompt = buildImageRefsPrompt(imageRefsContent, chronicleContext);
+  const imageRefsPrompt = buildImageRefsPrompt(imageRefsContent, chronicleContext, task.visualIdentities);
   const imageRefsCall = await runTextCall({
     llmClient,
     callType: 'chronicle.imageRefs',
@@ -1295,12 +1313,20 @@ async function executeImageRefsStep(
 function buildCoverImageScenePrompt(
   content: string,
   title: string,
-  roleAssignments: Array<{ entityName: string; entityKind: string; role: string; isPrimary: boolean }>,
+  roleAssignments: Array<{ entityId: string; entityName: string; entityKind: string; role: string; isPrimary: boolean }>,
   sceneFraming: string,
-  sceneInstructions: string
+  sceneInstructions: string,
+  visualIdentities?: Record<string, string>
 ): string {
   const castList = roleAssignments
-    .map((r) => `- ${r.entityName} (${r.entityKind}, ${r.role}${r.isPrimary ? ', primary' : ''})`)
+    .map((r) => {
+      let line = `- ${r.entityName} (${r.entityKind}, ${r.role}${r.isPrimary ? ', primary' : ''})`;
+      const visual = visualIdentities?.[r.entityId];
+      if (visual) {
+        line += `\n  Visual: ${visual}`;
+      }
+      return line;
+    })
     .join('\n');
 
   return `${sceneFraming}
@@ -1317,12 +1343,12 @@ ${content}
 ## Instructions
 ${sceneInstructions}
 
-Reference entities by name so their visual identity can be composited into the image.
+Weave the visual identity of each cast member into the scene description so their appearance is clear without separate lookups.
 
 IMPORTANT: Keep the scene description to 100-150 words. Be vivid but concise — every word should carry visual weight. This description will be combined with style, composition, and color directives, so focus on WHAT TO SHOW, not how to render it.
 
 Return ONLY valid JSON:
-{"coverImageScene": "...", "involvedEntityNames": ["name1", "name2"]}`;
+{"coverImageScene": "..."}`;
 }
 
 async function executeCoverImageSceneStep(
@@ -1349,7 +1375,8 @@ async function executeCoverImageSceneStep(
     chronicleRecord.title,
     chronicleRecord.roleAssignments,
     sceneTemplate.framing,
-    sceneTemplate.instructions
+    sceneTemplate.instructions,
+    task.visualIdentities
   );
 
   const sceneCall = await runTextCall({
@@ -1372,7 +1399,6 @@ async function executeCoverImageSceneStep(
   }
 
   let sceneDescription: string;
-  let involvedEntityIds: string[];
 
   try {
     const parsed = parseJsonObject<Record<string, unknown>>(sceneResult.text, 'cover image scene response');
@@ -1380,23 +1406,14 @@ async function executeCoverImageSceneStep(
     if (!sceneDescription) {
       return { success: false, error: 'Cover image scene response missing coverImageScene field', debug: sceneResult.debug };
     }
-
-    // Resolve entity names to IDs from role assignments
-    const involvedNames = Array.isArray(parsed.involvedEntityNames)
-      ? parsed.involvedEntityNames.filter((n): n is string => typeof n === 'string')
-      : [];
-    involvedEntityIds = chronicleRecord.roleAssignments
-      .filter((r) => involvedNames.some((name) => r.entityName.toLowerCase() === name.toLowerCase()))
-      .map((r) => r.entityId);
-    // Fallback: if no names matched, use all primary entities
-    if (involvedEntityIds.length === 0) {
-      involvedEntityIds = chronicleRecord.roleAssignments
-        .filter((r) => r.isPrimary)
-        .map((r) => r.entityId);
-    }
   } catch {
     return { success: false, error: 'Failed to parse cover image scene response', debug: sceneResult.debug };
   }
+
+  // Use all primary role assignments for involvedEntityIds (visual identity is now in the scene description)
+  const involvedEntityIds = chronicleRecord.roleAssignments
+    .filter((r) => r.isPrimary)
+    .map((r) => r.entityId);
 
   const coverImage: ChronicleCoverImage = {
     sceneDescription,
@@ -1461,6 +1478,184 @@ async function executeCoverImageStep(
     return { success: false, error: 'Chronicle has no cover image scene description' };
   }
   return { success: false, error: 'Cover image generation is handled via the image task pipeline from the UI' };
+}
+
+// ============================================================================
+// Regenerate Scene Description Step (single image ref)
+// ============================================================================
+
+function buildRegenerateSceneDescriptionPrompt(
+  chunk: string,
+  anchorText: string,
+  involvedEntities: Array<{ id: string; name: string; kind: string }>,
+  visualIdentities?: Record<string, string>,
+  originalDescription?: string,
+  originalCaption?: string
+): string {
+  const entityList = involvedEntities
+    .map((e) => {
+      let line = `- ${e.name} (${e.kind})`;
+      const visual = visualIdentities?.[e.id];
+      if (visual) {
+        line += `\n  Visual: ${visual}`;
+      }
+      return line;
+    })
+    .join('\n');
+
+  return `You are rewriting a scene description for an image that will be placed in a chronicle.
+
+## Context (excerpt from chronicle)
+${chunk}
+
+## Anchor Point
+The image appears near: "${anchorText}"
+
+## Involved Entities
+${entityList || '(none specified)'}
+
+## Previous Description
+${originalDescription || '(none)'}
+
+## Previous Caption
+${originalCaption || '(none)'}
+
+## Instructions
+Write a vivid 1-2 sentence scene description for this image placement. The description should:
+- Capture the dramatic moment or atmosphere at this point in the narrative
+- Reference the involved entities by their visual appearance (use their Visual identity)
+- Be specific enough for an image generator to create a compelling scene
+- Describe what figures LOOK LIKE, not just what they're doing
+
+Also write a short caption (a few words to a brief sentence) suitable for display beneath the image. The caption should identify the scene or moment, not describe the image.
+
+Return ONLY valid JSON:
+{"sceneDescription": "...", "caption": "..."}`;
+}
+
+async function executeRegenerateSceneDescriptionStep(
+  task: WorkerTask,
+  chronicleRecord: ChronicleRecord | undefined,
+  context: TaskContext
+): Promise<TaskResult> {
+  const { config, llmClient, isAborted } = context;
+
+  if (!chronicleRecord) {
+    return { success: false, error: 'Chronicle record missing' };
+  }
+  if (!task.imageRefId) {
+    return { success: false, error: 'imageRefId required for scene description regeneration' };
+  }
+
+  const { content } = resolveTargetVersionContent(chronicleRecord);
+  if (!content) {
+    return { success: false, error: 'Chronicle has no content' };
+  }
+
+  // Find the target ref
+  const ref = chronicleRecord.imageRefs?.refs.find((r) => r.refId === task.imageRefId);
+  if (!ref || ref.type !== 'prompt_request') {
+    return { success: false, error: `Prompt request ref ${task.imageRefId} not found` };
+  }
+
+  // Extract ~2000 chars around the anchor point
+  const anchorIndex = ref.anchorIndex ?? 0;
+  const CONTEXT_CHARS = 2000;
+  const start = Math.max(0, anchorIndex - CONTEXT_CHARS / 2);
+  const end = Math.min(content.length, anchorIndex + CONTEXT_CHARS / 2);
+  const chunk = content.substring(start, end);
+
+  // Resolve involved entities from chronicleContext
+  const involvedEntities = (ref.involvedEntityIds || [])
+    .map((id) => task.chronicleContext?.entities.find((e) => e.id === id))
+    .filter((e): e is NonNullable<typeof e> => e != null)
+    .map((e) => ({ id: e.id, name: e.name, kind: e.kind }));
+
+  const prompt = buildRegenerateSceneDescriptionPrompt(
+    chunk,
+    ref.anchorText,
+    involvedEntities,
+    task.visualIdentities,
+    ref.sceneDescription,
+    ref.caption
+  );
+
+  const callConfig = getCallConfig(config, 'chronicle.imageRefs');
+  const call = await runTextCall({
+    llmClient,
+    callType: 'chronicle.imageRefs',
+    callConfig,
+    systemPrompt: 'You are rewriting a scene description for a chronicle image. Always respond with valid JSON.',
+    prompt,
+    temperature: 0.6,
+  });
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted', debug: call.result.debug };
+  }
+
+  if (call.result.error || !call.result.text) {
+    return { success: false, error: `Scene description failed: ${call.result.error || 'Empty response'}`, debug: call.result.debug };
+  }
+
+  let newDescription: string;
+  let newCaption: string | undefined;
+  try {
+    const parsed = parseJsonObject<{ sceneDescription: string; caption?: string }>(call.result.text, 'scene description');
+    newDescription = typeof parsed.sceneDescription === 'string' ? parsed.sceneDescription.trim() : '';
+    if (!newDescription) {
+      return { success: false, error: 'No sceneDescription in response', debug: call.result.debug };
+    }
+    newCaption = typeof parsed.caption === 'string' ? parsed.caption.trim() || undefined : undefined;
+  } catch {
+    return { success: false, error: 'Failed to parse scene description response', debug: call.result.debug };
+  }
+
+  // Update the ref in storage — scene description + caption
+  const refUpdates: Parameters<typeof updateChronicleImageRef>[2] = {
+    sceneDescription: newDescription,
+    status: 'pending' as const,
+  };
+  if (newCaption) {
+    refUpdates.caption = newCaption;
+  }
+  await updateChronicleImageRef(chronicleRecord.chronicleId, task.imageRefId, refUpdates);
+
+  const cost = {
+    estimated: call.estimate.estimatedCost,
+    actual: call.usage.actualCost,
+    inputTokens: call.usage.inputTokens,
+    outputTokens: call.usage.outputTokens,
+  };
+
+  await saveCostRecordWithDefaults({
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    chronicleId: chronicleRecord.chronicleId,
+    type: 'chronicleImageRefRegen' as CostType,
+    model: callConfig.model,
+    estimatedCost: cost.estimated,
+    actualCost: cost.actual,
+    inputTokens: cost.inputTokens,
+    outputTokens: cost.outputTokens,
+  });
+
+  return {
+    success: true,
+    result: {
+      chronicleId: chronicleRecord.chronicleId,
+      generatedAt: Date.now(),
+      model: callConfig.model,
+      estimatedCost: cost.estimated,
+      actualCost: cost.actual,
+      inputTokens: cost.inputTokens,
+      outputTokens: cost.outputTokens,
+    },
+    debug: call.result.debug,
+  };
 }
 
 export const chronicleTask = {

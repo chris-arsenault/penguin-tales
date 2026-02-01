@@ -25,13 +25,13 @@ interface ImagePromptFormatResult {
  */
 async function formatImagePromptWithClaude(
   originalPrompt: string,
-  config: { useClaudeForImagePrompt?: boolean; claudeImagePromptTemplate?: string; claudeCoverImagePromptTemplate?: string; imageModel?: string; globalImageRules?: string },
+  config: { useClaudeForImagePrompt?: boolean; claudeImagePromptTemplate?: string; claudeChronicleImagePromptTemplate?: string; imageModel?: string; globalImageRules?: string },
   llmClient: LLMClient,
   callConfig: ResolvedLLMCallConfig,
-  isCoverImage?: boolean
+  isChronicleImage?: boolean
 ): Promise<ImagePromptFormatResult> {
-  const templateSource = isCoverImage && config.claudeCoverImagePromptTemplate
-    ? config.claudeCoverImagePromptTemplate
+  const templateSource = isChronicleImage && config.claudeChronicleImagePromptTemplate
+    ? config.claudeChronicleImagePromptTemplate
     : config.claudeImagePromptTemplate;
 
   if (!config.useClaudeForImagePrompt || !templateSource) {
@@ -53,7 +53,7 @@ async function formatImagePromptWithClaude(
   try {
     const formattingCall = await runTextCall({
       llmClient,
-      callType: 'image.promptFormatting',
+      callType: isChronicleImage ? 'image.chronicleFormatting' : 'image.promptFormatting',
       callConfig,
       systemPrompt: 'You are a prompt engineer specializing in image generation. Respond only with the reformatted prompt, no explanations or preamble.',
       prompt: formattingPrompt,
@@ -99,9 +99,10 @@ export const imageTask = {
 
     // Store original prompt before any refinement
     const originalPrompt = task.prompt;
-    const formattingConfig = getCallConfig(config, 'image.promptFormatting');
-    const isCoverImage = task.imageRefId === '__cover_image__';
-    const formatResult = await formatImagePromptWithClaude(originalPrompt, config, llmClient, formattingConfig, isCoverImage);
+    const isChronicleImage = task.imageType === 'chronicle';
+    const formattingCallType = isChronicleImage ? 'image.chronicleFormatting' : 'image.promptFormatting';
+    const formattingConfig = getCallConfig(config, formattingCallType);
+    const formatResult = await formatImagePromptWithClaude(originalPrompt, config, llmClient, formattingConfig, isChronicleImage);
     const finalPrompt = formatResult.prompt;
 
     // Save imagePrompt cost record if Claude was used

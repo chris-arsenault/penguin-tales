@@ -63,6 +63,23 @@ cd "$SCRIPT_DIR"
 terraform init
 terraform apply
 
+# Optimize S3 image variants (raw -> webp/thumb) based on manifest
+IMAGE_BUCKET=$(terraform output -raw image_bucket_name 2>/dev/null || true)
+IMAGE_PREFIX="${IMAGE_PREFIX:-}"
+if [ -n "$IMAGE_BUCKET" ]; then
+  REGION_OUTPUT=$(terraform output -raw aws_region 2>/dev/null || true)
+  REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-$REGION_OUTPUT}}"
+  if [ -z "$REGION" ]; then
+    REGION="us-east-1"
+  fi
+  export AWS_REGION="$REGION"
+  export AWS_DEFAULT_REGION="$REGION"
+  MANIFEST_KEY="${IMAGE_MANIFEST_KEY:-${IMAGE_PREFIX%/}/image-manifest.json}"
+  MANIFEST_KEY="${MANIFEST_KEY#/}"
+  echo "==> Optimizing image variants in s3://${IMAGE_BUCKET}/${MANIFEST_KEY}"
+  node "$REPO_ROOT/apps/viewer/webui/scripts/optimize-s3-images.mjs" --bucket "$IMAGE_BUCKET" --manifest-key "$MANIFEST_KEY" --region "$REGION"
+fi
+
 echo ""
 echo "==> Deployment complete!"
 terraform output website_url

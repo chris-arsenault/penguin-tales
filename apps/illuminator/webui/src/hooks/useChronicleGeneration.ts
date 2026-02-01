@@ -68,6 +68,7 @@ export interface ChronicleMetadata {
     entityKind: string;
     isPrimary: boolean;
   }>;
+  lens?: { entityId: string; entityName: string; entityKind: string };
   narrativeStyleId: string;
   narrativeStyle?: NarrativeStyle;
   selectedEntityIds: string[];

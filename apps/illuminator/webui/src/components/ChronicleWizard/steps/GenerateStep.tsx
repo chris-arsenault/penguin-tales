@@ -96,6 +96,29 @@ export default function GenerateStep({ onGenerate }: GenerateStepProps) {
           </div>
         </div>
 
+        {/* Narrative Lens */}
+        {state.lens && (
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+              Narrative Lens
+            </div>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 8px',
+              background: 'rgba(139, 92, 246, 0.1)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              borderRadius: '4px',
+              fontSize: '11px',
+            }}>
+              <span style={{ color: 'rgba(139, 92, 246, 0.7)' }}>&#x25C8;</span>
+              <span style={{ fontWeight: 500 }}>{state.lens.entityName}</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>({state.lens.entityKind})</span>
+            </div>
+          </div>
+        )}
+
         {/* Role Breakdown */}
         <div style={{ marginTop: '20px' }}>
           <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>

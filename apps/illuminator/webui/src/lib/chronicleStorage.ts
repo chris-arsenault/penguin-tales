@@ -9,6 +9,7 @@
 import type {
   ChronicleFormat,
   ChronicleRoleAssignment,
+  NarrativeLens,
   ChronicleFocusType,
   ChronicleStatus,
   ChronicleImageRefs,
@@ -53,6 +54,9 @@ export interface ChronicleRecord {
 
   /** Role assignments define the chronicle's cast */
   roleAssignments: ChronicleRoleAssignment[];
+
+  /** Optional narrative lens - contextual frame entity (rule, occurrence, ability) */
+  lens?: NarrativeLens;
 
   /** Narrative style ID */
   narrativeStyleId: string;
@@ -279,6 +283,7 @@ export interface ChronicleShellMetadata {
   narrativeStyleId: string;
   narrativeStyle?: NarrativeStyle;
   roleAssignments: ChronicleRoleAssignment[];
+  lens?: NarrativeLens;
   selectedEntityIds: string[];
   selectedEventIds: string[];
   selectedRelationshipIds: string[];
@@ -300,7 +305,6 @@ export async function createChronicleShell(
 
   const focusType = deriveFocusType(metadata.roleAssignments);
   const title = metadata.title || deriveTitleFromRoles(metadata.roleAssignments);
-
   const record: ChronicleRecord = {
     chronicleId,
     projectId: metadata.projectId,
@@ -313,6 +317,7 @@ export async function createChronicleShell(
     narrativeStyleId: metadata.narrativeStyleId,
     narrativeStyle: metadata.narrativeStyle,
     roleAssignments: metadata.roleAssignments,
+    lens: metadata.lens,
     selectedEntityIds: metadata.selectedEntityIds,
     selectedEventIds: metadata.selectedEventIds,
     selectedRelationshipIds: metadata.selectedRelationshipIds,
@@ -361,6 +366,7 @@ export interface ChronicleMetadata {
   narrativeStyleId: string;
   narrativeStyle?: NarrativeStyle;
   roleAssignments: ChronicleRoleAssignment[];
+  lens?: NarrativeLens;
   selectedEntityIds: string[];
   selectedEventIds: string[];
   selectedRelationshipIds: string[];
@@ -393,7 +399,6 @@ export async function createChronicle(
   const title = metadata.title || deriveTitleFromRoles(metadata.roleAssignments);
   const assembledAt = Date.now();
   const activeVersionId = `current_${assembledAt}`;
-
   const record: ChronicleRecord = {
     chronicleId,
     projectId: metadata.projectId,
@@ -406,6 +411,7 @@ export async function createChronicle(
     narrativeStyleId: metadata.narrativeStyleId,
     narrativeStyle: metadata.narrativeStyle,
     roleAssignments: metadata.roleAssignments,
+    lens: metadata.lens,
     selectedEntityIds: metadata.selectedEntityIds,
     selectedEventIds: metadata.selectedEventIds,
     selectedRelationshipIds: metadata.selectedRelationshipIds,
@@ -875,6 +881,7 @@ export async function updateChronicleImageRef(
     caption?: string;
     size?: 'small' | 'medium' | 'large' | 'full-width';
     justification?: 'left' | 'right' | null;
+    sceneDescription?: string;
   }
 ): Promise<void> {
   const db = await openChronicleDb();
@@ -903,7 +910,8 @@ export async function updateChronicleImageRef(
 
       const ref = record.imageRefs.refs[refIndex];
       const wantsPromptUpdates =
-        updates.status !== undefined || updates.generatedImageId !== undefined || updates.error !== undefined;
+        updates.status !== undefined || updates.generatedImageId !== undefined ||
+        updates.error !== undefined || updates.sceneDescription !== undefined;
 
       if (wantsPromptUpdates && ref.type !== 'prompt_request') {
         reject(new Error(`Image ref ${refId} is not a prompt request`));
@@ -930,6 +938,7 @@ export async function updateChronicleImageRef(
 
       // Apply prompt request updates
       if (ref.type === 'prompt_request') {
+        if (updates.sceneDescription !== undefined) ref.sceneDescription = updates.sceneDescription;
         if (updates.status !== undefined) ref.status = updates.status;
         if (updates.generatedImageId !== undefined) {
           if (updates.generatedImageId) {
@@ -1279,6 +1288,48 @@ export async function getEntityUsageStats(
           chronicleIds: [chronicle.chronicleId],
         });
       }
+    }
+  }
+
+  return stats;
+}
+
+// ============================================================================
+// Narrative Style Usage Statistics
+// ============================================================================
+
+/**
+ * Usage statistics for a narrative style across chronicles
+ */
+export interface NarrativeStyleUsageStats {
+  styleId: string;
+  usageCount: number;
+  chronicleIds: string[];
+}
+
+/**
+ * Compute narrative style usage statistics from existing chronicles.
+ * Returns a map of styleId -> usage stats.
+ */
+export async function getNarrativeStyleUsageStats(
+  simulationRunId: string
+): Promise<Map<string, NarrativeStyleUsageStats>> {
+  const chronicles = await getChroniclesForSimulation(simulationRunId);
+  const stats = new Map<string, NarrativeStyleUsageStats>();
+
+  for (const chronicle of chronicles) {
+    if (!chronicle.narrativeStyleId) continue;
+
+    const existing = stats.get(chronicle.narrativeStyleId);
+    if (existing) {
+      existing.usageCount += 1;
+      existing.chronicleIds.push(chronicle.chronicleId);
+    } else {
+      stats.set(chronicle.narrativeStyleId, {
+        styleId: chronicle.narrativeStyleId,
+        usageCount: 1,
+        chronicleIds: [chronicle.chronicleId],
+      });
     }
   }
 

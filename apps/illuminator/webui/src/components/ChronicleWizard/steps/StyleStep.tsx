@@ -4,9 +4,10 @@
  * Shows a grid of available narrative styles with role previews.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { NarrativeStyle, StoryNarrativeStyle, DocumentNarrativeStyle, RoleDefinition } from '@canonry/world-schema';
 import { useWizard } from '../WizardContext';
+import { getNarrativeStyleUsageStats } from '../../../lib/chronicleStorage';
 
 /** Get roles from either story or document style */
 function getRoles(style: NarrativeStyle): RoleDefinition[] {
@@ -23,9 +24,38 @@ interface StyleStepProps {
 }
 
 export default function StyleStep({ styles }: StyleStepProps) {
-  const { state, selectStyle, setAcceptDefaults } = useWizard();
+  const { state, selectStyle, setAcceptDefaults, simulationRunId } = useWizard();
   const [searchText, setSearchText] = useState('');
   const [formatFilter, setFormatFilter] = useState<'all' | 'story' | 'document'>('all');
+  const [styleUsage, setStyleUsage] = useState<Map<string, { usageCount: number }>>(new Map());
+  const [usageLoading, setUsageLoading] = useState(false);
+
+  useEffect(() => {
+    if (!simulationRunId) {
+      setStyleUsage(new Map());
+      setUsageLoading(false);
+      return;
+    }
+
+    let isActive = true;
+    setUsageLoading(true);
+
+    getNarrativeStyleUsageStats(simulationRunId)
+      .then((stats) => {
+        if (isActive) setStyleUsage(stats);
+      })
+      .catch((err) => {
+        console.error('[Chronicle Wizard] Failed to load narrative style usage stats:', err);
+        if (isActive) setStyleUsage(new Map());
+      })
+      .finally(() => {
+        if (isActive) setUsageLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [simulationRunId]);
 
   // Filter styles
   const filteredStyles = useMemo(() => {
@@ -119,6 +149,8 @@ export default function StyleStep({ styles }: StyleStepProps) {
                   key={style.id}
                   style={style}
                   isSelected={state.narrativeStyleId === style.id}
+                  usageCount={styleUsage.get(style.id)?.usageCount ?? 0}
+                  usageLoading={usageLoading}
                   onSelect={() => selectStyle(style, state.acceptDefaults)}
                 />
               ))}
@@ -143,6 +175,8 @@ export default function StyleStep({ styles }: StyleStepProps) {
                   key={style.id}
                   style={style}
                   isSelected={state.narrativeStyleId === style.id}
+                  usageCount={styleUsage.get(style.id)?.usageCount ?? 0}
+                  usageLoading={usageLoading}
                   onSelect={() => selectStyle(style, state.acceptDefaults)}
                 />
               ))}
@@ -183,6 +217,9 @@ export default function StyleStep({ styles }: StyleStepProps) {
           <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--text-muted)' }}>
             {state.narrativeStyle.description}
           </p>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            {usageLoading ? 'Usage in this run: …' : `Usage in this run: ${styleUsage.get(state.narrativeStyle.id)?.usageCount ?? 0}x`}
+          </div>
 
           {/* Role Requirements */}
           <div>
@@ -222,10 +259,12 @@ export default function StyleStep({ styles }: StyleStepProps) {
 interface StyleCardProps {
   style: NarrativeStyle;
   isSelected: boolean;
+  usageCount: number;
+  usageLoading: boolean;
   onSelect: () => void;
 }
 
-function StyleCard({ style, isSelected, onSelect }: StyleCardProps) {
+function StyleCard({ style, isSelected, usageCount, usageLoading, onSelect }: StyleCardProps) {
   const roles = getRoles(style);
   const roleCount = roles.length;
   const requiredCount = roles.filter(r => r.count.min > 0).length;
@@ -242,18 +281,33 @@ function StyleCard({ style, isSelected, onSelect }: StyleCardProps) {
         transition: 'all 0.2s ease',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px' }}>
-        <span style={{ fontWeight: 500, fontSize: '13px' }}>{style.name}</span>
-        <span style={{
-          padding: '2px 6px',
-          background: style.format === 'story' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-          color: style.format === 'story' ? 'var(--accent-color)' : 'var(--warning)',
-          borderRadius: '4px',
-          fontSize: '9px',
-          textTransform: 'uppercase',
-        }}>
-          {style.format}
-        </span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px', gap: '8px' }}>
+        <span style={{ fontWeight: 500, fontSize: '13px', flex: 1 }}>{style.name}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span
+            style={{
+              fontSize: '9px',
+              color: usageCount > 0 ? 'var(--text-secondary)' : 'var(--text-muted)',
+              padding: '2px 6px',
+              background: 'var(--bg-tertiary)',
+              borderRadius: '4px',
+              textTransform: 'uppercase',
+            }}
+            title="Times this style has been used in the current run"
+          >
+            {usageLoading ? '…' : `${usageCount}x used`}
+          </span>
+          <span style={{
+            padding: '2px 6px',
+            background: style.format === 'story' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+            color: style.format === 'story' ? 'var(--accent-color)' : 'var(--warning)',
+            borderRadius: '4px',
+            fontSize: '9px',
+            textTransform: 'uppercase',
+          }}>
+            {style.format}
+          </span>
+        </div>
       </div>
 
       <p style={{
@@ -268,7 +322,7 @@ function StyleCard({ style, isSelected, onSelect }: StyleCardProps) {
         {style.description}
       </p>
 
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
           {roleCount} roles ({requiredCount} required)
         </span>

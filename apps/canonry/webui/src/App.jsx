@@ -59,6 +59,31 @@ import {
   getCompletedChroniclesForProject,
 } from './storage/chronicleStorage';
 import { colors, typography, spacing } from './theme';
+import {
+  loadAwsConfig,
+  saveAwsConfig,
+  loadAwsTokens,
+  saveAwsTokens,
+  clearAwsTokens,
+  isTokenValid,
+} from './aws/awsConfigStorage';
+import {
+  extractCognitoTokensFromUrl,
+  clearCognitoHash,
+} from './aws/cognitoAuth';
+import {
+  signInWithUserPool,
+  getUserPoolSession,
+  signOutUserPool,
+  sessionToTokens,
+} from './aws/cognitoUserAuth';
+import {
+  createS3Client,
+  buildImageStorageConfig,
+  syncProjectImagesToS3,
+  listS3Prefixes,
+  buildStorageImageUrl,
+} from './aws/awsS3';
 
 /**
  * Extract loreData from enriched entities
@@ -284,6 +309,8 @@ async function buildBundleImageAssets({
   staticPages,
   shouldCancel,
   onProgress,
+  mode = 'local',
+  storage,
 }) {
   const imageIds = collectReferencedImageIds(worldData, chronicles, staticPages);
   const totalImages = imageIds.size;
@@ -315,6 +342,43 @@ async function buildBundleImageAssets({
     if (!record) {
       record = await getImageMetadata(imageId);
     }
+
+    if (mode === 's3' && storage) {
+      processed += 1;
+      const remotePath = buildStorageImageUrl(storage, 'raw', imageId);
+      if (!remotePath) {
+        if (onProgress) {
+          onProgress({ phase: 'images', processed, total: totalImages });
+        }
+        continue;
+      }
+
+      images[imageId] = remotePath;
+
+      const entity = entityByImageId.get(imageId) || (record?.entityId ? entityById.get(record.entityId) : null);
+      const prompt = record?.originalPrompt || record?.finalPrompt || record?.revisedPrompt || '';
+      const imageEntry = {
+        entityId: entity?.id || record?.entityId || 'chronicle',
+        entityName: entity?.name || record?.entityName || 'Unknown',
+        entityKind: entity?.kind || record?.entityKind || 'unknown',
+        prompt,
+        localPath: remotePath,
+        imageId,
+      };
+
+      if (record?.imageType === 'chronicle') {
+        imageEntry.imageType = 'chronicle';
+        imageEntry.chronicleId = record.chronicleId;
+        imageEntry.imageRefId = record.imageRefId;
+      }
+
+      imageResults.push(imageEntry);
+      if (onProgress) {
+        onProgress({ phase: 'images', processed, total: totalImages });
+      }
+      continue;
+    }
+
     const blob = await getImageBlob(imageId);
     throwIfExportCanceled(shouldCancel);
     processed += 1;
@@ -406,6 +470,32 @@ const styles = {
     color: colors.textMuted,
     flexShrink: 0,
   },
+  awsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: spacing.md,
+  },
+  awsField: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: spacing.xs,
+  },
+  awsLabel: {
+    fontSize: typography.sizeXs,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+  },
+  awsInput: {
+    width: '100%',
+    padding: `${spacing.sm} ${spacing.md}`,
+    borderRadius: spacing.sm,
+    border: `1px solid ${colors.border}`,
+    backgroundColor: colors.bgSecondary,
+    color: colors.textPrimary,
+    fontFamily: typography.fontFamily,
+    fontSize: typography.sizeSm,
+  },
 };
 
 const VALID_TABS = [
@@ -421,6 +511,15 @@ const VALID_TABS = [
 
 const SLOT_EXPORT_FORMAT = 'canonry-slot-export';
 const SLOT_EXPORT_VERSION = 1;
+const DEFAULT_AWS_CONFIG = {
+  region: '',
+  identityPoolId: '',
+  cognitoUserPoolId: '',
+  cognitoClientId: '',
+  imageBucket: '',
+  imagePrefix: '',
+  useS3Images: false,
+};
 
 function isWorldOutput(candidate) {
   if (!candidate || typeof candidate !== 'object') return false;
@@ -480,9 +579,20 @@ export default function App() {
   const [activeSlotIndex, setActiveSlotIndex] = useState(0);
   const [exportModalSlotIndex, setExportModalSlotIndex] = useState(null);
   const [exportBundleStatus, setExportBundleStatus] = useState({ state: 'idle', detail: '' });
+  const [awsModalOpen, setAwsModalOpen] = useState(false);
+  const [awsConfig, setAwsConfig] = useState(() => loadAwsConfig() || { ...DEFAULT_AWS_CONFIG });
+  const [awsTokens, setAwsTokens] = useState(() => loadAwsTokens());
+  const [awsStatus, setAwsStatus] = useState({ state: 'idle', detail: '' });
+  const [awsBrowseState, setAwsBrowseState] = useState({ loading: false, prefixes: [], error: null });
+  const [awsUsername, setAwsUsername] = useState('');
+  const [awsPassword, setAwsPassword] = useState('');
+  const [awsUserLabel, setAwsUserLabel] = useState('');
+  const [awsSyncProgress, setAwsSyncProgress] = useState({ phase: 'idle', processed: 0, total: 0, uploaded: 0 });
   const exportCancelRef = useRef(false);
   const exportModalMouseDown = useRef(false);
+  const awsModalMouseDown = useRef(false);
   const simulationOwnerRef = useRef(null);
+  const currentProjectRef = useRef(null);
   // Track whether we're loading from a saved slot (to skip auto-save to scratch)
   const isLoadingSlotRef = useRef(false);
   // Track the last saved simulation results object to detect new simulations
@@ -490,6 +600,45 @@ export default function App() {
   const bestRunScoreRef = useRef(-Infinity);
   const bestRunSaveQueueRef = useRef(Promise.resolve());
   const activeSection = activeTab ? (activeSectionByTab?.[activeTab] ?? null) : null;
+  const s3Client = useMemo(() => createS3Client(awsConfig, awsTokens), [awsConfig, awsTokens]);
+
+  useEffect(() => {
+    const tokens = extractCognitoTokensFromUrl();
+    if (tokens) {
+      saveAwsTokens(tokens);
+      setAwsTokens(tokens);
+      clearCognitoHash();
+    }
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    const userPoolConfigured = Boolean(awsConfig?.cognitoUserPoolId && awsConfig?.cognitoClientId);
+    if (!userPoolConfigured || isTokenValid(awsTokens)) return;
+    getUserPoolSession(awsConfig)
+      .then((session) => {
+        if (canceled || !session) return;
+        const nextTokens = sessionToTokens(session);
+        if (nextTokens) {
+          saveAwsTokens(nextTokens);
+          setAwsTokens(nextTokens);
+        }
+        const username = session.getIdToken().payload?.['cognito:username'] || '';
+        if (username) setAwsUserLabel(username);
+      })
+      .catch(() => {});
+    return () => {
+      canceled = true;
+    };
+  }, [awsConfig, awsTokens]);
+
+  const updateAwsConfig = useCallback((patch) => {
+    setAwsConfig((prev) => {
+      const next = { ...prev, ...patch };
+      saveAwsConfig(next);
+      return next;
+    });
+  }, []);
 
   const setActiveSection = useCallback((section) => {
     if (!activeTab) return;
@@ -582,6 +731,121 @@ export default function App() {
     }
   }, [closeExportModal, exportBundleStatus.state]);
 
+  const handleAwsModalMouseDown = useCallback((e) => {
+    awsModalMouseDown.current = e.target === e.currentTarget;
+  }, []);
+
+  const handleAwsModalClick = useCallback((e) => {
+    if (awsModalMouseDown.current && e.target === e.currentTarget) {
+      setAwsModalOpen(false);
+    }
+  }, []);
+
+  const handleAwsLogin = useCallback(async () => {
+    if (!awsUsername || !awsPassword) {
+      alert('Enter username and password.');
+      return;
+    }
+    try {
+      setAwsStatus({ state: 'working', detail: 'Signing in...' });
+      const session = await signInWithUserPool({
+        username: awsUsername,
+        password: awsPassword,
+        config: awsConfig,
+      });
+      const nextTokens = sessionToTokens(session);
+      if (nextTokens) {
+        saveAwsTokens(nextTokens);
+        setAwsTokens(nextTokens);
+      }
+      setAwsUserLabel(awsUsername);
+      setAwsPassword('');
+      setAwsStatus({ state: 'idle', detail: 'Signed in.' });
+    } catch (err) {
+      console.error('Failed to sign in:', err);
+      setAwsStatus({ state: 'error', detail: err.message || 'Sign in failed.' });
+    }
+  }, [awsUsername, awsPassword, awsConfig]);
+
+  const handleAwsLogout = useCallback(() => {
+    signOutUserPool(awsConfig);
+    clearAwsTokens();
+    setAwsTokens(null);
+    setAwsUserLabel('');
+    setAwsStatus({ state: 'idle', detail: 'Signed out.' });
+  }, [awsConfig]);
+
+  const handleAwsBrowsePrefixes = useCallback(async () => {
+    if (!s3Client || !awsConfig?.imageBucket) {
+      setAwsBrowseState({ loading: false, prefixes: [], error: 'Missing S3 client or bucket.' });
+      return;
+    }
+    try {
+      setAwsBrowseState({ loading: true, prefixes: [], error: null });
+      const prefixes = await listS3Prefixes(s3Client, {
+        bucket: awsConfig.imageBucket,
+        prefix: awsConfig.imagePrefix || '',
+      });
+      setAwsBrowseState({ loading: false, prefixes, error: null });
+    } catch (err) {
+      setAwsBrowseState({ loading: false, prefixes: [], error: err.message || 'Failed to list prefixes.' });
+    }
+  }, [s3Client, awsConfig]);
+
+  const handleAwsTestSetup = useCallback(async () => {
+    if (!s3Client) {
+      setAwsStatus({ state: 'error', detail: 'Missing AWS credentials.' });
+      return;
+    }
+    if (!awsConfig?.imageBucket) {
+      setAwsStatus({ state: 'error', detail: 'Missing image bucket.' });
+      return;
+    }
+    try {
+      setAwsStatus({ state: 'working', detail: 'Testing S3 access...' });
+      setAwsSyncProgress({ phase: 'test', processed: 0, total: 0, uploaded: 0 });
+      const prefixes = await listS3Prefixes(s3Client, {
+        bucket: awsConfig.imageBucket,
+        prefix: awsConfig.imagePrefix || '',
+      });
+      const prefixLabel = prefixes.length ? `Found ${prefixes.length} prefixes.` : 'Access OK.';
+      setAwsStatus({ state: 'idle', detail: `Test passed. ${prefixLabel}` });
+    } catch (err) {
+      console.error('Failed to test S3 setup:', err);
+      setAwsStatus({ state: 'error', detail: err.message || 'S3 test failed.' });
+    }
+  }, [s3Client, awsConfig]);
+
+  const handleAwsSyncImages = useCallback(async () => {
+    const projectId = currentProjectRef.current?.id;
+    if (!projectId) return;
+    if (!s3Client) {
+      alert('Missing S3 client. Check Cognito configuration and login.');
+      return;
+    }
+    setAwsStatus({ state: 'working', detail: 'Syncing images to S3...' });
+    setAwsSyncProgress({ phase: 'scan', processed: 0, total: 0, uploaded: 0 });
+    try {
+      await syncProjectImagesToS3({
+        projectId,
+        s3: s3Client,
+        config: awsConfig,
+        onProgress: ({ phase, processed, total, uploaded }) => {
+          const label = phase === 'upload' ? 'Uploading' : 'Scanning';
+          setAwsStatus({
+            state: 'working',
+            detail: `${label} images ${processed}/${total} (uploaded ${uploaded})...`,
+          });
+          setAwsSyncProgress({ phase, processed, total, uploaded });
+        },
+      });
+      setAwsStatus({ state: 'idle', detail: 'Image sync complete.' });
+    } catch (err) {
+      console.error('Failed to sync images:', err);
+      setAwsStatus({ state: 'error', detail: err.message || 'Image sync failed.' });
+    }
+  }, [s3Client, awsConfig]);
+
   const handleCancelExportBundle = useCallback(() => {
     exportCancelRef.current = true;
     setExportBundleStatus({ state: 'idle', detail: '' });
@@ -618,6 +882,10 @@ export default function App() {
     reloadProjectFromDefaults,
     DEFAULT_PROJECT_ID,
   } = useProjectStorage();
+
+  useEffect(() => {
+    currentProjectRef.current = currentProject;
+  }, [currentProject]);
 
   // Wrap reloadProjectFromDefaults to also update React state
   const handleReloadFromDefaults = useCallback(async () => {
@@ -1360,6 +1628,30 @@ export default function App() {
 
       const staticPages = (staticPagesRaw || []).filter((page) => page.status === 'published');
       const chronicles = chroniclesRaw || [];
+      const useS3Images = Boolean(awsConfig?.useS3Images && awsConfig?.imageBucket);
+      const imageStorage = useS3Images ? buildImageStorageConfig(awsConfig, currentProject.id) : null;
+
+      if (useS3Images) {
+        if (!s3Client) {
+          throw new Error('S3 sync is enabled but AWS credentials are not ready.');
+        }
+        setExportBundleStatus((prev) => (
+          prev.state === 'working' ? { ...prev, detail: 'Syncing images to S3...' } : prev
+        ));
+        await syncProjectImagesToS3({
+          projectId: currentProject.id,
+          s3: s3Client,
+          config: awsConfig,
+          onProgress: ({ processed, total, uploaded }) => {
+            setExportBundleStatus((prev) => (
+              prev.state === 'working'
+                ? { ...prev, detail: `Syncing images to S3 (${processed}/${total}, uploaded ${uploaded})...` }
+                : prev
+            ));
+          },
+        });
+      }
+
       const { imageData, images, imageFiles } = await buildBundleImageAssets({
         projectId: currentProject.id,
         worldData,
@@ -1374,6 +1666,8 @@ export default function App() {
               : prev
           ));
         },
+        mode: useS3Images ? 's3' : 'local',
+        storage: imageStorage,
       });
 
       throwIfExportCanceled(shouldCancel);
@@ -1438,9 +1732,11 @@ export default function App() {
   }, [
     activeSlotIndex,
     archivistData?.worldData,
+    awsConfig,
     closeExportModal,
     currentProject?.id,
     currentProject?.name,
+    s3Client,
     slots,
   ]);
 
@@ -1488,6 +1784,9 @@ export default function App() {
     ? exportModalSlot.title || (exportModalSlotIndex === 0 ? 'Scratch' : `Slot ${exportModalSlotIndex}`)
     : 'Slot';
   const isExportingBundle = exportBundleStatus.state === 'working';
+  const hasAwsToken = isTokenValid(awsTokens);
+  const awsLoginConfigured = Boolean(awsConfig?.cognitoUserPoolId && awsConfig?.cognitoClientId);
+  const awsReady = Boolean(awsConfig?.identityPoolId && awsConfig?.region && (!awsLoginConfigured || hasAwsToken));
 
   // Extract naming data for Name Forge (keyed by culture ID)
   const namingData = useMemo(() => {
@@ -1884,6 +2183,9 @@ export default function App() {
         <Navigation
           activeTab={activeTab}
           onTabChange={handleTabChange}
+          onAwsClick={() => {
+            setAwsModalOpen(true);
+          }}
           onHelpClick={() => setHelpModalOpen(true)}
         />
       )}
@@ -1940,6 +2242,11 @@ export default function App() {
                   <div style={{ fontSize: typography.sizeSm, color: colors.textMuted }}>
                     Viewer bundles include chronicles, static pages, and referenced images.
                   </div>
+                  {awsConfig?.useS3Images && (
+                    <div style={{ fontSize: typography.sizeSm, color: colors.textMuted, marginTop: spacing.sm }}>
+                      S3 image sync enabled: bundle will reference remote images and skip embedding them.
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -1968,6 +2275,214 @@ export default function App() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {awsModalOpen && (
+        <div
+          className="modal-overlay"
+          onMouseDown={handleAwsModalMouseDown}
+          onClick={handleAwsModalClick}
+        >
+          <div className="modal modal-simple" style={{ maxWidth: '900px' }}>
+            <div className="modal-header">
+              <div className="modal-title">AWS Sync</div>
+              <button className="btn-close" onClick={() => setAwsModalOpen(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ marginBottom: spacing.lg }}>
+                <div style={styles.awsLabel}>Session</div>
+                <div style={{ color: colors.textSecondary, marginTop: spacing.xs }}>
+                  {awsLoginConfigured
+                    ? (hasAwsToken
+                      ? `Signed in as ${awsUserLabel || 'Cognito user'}.`
+                      : 'Not authenticated. Login required.')
+                    : 'No user pool configured. Identity pool must allow unauthenticated access.'}
+                </div>
+              </div>
+
+              {awsStatus.detail && (
+                <div className="modal-status" style={{ marginBottom: spacing.lg }}>
+                  <div className="modal-status-title">AWS Status</div>
+                  <div className="modal-status-subtitle">{awsStatus.detail}</div>
+                </div>
+              )}
+              {awsSyncProgress.total > 0 && (
+                <div style={{ marginBottom: spacing.lg }}>
+                  <div style={{ fontSize: typography.sizeSm, color: colors.textMuted }}>
+                    Sync progress: {awsSyncProgress.processed}/{awsSyncProgress.total} processed
+                    {awsSyncProgress.uploaded ? `, ${awsSyncProgress.uploaded} uploaded` : ''}
+                  </div>
+                  <div style={{ marginTop: spacing.xs, height: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${awsSyncProgress.total ? Math.min(100, (awsSyncProgress.processed / awsSyncProgress.total) * 100) : 0}%`,
+                        background: colors.accent,
+                        borderRadius: '4px',
+                        transition: 'width 0.2s',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ marginBottom: spacing.lg }}>
+                <div className="modal-title" style={{ fontSize: typography.sizeMd }}>Cognito Auth</div>
+                <div style={styles.awsGrid}>
+                  <div style={styles.awsField}>
+                    <label style={styles.awsLabel}>Region</label>
+                    <input
+                      style={styles.awsInput}
+                      value={awsConfig.region}
+                      onChange={(e) => updateAwsConfig({ region: e.target.value })}
+                      placeholder="us-east-1"
+                    />
+                  </div>
+                  <div style={styles.awsField}>
+                    <label style={styles.awsLabel}>Identity Pool ID</label>
+                    <input
+                      style={styles.awsInput}
+                      value={awsConfig.identityPoolId}
+                      onChange={(e) => updateAwsConfig({ identityPoolId: e.target.value })}
+                      placeholder="us-east-1:xxxx-xxxx"
+                    />
+                  </div>
+                  <div style={styles.awsField}>
+                    <label style={styles.awsLabel}>User Pool ID</label>
+                    <input
+                      style={styles.awsInput}
+                      value={awsConfig.cognitoUserPoolId}
+                      onChange={(e) => updateAwsConfig({ cognitoUserPoolId: e.target.value })}
+                      placeholder="us-east-1_XXXXXX"
+                    />
+                  </div>
+                  <div style={styles.awsField}>
+                    <label style={styles.awsLabel}>App Client ID</label>
+                    <input
+                      style={styles.awsInput}
+                      value={awsConfig.cognitoClientId}
+                      onChange={(e) => updateAwsConfig({ cognitoClientId: e.target.value })}
+                      placeholder="Cognito client id"
+                    />
+                  </div>
+                </div>
+                <div style={{ marginTop: spacing.md }}>
+                  {hasAwsToken ? (
+                    <div style={{ display: 'flex', gap: spacing.sm, alignItems: 'center' }}>
+                      <div style={{ color: colors.textSecondary }}>
+                        {awsUserLabel ? `User: ${awsUserLabel}` : 'User authenticated.'}
+                      </div>
+                      <button className="btn-sm" onClick={handleAwsLogout}>
+                        Sign Out
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: spacing.md, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                      <div style={styles.awsField}>
+                        <label style={styles.awsLabel}>Username</label>
+                        <input
+                          style={styles.awsInput}
+                          value={awsUsername}
+                          onChange={(e) => setAwsUsername(e.target.value)}
+                          placeholder="username"
+                        />
+                      </div>
+                      <div style={styles.awsField}>
+                        <label style={styles.awsLabel}>Password</label>
+                        <input
+                          style={styles.awsInput}
+                          type="password"
+                          value={awsPassword}
+                          onChange={(e) => setAwsPassword(e.target.value)}
+                          placeholder="password"
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: spacing.sm }}>
+                        <button className="btn-sm btn-sm-primary" onClick={handleAwsLogin}>
+                          Sign In
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: spacing.lg }}>
+                <div className="modal-title" style={{ fontSize: typography.sizeMd }}>S3 Image Storage</div>
+                <div style={styles.awsGrid}>
+                  <div style={styles.awsField}>
+                    <label style={styles.awsLabel}>Bucket</label>
+                    <input
+                      style={styles.awsInput}
+                      value={awsConfig.imageBucket}
+                      onChange={(e) => updateAwsConfig({ imageBucket: e.target.value })}
+                      placeholder="bucket-name"
+                    />
+                  </div>
+                  <div style={styles.awsField}>
+                    <label style={styles.awsLabel}>Base Prefix</label>
+                    <input
+                      style={styles.awsInput}
+                      value={awsConfig.imagePrefix}
+                      onChange={(e) => updateAwsConfig({ imagePrefix: e.target.value })}
+                      placeholder="canonry"
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: spacing.sm, marginTop: spacing.md }}>
+                  <button className="btn-sm" onClick={handleAwsBrowsePrefixes}>
+                    Browse Prefix
+                  </button>
+                  <button className="btn-sm" onClick={handleAwsTestSetup}>
+                    Test Setup
+                  </button>
+                </div>
+                {awsBrowseState.loading && (
+                  <div style={{ color: colors.textMuted, marginTop: spacing.sm }}>Loading prefixes...</div>
+                )}
+                {awsBrowseState.error && (
+                  <div style={{ color: colors.danger, marginTop: spacing.sm }}>{awsBrowseState.error}</div>
+                )}
+                {awsBrowseState.prefixes.length > 0 && (
+                  <div style={{ marginTop: spacing.sm, maxHeight: '120px', overflowY: 'auto' }}>
+                    {awsBrowseState.prefixes.map((prefix) => (
+                      <button
+                        key={prefix}
+                        className="btn-sm"
+                        style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}
+                        onClick={() => updateAwsConfig({ imagePrefix: prefix.replace(/\/$/, '') })}
+                      >
+                        {prefix}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: spacing.lg }}>
+                <label style={{ display: 'flex', gap: spacing.sm, alignItems: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(awsConfig.useS3Images)}
+                    onChange={(e) => updateAwsConfig({ useS3Images: e.target.checked })}
+                  />
+                  <span>Use S3 images for viewer exports</span>
+                </label>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-sm" onClick={() => setAwsModalOpen(false)}>
+                Close
+              </button>
+              <button
+                className="btn-sm btn-sm-primary"
+                disabled={!awsReady || awsStatus.state === 'working'}
+                onClick={handleAwsSyncImages}
+              >
+                Sync Images to S3
+              </button>
             </div>
           </div>
         </div>

@@ -150,6 +150,7 @@ AVOID: Linear blow-by-blow narration. The chronicler explaining what events "mea
       { role: 'protagonist', count: { min: 1, max: 1 }, description: 'The central figure of the chronicle - may be heroic, tragic, or ambiguous in the telling' },
       { role: 'antagonist', count: { min: 1, max: 1 }, description: 'The opposing force - villain, rival power, or circumstance the chronicler must explain' },
       { role: 'the-lost', count: { min: 0, max: 2 }, description: 'Those who did not survive - their absence haunts the chronicle' },
+      { role: 'the-weight', count: { min: 0, max: 1 }, description: 'The force that shaped events - a law that bound hands, a power that corrupted, an occurrence that changed everything. Present in the telling even when no one names it directly' },
     ],
 
     pacing: {
@@ -587,6 +588,7 @@ AVOID: Irony. Deconstruction. Moral ambiguity. Anticlimactic endings. This is no
       { role: 'guide', count: { min: 0, max: 1 }, description: 'Mentor figure who provides wisdom and/or the call' },
       { role: 'companion', count: { min: 0, max: 2 }, description: 'Those who journey with the hero - may fall, may be saved' },
       { role: 'quest-object', count: { min: 0, max: 1 }, description: 'What is sought - weapon, knowledge, place of power' },
+      { role: 'the-calling', count: { min: 0, max: 1 }, description: 'The prophecy, ancient law, forbidden power, or world-event that sets the quest in motion. Defines what the hero must confront beyond any single enemy' },
     ],
 
     pacing: {
@@ -795,6 +797,7 @@ AVOID: Easy victories. Luck over virtue. Anticlimactic discovery. Treasure that'
       { role: 'guardian', count: { min: 0, max: 1 }, description: 'What protects the treasure - may be creature, trap, curse, or test' },
       { role: 'rival', count: { min: 0, max: 1 }, description: 'Competing seeker - their presence raises stakes and reveals character' },
       { role: 'resting-place', count: { min: 0, max: 1 }, description: 'Where the treasure waits - the final destination, earned' },
+      { role: 'the-price', count: { min: 0, max: 1 }, description: 'The rule, curse, ability, or consequence bound to the treasure. What possessing it demands. The cost that makes the seeker hesitate' },
     ],
 
     pacing: {
@@ -862,6 +865,7 @@ AVOID: Jump scares. Gore without meaning. Easy cures. Heroes who don't suffer. T
       { role: 'victim', count: { min: 1, max: 1 }, description: 'Present-day possessor - we watch them enter the pattern' },
       { role: 'origin', count: { min: 0, max: 1 }, description: 'Who or what created the curse - the wronged, the sacrifice, the malevolence' },
       { role: 'previous-owner', count: { min: 1, max: 2 }, description: 'Past victims whose fate foreshadows the present' },
+      { role: 'the-binding', count: { min: 0, max: 1 }, description: 'The rule, power, or event that created the curse - not a person but the mechanism itself. The logic that makes the pattern repeat' },
     ],
 
     pacing: {
@@ -926,6 +930,7 @@ AVOID: Privileging one generation as "the real story." Sentimentality about ance
       { role: 'first-generation', count: { min: 1, max: 1 }, description: 'Origin point - who made it, found it, first held it' },
       { role: 'middle-generation', count: { min: 1, max: 2 }, description: 'Those between - who carried, changed, lost, or saved it' },
       { role: 'current-holder', count: { min: 1, max: 1 }, description: 'Present moment - facing the choice of what to do with inherited meaning' },
+      { role: 'the-obligation', count: { min: 0, max: 1 }, description: 'The law, tradition, ability, or historical event bound to the artifact. What each generation inherits alongside the object - duty, prohibition, or power' },
     ],
 
     pacing: {
@@ -1122,6 +1127,7 @@ AVOID: Clear-cut guilt or innocence. Perry Mason revelations. Courtroom drama cl
       { role: 'accuser', count: { min: 1, max: 1 }, description: 'The prosecution - may be wronged party, state authority, or political rival' },
       { role: 'judge', count: { min: 1, max: 1 }, description: 'Who presides and decides - carries the weight of judgment' },
       { role: 'witness', count: { min: 1, max: 2 }, description: 'Those who testify - their divided loyalties and partial knowledge complicate both narratives' },
+      { role: 'the-precedent', count: { min: 0, max: 1 }, description: 'The law, doctrine, tradition, or past event invoked by both sides. The principle being tested as much as the accused' },
     ],
 
     pacing: {

@@ -8,3 +8,6 @@ prefix = "pt-viewer"
 
 # Domain name (Route53 hosted zone must already exist)
 domain_name = "penguin-tales.com"
+
+# Optional base prefix for image paths (must match Canonry S3 base prefix)
+# image_prefix = "canonry"

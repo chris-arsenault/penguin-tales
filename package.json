@@ -50,6 +50,7 @@
   ],
   "devDependencies": {
     "ajv": "^8.17.1",
+    "baseline-browser-mapping": "^2.9.19",
     "concurrently": "^9.2.1",
     "eslint-plugin-eslint-comments": "^3.2.0",
     "eslint-plugin-import": "^2.32.0",
@@ -60,11 +61,11 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-perf": "^3.3.3",
     "eslint-plugin-security": "^3.0.1",
-    "stylelint": "^16.26.1",
-    "stylelint-config-standard": "^39.0.1",
     "eslint-plugin-sonarjs": "^3.0.5",
     "eslint-plugin-unicorn": "^62.0.0",
-    "http-proxy": "^1.18.1"
+    "http-proxy": "^1.18.1",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard": "^39.0.1"
   },
   "dependencies": {
     "@turf/turf": "^7.3.1",

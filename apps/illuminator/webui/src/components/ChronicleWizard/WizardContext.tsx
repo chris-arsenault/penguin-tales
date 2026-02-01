@@ -19,6 +19,7 @@ function getRoles(style: NarrativeStyle | null): RoleDefinition[] {
 }
 import type {
   ChronicleRoleAssignment,
+  NarrativeLens,
   EntityContext,
   RelationshipContext,
   NarrativeEventContext,
@@ -55,6 +56,7 @@ export interface ChronicleSeed {
   narrativeStyle?: NarrativeStyle;
   entrypointId?: string; // Same field name as ChronicleRecord
   roleAssignments: ChronicleRoleAssignment[];
+  lens?: NarrativeLens;
   selectedEventIds: string[];
   selectedRelationshipIds: string[];
 }
@@ -78,6 +80,8 @@ export interface WizardState {
   /** Distance map from entry point (preserves paths through non-candidate entities) */
   candidateDistances: Map<string, number>;
   roleAssignments: ChronicleRoleAssignment[];
+  /** Optional narrative lens - contextual frame entity */
+  lens: NarrativeLens | null;
 
   // Step 4: Event/relationship resolution
   candidateEvents: NarrativeEventContext[];
@@ -107,6 +111,8 @@ type WizardAction =
   | { type: 'ADD_ROLE_ASSIGNMENT'; assignment: ChronicleRoleAssignment }
   | { type: 'REMOVE_ROLE_ASSIGNMENT'; entityId: string; role: string }
   | { type: 'TOGGLE_PRIMARY'; entityId: string; role: string }
+  | { type: 'SET_LENS'; lens: NarrativeLens }
+  | { type: 'CLEAR_LENS' }
   | { type: 'TOGGLE_EVENT'; eventId: string }
   | { type: 'TOGGLE_RELATIONSHIP'; relationshipId: string }
   | { type: 'SELECT_ALL_EVENTS'; eventIds: string[] }
@@ -133,6 +139,7 @@ const initialState: WizardState = {
   candidates: [],
   candidateDistances: new Map(),
   roleAssignments: [],
+  lens: null,
   candidateEvents: [],
   candidateRelationships: [],
   selectedEventIds: new Set(),
@@ -164,6 +171,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         candidates: [],
         candidateDistances: new Map(),
         roleAssignments: [],
+        lens: null,
         candidateEvents: [],
         candidateRelationships: [],
         selectedEventIds: new Set(),
@@ -185,6 +193,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         candidates: [],
         candidateDistances: new Map(),
         roleAssignments: [],
+        lens: null,
         candidateEvents: [],
         candidateRelationships: [],
         selectedEventIds: new Set(),
@@ -199,6 +208,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         candidates: [],
         candidateDistances: new Map(),
         roleAssignments: [],
+        lens: null,
         candidateEvents: [],
         candidateRelationships: [],
         selectedEventIds: new Set(),
@@ -213,6 +223,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         candidates: [],
         candidateDistances: new Map(),
         roleAssignments: [],
+        lens: null,
         candidateEvents: [],
         candidateRelationships: [],
         selectedEventIds: new Set(),
@@ -264,6 +275,12 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ),
       };
     }
+
+    case 'SET_LENS':
+      return { ...state, lens: action.lens };
+
+    case 'CLEAR_LENS':
+      return { ...state, lens: null };
 
     case 'TOGGLE_EVENT': {
       const newSet = new Set(state.selectedEventIds);
@@ -323,6 +340,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         entryPoint: action.entryPoint,
         candidates: action.candidates,
         roleAssignments: action.seed.roleAssignments,
+        lens: action.seed.lens || null,
         candidateEvents: action.events,
         candidateRelationships: action.relationships,
         selectedEventIds: new Set(action.seed.selectedEventIds),
@@ -371,6 +389,8 @@ interface WizardContextValue {
   addRoleAssignment: (assignment: ChronicleRoleAssignment) => void;
   removeRoleAssignment: (entityId: string, role: string) => void;
   togglePrimary: (entityId: string, role: string) => void;
+  setLens: (lens: NarrativeLens) => void;
+  clearLens: () => void;
 
   // Metrics computation helpers
   computeMetrics: (usageStats: Map<string, { usageCount: number }>) => Map<string, EntitySelectionMetrics>;
@@ -661,6 +681,15 @@ export function WizardProvider({ children, entityKinds, eras = [], simulationRun
     dispatch({ type: 'TOGGLE_PRIMARY', entityId, role });
   }, []);
 
+  // Lens actions
+  const setLens = useCallback((lens: NarrativeLens) => {
+    dispatch({ type: 'SET_LENS', lens });
+  }, []);
+
+  const clearLens = useCallback(() => {
+    dispatch({ type: 'CLEAR_LENS' });
+  }, []);
+
   // Step 4: Event/relationship selection
   const toggleEvent = useCallback((eventId: string) => {
     dispatch({ type: 'TOGGLE_EVENT', eventId });
@@ -747,6 +776,8 @@ export function WizardProvider({ children, entityKinds, eras = [], simulationRun
     addRoleAssignment,
     removeRoleAssignment,
     togglePrimary,
+    setLens,
+    clearLens,
     computeMetrics,
     computeEventMetricsForSelection,
     temporalContext,
@@ -780,6 +811,8 @@ export function WizardProvider({ children, entityKinds, eras = [], simulationRun
     addRoleAssignment,
     removeRoleAssignment,
     togglePrimary,
+    setLens,
+    clearLens,
     computeMetrics,
     computeEventMetricsForSelection,
     temporalContext,

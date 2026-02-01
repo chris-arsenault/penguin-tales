@@ -602,19 +602,6 @@ export function createDefaultCultureIdentities(): CultureIdentities {
 
 
 
-/**
- * Build the visual identity section from culture's visualIdentity
- * This informs the visual thesis and traits generation in the 3-step chain.
- */
-function buildVisualIdentitySection(visualIdentity: Record<string, string> | undefined, culture: string): string {
-  if (!visualIdentity || Object.keys(visualIdentity).length === 0) {
-    return '';
-  }
-
-  const lines = Object.entries(visualIdentity).map(([key, value]) => `- ${key}: ${value}`);
-  return `CULTURAL VISUAL IDENTITY (${culture}):\n${lines.join('\n')}`;
-}
-
 // =============================================================================
 // Chronicle Image Prompts
 // =============================================================================
@@ -630,146 +617,72 @@ const SIZE_COMPOSITION_HINTS: Record<string, string> = {
 };
 
 /**
- * Visual identity info for an entity involved in a scene
+ * Context for building chronicle scene image prompts
  */
-export interface InvolvedEntityVisual {
-  /** Entity ID */
-  id: string;
-  /** Entity name for display */
-  name: string;
-  /** Entity kind (npc, location, etc.) */
-  kind: string;
-  /** One-sentence visual thesis - the primary visual signal */
-  visualThesis?: string;
-  /** Supporting visual traits */
-  visualTraits?: string[];
-}
-
-/**
- * Context for building chronicle image prompts
- */
-export interface ChronicleImageContext {
+export interface ChronicleSceneContext {
   /** LLM-generated scene description */
   sceneDescription: string;
   /** Size hint for composition */
   size: 'small' | 'medium' | 'large' | 'full-width';
   /** Chronicle title for context */
   chronicleTitle?: string;
-  /** Primary culture for visual identity */
-  culture?: string;
   /** World context */
   world?: {
     name: string;
     description?: string;
-    tone?: string;
     speciesConstraint?: string;
   };
-  /** Entities involved in this scene with their visual identity */
-  involvedEntities?: InvolvedEntityVisual[];
 }
 
 /**
- * Build visual identity section for entities involved in a scene
- * Composes visual thesis and traits for each entity
+ * Build an image prompt for chronicle scene/montage images.
+ * Rendering directives (STYLE/PALETTE/COMPOSITION) come first as primary authority.
+ * No entity lookups — visual identity is baked into the scene description by the scene LLM.
  */
-function buildInvolvedEntitiesSection(involvedEntities: InvolvedEntityVisual[] | undefined): string {
-  if (!involvedEntities || involvedEntities.length === 0) {
-    return '';
-  }
-
-  // Filter to only entities with visual data
-  const entitiesWithVisuals = involvedEntities.filter(
-    e => e.visualThesis || (e.visualTraits && e.visualTraits.length > 0)
-  );
-
-  if (entitiesWithVisuals.length === 0) {
-    return '';
-  }
-
-  const lines: string[] = ['KEY FIGURES (maintain visual identity):'];
-
-  for (const entity of entitiesWithVisuals) {
-    lines.push(`  ${entity.name} (${entity.kind}):`);
-    if (entity.visualThesis) {
-      lines.push(`    Thesis: ${entity.visualThesis}`);
-    }
-    if (entity.visualTraits && entity.visualTraits.length > 0) {
-      // Include up to 3 traits to keep prompt concise
-      const traits = entity.visualTraits.slice(0, 3);
-      lines.push(`    Traits: ${traits.join('; ')}`);
-    }
-  }
-
-  return lines.join('\n');
-}
-
-/**
- * Build an image prompt for chronicle scene images
- * Combines scene description with style library and cultural theming
- */
-export function buildChronicleImagePrompt(
-  context: ChronicleImageContext,
+export function buildChronicleScenePrompt(
+  context: ChronicleSceneContext,
   styleInfo?: StyleInfo
 ): string {
-  const { sceneDescription, size, chronicleTitle, culture, world, involvedEntities } = context;
+  const { sceneDescription, size, chronicleTitle, world } = context;
 
-  // Build style section from artistic style
+  // Rendering directives first — these are the primary visual authority
   const styleSection = styleInfo?.artisticPromptFragment
     ? `STYLE: ${styleInfo.artisticPromptFragment}`
     : '';
 
-  // Build color palette section
   const colorPaletteSection = styleInfo?.colorPalettePromptFragment
     ? (styleInfo.colorPalettePromptFragment.startsWith('COLOR PALETTE')
         ? styleInfo.colorPalettePromptFragment
         : `COLOR PALETTE: ${styleInfo.colorPalettePromptFragment}`)
     : '';
 
-  // Build composition section - prefer explicit style, fall back to size-based hint
   const compositionHint = SIZE_COMPOSITION_HINTS[size] || SIZE_COMPOSITION_HINTS.medium;
   const compositionSection = styleInfo?.compositionPromptFragment
-    ? `COMPOSITION: ${styleInfo.compositionPromptFragment}\nSIZE HINT: ${compositionHint}`
+    ? `COMPOSITION: ${styleInfo.compositionPromptFragment}`
     : `COMPOSITION: ${compositionHint}`;
 
-  // Visual identity from culture
-  const visualIdentitySection = culture
-    ? buildVisualIdentitySection(styleInfo?.visualIdentity, culture)
-    : '';
+  const sizeHint = `SIZE HINT: ${compositionHint}`;
 
-  // Culture keywords
-  const cultureSection = styleInfo?.cultureKeywords?.length
-    ? `CULTURAL NOTES: ${styleInfo.cultureKeywords.join(', ')}`
-    : '';
-
-  // World context
+  // Scene content
   const worldSection = world
     ? `WORLD: ${world.name}${world.description ? ` - ${world.description}` : ''}`
     : '';
 
-  // Species constraint
   const speciesSection = world?.speciesConstraint
     ? `SPECIES REQUIREMENT: ${world.speciesConstraint}`
     : '';
 
-  // Involved entities visual identity
-  const involvedEntitiesSection = buildInvolvedEntitiesSection(involvedEntities);
-
   const parts = [
     styleSection,
     colorPaletteSection,
+    compositionSection,
+    sizeHint,
     '',
     `SCENE: ${sceneDescription}`,
     chronicleTitle ? `FROM: "${chronicleTitle}"` : '',
     '',
     worldSection,
     speciesSection,
-    '',
-    involvedEntitiesSection,
-    '',
-    visualIdentitySection,
-    cultureSection,
-    '',
-    compositionSection,
     '',
     'AVOID: Human figures, humanoid hands or fingers, human body proportions. Modern elements, anachronistic technology, text overlays, watermarks',
   ];

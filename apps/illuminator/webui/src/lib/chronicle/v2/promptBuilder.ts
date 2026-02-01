@@ -293,6 +293,36 @@ function buildEntityDirectivesSection(
   return lines.join('\n');
 }
 
+/**
+ * Build the narrative lens section.
+ * Provides contextual framing from an intangible entity (rule, occurrence, ability)
+ * that shapes the story without being a cast member.
+ */
+function buildNarrativeLensSection(context: ChronicleGenerationContext): string {
+  if (!context.lensEntity) {
+    return '';
+  }
+
+  const entity = context.lensEntity;
+  const desc = entity.description || entity.summary || '(no description available)';
+  const tags = entity.tags && Object.keys(entity.tags).length > 0
+    ? Object.entries(entity.tags).map(([k, v]) => `${k}=${v}`).join(', ')
+    : null;
+
+  const lines: string[] = ['# Narrative Lens'];
+  lines.push('This story exists in the shadow of:');
+  lines.push('');
+  lines.push(`## ${entity.name} (${entity.kind}${entity.subtype ? `/${entity.subtype}` : ''})`);
+  lines.push(`Prominence: ${entity.prominence}${entity.culture ? `, Culture: ${entity.culture}` : ''}`);
+  if (tags) lines.push(`Tags: ${tags}`);
+  lines.push('');
+  lines.push(desc);
+  lines.push('');
+  lines.push('Lens Guidance: This entity is NOT a character in the story. It is the context — the constraint, the backdrop, the thing everyone knows but no one can change. It should be felt in characters\' choices, in what is possible and impossible, in what goes unsaid. Reference it naturally, never explain it to the reader as if they don\'t know it.');
+
+  return lines.join('\n');
+}
+
 // =============================================================================
 // Story Format - Structure & Style Building
 // =============================================================================
@@ -478,6 +508,9 @@ Requirements:
   // 7. CAST (unified roles + characters)
   const castSection = buildUnifiedCastSection(selection, primaryEntityIds, style);
 
+  // 7b. NARRATIVE LENS (contextual frame entity)
+  const lensSection = buildNarrativeLensSection(context);
+
   // 8. WORLD (setting context only, no style)
   const worldSection = buildWorldSection(context);
 
@@ -500,6 +533,7 @@ Requirements:
     styleSection,
     // WORLD DATA
     castSection,
+    lensSection,
     worldSection,
     nameBankSection,
     temporalSection,
@@ -750,6 +784,9 @@ Requirements:
   // 6. CAST (unified roles + characters)
   const castSection = buildUnifiedDocumentCastSection(selection, primaryEntityIds, style);
 
+  // 6b. NARRATIVE LENS (contextual frame entity)
+  const lensSection = buildNarrativeLensSection(context);
+
   // 7. WORLD (setting context)
   const worldSection = buildWorldSection(context);
 
@@ -771,6 +808,7 @@ Requirements:
     entityDirectivesSection,
     // WORLD DATA
     castSection,
+    lensSection,
     worldSection,
     nameBankSection,
     temporalSection,
@@ -851,13 +889,14 @@ TASK DATA (how to write it):
 
 WORLD DATA (what to write about):
 - Cast: Narrative roles to fill, then characters to fill them
+- Narrative Lens (optional): A contextual entity (rule, occurrence, ability) that shapes the story without being a character — treat as ambient constraint
 - World: Setting name, description, canon facts
 - Name Bank: Culture-appropriate names for invented characters
 - Historical Context: Current era and world timeline
 - Relationships: Connections between characters
 - Events: What happened in the world
 
-Hierarchy: Narrative Structure and Prose instructions define THIS story. Narrative Voice and Entity Directives are pre-synthesized guidance — follow their intent closely, but express them in your own voice. Writing Style provides the ambient tone everything sits within.`;
+Hierarchy: Narrative Structure and Prose instructions define THIS story. Narrative Voice and Entity Directives are pre-synthesized guidance — follow their intent closely, but express them in your own voice. Writing Style provides the ambient tone everything sits within. The Narrative Lens, when present, provides contextual gravity — weave it into characters' decisions and the world's constraints without explaining it.`;
   } else {
     return `You are writing an in-universe document. Your prompt contains:
 
@@ -870,13 +909,14 @@ TASK DATA (how to write it):
 
 WORLD DATA (what to write about):
 - Cast: Document roles to fill, then characters to fill them
+- Narrative Lens (optional): A contextual entity (rule, occurrence, ability) that shapes the document without being a character — treat as ambient constraint
 - World: Setting name, description, canon facts
 - Name Bank: Culture-appropriate names for invented characters
 - Historical Context: Current era and world timeline
 - Relationships: Connections between characters
 - Events: What happened in the world
 
-Hierarchy: Document Instructions define THIS document's structure and voice. Narrative Voice and Entity Directives are pre-synthesized guidance — follow their intent closely, but express them in your own voice.
+Hierarchy: Document Instructions define THIS document's structure and voice. Narrative Voice and Entity Directives are pre-synthesized guidance — follow their intent closely, but express them in your own voice. The Narrative Lens, when present, provides contextual gravity — weave it into the document's assumptions and references without explaining it.
 
 Write authentically as if the document exists within the world. No meta-commentary.`;
   }

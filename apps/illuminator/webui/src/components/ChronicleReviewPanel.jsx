@@ -658,6 +658,7 @@ function RefinementOptionsPanel({
   onGenerateImageRefs,
   onGenerateCoverImageScene,
   onGenerateCoverImage,
+  onImageClick,
   imageSize,
   imageQuality,
   imageModel,
@@ -666,16 +667,20 @@ function RefinementOptionsPanel({
   onUpdateChronicleAnchorText,
   onUpdateChronicleImageSize,
   onUpdateChronicleImageJustification,
+  onRegenerateDescription,
   isGenerating,
   refinements,
   entityMap,
   styleLibrary,
+  styleSelection,
   cultures,
   cultureIdentities,
   worldContext,
   summaryIndicator,
   imageRefsIndicator,
   imageRefsTargetContent,
+  imageGenSettings,
+  onOpenImageSettings,
 }) {
   const formatTimestamp = (timestamp) => new Date(timestamp).toLocaleString();
   const summaryState = refinements?.summary || {};
@@ -752,7 +757,7 @@ function RefinementOptionsPanel({
           onGenerateCoverImageScene={onGenerateCoverImageScene}
           onGenerateCoverImage={onGenerateCoverImage}
           isGenerating={isGenerating}
-          onImageClick={handleImageClick}
+          onImageClick={onImageClick}
         />
 
         {/* Image Refs */}
@@ -1597,6 +1602,7 @@ export default function ChronicleReviewPanel({
           onGenerateImageRefs={onGenerateImageRefs}
           onGenerateCoverImageScene={onGenerateCoverImageScene}
           onGenerateCoverImage={onGenerateCoverImage}
+          onImageClick={handleImageClick}
           imageSize={imageSize}
           imageQuality={imageQuality}
           imageModel={imageModel}
@@ -1605,16 +1611,20 @@ export default function ChronicleReviewPanel({
           onUpdateChronicleAnchorText={onUpdateChronicleAnchorText}
           onUpdateChronicleImageSize={onUpdateChronicleImageSize}
           onUpdateChronicleImageJustification={onUpdateChronicleImageJustification}
+          onRegenerateDescription={onRegenerateDescription}
           isGenerating={isGenerating}
           refinements={refinements}
           entityMap={entityMap}
           styleLibrary={styleLibrary}
+          styleSelection={styleSelection}
           cultures={cultures}
           cultureIdentities={cultureIdentities}
           worldContext={worldContext}
           summaryIndicator={summaryIndicator}
           imageRefsIndicator={imageRefsIndicator}
           imageRefsTargetContent={imageRefsTargetContent}
+          imageGenSettings={imageGenSettings}
+          onOpenImageSettings={onOpenImageSettings}
         />
 
         {/* 5. Reference — CONTEXT (collapsed by default) */}

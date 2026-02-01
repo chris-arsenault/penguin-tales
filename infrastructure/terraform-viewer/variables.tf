@@ -17,3 +17,9 @@ variable "domain_name" {
   type        = string
   default     = "penguin-tales.com"
 }
+
+variable "image_prefix" {
+  description = "Optional base prefix for image paths (must match Canonry S3 base prefix)"
+  type        = string
+  default     = ""
+}

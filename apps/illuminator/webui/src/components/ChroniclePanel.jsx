@@ -140,8 +140,13 @@ function ChronicleItemCard({ item, isSelected, onClick }) {
       syms.push({ symbol: '\u21C4', title: 'Lore backported to cast', color: 'var(--text-secondary)' });
     }
 
+    // Narrative lens
+    if (item.lens) {
+      syms.push({ symbol: '\u25C8', title: `Lens: ${item.lens.entityName}`, color: '#8b5cf6' });
+    }
+
     return syms;
-  }, [item.focusType, item.primaryCount, item.perspectiveSynthesis, item.combineInstructions, item.coverImage?.status, item.loreBackported]);
+  }, [item.focusType, item.primaryCount, item.perspectiveSynthesis, item.combineInstructions, item.coverImage?.status, item.loreBackported, item.lens]);
 
   // Compact numeric badge: cast count + scene image count
   const castCount = (item.primaryCount || 0) + (item.supportingCount || 0);
@@ -1002,6 +1007,7 @@ export default function ChroniclePanel({
           narrativeStyle: chronicle.narrativeStyle,
           entrypointId: chronicle.entrypointId,
           roleAssignments: chronicle.roleAssignments || [],
+          lens: chronicle.lens,
           selectedEventIds: chronicle.selectedEventIds || [],
           selectedRelationshipIds: chronicle.selectedRelationshipIds || [],
         };
@@ -1144,6 +1150,7 @@ export default function ChroniclePanel({
     // Build chronicle selections (chronicle-first format)
     const selections = {
       roleAssignments: wizardConfig.roleAssignments,
+      lens: wizardConfig.lens,
       selectedEventIds: wizardConfig.selectedEventIds,
       selectedRelationshipIds: wizardConfig.selectedRelationshipIds,
       entrypointId: wizardConfig.entryPointId, // Mechanical only, not identity
@@ -1200,15 +1207,22 @@ export default function ChroniclePanel({
     // Derive chronicle metadata from role assignments
     const title = deriveTitleFromRoles(wizardConfig.roleAssignments);
 
+    // Build selectedEntityIds including lens entity if present
+    const selectedEntityIds = wizardConfig.roleAssignments.map(r => r.entityId);
+    if (wizardConfig.lens && !selectedEntityIds.includes(wizardConfig.lens.entityId)) {
+      selectedEntityIds.push(wizardConfig.lens.entityId);
+    }
+
     // Chronicle metadata for storage (passed to generation functions)
     const chronicleMetadata = {
       chronicleId,
       title,
       format: narrativeStyle.format,
       roleAssignments: wizardConfig.roleAssignments,
+      lens: wizardConfig.lens,
       narrativeStyleId: wizardConfig.narrativeStyleId,
       narrativeStyle,
-      selectedEntityIds: wizardConfig.roleAssignments.map(r => r.entityId),
+      selectedEntityIds,
       selectedEventIds: wizardConfig.selectedEventIds,
       selectedRelationshipIds: wizardConfig.selectedRelationshipIds,
       entrypointId: wizardConfig.entryPointId,
@@ -1235,7 +1249,8 @@ export default function ChroniclePanel({
         narrativeStyleId: wizardConfig.narrativeStyleId,
         narrativeStyle,
         roleAssignments: wizardConfig.roleAssignments,
-        selectedEntityIds: wizardConfig.roleAssignments.map(r => r.entityId),
+        lens: wizardConfig.lens,
+        selectedEntityIds,
         selectedEventIds: wizardConfig.selectedEventIds,
         selectedRelationshipIds: wizardConfig.selectedRelationshipIds,
         entrypointId: wizardConfig.entryPointId,

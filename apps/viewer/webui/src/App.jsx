@@ -282,6 +282,7 @@ function resolveAssetUrl(value, bundleUrl) {
   }
 }
 
+
 function normalizeBundle(raw, bundleUrl) {
   if (!raw || typeof raw !== 'object') return null;
 

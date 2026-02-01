@@ -8,7 +8,7 @@
  * - Mini constellation showing 1-hop network preview
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { EntityContext, RelationshipContext, NarrativeEventContext } from '../../../lib/chronicleTypes';
 import { useWizard } from '../WizardContext';
 import {
@@ -17,6 +17,7 @@ import {
   getUniqueKinds,
   type EntityWithPotential,
 } from '../../../lib/chronicle/storyPotential';
+import { getEntityUsageStats } from '../../../lib/chronicleStorage';
 import {
   FilterChips,
   StoryPotentialRadarWithScore,
@@ -30,22 +31,142 @@ interface EntryPointStepProps {
   events: NarrativeEventContext[];
 }
 
-type SortOption = 'story-score' | 'connections' | 'name';
+type SortOption = 'story-score' | 'connections' | 'name' | 'underused';
+
+interface UsageMetrics {
+  usageCount: number;
+  unusedSelf: boolean;
+  hop1Unused: number;
+  hop1Total: number;
+  hop2Unused: number;
+  hop2Total: number;
+  underusedScore: number;
+  prominence: number;
+}
 
 export default function EntryPointStep({
   entities,
   relationships,
   events,
 }: EntryPointStepProps) {
-  const { state, selectEntryPoint, clearEntryPoint, setIncludeErasInNeighborhood } = useWizard();
+  const {
+    state,
+    selectEntryPoint,
+    clearEntryPoint,
+    setIncludeErasInNeighborhood,
+    simulationRunId,
+  } = useWizard();
   const [selectedKinds, setSelectedKinds] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>('story-score');
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
+  const [onlyUnused, setOnlyUnused] = useState(false);
+  const [usageStats, setUsageStats] = useState<Map<string, { usageCount: number }>>(new Map());
+  const [usageLoading, setUsageLoading] = useState(false);
+
+  useEffect(() => {
+    if (!simulationRunId) {
+      setUsageStats(new Map());
+      setUsageLoading(false);
+      return;
+    }
+
+    let isActive = true;
+    setUsageLoading(true);
+
+    getEntityUsageStats(simulationRunId)
+      .then((stats) => {
+        if (isActive) setUsageStats(stats);
+      })
+      .catch((err) => {
+        console.error('[Chronicle Wizard] Failed to load entity usage stats:', err);
+        if (isActive) setUsageStats(new Map());
+      })
+      .finally(() => {
+        if (isActive) setUsageLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [simulationRunId]);
 
   // Compute story potentials for all entities
   const entityPotentials = useMemo(() => {
     return computeAllStoryPotentials(entities, relationships, events);
   }, [entities, relationships, events]);
+
+  const usageCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const [id, stats] of usageStats) {
+      counts.set(id, stats.usageCount);
+    }
+    return counts;
+  }, [usageStats]);
+
+  const usageMetrics = useMemo(() => {
+    if (entityPotentials.size === 0) return new Map<string, UsageMetrics>();
+
+    const entityIds = Array.from(entityPotentials.keys());
+    const adjacency = new Map<string, Set<string>>();
+    for (const id of entityIds) adjacency.set(id, new Set());
+
+    for (const rel of relationships) {
+      if (!adjacency.has(rel.src) || !adjacency.has(rel.dst)) continue;
+      adjacency.get(rel.src)!.add(rel.dst);
+      adjacency.get(rel.dst)!.add(rel.src);
+    }
+
+    const visitStamp = new Map<string, number>();
+    let stamp = 1;
+    const result = new Map<string, UsageMetrics>();
+
+    for (const id of entityIds) {
+      const usageCount = usageCounts.get(id) ?? 0;
+      const entity = entityPotentials.get(id);
+      const rawProminence = entity ? Number(entity.prominence) : 0;
+      const prominence = Number.isFinite(rawProminence) ? Math.max(0, rawProminence) : 0;
+
+      const firstHop = adjacency.get(id) || new Set<string>();
+      stamp += 1;
+      visitStamp.set(id, stamp);
+
+      let hop1Total = 0;
+      let hop1Unused = 0;
+      for (const neighbor of firstHop) {
+        if (visitStamp.get(neighbor) === stamp) continue;
+        visitStamp.set(neighbor, stamp);
+        hop1Total += 1;
+        if ((usageCounts.get(neighbor) ?? 0) === 0) hop1Unused += 1;
+      }
+
+      let hop2Total = 0;
+      let hop2Unused = 0;
+      for (const neighbor of firstHop) {
+        const neighborHops = adjacency.get(neighbor);
+        if (!neighborHops) continue;
+
+        for (const secondHop of neighborHops) {
+          if (visitStamp.get(secondHop) === stamp) continue;
+          visitStamp.set(secondHop, stamp);
+          hop2Total += 1;
+          if ((usageCounts.get(secondHop) ?? 0) === 0) hop2Unused += 1;
+        }
+      }
+
+      result.set(id, {
+        usageCount,
+        unusedSelf: usageCount === 0,
+        hop1Unused,
+        hop1Total,
+        hop2Unused,
+        hop2Total,
+        underusedScore: prominence / (usageCount + 1),
+        prominence,
+      });
+    }
+
+    return result;
+  }, [entityPotentials, relationships, usageCounts]);
 
   // Get available kinds for filter chips
   const availableKinds = useMemo(() => {
@@ -61,6 +182,11 @@ export default function EntryPointStep({
       result = result.filter(e => selectedKinds.has(e.kind));
     }
 
+    // Apply unused filter (requires usage stats)
+    if (onlyUnused && !usageLoading) {
+      result = result.filter(e => (usageMetrics.get(e.id)?.usageCount ?? 0) === 0);
+    }
+
     // Sort
     result.sort((a, b) => {
       switch (sortBy) {
@@ -68,6 +194,12 @@ export default function EntryPointStep({
           return a.name.localeCompare(b.name);
         case 'connections':
           return b.connectionCount - a.connectionCount;
+        case 'underused': {
+          const aScore = usageMetrics.get(a.id)?.underusedScore ?? 0;
+          const bScore = usageMetrics.get(b.id)?.underusedScore ?? 0;
+          if (bScore !== aScore) return bScore - aScore;
+          return b.potential.overallScore - a.potential.overallScore;
+        }
         case 'story-score':
         default:
           return b.potential.overallScore - a.potential.overallScore;
@@ -75,7 +207,7 @@ export default function EntryPointStep({
     });
 
     return result;
-  }, [entityPotentials, selectedKinds, sortBy]);
+  }, [entityPotentials, selectedKinds, sortBy, onlyUnused, usageLoading, usageMetrics]);
 
   // Get entity for detail panel (hover takes priority over selection)
   const detailEntity = useMemo(() => {
@@ -89,6 +221,10 @@ export default function EntryPointStep({
     if (!detailEntity) return [];
     return getConnectedEntities(detailEntity.id, entities, relationships);
   }, [detailEntity, entities, relationships]);
+  const detailUsage = useMemo(() => {
+    if (!detailEntity) return null;
+    return usageMetrics.get(detailEntity.id) || null;
+  }, [detailEntity, usageMetrics]);
 
   const handleSelect = (entity: EntityWithPotential) => {
     // Click again to deselect
@@ -135,6 +271,7 @@ export default function EntryPointStep({
             >
               <option value="story-score">Sort by Story Score</option>
               <option value="connections">Sort by Connections</option>
+              <option value="underused">Sort by Underused Score</option>
               <option value="name">Sort by Name</option>
             </select>
             <label style={{
@@ -152,6 +289,23 @@ export default function EntryPointStep({
                 style={{ margin: 0 }}
               />
               Include eras in neighborhood
+            </label>
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '11px',
+              color: usageLoading ? 'var(--text-muted)' : 'var(--text-secondary)',
+              cursor: usageLoading ? 'not-allowed' : 'pointer',
+            }}>
+              <input
+                type="checkbox"
+                checked={onlyUnused}
+                onChange={(e) => setOnlyUnused(e.target.checked)}
+                style={{ margin: 0 }}
+                disabled={usageLoading}
+              />
+              Only unused
             </label>
           </div>
 
@@ -171,6 +325,7 @@ export default function EntryPointStep({
               filteredEntities.map(entity => {
                 const isSelected = state.entryPointId === entity.id;
                 const isHovered = hoveredEntityId === entity.id;
+                const usage = usageMetrics.get(entity.id);
 
                 return (
                   <div
@@ -235,6 +390,16 @@ export default function EntryPointStep({
                         }}>
                           {entity.kind}
                         </span>
+                        <span style={{
+                          padding: '1px 6px',
+                          background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)',
+                          borderRadius: '4px',
+                          fontSize: '9px',
+                          color: isSelected ? 'rgba(255,255,255,0.9)' : 'var(--text-muted)',
+                        }}
+                        title="Prominence-weighted underuse: prominence ÷ (usage + 1)">
+                          {usageLoading ? 'Underused ...' : `Underused ${usage ? usage.underusedScore.toFixed(2) : '0.00'}`}
+                        </span>
                       </div>
                       <div style={{
                         fontSize: '11px',
@@ -252,6 +417,15 @@ export default function EntryPointStep({
                             <span>·</span>
                             <span>{entity.subtype}</span>
                           </>
+                        )}
+                      </div>
+                      <div style={{
+                        fontSize: '10px',
+                        color: isSelected ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)',
+                        marginTop: '2px',
+                      }}>
+                        {usageLoading ? 'Unused: ...' : (
+                          `Unused: self ${usage?.unusedSelf ? '1' : '0'}/1 · 1-hop ${usage?.hop1Unused ?? 0}/${usage?.hop1Total ?? 0} · 2-hop ${usage?.hop2Unused ?? 0}/${usage?.hop2Total ?? 0}`
                         )}
                       </div>
                     </div>
@@ -337,6 +511,24 @@ export default function EntryPointStep({
                 }}>
                   <span><strong>{detailEntity.connectedKinds.length}</strong> kinds</span>
                   <span><strong>{detailEntity.eraIds.length}</strong> eras</span>
+                </div>
+                <div style={{
+                  marginTop: '6px',
+                  textAlign: 'center',
+                  fontSize: '10px',
+                  color: 'var(--text-muted)',
+                }}>
+                  {usageLoading || !detailUsage ? 'Unused: ...' : (
+                    `Unused: self ${detailUsage.unusedSelf ? '1' : '0'}/1 · 1-hop ${detailUsage.hop1Unused}/${detailUsage.hop1Total} · 2-hop ${detailUsage.hop2Unused}/${detailUsage.hop2Total}`
+                  )}
+                </div>
+                <div style={{
+                  marginTop: '4px',
+                  textAlign: 'center',
+                  fontSize: '10px',
+                  color: 'var(--text-muted)',
+                }}>
+                  {usageLoading || !detailUsage ? 'Underused score: ...' : `Underused score: ${detailUsage.underusedScore.toFixed(2)}`}
                 </div>
               </div>
             </>

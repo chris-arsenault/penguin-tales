@@ -13,6 +13,7 @@ export type LLMCallType =
 
   // Image Generation
   | 'image.promptFormatting'     // Claude reformats prompt for image model
+  | 'image.chronicleFormatting'  // Synthesize chronicle scene/montage prompts for image model
 
   // Perspective Synthesis
   | 'perspective.synthesis'      // Synthesize world perspective from entity constellation
@@ -45,6 +46,7 @@ export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'description.visualThesis',
   'description.visualTraits',
   'image.promptFormatting',
+  'image.chronicleFormatting',
   'perspective.synthesis',
   'chronicle.generation',
   'chronicle.compare',
@@ -154,6 +156,17 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
   'image.promptFormatting': {
     label: 'Prompt Formatting',
     description: 'Reformats description for the image generation model',
+    category: 'image',
+    defaults: {
+      model: 'claude-haiku-4-5-20251001',
+      thinkingBudget: 0,
+      maxTokens: 1024,
+    },
+    recommendedModels: ['claude-haiku-4-5-20251001'],
+  },
+  'image.chronicleFormatting': {
+    label: 'Chronicle Prompt Formatting',
+    description: 'Synthesizes chronicle scene/montage prompts for the image generation model',
     category: 'image',
     defaults: {
       model: 'claude-haiku-4-5-20251001',
@@ -320,7 +333,7 @@ export const CATEGORY_DESCRIPTIONS: Record<LLMCallCategory, string> = {
 export function getCallTypesByCategory(): Record<LLMCallCategory, LLMCallType[]> {
   return {
     description: ['description.narrative', 'description.visualThesis', 'description.visualTraits', 'description.copyEdit'],
-    image: ['image.promptFormatting'],
+    image: ['image.promptFormatting', 'image.chronicleFormatting'],
     perspective: ['perspective.synthesis'],
     chronicle: ['chronicle.generation', 'chronicle.compare', 'chronicle.combine', 'chronicle.summary', 'chronicle.imageRefs', 'chronicle.coverImageScene'],
     palette: ['palette.expansion'],

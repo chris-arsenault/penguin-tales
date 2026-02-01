@@ -16,6 +16,7 @@ import type { NarrativeStyle } from '@canonry/world-schema';
 import type {
   ChronicleGenerationContext,
   ChronicleRoleAssignment,
+  NarrativeLens,
   ChronicleFocus,
   ChronicleFocusType,
   EntityContext,
@@ -202,6 +203,8 @@ function buildEventContext(
 export interface ChronicleSelections {
   /** Role assignments define the cast - primary identity */
   roleAssignments: ChronicleRoleAssignment[];
+  /** Optional narrative lens - contextual frame entity */
+  lens?: NarrativeLens;
   /** Selected event IDs */
   selectedEventIds: string[];
   /** Selected relationship IDs (src:dst:kind format) */
@@ -225,7 +228,8 @@ function deriveFocusType(roleAssignments: ChronicleRoleAssignment[]): ChronicleF
 function buildFocus(
   roleAssignments: ChronicleRoleAssignment[],
   selectedEventIds: string[],
-  selectedRelationshipIds: string[]
+  selectedRelationshipIds: string[],
+  lens?: NarrativeLens
 ): ChronicleFocus {
   const primaryEntityIds = roleAssignments
     .filter(r => r.isPrimary)
@@ -234,10 +238,15 @@ function buildFocus(
     .filter(r => !r.isPrimary)
     .map(r => r.entityId);
   const selectedEntityIds = roleAssignments.map(r => r.entityId);
+  // Include lens entity in selected IDs so it's available for context building
+  if (lens && !selectedEntityIds.includes(lens.entityId)) {
+    selectedEntityIds.push(lens.entityId);
+  }
 
   return {
     type: deriveFocusType(roleAssignments),
     roleAssignments,
+    lens,
     primaryEntityIds,
     supportingEntityIds,
     selectedEntityIds,
@@ -277,7 +286,8 @@ export function buildChronicleContext(
   const focus = buildFocus(
     selections.roleAssignments,
     selections.selectedEventIds,
-    selections.selectedRelationshipIds
+    selections.selectedRelationshipIds,
+    selections.lens
   );
 
   // Get entities from role assignments
@@ -303,6 +313,10 @@ export function buildChronicleContext(
     .sort((a, b) => b.significance - a.significance)
     .map(buildEventContext);
 
+  // Resolve lens entity from world data
+  const lensRaw = selections.lens ? entityMap.get(selections.lens.entityId) : undefined;
+  const lensEntity = lensRaw ? buildEntityContext(lensRaw) : undefined;
+
   const eraLookup = buildEraLookup(worldData.hardState);
 
   // Find era from first primary entity (use entity eraId attribute directly)
@@ -325,6 +339,9 @@ export function buildChronicleContext(
 
     // Chronicle focus (primary)
     focus,
+
+    // Narrative lens entity (contextual frame)
+    lensEntity,
 
     era: era ? buildEraContext(era) : undefined,
     // Full temporal context with all eras and chronicle timeline

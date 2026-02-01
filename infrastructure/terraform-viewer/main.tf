@@ -5,6 +5,18 @@ data "aws_caller_identity" "current" {}
 locals {
   bucket_name  = "${var.prefix}-static-${data.aws_caller_identity.current.account_id}"
   s3_origin_id = "S3-${local.bucket_name}"
+  image_bucket_name = "${var.prefix}-canonry-images-${data.aws_caller_identity.current.account_id}"
+  image_origin_id = "S3-${local.image_bucket_name}"
+  image_prefix = trimsuffix(trimprefix(var.image_prefix, "/"), "/")
+  image_path_patterns = local.image_prefix != "" ? [
+    "${local.image_prefix}/raw/*",
+    "${local.image_prefix}/webp/*",
+    "${local.image_prefix}/thumb/*"
+  ] : [
+    "raw/*",
+    "webp/*",
+    "thumb/*"
+  ]
 
   # App build outputs and URL prefixes
   apps = {
@@ -74,6 +86,81 @@ resource "aws_acm_certificate_validation" "main" {
 
 resource "aws_s3_bucket" "static_site" {
   bucket = local.bucket_name
+}
+
+# -----------------------------------------------------------------------------
+# S3 Bucket for Image Storage (raw/webp/thumb)
+# -----------------------------------------------------------------------------
+
+resource "aws_s3_bucket" "image_assets" {
+  bucket = local.image_bucket_name
+}
+
+resource "aws_s3_bucket_versioning" "image_assets" {
+  bucket = aws_s3_bucket.image_assets.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "image_assets" {
+  bucket = aws_s3_bucket.image_assets.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "image_assets" {
+  bucket = aws_s3_bucket.image_assets.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_policy" "image_assets" {
+  bucket = aws_s3_bucket.image_assets.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowCloudFrontServicePrincipal"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:GetObject"
+        Resource = [
+          "${aws_s3_bucket.image_assets.arn}/*"
+        ]
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.static_site.arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+# -----------------------------------------------------------------------------
+# CORS for Image Bucket (Canonry browser uploads)
+# -----------------------------------------------------------------------------
+
+resource "aws_s3_bucket_cors_configuration" "image_assets" {
+  bucket = aws_s3_bucket.image_assets.id
+
+  cors_rule {
+    allowed_methods = ["GET", "PUT", "HEAD"]
+    allowed_origins = ["*"]
+    allowed_headers = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3600
+  }
 }
 
 resource "aws_s3_bucket_versioning" "static_site" {
@@ -239,6 +326,12 @@ resource "aws_cloudfront_distribution" "static_site" {
     origin_access_control_id = aws_cloudfront_origin_access_control.static_site.id
   }
 
+  origin {
+    domain_name              = aws_s3_bucket.image_assets.bucket_regional_domain_name
+    origin_id                = local.image_origin_id
+    origin_access_control_id = aws_cloudfront_origin_access_control.static_site.id
+  }
+
   # Default behavior - serves viewer shell from root
   # Respects Cache-Control headers from S3 (min_ttl=0 allows S3 to control caching)
   default_cache_behavior {
@@ -299,6 +392,29 @@ resource "aws_cloudfront_distribution" "static_site" {
     default_ttl            = 86400
     max_ttl                = 31536000
     compress               = true
+  }
+
+  dynamic "ordered_cache_behavior" {
+    for_each = local.image_path_patterns
+    content {
+      path_pattern     = "/${ordered_cache_behavior.value}"
+      allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+      cached_methods   = ["GET", "HEAD"]
+      target_origin_id = local.image_origin_id
+
+      forwarded_values {
+        query_string = false
+        cookies {
+          forward = "none"
+        }
+      }
+
+      viewer_protocol_policy = "redirect-to-https"
+      min_ttl                = 0
+      default_ttl            = 86400
+      max_ttl                = 31536000
+      compress               = true
+    }
   }
 
   # Custom error responses for SPA routing

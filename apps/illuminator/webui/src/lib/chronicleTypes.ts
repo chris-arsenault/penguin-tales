@@ -196,6 +196,24 @@ export interface ChronicleRoleAssignment {
 }
 
 // =============================================================================
+// Narrative Lens - Universal contextual frame entity
+// =============================================================================
+
+/**
+ * A narrative lens entity assigned in the wizard.
+ * Not a cast member - provides contextual framing for any narrative style.
+ * Typically a rule, occurrence, or ability that shapes the story's world.
+ */
+export interface NarrativeLens {
+  /** Assigned entity ID */
+  entityId: string;
+  /** Entity name (denormalized for display) */
+  entityName: string;
+  /** Entity kind (denormalized for display) */
+  entityKind: string;
+}
+
+// =============================================================================
 // Generation Context - Input to each generation step
 // =============================================================================
 
@@ -307,6 +325,9 @@ export interface ChronicleFocus {
 
   /** Role assignments define the cast - THIS IS THE PRIMARY IDENTITY */
   roleAssignments: ChronicleRoleAssignment[];
+
+  /** Optional narrative lens - contextual frame entity (rule, occurrence, ability) */
+  lens?: NarrativeLens;
 
   /** Entity IDs of primary characters (derived from isPrimary=true) */
   primaryEntityIds: string[];
@@ -458,6 +479,9 @@ export interface ChronicleGenerationContext {
 
   // Chronicle focus (chronicle-first architecture)
   focus: ChronicleFocus;
+
+  // Optional narrative lens entity (contextual frame, not a cast member)
+  lensEntity?: EntityContext;
 
   // Optional era context (legacy single era)
   era?: EraContext;

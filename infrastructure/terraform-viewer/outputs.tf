@@ -5,6 +5,11 @@ output "bucket_name" {
   value       = aws_s3_bucket.static_site.id
 }
 
+output "image_bucket_name" {
+  description = "Name of the S3 bucket used for raw/webp/thumb images"
+  value       = aws_s3_bucket.image_assets.id
+}
+
 output "s3_bucket_name" {
   description = "Name of the S3 bucket (deprecated, use bucket_name)"
   value       = aws_s3_bucket.static_site.id
@@ -33,6 +38,11 @@ output "acm_certificate_arn" {
 output "website_url" {
   description = "URL to access the application"
   value       = "https://${var.domain_name}/"
+}
+
+output "aws_region" {
+  description = "AWS region for the deployment"
+  value       = var.aws_region
 }
 
 output "route53_zone_id" {

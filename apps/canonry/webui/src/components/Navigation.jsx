@@ -75,7 +75,7 @@ const TABS = [
   { id: 'chronicler', label: 'Chronicler', enabled: true },
 ];
 
-export default function Navigation({ activeTab, onTabChange, onHelpClick }) {
+export default function Navigation({ activeTab, onTabChange, onHelpClick, onAwsClick }) {
   const getTabStyle = (tab) => {
     if (!tab.enabled) {
       return { ...styles.tab, ...styles.tabDisabled };
@@ -118,6 +118,23 @@ export default function Navigation({ activeTab, onTabChange, onHelpClick }) {
           </button>
         ))}
       </div>
+      <button
+        style={styles.helpButton}
+        onClick={onAwsClick}
+        onMouseEnter={(e) => {
+          e.target.style.backgroundColor = colors.bgTertiary;
+          e.target.style.color = colors.textPrimary;
+          e.target.style.borderColor = colors.borderLight;
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.backgroundColor = 'transparent';
+          e.target.style.color = colors.textSecondary;
+          e.target.style.borderColor = colors.border;
+        }}
+        title="AWS & S3 Sync"
+      >
+        AWS
+      </button>
       <button
         style={styles.helpButton}
         onClick={onHelpClick}

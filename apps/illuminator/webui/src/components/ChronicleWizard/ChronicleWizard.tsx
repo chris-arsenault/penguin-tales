@@ -11,7 +11,7 @@
 
 import { useEffect, useCallback, useMemo, useRef } from 'react';
 import type { NarrativeStyle, EntityKindDefinition } from '@canonry/world-schema';
-import type { EntityContext, RelationshipContext, NarrativeEventContext, EraTemporalInfo, ChronicleTemporalContext } from '../../lib/chronicleTypes';
+import type { EntityContext, RelationshipContext, NarrativeEventContext, EraTemporalInfo, ChronicleTemporalContext, NarrativeLens } from '../../lib/chronicleTypes';
 import { WizardProvider, useWizard, WizardStep, ChronicleSeed } from './WizardContext';
 import StyleStep from './steps/StyleStep';
 import EntryPointStep from './steps/EntryPointStep';
@@ -58,6 +58,8 @@ export interface WizardGenerateConfig {
   }>;
   selectedEventIds: string[];
   selectedRelationshipIds: string[];
+  /** Optional narrative lens entity (contextual frame) */
+  lens?: NarrativeLens;
   /** Temporal context computed from selected events and eras */
   temporalContext: ChronicleTemporalContext | null;
   /** Optional temperature override (if not set, uses narrative style default) */
@@ -185,6 +187,7 @@ function InnerWizard({
       roleAssignments: state.roleAssignments,
       selectedEventIds: Array.from(state.selectedEventIds),
       selectedRelationshipIds: Array.from(state.selectedRelationshipIds),
+      lens: state.lens || undefined,
       temporalContext,
       temperatureOverride: state.temperatureOverride ?? undefined,
     };

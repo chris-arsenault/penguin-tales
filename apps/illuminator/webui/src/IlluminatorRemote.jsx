@@ -1627,8 +1627,10 @@ export default function IlluminatorRemote({
           ))}
         </nav>
 
+        <div style={{ flex: 1 }} />
+
         {/* Image Settings trigger */}
-        <div style={{ padding: '0 8px', marginTop: 'auto' }}>
+        <div style={{ padding: '0 8px', marginBottom: '4px' }}>
           <ImageSettingsTrigger
             settings={imageGenSettings}
             styleLibrary={styleLibrary}
