@@ -243,6 +243,7 @@ export async function getAllImages(): Promise<Array<Omit<ImageRecord, 'blob'> & 
   const records = await db.images.toArray();
   const images = records.map(({ blob, ...metadata }) => ({
     ...metadata,
+    size: (typeof metadata.size === 'number' && Number.isFinite(metadata.size)) ? metadata.size : (blob?.size || 0),
     hasBlob: Boolean(blob),
   }));
   images.sort((a, b) => (b.generatedAt || 0) - (a.generatedAt || 0));
@@ -271,7 +272,7 @@ export async function getStorageStats(): Promise<{
   const byProject: Record<string, { count: number; size: number }> = {};
 
   for (const img of records) {
-    const size = img.size || 0;
+    const size = (typeof img.size === 'number' && Number.isFinite(img.size)) ? img.size : (img.blob?.size || 0);
     totalSize += size;
 
     const pid = img.projectId || 'unknown';
@@ -351,7 +352,7 @@ export async function searchImagesWithFilters(filters: {
  * Format bytes to human-readable string.
  */
 export function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  if (!bytes || !Number.isFinite(bytes) || bytes <= 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
