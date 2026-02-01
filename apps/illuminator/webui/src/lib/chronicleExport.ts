@@ -92,6 +92,8 @@ export interface ChronicleExport {
     focusType: string;
     narrativeStyleId: string;
     narrativeStyleName?: string;
+    /** Narrative lens entity providing contextual framing (rule, occurrence, ability) */
+    lens?: { entityId: string; entityName: string; entityKind: string };
     createdAt: string;
     acceptedAt?: string;
     model: string;
@@ -286,6 +288,7 @@ export function buildChronicleExport(chronicle: ChronicleRecord): ChronicleExpor
       focusType: chronicle.focusType,
       narrativeStyleId: chronicle.narrativeStyleId,
       narrativeStyleName: chronicle.narrativeStyle?.name,
+      lens: chronicle.lens ? { entityId: chronicle.lens.entityId, entityName: chronicle.lens.entityName, entityKind: chronicle.lens.entityKind } : undefined,
       createdAt: new Date(chronicle.createdAt).toISOString(),
       acceptedAt: chronicle.acceptedAt
         ? new Date(chronicle.acceptedAt).toISOString()

@@ -50,7 +50,6 @@ export default function RoleAssignmentStep() {
     togglePrimary,
     setLens,
     clearLens,
-    kindToCategory: wizardKindToCategory,
     computeMetrics,
     simulationRunId,
   } = useWizard();
@@ -60,7 +59,6 @@ export default function RoleAssignmentStep() {
   const [metricsMap, setMetricsMap] = useState<Map<string, EntitySelectionMetrics>>(new Map());
   const [selectedKinds, setSelectedKinds] = useState<Set<string>>(new Set());
   const [connectionFilter, setConnectionFilter] = useState<string | null>(null);
-  const [lensExpanded, setLensExpanded] = useState(false);
 
   const style = state.narrativeStyle;
   const roles = getRoles(style);
@@ -148,32 +146,6 @@ export default function RoleAssignmentStep() {
     }
     return map;
   }, [state.candidates]);
-
-  // Intangible entity categories for lens suggestions
-  const LENS_CATEGORIES = new Set(['concept', 'power', 'event']);
-
-  // Compute lens candidates: intangible entities from the candidate pool, not already assigned to roles
-  const lensCandidates = useMemo(() => {
-    return state.candidates.filter(c => {
-      // Must be an intangible category
-      const category = wizardKindToCategory.get(c.kind);
-      if (!category || !LENS_CATEGORIES.has(category)) return false;
-      // Must not be assigned to a role already
-      if (assignedEntityIds.has(c.id)) return false;
-      // Must not be the current lens
-      if (state.lens?.entityId === c.id) return false;
-      return true;
-    });
-  }, [state.candidates, wizardKindToCategory, assignedEntityIds, state.lens]);
-
-  // All candidates eligible for lens (including non-intangible, for manual override)
-  const allLensCandidates = useMemo(() => {
-    return state.candidates.filter(c => {
-      if (assignedEntityIds.has(c.id)) return false;
-      if (state.lens?.entityId === c.id) return false;
-      return true;
-    });
-  }, [state.candidates, assignedEntityIds, state.lens]);
 
   const handleSetLens = useCallback((entity: typeof state.candidates[0]) => {
     const lens: NarrativeLens = {
@@ -408,129 +380,28 @@ export default function RoleAssignmentStep() {
             })}
           </div>
 
-          {/* Narrative Lens - collapsible */}
-          <div style={{ marginTop: '4px', borderTop: '1px solid var(--border-color)', paddingTop: '6px' }}>
-            <div
-              onClick={() => setLensExpanded(!lensExpanded)}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                cursor: 'pointer',
-                marginBottom: lensExpanded ? '6px' : 0,
-              }}
-            >
-              <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                Narrative Lens
-                {state.lens && (
-                  <span style={{ color: 'var(--accent-color)', marginLeft: '4px' }} title="Lens assigned">
-                    ◈
-                  </span>
-                )}
-              </span>
-              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                {lensExpanded ? '▾' : '▸'}
-              </span>
+          {/* Narrative Lens */}
+          <div style={{ marginTop: '6px', borderTop: '1px solid var(--border-color)', paddingTop: '6px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+              Narrative Lens
             </div>
-            {lensExpanded && (
-              <div style={{ fontSize: '11px' }}>
-                <div style={{ color: 'var(--text-muted)', fontSize: '10px', marginBottom: '6px' }}>
-                  Optional context: a rule, occurrence, or ability that shapes this story without being a cast member.
-                </div>
-                {state.lens ? (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '4px 8px',
-                    background: 'rgba(139, 92, 246, 0.1)',
-                    border: '1px solid rgba(139, 92, 246, 0.3)',
-                    borderRadius: '4px',
-                  }}>
-                    <div>
-                      <span style={{ fontWeight: 500 }}>{state.lens.entityName}</span>
-                      <span style={{ color: 'var(--text-muted)', marginLeft: '6px', fontSize: '10px' }}>
-                        {state.lens.entityKind}
-                      </span>
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); clearLens(); }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--text-muted)',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        padding: '0 2px',
-                      }}
-                      title="Remove lens"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    {/* Suggested intangible entities */}
-                    {lensCandidates.length > 0 && (
-                      <div style={{ marginBottom: '4px' }}>
-                        <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginBottom: '3px' }}>Suggested</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '80px', overflowY: 'auto' }}>
-                          {lensCandidates.slice(0, 5).map(c => (
-                            <button
-                              key={c.id}
-                              onClick={() => handleSetLens(c)}
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                padding: '3px 6px',
-                                background: 'var(--bg-tertiary)',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '3px',
-                                cursor: 'pointer',
-                                fontSize: '10px',
-                                textAlign: 'left',
-                                color: 'inherit',
-                              }}
-                              title={`${c.kind}: ${c.name}`}
-                            >
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
-                              <span style={{ color: 'var(--text-muted)', marginLeft: '4px', flexShrink: 0 }}>{c.kind}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {/* Assign from selection */}
-                    {selectedEntityId && !assignedEntityIds.has(selectedEntityId) && (
-                      <button
-                        onClick={() => {
-                          const entity = state.candidates.find(e => e.id === selectedEntityId);
-                          if (entity) handleSetLens(entity);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '4px 8px',
-                          background: 'rgba(139, 92, 246, 0.1)',
-                          border: '1px dashed rgba(139, 92, 246, 0.4)',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '10px',
-                          color: 'var(--accent-color)',
-                        }}
-                      >
-                        Set selected as lens
-                      </button>
-                    )}
-                    {lensCandidates.length === 0 && !selectedEntityId && (
-                      <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontStyle: 'italic' }}>
-                        No intangible entities in neighborhood
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+              Optional context: a rule, occurrence, or ability that shapes this story without being a cast member.
+            </div>
+            <RoleSlot
+              role={{ role: 'lens', count: { min: 0, max: 1 }, description: 'Contextual frame — not a character but a constraint, backdrop, or force that colors the narrative' }}
+              assignments={state.lens ? [{ role: 'lens', entityId: state.lens.entityId, entityName: state.lens.entityName, entityKind: state.lens.entityKind, isPrimary: false }] : []}
+              hasSelection={selectedEntityId !== null && !assignedEntityIds.has(selectedEntityId) && !(state.lens?.entityId === selectedEntityId)}
+              isAtMax={state.lens !== null}
+              isUnderMin={false}
+              onAssign={() => {
+                if (!selectedEntityId) return;
+                const entity = state.candidates.find(e => e.id === selectedEntityId);
+                if (entity) handleSetLens(entity);
+              }}
+              onRemove={() => clearLens()}
+              onTogglePrimary={() => {}}
+            />
           </div>
 
           {/* Entity detail - always visible */}

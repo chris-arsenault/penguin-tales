@@ -336,7 +336,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         narrativeStyleId: action.seed.narrativeStyleId,
         narrativeStyle: action.style,
         acceptDefaults: false,
-        entryPointId: action.seed.entryPointId,
+        entryPointId: action.seed.entrypointId ?? null,
         entryPoint: action.entryPoint,
         candidates: action.candidates,
         roleAssignments: action.seed.roleAssignments,
