@@ -218,13 +218,36 @@ function SwatchStrip({ colors }: { colors: string[] }) {
 export default function ImageSettingsDrawer({
   isOpen,
   onClose,
-  settings,
-  onSettingsChange,
+  settings: externalSettings,
+  onSettingsChange: externalOnChange,
   styleLibrary,
   cultures,
   imageModel,
 }: ImageSettingsDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
+
+  // Local copy of settings for instant UI feedback.
+  // Changes render immediately here, then propagate to parent via rAF.
+  const [settings, setLocalSettings] = useState(externalSettings);
+  const pendingFlush = useRef<number | null>(null);
+
+  // Sync local state when external settings change (e.g. on mount or external update)
+  useEffect(() => { setLocalSettings(externalSettings); }, [externalSettings]);
+
+  // Debounced push to parent — renders locally first, then flushes
+  const onSettingsChange = useCallback((partial: Partial<ImageGenSettings>) => {
+    setLocalSettings((prev) => ({ ...prev, ...partial }));
+    if (pendingFlush.current !== null) cancelAnimationFrame(pendingFlush.current);
+    pendingFlush.current = requestAnimationFrame(() => {
+      pendingFlush.current = null;
+      externalOnChange(partial);
+    });
+  }, [externalOnChange]);
+
+  // Cleanup on unmount
+  useEffect(() => () => {
+    if (pendingFlush.current !== null) cancelAnimationFrame(pendingFlush.current);
+  }, []);
 
   // Close on Escape
   useEffect(() => {
