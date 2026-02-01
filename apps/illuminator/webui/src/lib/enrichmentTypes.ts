@@ -170,6 +170,8 @@ export interface EntityEnrichment {
   }>;
   /** Historian annotations — scholarly margin notes anchored to description text */
   historianNotes?: HistorianNote[];
+  /** Slug aliases from entity renames — old entity IDs that should still resolve in deep links */
+  slugAliases?: string[];
 }
 
 /**

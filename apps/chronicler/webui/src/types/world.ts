@@ -210,6 +210,7 @@ export interface WikiPageIndex {
   byId: Map<string, PageIndexEntry>;
   byName: Map<string, string>; // lowercase name -> id
   byAlias: Map<string, string>; // lowercase alias -> id
+  bySlug: Map<string, string>; // slugified name/alias -> id (for URL resolution)
   categories: WikiCategory[];
   // Disambiguation: baseName (lowercase) -> pages sharing that base name
   byBaseName: Map<string, DisambiguationEntry[]>;

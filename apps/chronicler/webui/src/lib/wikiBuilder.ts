@@ -310,6 +310,7 @@ export function buildPageIndex(
   const byId = new Map<string, PageIndexEntry>();
   const byName = new Map<string, string>();
   const byAlias = new Map<string, string>();
+  const bySlug = new Map<string, string>();
 
   // Build entity name lookup for resolving linked entity names to IDs
   const entityByName = new Map(worldData.hardState.map(e => [e.name.toLowerCase(), e.id]));
@@ -348,6 +349,18 @@ export function buildPageIndex(
     entries.push(entry);
     byId.set(entry.id, entry);
     byName.set(entity.name.toLowerCase(), entity.id);
+
+    // Index by slug for URL resolution (name slug + slug aliases from renames)
+    const nameSlug = slugify(entity.name);
+    if (nameSlug && !bySlug.has(nameSlug)) {
+      bySlug.set(nameSlug, entity.id);
+    }
+    const slugAliases: string[] = (entity.enrichment as any)?.slugAliases || [];
+    for (const sa of slugAliases) {
+      if (sa && !bySlug.has(sa)) {
+        bySlug.set(sa, entity.id);
+      }
+    }
 
     for (const alias of aliases) {
       const normalized = alias.toLowerCase();
@@ -640,7 +653,7 @@ export function buildPageIndex(
     }
   }
 
-  return { entries, byId, byName, byAlias, categories, byBaseName };
+  return { entries, byId, byName, byAlias, bySlug, categories, byBaseName };
 }
 
 /**
@@ -661,8 +674,13 @@ export function buildPageById(
   prominenceScale?: ProminenceScale
 ): WikiPage | null {
   const resolvedProminenceScale = resolveProminenceScale(worldData, prominenceScale);
-  const indexEntry = pageIndex.byId.get(pageId);
-  if (!indexEntry) return null;
+  let indexEntry = pageIndex.byId.get(pageId);
+  if (!indexEntry) {
+    // Slug fallback: supports renamed entity URLs and slug-based deep links
+    const resolvedId = pageIndex.bySlug.get(pageId);
+    if (resolvedId) indexEntry = pageIndex.byId.get(resolvedId);
+    if (!indexEntry) return null;
+  }
 
   const loreIndex = buildLoreIndex(loreData);
   const imageIndex = buildImageIndex(worldData, imageData);

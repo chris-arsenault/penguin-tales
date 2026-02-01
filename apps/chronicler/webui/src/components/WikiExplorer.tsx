@@ -275,12 +275,17 @@ export default function WikiExplorer({
 
   // Get a page from cache or build it on-demand
   const getPage = useCallback((pageId: string): WikiPage | null => {
-    if (pageCache.has(pageId)) {
-      return pageCache.get(pageId)!;
+    // Resolve slug to canonical ID for consistent caching
+    const canonicalId = pageIndex.byId.has(pageId)
+      ? pageId
+      : (pageIndex.bySlug.get(pageId) ?? pageId);
+
+    if (pageCache.has(canonicalId)) {
+      return pageCache.get(canonicalId)!;
     }
 
     const page = buildPageById(
-      pageId,
+      canonicalId,
       worldData,
       loreData,
       imageData,
@@ -290,7 +295,7 @@ export default function WikiExplorer({
       prominenceScale
     );
     if (page) {
-      pageCache.set(pageId, page);
+      pageCache.set(canonicalId, page);
     }
     return page;
   }, [worldData, loreData, imageData, pageIndex, chronicles, staticPages, prominenceScale, pageCache]);
@@ -388,8 +393,11 @@ export default function WikiExplorer({
   }, [currentPage, isChronicleIndex, isPagesIndex, isConfluxesIndex, isHuddlesIndex, isPageCategory, pageCategoryNamespace]);
 
   // Handle navigation - updates hash which triggers state update via hashchange
+  // Uses slug for entity page URLs (prettier, rename-friendly)
   const handleNavigate = useCallback((pageId: string) => {
-    const newHash = buildPageHash(pageId);
+    const entry = pageIndex.byId.get(pageId);
+    const urlId = (entry && entry.type === 'entity') ? entry.slug : pageId;
+    const newHash = buildPageHash(urlId);
     if (window.location.hash !== newHash) {
       window.location.hash = newHash;
     }
@@ -397,7 +405,7 @@ export default function WikiExplorer({
     if (isMobile) {
       setIsSidebarOpen(false);
     }
-  }, [isMobile]);
+  }, [isMobile, pageIndex]);
 
   const handleNavigateToEntity = useCallback((entityId: string) => {
     // Check if entity ID exists in index
@@ -405,6 +413,12 @@ export default function WikiExplorer({
       handleNavigate(entityId);
     } else if (pageIndex.byId.has(`entity-${entityId}`)) {
       handleNavigate(`entity-${entityId}`);
+    } else {
+      // Try slug resolution (supports renamed entities)
+      const resolvedId = pageIndex.bySlug.get(entityId);
+      if (resolvedId && pageIndex.byId.has(resolvedId)) {
+        handleNavigate(resolvedId);
+      }
     }
   }, [pageIndex, handleNavigate]);
 

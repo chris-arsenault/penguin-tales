@@ -858,6 +858,14 @@ export function applyEntityPatches<T extends ScanEntity>(
 
     if (isTarget) {
       updated.name = newName;
+      // Store the entity ID as a slug alias so deep links using the old
+      // ID-based slug still resolve after the name changes. The chronicler's
+      // bySlug map indexes these for URL resolution.
+      const existingAliases = (entity as any).enrichment?.slugAliases || [];
+      if (!existingAliases.includes(entity.id)) {
+        if (!updated.enrichment) updated.enrichment = { ...(entity as any).enrichment };
+        (updated as any).enrichment.slugAliases = [...existingAliases, entity.id];
+      }
     }
 
     if (!patch) return updated;
