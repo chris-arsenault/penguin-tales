@@ -14,7 +14,7 @@ import {
   deleteImages,
   getImageBlob,
   formatBytes,
-} from '../../../../canonry/webui/src/storage/imageStore';
+} from '../lib/db/imageRepository';
 import { downloadImagePromptExport } from '../lib/db/imageRepository';
 import ImageModal from './ImageModal';
 

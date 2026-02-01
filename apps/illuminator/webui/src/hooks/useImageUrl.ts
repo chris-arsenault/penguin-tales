@@ -1,12 +1,12 @@
 /**
- * useImageUrl - Hook to load images from local IndexedDB storage
+ * useImageUrl - Hook to load images from Dexie storage
  *
  * Takes an imageId and returns an object URL that can be used in img tags.
  * Handles loading state and cleanup of object URLs.
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { loadImage } from '../../../../canonry/webui/src/storage/imageStore';
+import { db } from '../lib/db/illuminatorDb';
 
 interface UseImageUrlResult {
   url: string | null;
@@ -58,22 +58,23 @@ export function useImageUrl(imageId: string | null | undefined): UseImageUrlResu
 
     setLoading(true);
 
-    loadImage(imageId)
-      .then((result) => {
-        if (result) {
-          setUrl(result.url);
-          currentUrlRef.current = result.url;
+    db.images.get(imageId)
+      .then((record) => {
+        if (record?.blob) {
+          const objectUrl = URL.createObjectURL(record.blob);
+          setUrl(objectUrl);
+          currentUrlRef.current = objectUrl;
           setMetadata({
-            entityId: result.entityId,
-            entityName: result.entityName,
-            entityKind: result.entityKind,
-            entityCulture: result.entityCulture,
-            originalPrompt: result.originalPrompt,
-            finalPrompt: result.finalPrompt,
-            generatedAt: result.generatedAt,
-            model: result.model,
-            revisedPrompt: result.revisedPrompt,
-            size: result.size,
+            entityId: record.entityId,
+            entityName: record.entityName,
+            entityKind: record.entityKind,
+            entityCulture: record.entityCulture,
+            originalPrompt: record.originalPrompt,
+            finalPrompt: record.finalPrompt,
+            generatedAt: record.generatedAt,
+            model: record.model,
+            revisedPrompt: record.revisedPrompt,
+            size: record.size,
           });
         } else {
           setError('Image not found in storage');
@@ -126,34 +127,35 @@ export function useImageUrls(imageIds: (string | null | undefined)[]): Map<strin
     }
     setResults(initialResults);
 
-    // Load all images
+    // Load all images from Dexie
     Promise.all(
       validIds.map((id) =>
-        loadImage(id)
-          .then((result) => ({ id, result, error: null }))
-          .catch((err) => ({ id, result: null, error: err.message }))
+        db.images.get(id)
+          .then((record) => ({ id, record, error: null }))
+          .catch((err) => ({ id, record: null, error: err.message }))
       )
     ).then((loadResults) => {
       const newResults = new Map<string, UseImageUrlResult>();
 
-      for (const { id, result, error } of loadResults) {
-        if (result) {
-          urlsRef.current.set(id, result.url);
+      for (const { id, record, error } of loadResults) {
+        if (record?.blob) {
+          const objectUrl = URL.createObjectURL(record.blob);
+          urlsRef.current.set(id, objectUrl);
           newResults.set(id, {
-            url: result.url,
+            url: objectUrl,
             loading: false,
             error: null,
             metadata: {
-              entityId: result.entityId,
-              entityName: result.entityName,
-              entityKind: result.entityKind,
-              entityCulture: result.entityCulture,
-              originalPrompt: result.originalPrompt,
-              finalPrompt: result.finalPrompt,
-              generatedAt: result.generatedAt,
-              model: result.model,
-              revisedPrompt: result.revisedPrompt,
-              size: result.size,
+              entityId: record.entityId,
+              entityName: record.entityName,
+              entityKind: record.entityKind,
+              entityCulture: record.entityCulture,
+              originalPrompt: record.originalPrompt,
+              finalPrompt: record.finalPrompt,
+              generatedAt: record.generatedAt,
+              model: record.model,
+              revisedPrompt: record.revisedPrompt,
+              size: record.size,
             },
           });
         } else {

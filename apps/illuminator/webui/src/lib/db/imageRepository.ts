@@ -172,6 +172,193 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 // ============================================================================
+// Load / Browse (used by UI components that previously used Canonry imageStore)
+// ============================================================================
+
+/**
+ * Load an image by ID and create an object URL.
+ * Returns { url, ...metadata } or null if not found.
+ * Caller is responsible for revoking the object URL.
+ */
+export async function loadImage(imageId: string): Promise<{
+  url: string;
+  imageId: string;
+  entityId: string;
+  projectId: string;
+  mimeType: string;
+  size: number;
+  generatedAt: number;
+  model: string;
+  originalPrompt?: string;
+  finalPrompt?: string;
+  revisedPrompt?: string;
+  entityName?: string;
+  entityKind?: string;
+  entityCulture?: string;
+  imageType?: ImageType;
+  chronicleId?: string;
+  imageRefId?: string;
+  sceneDescription?: string;
+} | null> {
+  if (!imageId) return null;
+  const record = await db.images.get(imageId);
+  if (!record?.blob) return null;
+
+  const url = URL.createObjectURL(record.blob);
+  return {
+    url,
+    imageId: record.imageId,
+    entityId: record.entityId,
+    projectId: record.projectId,
+    mimeType: record.mimeType,
+    size: record.size,
+    generatedAt: record.generatedAt,
+    model: record.model,
+    originalPrompt: record.originalPrompt,
+    finalPrompt: record.finalPrompt,
+    revisedPrompt: record.revisedPrompt,
+    entityName: record.entityName,
+    entityKind: record.entityKind,
+    entityCulture: record.entityCulture,
+    imageType: record.imageType,
+    chronicleId: record.chronicleId,
+    imageRefId: record.imageRefId,
+    sceneDescription: record.sceneDescription,
+  };
+}
+
+/**
+ * Get raw image blob by ID.
+ */
+export async function getImageBlob(imageId: string): Promise<Blob | null> {
+  if (!imageId) return null;
+  const record = await db.images.get(imageId);
+  return record?.blob || null;
+}
+
+/**
+ * Get all images (metadata only, no blobs) sorted newest first.
+ */
+export async function getAllImages(): Promise<Array<Omit<ImageRecord, 'blob'> & { hasBlob: boolean }>> {
+  const records = await db.images.toArray();
+  const images = records.map(({ blob, ...metadata }) => ({
+    ...metadata,
+    hasBlob: Boolean(blob),
+  }));
+  images.sort((a, b) => (b.generatedAt || 0) - (a.generatedAt || 0));
+  return images;
+}
+
+/**
+ * Delete multiple images by ID.
+ */
+export async function deleteImages(imageIds: string[]): Promise<void> {
+  if (!imageIds?.length) return;
+  await db.images.bulkDelete(imageIds);
+}
+
+/**
+ * Get storage statistics (count, total size, breakdown by project).
+ */
+export async function getStorageStats(): Promise<{
+  totalCount: number;
+  totalSize: number;
+  byProject: Record<string, { count: number; size: number }>;
+}> {
+  const records = await db.images.toArray();
+
+  let totalSize = 0;
+  const byProject: Record<string, { count: number; size: number }> = {};
+
+  for (const img of records) {
+    const size = img.size || 0;
+    totalSize += size;
+
+    const pid = img.projectId || 'unknown';
+    if (!byProject[pid]) {
+      byProject[pid] = { count: 0, size: 0 };
+    }
+    byProject[pid].count++;
+    byProject[pid].size += size;
+  }
+
+  return { totalCount: records.length, totalSize, byProject };
+}
+
+/**
+ * Get unique values for a metadata field (for filter dropdowns).
+ */
+export async function getImageFilterOptions(
+  field: 'entityKind' | 'entityCulture' | 'model' | 'projectId'
+): Promise<string[]> {
+  const records = await db.images.toArray();
+  const values = new Set<string>();
+  for (const record of records) {
+    const val = (record as any)[field];
+    if (val) values.add(val);
+  }
+  return [...values].sort();
+}
+
+/**
+ * Search images with rich filters (entity kind, culture, model, text search).
+ * Returns metadata without blobs.
+ */
+export async function searchImagesWithFilters(filters: {
+  projectId?: string;
+  entityKind?: string;
+  entityCulture?: string;
+  model?: string;
+  imageType?: string;
+  chronicleId?: string;
+  searchText?: string;
+  limit?: number;
+} = {}): Promise<Array<Omit<ImageRecord, 'blob'> & { hasBlob: boolean }>> {
+  let records = await db.images.toArray();
+
+  let images = records.map(({ blob, ...metadata }) => ({
+    ...metadata,
+    hasBlob: Boolean(blob),
+  }));
+
+  if (filters.projectId) images = images.filter((img) => img.projectId === filters.projectId);
+  if (filters.entityKind) images = images.filter((img) => img.entityKind === filters.entityKind);
+  if (filters.entityCulture) images = images.filter((img) => img.entityCulture === filters.entityCulture);
+  if (filters.model) images = images.filter((img) => img.model === filters.model);
+  if (filters.imageType) images = images.filter((img) => img.imageType === filters.imageType);
+  if (filters.chronicleId) images = images.filter((img) => img.chronicleId === filters.chronicleId);
+
+  if (filters.searchText) {
+    const search = filters.searchText.toLowerCase();
+    images = images.filter((img) =>
+      (img.entityName?.toLowerCase().includes(search)) ||
+      (img.originalPrompt?.toLowerCase().includes(search)) ||
+      (img.finalPrompt?.toLowerCase().includes(search)) ||
+      (img.revisedPrompt?.toLowerCase().includes(search))
+    );
+  }
+
+  images.sort((a, b) => (b.generatedAt || 0) - (a.generatedAt || 0));
+
+  if (filters.limit && filters.limit > 0) {
+    images = images.slice(0, filters.limit);
+  }
+
+  return images;
+}
+
+/**
+ * Format bytes to human-readable string.
+ */
+export function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
+// ============================================================================
 // Bulk Export for Prompt Analysis
 // ============================================================================
 

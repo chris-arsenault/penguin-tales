@@ -7,11 +7,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  searchImages,
+  searchImagesWithFilters as searchImages,
   getImageFilterOptions,
   loadImage,
   formatBytes,
-} from '../../../../canonry/webui/src/storage/imageStore';
+} from '../lib/db/imageRepository';
 
 /**
  * Format a timestamp to a readable date string
