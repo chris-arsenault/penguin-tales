@@ -6,7 +6,7 @@
  * Includes enrichment settings (moved from ConfigPanel).
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import ImageModal from './ImageModal';
 import ImagePickerModal from './ImagePickerModal';
 import EntityDetailView from './EntityDetailView';
@@ -26,53 +26,54 @@ import {
 } from '@canonry/world-schema';
 // imageSettings imports removed - size/quality now in ImageSettingsDrawer
 
-// Thumbnail component that loads image from local storage
+// Thumbnail component that lazy-loads image when visible via IntersectionObserver
 function ImageThumbnail({ imageId, alt, onClick }) {
-  const { url, loading, error } = useImageUrl(imageId);
+  const containerRef = useRef(null);
+  const [visible, setVisible] = useState(false);
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '4px',
-          background: 'var(--bg-tertiary)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--text-muted)',
-          fontSize: '10px',
-        }}
-      >
-        Loading...
-      </div>
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 },
     );
-  }
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
-  if (error || !url) {
-    return (
-      <div
-        style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '4px',
-          background: 'var(--bg-tertiary)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--text-muted)',
-          fontSize: '10px',
-        }}
-        title={error || 'Image not found'}
-      >
-        No image
-      </div>
-    );
-  }
+  // Only activate the hook once visible (pass null to skip loading)
+  const { url, loading, error } = useImageUrl(visible ? imageId : null);
+
+  const placeholder = (text, title) => (
+    <div
+      ref={containerRef}
+      style={{
+        width: '80px',
+        height: '80px',
+        borderRadius: '4px',
+        background: 'var(--bg-tertiary)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--text-muted)',
+        fontSize: '10px',
+      }}
+      title={title}
+    >
+      {text}
+    </div>
+  );
+
+  if (!visible || loading) return placeholder('Loading...');
+  if (error || !url) return placeholder('No image', error || 'Image not found');
 
   return (
-    <div style={{ cursor: 'pointer' }} onClick={() => onClick(imageId, alt)}>
+    <div ref={containerRef} style={{ cursor: 'pointer' }} onClick={() => onClick(imageId, alt)}>
       <img
         src={url}
         alt={alt}

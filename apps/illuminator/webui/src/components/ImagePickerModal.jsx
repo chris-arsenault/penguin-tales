@@ -14,6 +14,55 @@ import {
 } from '../lib/db/imageRepository';
 
 /**
+ * Lazy-loading thumbnail that only loads the blob when visible via IntersectionObserver.
+ */
+function LazyThumbnail({ imageId, alt, style }) {
+  const ref = useRef(null);
+  const [url, setUrl] = useState(null);
+  const urlRef = useRef(null);
+
+  useEffect(() => {
+    if (!ref.current || !imageId) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          observer.disconnect();
+          loadImage(imageId).then((result) => {
+            if (result?.url) {
+              setUrl(result.url);
+              urlRef.current = result.url;
+            }
+          });
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(ref.current);
+    return () => {
+      observer.disconnect();
+      if (urlRef.current) {
+        URL.revokeObjectURL(urlRef.current);
+        urlRef.current = null;
+      }
+    };
+  }, [imageId]);
+
+  return (
+    <div ref={ref} style={style}>
+      {url ? (
+        <img src={url} alt={alt} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '11px' }}>
+          Loading...
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Format a timestamp to a readable date string
  */
 function formatDate(timestamp) {
@@ -47,7 +96,6 @@ export default function ImagePickerModal({
     }
   };
   const [loading, setLoading] = useState(true);
-  const [thumbnailUrls, setThumbnailUrls] = useState({});
   const [selectedImageId, setSelectedImageId] = useState(null);
   const [filterKind, setFilterKind] = useState('all');
   const [filterCulture, setFilterCulture] = useState('all');
@@ -106,42 +154,6 @@ export default function ImagePickerModal({
     loadData();
   }, [isOpen, filterKind, filterCulture, filterModel, searchText]);
 
-  // Load thumbnail URLs for visible images
-  useEffect(() => {
-    if (!isOpen || images.length === 0) return;
-
-    const loadThumbnails = async () => {
-      const newUrls = {};
-
-      for (const img of images) {
-        if (!thumbnailUrls[img.imageId]) {
-          try {
-            const result = await loadImage(img.imageId);
-            if (result?.url) {
-              newUrls[img.imageId] = result.url;
-            }
-          } catch {
-            // Ignore errors
-          }
-        }
-      }
-
-      if (Object.keys(newUrls).length > 0) {
-        setThumbnailUrls((prev) => ({ ...prev, ...newUrls }));
-      }
-    };
-
-    loadThumbnails();
-
-    // Cleanup URLs on close
-    return () => {
-      if (!isOpen) {
-        for (const url of Object.values(thumbnailUrls)) {
-          URL.revokeObjectURL(url);
-        }
-      }
-    };
-  }, [isOpen, images]);
 
 
   // Handle selection
@@ -335,46 +347,16 @@ export default function ImagePickerModal({
                         </div>
                       )}
 
-                      {/* Thumbnail */}
-                      <div
+                      {/* Thumbnail — lazy-loaded via IntersectionObserver */}
+                      <LazyThumbnail
+                        imageId={img.imageId}
+                        alt={img.entityName || img.imageId}
                         style={{
                           width: '100%',
                           paddingTop: '100%',
                           position: 'relative',
                         }}
-                      >
-                        {thumbnailUrls[img.imageId] ? (
-                          <img
-                            src={thumbnailUrls[img.imageId]}
-                            alt={img.entityName || img.imageId}
-                            style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                            }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              width: '100%',
-                              height: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'var(--text-muted)',
-                              fontSize: '11px',
-                            }}
-                          >
-                            Loading...
-                          </div>
-                        )}
-                      </div>
+                      />
 
                       {/* Info */}
                       <div style={{ padding: '8px' }}>

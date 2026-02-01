@@ -1,5 +1,5 @@
 import { useState, useRef, lazy, Suspense, useMemo, useEffect, useCallback } from 'react';
-import type { WorldState, Filters, EntityKind, LoreData, ImageMetadata } from '../types/world.ts';
+import type { WorldState, Filters, EntityKind, LoreData } from '../types/world.ts';
 import { applyFilters, applyTemporalFilter, getProminenceLevels } from '../utils/dataTransform.ts';
 import CoordinateMapView from './CoordinateMapView.tsx';
 import FilterPanel from './FilterPanel.tsx';
@@ -36,7 +36,6 @@ function buildEntityHash(entityId: string | undefined): string {
 interface WorldExplorerProps {
   worldData: WorldState;
   loreData: LoreData | null;
-  imageData: ImageMetadata | null;
 }
 
 export type EdgeMetric = 'strength' | 'distance' | 'none';
@@ -46,7 +45,7 @@ const GraphView = lazy(() => import('./GraphView.tsx'));
 const GraphView3D = lazy(() => import('./GraphView3D.tsx'));
 const TimelineView3D = lazy(() => import('./TimelineView3D.tsx'));
 
-export default function WorldExplorer({ worldData, loreData, imageData }: WorldExplorerProps) {
+export default function WorldExplorer({ worldData, loreData }: WorldExplorerProps) {
   // Initialize from hash on mount
   const [selectedEntityId, setSelectedEntityId] = useState<string | undefined>(() => parseHashEntityId());
   const [currentTick, setCurrentTick] = useState<number>(worldData.metadata.tick);
@@ -173,7 +172,6 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
           entityId={selectedEntityId}
           worldData={worldData}
           loreData={loreData}
-          imageData={imageData}
           onRelatedClick={handleEntitySelect}
           prominenceScale={prominenceScale}
         />

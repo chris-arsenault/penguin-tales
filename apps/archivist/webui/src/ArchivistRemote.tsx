@@ -7,19 +7,17 @@
 
 import './index.css';
 import WorldExplorer from './components/WorldExplorer.tsx';
-import type { WorldState, LoreData, ImageMetadata } from './types/world.ts';
+import type { WorldState, LoreData } from './types/world.ts';
 import { validateWorldData } from './utils/schemaValidation.ts';
 
 export interface ArchivistRemoteProps {
   worldData?: WorldState | null;
   loreData?: LoreData | null;
-  imageData?: ImageMetadata | null;
 }
 
 export default function ArchivistRemote({
   worldData = null,
   loreData = null,
-  imageData = null,
 }: ArchivistRemoteProps) {
   if (!worldData) {
     return (
@@ -58,7 +56,6 @@ export default function ArchivistRemote({
     <WorldExplorer
       worldData={worldData}
       loreData={loreData}
-      imageData={imageData}
     />
   );
 }

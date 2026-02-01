@@ -9,7 +9,8 @@
  */
 
 import { useState, useMemo, useEffect, useLayoutEffect, useCallback } from 'react';
-import type { WorldState, LoreData, ImageMetadata, WikiPage, HardState, ImageLoader } from '../types/world.ts';
+import type { WorldState, LoreData, ImageMetadata, WikiPage, HardState } from '../types/world.ts';
+import { useImageUrl, useImageUrls, useImageMetadata } from '@penguin-tales/image-store';
 import { buildPageIndex, buildPageById } from '../lib/wikiBuilder.ts';
 import { getCompletedChroniclesForSimulation, type ChronicleRecord } from '../lib/chronicleStorage.ts';
 import { getPublishedStaticPagesForProject, type StaticPage } from '../lib/staticPageStorage.ts';
@@ -84,9 +85,6 @@ interface WikiExplorerProps {
   projectId?: string;
   worldData: WorldState;
   loreData: LoreData | null;
-  imageData: ImageMetadata | null;
-  /** Lazy image loader - loads images on-demand from IndexedDB */
-  imageLoader?: ImageLoader;
   chronicles?: ChronicleRecord[];
   staticPages?: StaticPage[];
   /** Page ID requested by external navigation (e.g., from Archivist) */
@@ -101,8 +99,6 @@ export default function WikiExplorer({
   projectId,
   worldData,
   loreData,
-  imageData,
-  imageLoader,
   chronicles: chroniclesOverride,
   staticPages: staticPagesOverride,
   requestedPageId,
@@ -251,12 +247,51 @@ export default function WikiExplorer({
     return buildProminenceScale(values, { distribution: DEFAULT_PROMINENCE_DISTRIBUTION });
   }, [worldData, dataError]);
 
+  // Collect all entity imageIds for bulk loading from the store
+  const entityImageIds = useMemo(() =>
+    worldData.hardState
+      .map(e => e.enrichment?.image?.imageId)
+      .filter((id): id is string => Boolean(id)),
+    [worldData]
+  );
+
+  // Bulk-load URLs and metadata from the shared image store
+  const { urls: entityImageUrls } = useImageUrls(entityImageIds);
+  const imageMetadataMap = useImageMetadata(entityImageIds);
+
+  // Build imageData structure from store (same shape wikiBuilder expects)
+  const imageData = useMemo((): ImageMetadata | null => {
+    if (entityImageUrls.size === 0) return null;
+    const results = [];
+    for (const entity of worldData.hardState) {
+      const imageId = entity.enrichment?.image?.imageId;
+      if (!imageId) continue;
+      const url = entityImageUrls.get(imageId);
+      const meta = imageMetadataMap.get(imageId);
+      if (url) {
+        results.push({
+          imageId,
+          entityId: entity.id,
+          entityName: entity.name,
+          entityKind: entity.kind,
+          prompt: '',
+          localPath: url,
+          thumbPath: url,
+          width: meta?.width,
+          height: meta?.height,
+          aspect: meta?.aspect,
+        });
+      }
+    }
+    return { generatedAt: '', totalImages: results.length, results };
+  }, [worldData, entityImageUrls, imageMetadataMap]);
+
   // Build lightweight page index (fast) - only if data is valid
   const { pageIndex, entityIndex } = useMemo(() => {
     if (dataError) {
       // Return empty index when data is invalid
       return {
-        pageIndex: { entries: [], byId: new Map(), byName: new Map(), byAlias: new Map(), categories: [], byBaseName: new Map() },
+        pageIndex: { entries: [], byId: new Map(), byName: new Map(), byAlias: new Map(), bySlug: new Map(), categories: [], byBaseName: new Map() },
         entityIndex: new Map<string, HardState>(),
       };
     }
@@ -587,7 +622,6 @@ export default function WikiExplorer({
               pages={indexAsPages}
               entityIndex={entityIndex}
               imageData={imageData}
-              imageLoader={imageLoader}
               disambiguation={currentDisambiguation}
               onNavigate={handleNavigate}
               onNavigateToEntity={handleNavigateToEntity}
@@ -601,8 +635,6 @@ export default function WikiExplorer({
               chronicles={chroniclePages}
               staticPages={staticPagesAsWikiPages}
               categories={pageIndex.categories}
-              imageData={imageData}
-              imageLoader={imageLoader}
               onNavigate={handleNavigate}
               prominenceScale={prominenceScale}
               breakpoint={breakpoint}
@@ -621,8 +653,6 @@ interface HomePageProps {
   chronicles: WikiPage[];
   staticPages: WikiPage[];
   categories: { id: string; name: string; pageCount: number }[];
-  imageData: ImageMetadata | null;
-  imageLoader?: ImageLoader;
   onNavigate: (pageId: string) => void;
   prominenceScale: ProminenceScale;
   breakpoint: 'mobile' | 'tablet' | 'desktop';
@@ -678,7 +708,6 @@ function HomePage({
   worldData,
   chronicles,
   staticPages,
-  imageLoader,
   onNavigate,
   prominenceScale,
   breakpoint,
@@ -755,27 +784,18 @@ function HomePage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load featured article image
-  const [featuredImageUrl, setFeaturedImageUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!featuredArticle?.enrichment?.image?.imageId || !imageLoader) {
-      setFeaturedImageUrl(null);
-      return;
-    }
-    let cancelled = false;
-    imageLoader(featuredArticle.enrichment.image.imageId).then(url => {
-      if (!cancelled) setFeaturedImageUrl(url);
-    });
-    return () => { cancelled = true; };
-  }, [featuredArticle, imageLoader]);
+  // Load featured article image from the shared image store
+  const featuredImageId = featuredArticle?.enrichment?.image?.imageId;
+  const { url: featuredImageUrl } = useImageUrl(featuredImageId);
 
   const openFeaturedImage = useCallback(async () => {
     if (!featuredImageUrl || !featuredArticle) return;
     // Try to load full-size image for lightbox
     let fullUrl = featuredImageUrl;
-    if (imageLoader && featuredArticle.enrichment?.image?.imageId) {
+    if (featuredArticle.enrichment?.image?.imageId) {
       try {
-        const loaded = await imageLoader(featuredArticle.enrichment.image.imageId, 'full');
+        const { useImageStore } = await import('@penguin-tales/image-store');
+        const loaded = await useImageStore.getState().loadUrl(featuredArticle.enrichment.image.imageId, 'full');
         if (loaded) fullUrl = loaded;
       } catch {
         // Fall back to thumbnail
@@ -786,7 +806,7 @@ function HomePage({
       title: featuredArticle.name,
       summary: featuredArticle.summary,
     });
-  }, [featuredArticle, featuredImageUrl, imageLoader]);
+  }, [featuredArticle, featuredImageUrl]);
 
   const closeImageModal = useCallback(() => {
     setActiveImage(null);

@@ -58,10 +58,13 @@ export function useImageUrl(imageId: string | null | undefined): UseImageUrlResu
 
     setLoading(true);
 
-    db.images.get(imageId)
-      .then((record) => {
-        if (record?.blob) {
-          const objectUrl = URL.createObjectURL(record.blob);
+    Promise.all([
+      db.images.get(imageId),
+      db.imageBlobs.get(imageId),
+    ])
+      .then(([record, blobRecord]) => {
+        if (record && blobRecord?.blob) {
+          const objectUrl = URL.createObjectURL(blobRecord.blob);
           setUrl(objectUrl);
           currentUrlRef.current = objectUrl;
           setMetadata({
@@ -127,17 +130,21 @@ export function useImageUrls(imageIds: (string | null | undefined)[]): Map<strin
     }
     setResults(initialResults);
 
-    // Load all images in a single Dexie transaction (bulkGet)
-    db.images.bulkGet(validIds)
-      .then((records) => {
+    // Load metadata and blobs in parallel from split tables
+    Promise.all([
+      db.images.bulkGet(validIds),
+      db.imageBlobs.bulkGet(validIds),
+    ])
+      .then(([metadataRecords, blobRecords]) => {
         const newResults = new Map<string, UseImageUrlResult>();
 
         for (let i = 0; i < validIds.length; i++) {
           const id = validIds[i];
-          const record = records[i];
+          const record = metadataRecords[i];
+          const blobRecord = blobRecords[i];
 
-          if (record?.blob) {
-            const objectUrl = URL.createObjectURL(record.blob);
+          if (record && blobRecord?.blob) {
+            const objectUrl = URL.createObjectURL(blobRecord.blob);
             urlsRef.current.set(id, objectUrl);
             newResults.set(id, {
               url: objectUrl,

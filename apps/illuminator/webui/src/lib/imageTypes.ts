@@ -59,6 +59,12 @@ export interface ImageRecord extends ImageMetadata {
   savedAt: number;
 }
 
+/** Blob-only record stored in the separate imageBlobs table (v3+) */
+export interface ImageBlobRecord {
+  imageId: string;
+  blob: Blob;
+}
+
 /**
  * Lightweight image metadata for listing (no blob data)
  */

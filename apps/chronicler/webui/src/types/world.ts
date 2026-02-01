@@ -132,14 +132,6 @@ export interface ImageMetadata {
 export type ImageSize = 'thumb' | 'full';
 
 /**
- * Lazy image loader function type
- * Takes an imageId and optional size, returns a promise that resolves to the image URL (or null)
- * @param imageId - The image identifier
- * @param size - 'thumb' (default) for inline display, 'full' for lightbox
- */
-export type ImageLoader = (imageId: string, size?: ImageSize) => Promise<string | null>;
-
-/**
  * Lightweight page index entry for navigation and search
  * Contains only the minimal info needed without building full content
  */

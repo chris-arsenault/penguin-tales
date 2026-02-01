@@ -52,7 +52,8 @@ import LoreWeaveHost from './remotes/LoreWeaveHost';
 import IlluminatorHost from './remotes/IlluminatorHost';
 import ArchivistHost from './remotes/ArchivistHost';
 import ChroniclerHost from './remotes/ChroniclerHost';
-import { getImagesByProject, getImageBlob, getImageMetadata, loadImage } from './storage/imageStore';
+import { useImageStore, IndexedDBBackend } from '@penguin-tales/image-store';
+import { getImagesByProject, getImageBlob, getImageMetadata } from './lib/imageExportHelpers';
 import { getStaticPagesForProject } from './storage/staticPageStorage';
 import {
   getCompletedChroniclesForSimulation,
@@ -139,89 +140,6 @@ async function extractLoreDataWithCurrentImageRefs(worldData) {
   return extractLoreDataFromEntities(worldData);
 }
 
-/**
- * Load images from IndexedDB and format for Chronicler
- * Returns ImageMetadata with object URLs for display
- */
-async function loadImageDataForProject(projectId, worldData) {
-  if (!projectId || !worldData?.hardState) return null;
-
-  try {
-    const images = await getImagesByProject(projectId);
-    if (!images || images.length === 0) return null;
-
-    const imageById = new Map(images.map((img) => [img.imageId, img]));
-    const imageCache = new Map();
-    const results = [];
-
-    // Load images referenced by the current simulation entities
-    for (const entity of worldData.hardState) {
-      const imageId = entity?.enrichment?.image?.imageId;
-      if (!imageId) continue;
-
-      const imageRecord = imageById.get(imageId);
-      if (!imageRecord) continue;
-
-      let cached = imageCache.get(imageId);
-      if (!cached) {
-        const imageData = await loadImage(imageId);
-        if (!imageData?.url) continue;
-        cached = {
-          url: imageData.url,
-          prompt: imageData.originalPrompt || imageData.finalPrompt || imageData.revisedPrompt || '',
-        };
-        imageCache.set(imageId, cached);
-      }
-
-      results.push({
-        entityId: entity.id,
-        entityName: entity?.name || imageRecord.entityName || 'Unknown',
-        entityKind: entity?.kind || imageRecord.entityKind || 'unknown',
-        prompt: cached.prompt || imageRecord.originalPrompt || imageRecord.finalPrompt || '',
-        localPath: cached.url, // Object URL for display
-        imageId,
-      });
-    }
-
-    // Also load chronicle images (imageType === 'chronicle')
-    for (const imageRecord of images) {
-      if (imageRecord.imageType !== 'chronicle') continue;
-      if (imageCache.has(imageRecord.imageId)) continue; // Already loaded
-
-      const imageData = await loadImage(imageRecord.imageId);
-      if (!imageData?.url) continue;
-
-      imageCache.set(imageRecord.imageId, {
-        url: imageData.url,
-        prompt: imageData.originalPrompt || imageData.finalPrompt || imageData.revisedPrompt || '',
-      });
-
-      results.push({
-        entityId: imageRecord.entityId || 'chronicle',
-        entityName: imageRecord.entityName || 'Chronicle Image',
-        entityKind: imageRecord.entityKind || 'chronicle',
-        prompt: imageData.originalPrompt || imageData.finalPrompt || imageRecord.originalPrompt || '',
-        localPath: imageData.url,
-        imageId: imageRecord.imageId,
-        // Chronicle-specific metadata
-        imageType: 'chronicle',
-        chronicleId: imageRecord.chronicleId,
-        imageRefId: imageRecord.imageRefId,
-      });
-    }
-
-    if (results.length === 0) return null;
-
-    return {
-      generatedAt: new Date().toISOString(),
-      totalImages: results.length,
-      results,
-    };
-  } catch (err) {
-    console.error('Failed to load images for project:', err);
-    return null;
-  }
-}
 
 const IMAGE_EXTENSION_BY_TYPE = {
   'image/png': 'png',
@@ -951,37 +869,15 @@ export default function App() {
     }
   }, [reloadProjectFromDefaults, currentProject?.id]);
 
-  /**
-   * Lazy image loader for Chronicler - loads images on-demand from IndexedDB
-   * Uses an internal cache to avoid reloading the same image multiple times
-   */
-  const imageLoaderCacheRef = useRef(new Map());
-  const imageLoader = useCallback(async (imageId) => {
-    if (!imageId) return null;
-
-    // Check cache first
-    const cache = imageLoaderCacheRef.current;
-    if (cache.has(imageId)) {
-      return cache.get(imageId);
-    }
-
-    try {
-      const imageData = await loadImage(imageId);
-      const url = imageData?.url || null;
-      cache.set(imageId, url);
-      return url;
-    } catch (err) {
-      console.error('Failed to load image:', imageId, err);
-      cache.set(imageId, null);
-      return null;
-    }
+  // Configure the shared image store with an IndexedDB backend
+  useEffect(() => {
+    const backend = new IndexedDBBackend();
+    useImageStore.getState().configure(backend);
+    return () => useImageStore.getState().cleanup();
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-
-    // Clear image loader cache on project change
-    imageLoaderCacheRef.current.clear();
 
     if (!currentProject?.id) {
       simulationOwnerRef.current = null;
@@ -1034,13 +930,10 @@ export default function App() {
         setSimulationResults(activeSlot.simulationResults || null);
         setSimulationState(activeSlot.simulationState || null);
         if (activeSlot.worldData) {
-          // Extract loreData from enriched entities (with current imageRefs) and load images
-          Promise.all([
-            extractLoreDataWithCurrentImageRefs(activeSlot.worldData),
-            loadImageDataForProject(currentProject.id, activeSlot.worldData),
-          ]).then(([loreData, imageData]) => {
+          // Extract loreData from enriched entities (with current imageRefs)
+          extractLoreDataWithCurrentImageRefs(activeSlot.worldData).then((loreData) => {
             if (cancelled) return;
-            setArchivistData({ worldData: activeSlot.worldData, loreData, imageData });
+            setArchivistData({ worldData: activeSlot.worldData, loreData });
           });
         }
       }
@@ -1128,12 +1021,9 @@ export default function App() {
 
       // Update archivistData for immediate use
       if (worldData) {
-        Promise.all([
-          extractLoreDataWithCurrentImageRefs(worldData),
-          loadImageDataForProject(currentProject.id, worldData),
-        ]).then(([loreData, imageData]) => {
+        extractLoreDataWithCurrentImageRefs(worldData).then((loreData) => {
           if (cancelled) return;
-          setArchivistData({ worldData, loreData, imageData });
+          setArchivistData({ worldData, loreData });
         });
       }
 
@@ -1413,12 +1303,9 @@ export default function App() {
         setSimulationResults(storedSlot.simulationResults || null);
         setSimulationState(storedSlot.simulationState || null);
         if (storedSlot.worldData) {
-          // Extract loreData (with current imageRefs) and load images
-          const [loreData, imageData] = await Promise.all([
-            extractLoreDataWithCurrentImageRefs(storedSlot.worldData),
-            loadImageDataForProject(currentProject.id, storedSlot.worldData),
-          ]);
-          setArchivistData({ worldData: storedSlot.worldData, loreData, imageData });
+          // Extract loreData (with current imageRefs)
+          const loreData = await extractLoreDataWithCurrentImageRefs(storedSlot.worldData);
+          setArchivistData({ worldData: storedSlot.worldData, loreData });
         } else {
           setArchivistData(null);
         }
@@ -2140,7 +2027,6 @@ export default function App() {
               <ArchivistHost
                 worldData={archivistData?.worldData}
                 loreData={archivistData?.loreData}
-                imageData={archivistData?.imageData}
               />
             </div>
             <div style={{ display: activeTab === 'chronicler' ? 'contents' : 'none' }}>
@@ -2148,8 +2034,6 @@ export default function App() {
                 projectId={currentProject?.id}
                 worldData={archivistData?.worldData}
                 loreData={archivistData?.loreData}
-                imageData={archivistData?.imageData}
-                imageLoader={imageLoader}
                 requestedPageId={chroniclerRequestedPage}
                 onRequestedPageConsumed={() => setChroniclerRequestedPage(null)}
               />

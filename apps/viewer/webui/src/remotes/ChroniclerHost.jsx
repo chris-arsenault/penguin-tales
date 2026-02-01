@@ -37,8 +37,6 @@ export default function ChroniclerHost({
   projectId,
   worldData,
   loreData,
-  imageData,
-  imageLoader,
   chronicles,
   staticPages,
   requestedPageId,
@@ -52,8 +50,6 @@ export default function ChroniclerHost({
           projectId={projectId}
           worldData={worldData}
           loreData={loreData}
-          imageData={imageData}
-          imageLoader={imageLoader}
           chronicles={chronicles}
           staticPages={staticPages}
           requestedPageId={requestedPageId}

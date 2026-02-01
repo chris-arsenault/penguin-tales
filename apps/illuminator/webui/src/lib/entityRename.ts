@@ -12,6 +12,9 @@ import type { ChronicleRecord } from './db/chronicleRepository';
 // Types
 // ---------------------------------------------------------------------------
 
+/** How closely related this match source is to the entity being renamed. */
+export type MatchTier = 'self' | 'related' | 'cast' | 'participant' | 'mention' | 'general';
+
 export interface RenameMatch {
   /** Unique match ID */
   id: string;
@@ -35,6 +38,8 @@ export interface RenameMatch {
   contextAfter: string;
   /** Which name fragment matched (for partial matches) */
   partialFragment?: string;
+  /** Relationship tier: how the source relates to the entity being renamed */
+  tier: MatchTier;
 }
 
 export interface MatchDecision {
@@ -217,15 +222,18 @@ function findAllOccurrences(
       const lastNormIdx = matchEnd - 1;
       let rawEnd = indexMap[lastNormIdx] + 1;
       // Extend past any non-ASCII/non-alpha trailing chars that are part of the same "word"
-      // (e.g., punctuation attached to the name like possessives)
-      // But don't extend past whitespace or the next word
-      // Just grab to the next space or end of text
+      // (e.g., decorative chars like ~ or ]) but stop at possessive markers ('s)
+      // and whitespace or the next word
       while (rawEnd < originalText.length) {
         const ch = originalText[rawEnd];
         if (/\s/.test(ch)) break;
         // If the next char is a letter/number, we've hit the next word - stop
         if (isAsciiAlphaNumeric(ch.toLowerCase())) break;
-        // Include trailing non-alphanumeric, non-space chars (like ~ or ' or ])
+        // Stop at apostrophes — trailing apostrophes are grammatical (possessive/
+        // contraction), not part of the entity name. Apostrophes *within* names
+        // (e.g. O'Brien) are already captured via the indexMap within the match span.
+        if (ch === "'" || ch === '\u2019') break;
+        // Include trailing non-alphanumeric, non-space chars (like ~ or ])
         rawEnd++;
       }
 
@@ -328,6 +336,9 @@ export async function scanForReferences(
   const fullSlug = normalizeSlug(oldName);
   const partialSlugs = generatePartials(oldName);
 
+  // Current tier label — set before each scan pass, read by match-push sites.
+  let currentTier: MatchTier = 'general';
+
   // Track positions covered by full matches to exclude from partial results
   // Key: `${sourceType}:${sourceId}:${field}`, Value: Set of `${start}:${end}`
   const coveredPositions = new Map<string, Set<string>>();
@@ -380,6 +391,7 @@ export async function scanForReferences(
         position: m.start,
         contextBefore: ctx.before,
         contextAfter: ctx.after,
+        tier: currentTier,
       });
     }
 
@@ -402,6 +414,7 @@ export async function scanForReferences(
           contextBefore: ctx.before,
           contextAfter: ctx.after,
           partialFragment: partialSlug,
+          tier: currentTier,
         });
       }
     }
@@ -504,6 +517,7 @@ export async function scanForReferences(
         position: m.start,
         contextBefore: ctx.before,
         contextAfter: ctx.after,
+        tier: currentTier,
       });
     }
   }
@@ -511,6 +525,7 @@ export async function scanForReferences(
   // =========================================================================
   // 1. SELF: The renamed entity's own fields (full + partial)
   // =========================================================================
+  currentTier = 'self';
   const selfEntity = entityById.get(entityId);
   if (selfEntity) {
     scanEntityTextFields(selfEntity, scanTextFieldFullAndPartial);
@@ -519,6 +534,7 @@ export async function scanForReferences(
   // =========================================================================
   // 2. RELATED: Entities connected via relationship FK (full + partial)
   // =========================================================================
+  currentTier = 'related';
   for (const relEntityId of relatedEntityIds) {
     const relEntity = entityById.get(relEntityId);
     if (!relEntity) continue;
@@ -528,6 +544,7 @@ export async function scanForReferences(
   // =========================================================================
   // 3. CAST CHRONICLES: Chronicles where entity is a cast member (full + partial + metadata)
   // =========================================================================
+  currentTier = 'cast';
   for (const chronicle of chronicles) {
     if (!castChronicleIds.has(chronicle.chronicleId)) continue;
 
@@ -550,6 +567,7 @@ export async function scanForReferences(
             position: 0,
             contextBefore: `Role: ${ra.role}`,
             contextAfter: `(${ra.entityKind})`,
+            tier: currentTier,
           });
         }
       }
@@ -567,6 +585,7 @@ export async function scanForReferences(
         position: 0,
         contextBefore: 'Lens:',
         contextAfter: `(${chronicle.lens.entityKind})`,
+        tier: currentTier,
       });
     }
 
@@ -585,6 +604,7 @@ export async function scanForReferences(
             position: 0,
             contextBefore: 'Directive:',
             contextAfter: ed.directive.slice(0, 40) + (ed.directive.length > 40 ? '...' : ''),
+            tier: currentTier,
           });
         }
       }
@@ -610,6 +630,7 @@ export async function scanForReferences(
   // 4. GENERAL SWEEP: All other entities and chronicles (FULL NAME ONLY)
   //    No partial matches here to avoid noise from common word fragments.
   // =========================================================================
+  currentTier = 'general';
   const scannedEntityIds = new Set([entityId, ...relatedEntityIds]);
   for (const entity of entities) {
     if (scannedEntityIds.has(entity.id)) continue;
@@ -637,6 +658,7 @@ export async function scanForReferences(
             position: 0,
             contextBefore: `Role: ${ra.role}`,
             contextAfter: `(${ra.entityKind})`,
+            tier: currentTier,
           });
         }
       }
@@ -654,6 +676,7 @@ export async function scanForReferences(
         position: 0,
         contextBefore: 'Lens:',
         contextAfter: `(${chronicle.lens.entityKind})`,
+        tier: currentTier,
       });
     }
 
@@ -700,6 +723,7 @@ export async function scanForReferences(
         ? event.description.slice(0, 57) + '...'
         : event.description;
       const isParticipant = participantEventIds.has(eId);
+      currentTier = isParticipant ? 'participant' : 'mention';
       const scan = isParticipant ? scanTextFieldFullAndPartial : scanTextFieldFullNameOnly;
 
       // Structured name fields (metadata matches for participant events)
@@ -716,6 +740,7 @@ export async function scanForReferences(
             position: 0,
             contextBefore: 'Subject:',
             contextAfter: '',
+            tier: currentTier,
           });
         }
         for (let pi = 0; pi < event.participantEffects.length; pi++) {
@@ -732,6 +757,7 @@ export async function scanForReferences(
               position: 0,
               contextBefore: 'Participant:',
               contextAfter: '',
+              tier: currentTier,
             });
           }
           for (let ei = 0; ei < pe.effects.length; ei++) {
@@ -748,6 +774,7 @@ export async function scanForReferences(
                 position: 0,
                 contextBefore: `Related entity (${pe.entity.name}):`,
                 contextAfter: '',
+                tier: currentTier,
               });
             }
           }
@@ -794,6 +821,7 @@ export async function scanForReferences(
         position: 0,
         contextBefore: `${direction} ${rel.kind}:`,
         contextAfter: `→ ${otherName}${rel.status === 'historical' ? ' (historical)' : ''}`,
+        tier: 'related',
       });
     }
   }
@@ -811,6 +839,7 @@ export async function scanForReferences(
         position: 0,
         contextBefore: 'Cast member:',
         contextAfter: `(${chronicle.selectedEntityIds.length} entities in chronicle)`,
+        tier: 'cast',
       });
     }
   }

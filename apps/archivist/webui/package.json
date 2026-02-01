@@ -18,10 +18,12 @@
     "cytoscape": "^3.33.1",
     "cytoscape-cose-bilkent": "^4.1.0",
     "fuse.js": "^7.1.0",
+    "@penguin-tales/image-store": "file:../../../packages/image-store",
     "react": "^19.2.0",
     "react-cytoscapejs": "^2.0.0",
     "react-dom": "^19.2.0",
     "react-force-graph-3d": "^1.29.0",
+    "zustand": "^5.0.2",
     "three": "^0.181.2"
   },
   "devDependencies": {

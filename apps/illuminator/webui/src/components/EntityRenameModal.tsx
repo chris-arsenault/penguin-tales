@@ -825,33 +825,16 @@ export default function EntityRenameModal({
       }
     }
 
-    // Determine tier labels based on scan structure
-    const relatedEntityIds = new Set<string>();
-    if (relationships) {
-      for (const rel of relationships) {
-        if (rel.src === entityId) relatedEntityIds.add(rel.dst);
-        if (rel.dst === entityId) relatedEntityIds.add(rel.src);
-      }
-    }
-
     // Convert to sorted array: self first, then entities, then chronicles
+    // Tier is derived from the matches themselves (set by the scan function).
     const groups: SourceGroup[] = [];
     for (const [sourceId, entry] of groupMap) {
-      // Skip sources with only connections and no actionable matches —
-      // they'll appear as connection rows inside related source groups or
-      // at the bottom if truly orphaned.
       const isSelf = sourceId === entityId && entry.sourceType === 'entity';
 
-      let tier = '';
-      if (isSelf) {
-        tier = 'this entity';
-      } else if (entry.sourceType === 'entity') {
-        tier = relatedEntityIds.has(sourceId) ? 'related' : 'general';
-      } else if (entry.sourceType === 'event') {
-        tier = 'event';
-      } else {
-        tier = 'cast';
-      }
+      // Use the tier from the first match/connection — all matches for a given
+      // source share the same tier since it's set per-scan-pass.
+      const firstMatch = entry.matches[0] || entry.connections[0];
+      const tier = isSelf ? 'this entity' : (firstMatch?.tier ?? 'general');
 
       groups.push({
         sourceId,
@@ -865,6 +848,12 @@ export default function EntityRenameModal({
     }
 
     // Sort: self first, then entities (related before general), then events, then chronicles
+    // Tier priority: FK-confirmed tiers sort before text-only mentions
+    const tierOrder: Record<string, number> = {
+      'this entity': 0, self: 0,
+      related: 1, participant: 1, cast: 1,
+      mention: 2, general: 2,
+    };
     const typeOrder: Record<string, number> = { entity: 0, event: 1, chronicle: 2 };
     groups.sort((a, b) => {
       if (a.isSelf) return -1;
@@ -873,16 +862,15 @@ export default function EntityRenameModal({
       const typeA = typeOrder[a.sourceType] ?? 9;
       const typeB = typeOrder[b.sourceType] ?? 9;
       if (typeA !== typeB) return typeA - typeB;
-      // related before general
-      if (a.tier !== b.tier) {
-        if (a.tier === 'related') return -1;
-        if (b.tier === 'related') return 1;
-      }
+      // FK-confirmed before text-only mentions
+      const ta = tierOrder[a.tier] ?? 9;
+      const tb = tierOrder[b.tier] ?? 9;
+      if (ta !== tb) return ta - tb;
       return a.sourceName.localeCompare(b.sourceName);
     });
 
     return groups;
-  }, [scanResult, entityId, relationships]);
+  }, [scanResult, entityId]);
 
   // Separate: sources with actionable matches vs connection-only sources
   const actionableGroups = useMemo(

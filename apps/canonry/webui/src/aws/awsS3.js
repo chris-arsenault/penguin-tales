@@ -1,6 +1,6 @@
 import { S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { fromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity';
-import { getImageBlob, getImagesByProject } from '../storage/imageStore';
+import { getImageBlob, getImagesByProject } from '../lib/imageExportHelpers';
 
 const DEFAULT_RAW_PREFIX = 'raw';
 const DEFAULT_WEBP_PREFIX = 'webp';

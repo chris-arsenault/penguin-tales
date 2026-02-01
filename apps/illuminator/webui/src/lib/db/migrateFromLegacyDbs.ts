@@ -129,10 +129,19 @@ async function migrateImages(): Promise<void> {
   if (!idb) { markMigrated(dbName); return; }
 
   try {
-    const records = await readAllFromStore(idb, 'images');
+    const records = await readAllFromStore<any>(idb, 'images');
     if (records.length > 0) {
-      await db.images.bulkPut(records);
-      console.log(`${LOG_PREFIX} Migrated ${records.length} images`);
+      // Split into metadata (no blob) and blob records for v3 schema
+      const metadataRecords = records.map(({ blob, ...rest }: any) => rest);
+      const blobRecords = records
+        .filter((r: any) => r.blob)
+        .map((r: any) => ({ imageId: r.imageId, blob: r.blob }));
+
+      await db.transaction('rw', [db.images, db.imageBlobs], async () => {
+        await db.images.bulkPut(metadataRecords);
+        await db.imageBlobs.bulkPut(blobRecords);
+      });
+      console.log(`${LOG_PREFIX} Migrated ${records.length} images (${blobRecords.length} blobs)`);
     }
     idb.close();
     await deleteLegacyDb(dbName);

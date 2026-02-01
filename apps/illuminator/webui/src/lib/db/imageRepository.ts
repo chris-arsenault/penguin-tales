@@ -66,9 +66,8 @@ export async function saveImage(
   blob: Blob,
   metadata: ImageMetadata
 ): Promise<string> {
-  const record: ImageRecord = {
+  const metadataRecord = {
     imageId,
-    blob,
     mimeType: blob.type || 'image/png',
     size: blob.size,
     ...metadata,
@@ -82,7 +81,10 @@ export async function saveImage(
     size: blob.size,
   });
 
-  await db.images.put(record);
+  await db.transaction('rw', [db.images, db.imageBlobs], async () => {
+    await db.images.put(metadataRecord as any);
+    await db.imageBlobs.put({ imageId, blob });
+  });
 
   console.log(`${LOG_PREFIX} Image save complete`, {
     imageId,
@@ -95,7 +97,10 @@ export async function saveImage(
 }
 
 export async function deleteImage(imageId: string): Promise<void> {
-  await db.images.delete(imageId);
+  await db.transaction('rw', [db.images, db.imageBlobs], async () => {
+    await db.images.delete(imageId);
+    await db.imageBlobs.delete(imageId);
+  });
 }
 
 // ============================================================================
@@ -148,11 +153,11 @@ export async function searchImages(options: ImageSearchOptions = {}): Promise<{
  * Load a single image's dataUrl by ID (on-demand loading).
  */
 export async function getImageDataUrl(imageId: string): Promise<string | null> {
-  const record = await db.images.get(imageId);
-  if (!record?.blob) return null;
+  const blobRecord = await db.imageBlobs.get(imageId);
+  if (!blobRecord?.blob) return null;
 
   try {
-    return await blobToDataUrl(record.blob);
+    return await blobToDataUrl(blobRecord.blob);
   } catch (err) {
     console.warn(`Failed to convert image ${imageId} to dataUrl:`, err);
     return null;
@@ -201,29 +206,32 @@ export async function loadImage(imageId: string): Promise<{
   sceneDescription?: string;
 } | null> {
   if (!imageId) return null;
-  const record = await db.images.get(imageId);
-  if (!record?.blob) return null;
+  const [metadata, blobRecord] = await Promise.all([
+    db.images.get(imageId),
+    db.imageBlobs.get(imageId),
+  ]);
+  if (!metadata || !blobRecord?.blob) return null;
 
-  const url = URL.createObjectURL(record.blob);
+  const url = URL.createObjectURL(blobRecord.blob);
   return {
     url,
-    imageId: record.imageId,
-    entityId: record.entityId,
-    projectId: record.projectId,
-    mimeType: record.mimeType,
-    size: record.size,
-    generatedAt: record.generatedAt,
-    model: record.model,
-    originalPrompt: record.originalPrompt,
-    finalPrompt: record.finalPrompt,
-    revisedPrompt: record.revisedPrompt,
-    entityName: record.entityName,
-    entityKind: record.entityKind,
-    entityCulture: record.entityCulture,
-    imageType: record.imageType,
-    chronicleId: record.chronicleId,
-    imageRefId: record.imageRefId,
-    sceneDescription: record.sceneDescription,
+    imageId: metadata.imageId,
+    entityId: metadata.entityId,
+    projectId: metadata.projectId,
+    mimeType: metadata.mimeType,
+    size: metadata.size,
+    generatedAt: metadata.generatedAt,
+    model: metadata.model,
+    originalPrompt: metadata.originalPrompt,
+    finalPrompt: metadata.finalPrompt,
+    revisedPrompt: metadata.revisedPrompt,
+    entityName: metadata.entityName,
+    entityKind: metadata.entityKind,
+    entityCulture: metadata.entityCulture,
+    imageType: metadata.imageType,
+    chronicleId: metadata.chronicleId,
+    imageRefId: metadata.imageRefId,
+    sceneDescription: metadata.sceneDescription,
   };
 }
 
@@ -232,7 +240,7 @@ export async function loadImage(imageId: string): Promise<{
  */
 export async function getImageBlob(imageId: string): Promise<Blob | null> {
   if (!imageId) return null;
-  const record = await db.images.get(imageId);
+  const record = await db.imageBlobs.get(imageId);
   return record?.blob || null;
 }
 
@@ -241,10 +249,34 @@ export async function getImageBlob(imageId: string): Promise<Blob | null> {
  */
 export async function getAllImages(): Promise<Array<Omit<ImageRecord, 'blob'> & { hasBlob: boolean }>> {
   const records = await db.images.toArray();
-  const images = records.map(({ blob, ...metadata }) => ({
-    ...metadata,
-    size: (typeof metadata.size === 'number' && Number.isFinite(metadata.size)) ? metadata.size : (blob?.size || 0),
-    hasBlob: Boolean(blob),
+  const images = records.map((record) => ({
+    imageId: record.imageId,
+    entityId: record.entityId,
+    projectId: record.projectId,
+    entityName: record.entityName,
+    entityKind: record.entityKind,
+    entityCulture: record.entityCulture,
+    originalPrompt: record.originalPrompt,
+    formattingPrompt: record.formattingPrompt,
+    finalPrompt: record.finalPrompt,
+    generatedAt: record.generatedAt,
+    model: record.model,
+    revisedPrompt: record.revisedPrompt,
+    estimatedCost: record.estimatedCost,
+    actualCost: record.actualCost,
+    inputTokens: record.inputTokens,
+    outputTokens: record.outputTokens,
+    width: record.width,
+    height: record.height,
+    aspect: record.aspect,
+    imageType: record.imageType,
+    chronicleId: record.chronicleId,
+    imageRefId: record.imageRefId,
+    sceneDescription: record.sceneDescription,
+    mimeType: record.mimeType,
+    size: (typeof record.size === 'number' && Number.isFinite(record.size)) ? record.size : 0,
+    savedAt: record.savedAt,
+    hasBlob: true,
   }));
   images.sort((a, b) => (b.generatedAt || 0) - (a.generatedAt || 0));
   return images;
@@ -255,7 +287,10 @@ export async function getAllImages(): Promise<Array<Omit<ImageRecord, 'blob'> & 
  */
 export async function deleteImages(imageIds: string[]): Promise<void> {
   if (!imageIds?.length) return;
-  await db.images.bulkDelete(imageIds);
+  await db.transaction('rw', [db.images, db.imageBlobs], async () => {
+    await db.images.bulkDelete(imageIds);
+    await db.imageBlobs.bulkDelete(imageIds);
+  });
 }
 
 /**
@@ -272,7 +307,7 @@ export async function getStorageStats(): Promise<{
   const byProject: Record<string, { count: number; size: number }> = {};
 
   for (const img of records) {
-    const size = (typeof img.size === 'number' && Number.isFinite(img.size)) ? img.size : (img.blob?.size || 0);
+    const size = (typeof img.size === 'number' && Number.isFinite(img.size)) ? img.size : 0;
     totalSize += size;
 
     const pid = img.projectId || 'unknown';
@@ -315,11 +350,11 @@ export async function searchImagesWithFilters(filters: {
   searchText?: string;
   limit?: number;
 } = {}): Promise<Array<Omit<ImageRecord, 'blob'> & { hasBlob: boolean }>> {
-  let records = await db.images.toArray();
+  const records = await db.images.toArray();
 
-  let images = records.map(({ blob, ...metadata }) => ({
-    ...metadata,
-    hasBlob: Boolean(blob),
+  let images: Array<Omit<ImageRecord, 'blob'> & { hasBlob: boolean }> = records.map((record) => ({
+    ...record,
+    hasBlob: true,
   }));
 
   if (filters.projectId) images = images.filter((img) => img.projectId === filters.projectId);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import type { WorldState, LoreData, ImageMetadata, DescriptionLore, RelationshipBackstoryLore, ChainLinkLore, DiscoveryEventLore, Region } from '../types/world.ts';
+import type { WorldState, LoreData, DescriptionLore, RelationshipBackstoryLore, ChainLinkLore, DiscoveryEventLore, Region } from '../types/world.ts';
 import { getEntityById, getRelatedEntities, getRelationships, getTagsArray } from '../utils/dataTransform.ts';
+import { useImageUrl } from '@penguin-tales/image-store';
 import LoreSection from './LoreSection.tsx';
 import RelationshipStoryModal from './RelationshipStoryModal.tsx';
 import ChainLinkSection from './ChainLinkSection.tsx';
@@ -12,7 +13,6 @@ interface EntityDetailProps {
   entityId?: string;
   worldData: WorldState;
   loreData: LoreData | null;
-  imageData: ImageMetadata | null;
   onRelatedClick: (entityId: string) => void;
   prominenceScale: ProminenceScale;
 }
@@ -116,7 +116,6 @@ export default function EntityDetail({
   entityId,
   worldData,
   loreData,
-  imageData,
   onRelatedClick,
   prominenceScale
 }: EntityDetailProps) {
@@ -124,6 +123,12 @@ export default function EntityDetail({
   const [selectedRelationshipLore, setSelectedRelationshipLore] = useState<RelationshipBackstoryLore | null>(null);
   const [expandedOutgoing, setExpandedOutgoing] = useState<Set<string>>(new Set());
   const [expandedIncoming, setExpandedIncoming] = useState<Set<string>>(new Set());
+
+  // Look up entity to get imageId for the hook (must be before early returns)
+  const selection = entityId ? parseSelectionId(entityId) : null;
+  const entityForImage = selection?.type === 'entity' ? getEntityById(worldData, selection.id) : null;
+  const imageId = entityForImage?.enrichment?.image?.imageId;
+  const { url: imageUrl } = useImageUrl(imageId);
 
   if (!entityId) {
     return (
@@ -136,11 +141,11 @@ export default function EntityDetail({
     );
   }
 
-  // Check if this is a region selection
-  const selection = parseSelectionId(entityId);
+  // selection is guaranteed non-null here because entityId is truthy
+  const sel = selection!;
 
-  if (selection.type === 'region') {
-    const region = findRegion(worldData, selection.entityKind, selection.regionId);
+  if (sel.type === 'region') {
+    const region = findRegion(worldData, sel.entityKind, sel.regionId);
     if (!region) {
       return (
         <div className="entity-detail">
@@ -148,10 +153,10 @@ export default function EntityDetail({
         </div>
       );
     }
-    return <RegionDetail region={region} entityKind={selection.entityKind} worldData={worldData} />;
+    return <RegionDetail region={region} entityKind={sel.entityKind} worldData={worldData} />;
   }
 
-  const entity = getEntityById(worldData, selection.id);
+  const entity = getEntityById(worldData, sel.id);
 
   if (!entity) {
     return (
@@ -184,10 +189,7 @@ export default function EntityDetail({
     record => record.type === 'discovery_event' && record.targetId === entityId
   ) as DiscoveryEventLore | undefined;
 
-  // Find image for this entity
-  const entityImage = imageData?.results.find(img => img.entityId === entityId);
-  // Convert path from "output/images/..." to "images/..."
-  const imagePath = entityImage?.localPath.replace('output/images/', 'images/');
+  // Image URL loaded via useImageUrl hook (called above, before early returns)
 
   // Helper to find relationship lore
   const findRelationshipLore = (srcId: string, dstId: string, kind: string): RelationshipBackstoryLore | undefined => {
@@ -269,11 +271,11 @@ export default function EntityDetail({
       </div>
 
       {/* Entity Image */}
-      {imagePath && (
+      {imageUrl && (
         <div className="mb-6">
           <div className="entity-image-container">
             <img
-              src={`/${imagePath}`}
+              src={imageUrl}
               alt={entity.name}
               className="entity-image"
               loading="lazy"

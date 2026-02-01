@@ -421,7 +421,8 @@ export default function BackrefImageEditor({ entity, entities, onUpdateBackrefs,
     return [...new Set(ids)];
   }, [chronicles, entities]);
 
-  const imageUrls = useImageUrls(allImageIds);
+  // Only load blobs when the editor is visible (expanded or alwaysExpanded)
+  const imageUrls = useImageUrls(expanded ? allImageIds : []);
 
   const handleBackrefChange = useCallback((updatedBackref) => {
     const updated = backrefs.map((b) =>

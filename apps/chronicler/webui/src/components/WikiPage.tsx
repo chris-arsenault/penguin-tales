@@ -10,7 +10,8 @@
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import MDEditor from '@uiw/react-md-editor';
-import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, ImageLoader, DisambiguationEntry, ImageAspect } from '../types/world.ts';
+import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, DisambiguationEntry, ImageAspect } from '../types/world.ts';
+import { useImageUrl, useImageStore } from '@penguin-tales/image-store';
 import { SeedModal, type ChronicleSeedData } from './ChronicleSeedViewer.tsx';
 import { applyWikiLinks } from '../lib/wikiBuilder.ts';
 import { resolveAnchorPhrase } from '../lib/fuzzyAnchor.ts';
@@ -85,64 +86,17 @@ function getInfoboxImageClass(aspect: ImageAspect | undefined, isMobile: boolean
 
 /**
  * ChronicleImage - Renders an inline chronicle image
- * Uses imageLoader for on-demand loading, falls back to imageData if available
+ * Loads images on-demand from the shared image store
  */
 function ChronicleImage({
   image,
-  imageData,
-  imageLoader,
   onOpen,
 }: {
   image: WikiSectionImage;
-  imageData: ImageMetadata | null;
-  imageLoader?: ImageLoader;
   onOpen?: (imageUrl: string, image: WikiSectionImage) => void;
 }) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { url: imageUrl, loading } = useImageUrl(image.imageId);
   const [error, setError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadImage() {
-      // Prefer imageLoader (lazy loading from IndexedDB)
-      if (imageLoader) {
-        try {
-          const url = await imageLoader(image.imageId);
-          if (!cancelled) {
-            setImageUrl(url);
-            setLoading(false);
-          }
-        } catch (err) {
-          if (!cancelled) {
-            console.error('Failed to load image:', image.imageId, err);
-            setLoading(false);
-          }
-        }
-        return;
-      }
-
-      // Fallback to pre-loaded imageData
-      if (imageData?.results) {
-        const imageResult = imageData.results.find(r => r.imageId === image.imageId);
-        if (imageResult?.localPath) {
-          const path = imageResult.localPath;
-          const webPath = path.startsWith('blob:') || path.startsWith('data:')
-            ? path
-            : path.replace('output/images/', 'images/');
-          setImageUrl(webPath);
-        }
-      }
-      setLoading(false);
-    }
-
-    loadImage();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [image.imageId, imageData, imageLoader]);
 
   const imageClassName = getImageClassName(image.size, image.justification || 'left');
 
@@ -186,8 +140,6 @@ function ChronicleImage({
  */
 function SectionWithImages({
   section,
-  imageData,
-  imageLoader,
   entityNameMap,
   aliasMap,
   linkableNames,
@@ -197,8 +149,6 @@ function SectionWithImages({
   onImageOpen,
 }: {
   section: WikiSection;
-  imageData: ImageMetadata | null;
-  imageLoader?: ImageLoader;
   entityNameMap: Map<string, string>;
   aliasMap: Map<string, string>;
   linkableNames: Array<{ name: string; id: string }>;
@@ -282,8 +232,6 @@ function SectionWithImages({
               <ChronicleImage
                 key={`img-${fragment.image.refId}-${i}`}
                 image={fragment.image}
-                imageData={imageData}
-                imageLoader={imageLoader}
                 onOpen={onImageOpen}
               />
             );
@@ -294,8 +242,6 @@ function SectionWithImages({
                 <div className={styles.clearfix} />
                 <ChronicleImage
                   image={fragment.image}
-                  imageData={imageData}
-                  imageLoader={imageLoader}
                   onOpen={onImageOpen}
                 />
               </React.Fragment>
@@ -595,7 +541,6 @@ interface WikiPageViewProps {
   pages: WikiPage[];
   entityIndex: Map<string, HardState>;
   imageData: ImageMetadata | null;
-  imageLoader?: ImageLoader;
   /** Other pages that share this page's base name (for disambiguation) */
   disambiguation?: DisambiguationEntry[];
   onNavigate: (pageId: string) => void;
@@ -609,7 +554,6 @@ export default function WikiPageView({
   pages,
   entityIndex,
   imageData,
-  imageLoader,
   disambiguation,
   onNavigate,
   onNavigateToEntity,
@@ -769,9 +713,9 @@ export default function WikiPageView({
   const handleInlineImageOpen = useCallback(async (thumbUrl: string, image: WikiSectionImage) => {
     // Try to load full-size image for lightbox, fall back to thumbnail
     let fullUrl = thumbUrl;
-    if (imageLoader && image.imageId) {
+    if (image.imageId) {
       try {
-        const loaded = await imageLoader(image.imageId, 'full');
+        const loaded = await useImageStore.getState().loadUrl(image.imageId, 'full');
         if (loaded) fullUrl = loaded;
       } catch {
         // Fall back to thumbnail
@@ -784,7 +728,7 @@ export default function WikiPageView({
       suppressSummaryFallback: image.type === 'chronicle_image',
       captionOnly: image.type === 'chronicle_image',
     });
-  }, [openImageModal, imageLoader]);
+  }, [openImageModal]);
 
   // Build seed data for chronicle pages
   const seedData = useMemo((): ChronicleSeedData | null => {
@@ -932,12 +876,12 @@ export default function WikiPageView({
     const entityId = entityIndex.has(page.id) ? page.id : undefined;
     // Try to load full-size image for lightbox
     let fullUrl = infoboxImage;
-    if (imageLoader && entityId) {
+    if (entityId) {
       const entity = entityIndex.get(entityId);
       const imageId = entity?.enrichment?.image?.imageId;
       if (imageId) {
         try {
-          const loaded = await imageLoader(imageId, 'full');
+          const loaded = await useImageStore.getState().loadUrl(imageId, 'full');
           if (loaded) fullUrl = loaded;
         } catch {
           // Fall back to infobox image path
@@ -949,7 +893,7 @@ export default function WikiPageView({
       fallbackTitle: page.title,
       fallbackSummary: page.content.summary,
     });
-  }, [infoboxImage, entityIndex, page.id, page.title, page.content.summary, imageLoader, openImageModal]);
+  }, [infoboxImage, entityIndex, page.id, page.title, page.content.summary, openImageModal]);
 
   return (
     <div className={styles.container}>
@@ -1019,8 +963,6 @@ export default function WikiPageView({
                   justification: 'left',
                   caption: page.title,
                 }}
-                imageData={imageData}
-                imageLoader={imageLoader}
                 onOpen={(url, img) => setActiveImage({ url, title: img.caption || page.title })}
               />
             )}
@@ -1151,8 +1093,6 @@ export default function WikiPageView({
             ) : (
               <SectionWithImages
                 section={section}
-                imageData={imageData}
-                imageLoader={imageLoader}
                 entityNameMap={entityNameMap}
                 aliasMap={aliasMap}
                 linkableNames={linkableNames}

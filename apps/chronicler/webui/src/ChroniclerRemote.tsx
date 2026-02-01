@@ -11,14 +11,12 @@ import './styles/variables.css';
 import WikiExplorer from './components/WikiExplorer.tsx';
 import type { ChronicleRecord } from './lib/chronicleStorage.ts';
 import type { StaticPage } from './lib/staticPageStorage.ts';
-import type { WorldState, LoreData, ImageMetadata, ImageLoader } from './types/world.ts';
+import type { WorldState, LoreData } from './types/world.ts';
 
 export interface ChroniclerRemoteProps {
   projectId?: string;
   worldData?: WorldState | null;
   loreData?: LoreData | null;
-  imageData?: ImageMetadata | null;
-  imageLoader?: ImageLoader;
   chronicles?: ChronicleRecord[];
   staticPages?: StaticPage[];
   /** Page ID requested by external navigation (e.g., from Archivist) */
@@ -33,8 +31,6 @@ export default function ChroniclerRemote({
   projectId,
   worldData = null,
   loreData = null,
-  imageData = null,
-  imageLoader,
   chronicles,
   staticPages,
   requestedPageId,
@@ -71,8 +67,6 @@ export default function ChroniclerRemote({
       projectId={projectId}
       worldData={worldData}
       loreData={loreData}
-      imageData={imageData}
-      imageLoader={imageLoader}
       chronicles={chronicles}
       staticPages={staticPages}
       requestedPageId={requestedPageId}

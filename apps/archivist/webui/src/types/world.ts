@@ -12,8 +12,16 @@ import type {
   WorldRelationship as CanonryWorldRelationship,
 } from '@canonry/world-schema';
 
-export type WorldState = CanonryWorldOutput;
-export type HardState = CanonryWorldEntity;
+export type WorldState = Omit<CanonryWorldOutput, 'hardState'> & {
+  hardState: HardState[];
+};
+export type HardState = CanonryWorldEntity & {
+  enrichment?: {
+    image?: {
+      imageId?: string;
+    };
+  };
+};
 export type Relationship = CanonryWorldRelationship;
 export type WorldMetadata = CanonryWorldMetadata;
 export type Prominence = CanonryProminenceLabel;

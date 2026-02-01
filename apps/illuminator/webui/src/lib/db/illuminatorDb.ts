@@ -10,7 +10,7 @@ import Dexie, { type Table } from 'dexie';
 import type { WorldEntity, NarrativeEvent } from '@canonry/world-schema';
 import type { EntityEnrichment } from '../enrichmentTypes';
 import type { ChronicleRecord } from '../chronicleTypes';
-import type { ImageRecord, ImageType, ImageAspect } from '../imageTypes';
+import type { ImageRecord, ImageType, ImageAspect, ImageBlobRecord } from '../imageTypes';
 import type { CostRecord, CostType, CostRecordInput, CostSummary } from '../costTypes';
 import type { TraitPalette, UsedTraitRecord, PaletteItem, TraitGuidance } from '../traitTypes';
 import type { HistorianRun } from '../historianTypes';
@@ -58,7 +58,7 @@ export interface StyleLibraryRecord {
 
 export type {
   ChronicleRecord,
-  ImageRecord, ImageType, ImageAspect,
+  ImageRecord, ImageType, ImageAspect, ImageBlobRecord,
   CostRecord, CostType, CostRecordInput, CostSummary,
   TraitPalette, UsedTraitRecord, PaletteItem, TraitGuidance,
   HistorianRun,
@@ -78,6 +78,7 @@ class IlluminatorDatabase extends Dexie {
   narrativeEvents!: Table<PersistedNarrativeEvent, string>;
   chronicles!: Table<ChronicleRecord, string>;
   images!: Table<ImageRecord, string>;
+  imageBlobs!: Table<ImageBlobRecord, string>;
   costs!: Table<CostRecord, string>;
   traitPalettes!: Table<TraitPalette, string>;
   usedTraits!: Table<UsedTraitRecord, string>;
@@ -126,6 +127,49 @@ class IlluminatorDatabase extends Dexie {
       // Style library (from illuminator-styles)
       styleLibrary: 'id',
     });
+
+    // v3 — split image blobs into separate table for fast metadata queries
+    this.version(3)
+      .stores({
+        // All existing tables (must redeclare)
+        entities: 'id, simulationRunId, kind, [simulationRunId+kind]',
+        narrativeEvents: 'id, simulationRunId',
+        chronicles: 'chronicleId, simulationRunId, projectId',
+        images: 'imageId, projectId, entityId, chronicleId, entityKind, entityCulture, model, imageType, generatedAt',
+        costs: 'id, projectId, simulationRunId, entityId, chronicleId, type, model, timestamp',
+        traitPalettes: 'id, projectId, entityKind',
+        usedTraits: 'id, projectId, simulationRunId, entityKind, entityId',
+        historianRuns: 'runId, projectId, status, createdAt',
+        summaryRevisionRuns: 'runId, projectId, status, createdAt',
+        dynamicsRuns: 'runId, projectId, status, createdAt',
+        staticPages: 'pageId, projectId, slug, status, updatedAt',
+        styleLibrary: 'id',
+
+        // New: blob-only table for image binary data
+        imageBlobs: 'imageId',
+      })
+      .upgrade(async (tx) => {
+        console.log('[IlluminatorDB] v3 upgrade: splitting image blobs into separate table...');
+        const imagesTable = tx.table('images');
+        const blobsTable = tx.table('imageBlobs');
+
+        const allImages = await imagesTable.toArray();
+        let migrated = 0;
+
+        for (const record of allImages) {
+          if (record.blob) {
+            await blobsTable.put({ imageId: record.imageId, blob: record.blob });
+            migrated++;
+          }
+        }
+
+        // Clear blobs from images table
+        await imagesTable.toCollection().modify((record: any) => {
+          delete record.blob;
+        });
+
+        console.log(`[IlluminatorDB] v3 upgrade complete: ${migrated}/${allImages.length} blobs migrated`);
+      });
   }
 }
 

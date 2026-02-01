@@ -72,7 +72,7 @@ interface EntityDetailViewProps {
   isHistorianActive?: boolean;
   historianConfigured?: boolean;
   onRename?: (entityId: string) => void;
-  onPatchEvents?: (entityId: string, oldName: string) => void;
+  onPatchEvents?: (entityId: string) => void;
 }
 
 function formatDate(timestamp: number | undefined): string {
@@ -434,15 +434,7 @@ export default function EntityDetailView({
                 )}
                 {onPatchEvents && (
                   <button
-                    onClick={() => {
-                      const oldName = prompt(
-                        `Patch narrative events: enter the OLD name to replace.\n\nEntity ID: ${entity.id}\nCurrent name: ${entity.name}`,
-                        entity.id.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
-                      );
-                      if (oldName?.trim()) {
-                        onPatchEvents(entity.id, oldName.trim());
-                      }
-                    }}
+                    onClick={() => onPatchEvents(entity.id)}
                     title="Repair stale names in narrative event history for this entity"
                     style={{
                       background: 'var(--bg-tertiary)',

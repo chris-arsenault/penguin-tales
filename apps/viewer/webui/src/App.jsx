@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Fuse from 'fuse.js';
+import { useImageStore, CDNBackend } from '@penguin-tales/image-store';
 import ArchivistHost from './remotes/ArchivistHost.jsx';
 import ChroniclerHost from './remotes/ChroniclerHost.jsx';
 
@@ -591,37 +592,13 @@ export default function App() {
     }
   }, [activeView]);
 
-  // Build image lookup maps for optimized images (thumb/full) and legacy (single path)
-  const imageLookup = useMemo(() => {
-    const map = new Map();
-    if (bundle?.images) {
-      for (const [imageId, url] of Object.entries(bundle.images)) {
-        if (url) map.set(imageId, { url, thumb: url, full: url });
-      }
-    }
-    if (bundle?.imageData?.results) {
-      for (const image of bundle.imageData.results) {
-        if (image.imageId) {
-          // Use optimized paths if available, fall back to localPath
-          const thumb = image.thumbPath || image.localPath;
-          const full = image.fullPath || image.localPath;
-          if (thumb || full) {
-            map.set(image.imageId, { url: thumb, thumb, full });
-          }
-        }
-      }
-    }
-    return map;
+  // Configure CDN image backend when bundle loads
+  useEffect(() => {
+    if (!bundle) return;
+    const backend = new CDNBackend(bundle.imageData || null, bundle.images || null);
+    useImageStore.getState().configure(backend);
+    return () => useImageStore.getState().cleanup();
   }, [bundle]);
-
-  // imageLoader supports optional size parameter:
-  // - 'thumb' (default): returns thumbnail for inline display
-  // - 'full': returns full-size image for lightbox
-  const imageLoader = useCallback(async (imageId, size = 'thumb') => {
-    const entry = imageLookup.get(imageId);
-    if (!entry) return null;
-    return size === 'full' ? entry.full : entry.thumb;
-  }, [imageLookup]);
 
   if (status === 'loading') {
     return (
@@ -707,7 +684,6 @@ export default function App() {
           <ArchivistHost
             worldData={bundle.worldData}
             loreData={bundle.loreData || null}
-            imageData={bundle.imageData || null}
           />
         </div>
         <div className="panel" style={{ display: activeView === 'chronicler' ? 'block' : 'none' }}>
@@ -715,8 +691,6 @@ export default function App() {
             projectId={bundle.projectId}
             worldData={bundle.worldData}
             loreData={bundle.loreData || null}
-            imageData={bundle.imageData || null}
-            imageLoader={imageLoader}
             chronicles={bundle.chronicles}
             staticPages={bundle.staticPages}
             requestedPageId={chroniclerRequestedPage}

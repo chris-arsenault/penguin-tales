@@ -20,7 +20,8 @@
     "packages/world-schema",
     "packages/canonry-dsl",
     "packages/canonry-dsl-v2",
-    "packages/shared-components"
+    "packages/shared-components",
+    "packages/image-store"
   ],
   "scripts": {
     "build:conduit": "npm --prefix packages/canonry-dsl-v2 run build",
