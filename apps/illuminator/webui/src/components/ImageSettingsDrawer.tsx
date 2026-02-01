@@ -245,10 +245,6 @@ export default function ImageSettingsDrawer({
     onSettingsChange({ collapsedSections: Array.from(next) });
   }, [collapsedSet, onSettingsChange]);
 
-  // Active category tabs
-  const [activeCompositionCategory, setActiveCompositionCategory] = useState('character');
-  const [activeArtisticCategory, setActiveArtisticCategory] = useState('painting');
-
   // Group compositions by category
   const groupedCompositions = useMemo(() => {
     if (!styleLibrary) return new Map<string, typeof styleLibrary.compositionStyles>();
@@ -272,6 +268,27 @@ export default function ImageSettingsDrawer({
     }
     return map;
   }, [styleLibrary]);
+
+  // Derive initial category tab from current selection
+  const selectedCompositionCategory = useMemo(() => {
+    if (!styleLibrary) return COMPOSITION_CATEGORY_ORDER[0];
+    const selected = styleLibrary.compositionStyles.find((s) => s.id === settings.compositionStyleId);
+    return selected?.targetCategory || COMPOSITION_CATEGORY_ORDER[0];
+  }, [styleLibrary, settings.compositionStyleId]);
+
+  const selectedArtisticCategory = useMemo(() => {
+    if (!styleLibrary) return ARTISTIC_CATEGORY_ORDER[0];
+    const selected = styleLibrary.artisticStyles.find((s) => s.id === settings.artisticStyleId);
+    return selected?.category || ARTISTIC_CATEGORY_ORDER[0];
+  }, [styleLibrary, settings.artisticStyleId]);
+
+  // Active category tabs — initialized from selection, then user-controllable
+  const [activeCompositionCategory, setActiveCompositionCategory] = useState(selectedCompositionCategory);
+  const [activeArtisticCategory, setActiveArtisticCategory] = useState(selectedArtisticCategory);
+
+  // Sync tab when selection changes to a different category (e.g. picking from a different tab)
+  useEffect(() => { setActiveCompositionCategory(selectedCompositionCategory); }, [selectedCompositionCategory]);
+  useEffect(() => { setActiveArtisticCategory(selectedArtisticCategory); }, [selectedArtisticCategory]);
 
   // Available category tabs (only those with styles)
   const availableCompositionCategories = useMemo(() => {
