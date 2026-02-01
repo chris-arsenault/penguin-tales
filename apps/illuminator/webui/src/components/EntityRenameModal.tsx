@@ -38,6 +38,13 @@ interface Entity {
   culture?: string;
   summary?: string;
   description?: string;
+  enrichment?: {
+    descriptionHistory?: Array<{
+      description: string;
+      replacedAt: number;
+      source: string;
+    }>;
+  };
 }
 
 interface Relationship {
@@ -70,6 +77,22 @@ interface DecisionState {
 // Match Row Component
 // ---------------------------------------------------------------------------
 
+const TYPE_COLORS: Record<string, string> = {
+  full: '#22c55e',
+  partial: '#f59e0b',
+  metadata: '#6366f1',
+  id_slug: '#06b6d4',
+};
+const TYPE_LABELS: Record<string, string> = {
+  full: 'full',
+  partial: 'partial',
+  metadata: 'metadata',
+  id_slug: 'connection',
+};
+
+/**
+ * Actionable match row — shows diff preview and accept/reject/edit controls.
+ */
 function MatchRow({
   match,
   decision,
@@ -85,19 +108,6 @@ function MatchRow({
 }) {
   const replacementText =
     decision.action === 'edit' ? decision.editText : newName;
-
-  const typeColors: Record<string, string> = {
-    full: '#22c55e',
-    partial: '#f59e0b',
-    metadata: '#6366f1',
-    id_slug: '#06b6d4',
-  };
-  const typeLabels: Record<string, string> = {
-    full: 'full',
-    partial: 'partial',
-    metadata: 'metadata',
-    id_slug: 'id ref',
-  };
 
   return (
     <div
@@ -126,7 +136,7 @@ function MatchRow({
       >
         <span
           style={{
-            background: typeColors[match.matchType] || '#666',
+            background: TYPE_COLORS[match.matchType] || '#666',
             color: '#fff',
             padding: '0 4px',
             borderRadius: '2px',
@@ -135,7 +145,7 @@ function MatchRow({
             textTransform: 'uppercase',
           }}
         >
-          {typeLabels[match.matchType] || match.matchType}
+          {TYPE_LABELS[match.matchType] || match.matchType}
         </span>
         <span>{match.sourceName}</span>
         <span style={{ opacity: 0.6 }}>{match.field}</span>
@@ -146,7 +156,7 @@ function MatchRow({
         )}
       </div>
 
-      {/* Context snippet */}
+      {/* Context snippet with diff */}
       <div
         style={{
           fontSize: '11px',
@@ -240,6 +250,52 @@ function MatchRow({
   );
 }
 
+/**
+ * Non-actionable connection row — shows FK reference as informational context.
+ * No diff, no accept/reject/edit. Helps the user audit sweep coverage.
+ */
+function ConnectionRow({ match }: { match: RenameMatch }) {
+  return (
+    <div
+      style={{
+        padding: '6px 12px',
+        background: 'var(--bg-secondary)',
+        borderRadius: '4px',
+        border: '1px solid var(--border-color)',
+        marginBottom: '3px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontSize: '11px',
+      }}
+    >
+      <span
+        style={{
+          background: TYPE_COLORS.id_slug,
+          color: '#fff',
+          padding: '0 4px',
+          borderRadius: '2px',
+          fontSize: '9px',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          flexShrink: 0,
+        }}
+      >
+        {TYPE_LABELS.id_slug}
+      </span>
+      <span style={{ color: 'var(--text-muted)' }}>
+        {match.contextBefore}
+      </span>
+      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+        {match.sourceName}
+      </span>
+      <span style={{ color: 'var(--text-muted)' }}>
+        {match.contextAfter}
+      </span>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main Modal
 // ---------------------------------------------------------------------------
@@ -320,11 +376,13 @@ export default function EntityRenameModal({
       );
       setScanResult(result);
 
-      // Initialize decisions: accept for full+metadata, reject for partial
+      // Initialize decisions: accept for full+metadata, reject for partial.
+      // id_slug matches are informational only — no decision needed.
       const initial = new Map<string, DecisionState>();
       for (const match of result.matches) {
+        if (match.matchType === 'id_slug') continue;
         initial.set(match.id, {
-          action: (match.matchType === 'partial' || match.matchType === 'id_slug') ? 'reject' : 'accept',
+          action: match.matchType === 'partial' ? 'reject' : 'accept',
           editText: newName,
         });
       }
@@ -454,16 +512,23 @@ export default function EntityRenameModal({
 
   // --- Stats ---
   const stats = useMemo(() => {
-    if (!scanResult) return { accepts: 0, rejects: 0, edits: 0, total: 0 };
+    if (!scanResult) return { accepts: 0, rejects: 0, edits: 0, total: 0, connections: 0 };
     let accepts = 0,
       rejects = 0,
-      edits = 0;
-    for (const [, state] of decisions) {
+      edits = 0,
+      connections = 0;
+    for (const match of scanResult.matches) {
+      if (match.matchType === 'id_slug') {
+        connections++;
+        continue;
+      }
+      const state = decisions.get(match.id);
+      if (!state) continue;
       if (state.action === 'accept') accepts++;
       else if (state.action === 'reject') rejects++;
       else if (state.action === 'edit') edits++;
     }
-    return { accepts, rejects, edits, total: scanResult.matches.length };
+    return { accepts, rejects, edits, total: accepts + rejects + edits, connections };
   }, [scanResult, decisions]);
 
   // --- Grouped matches ---
@@ -475,7 +540,7 @@ export default function EntityRenameModal({
       matches: RenameMatch[];
     }> = [];
 
-    // Group: self entity (name + description + summary), excluding id_slug
+    // Group: self entity (description + summary + history)
     const selfMatches = scanResult.matches.filter(
       (m) => m.sourceType === 'entity' && m.sourceId === entityId && m.matchType !== 'id_slug',
     );
@@ -483,7 +548,7 @@ export default function EntityRenameModal({
       groups.push({ label: 'This Entity', matches: selfMatches });
     }
 
-    // Group: other entities, excluding id_slug
+    // Group: other entities (related + general sweep hits)
     const otherEntityMatches = scanResult.matches.filter(
       (m) => m.sourceType === 'entity' && m.sourceId !== entityId && m.matchType !== 'id_slug',
     );
@@ -494,7 +559,7 @@ export default function EntityRenameModal({
       });
     }
 
-    // Group: chronicle metadata
+    // Group: chronicle metadata (denormalized entityName fields)
     const chronicleMetaMatches = scanResult.matches.filter(
       (m) => m.sourceType === 'chronicle' && m.matchType === 'metadata',
     );
@@ -505,7 +570,7 @@ export default function EntityRenameModal({
       });
     }
 
-    // Group: chronicle text
+    // Group: chronicle text (prose content across all versions)
     const chronicleTextMatches = scanResult.matches.filter(
       (m) =>
         m.sourceType === 'chronicle' &&
@@ -518,16 +583,16 @@ export default function EntityRenameModal({
       });
     }
 
-    // Group: Foreign key references (relationships, chronicle cast, etc.)
-    // These are informational - show everywhere the entity ID is used as a
-    // foreign key so the user can verify all text references are covered.
-    const idSlugMatches = scanResult.matches.filter(
+    // Group: Connections (informational, non-actionable)
+    // FK references showing all hard links to this entity — helps the user
+    // audit whether the text sweep covered everything it should.
+    const connectionMatches = scanResult.matches.filter(
       (m) => m.matchType === 'id_slug',
     );
-    if (idSlugMatches.length > 0) {
+    if (connectionMatches.length > 0) {
       groups.push({
-        label: `ID References (${idSlugMatches.length} - relationships, chronicle cast)`,
-        matches: idSlugMatches,
+        label: `Connections (${connectionMatches.length} relationships + chronicle cast)`,
+        matches: connectionMatches,
       });
     }
 
@@ -762,6 +827,11 @@ export default function EntityRenameModal({
                 <span style={{ color: 'var(--text-muted)' }}>
                   / {stats.total} total
                 </span>
+                {stats.connections > 0 && (
+                  <span style={{ color: '#06b6d4' }}>
+                    + {stats.connections} connections
+                  </span>
+                )}
                 <div style={{ flex: 1 }} />
                 <button
                   onClick={handleAcceptAll}
@@ -808,6 +878,9 @@ export default function EntityRenameModal({
                     {group.label}
                   </div>
                   {group.matches.map((match) => {
+                    if (match.matchType === 'id_slug') {
+                      return <ConnectionRow key={match.id} match={match} />;
+                    }
                     const decision = decisions.get(match.id) || {
                       action: 'reject' as DecisionAction,
                       editText: newName,

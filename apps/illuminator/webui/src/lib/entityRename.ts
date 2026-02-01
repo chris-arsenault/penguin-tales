@@ -261,13 +261,20 @@ function extractContext(
 // Main scan
 // ---------------------------------------------------------------------------
 
-interface ScanEntity {
+export interface ScanEntity {
   id: string;
   name: string;
   kind: string;
   subtype?: string;
   summary?: string;
   description?: string;
+  enrichment?: {
+    descriptionHistory?: Array<{
+      description: string;
+      replacedAt: number;
+      source: string;
+    }>;
+  };
 }
 
 let matchIdCounter = 0;
@@ -380,25 +387,25 @@ export async function scanForReferences(
 
   // Scan uses a tiered approach based on hard FK links:
   //
-  // 1. SELF: The entity's own name/summary/description (full + partial)
-  // 2. FIRST ORDER: Entities with relationships to this entity (full + partial)
+  // 1. SELF: The entity's own summary/description/descriptionHistory (full + partial)
+  // 2. RELATED: Entities with relationships to this entity (full + partial)
   //    Found via hard relationship FK lookup, not blind text search.
   // 3. CAST CHRONICLES: Chronicles where this entity is a cast member (full + partial)
   //    Found via selectedEntityIds FK, plus metadata (roleAssignments, lens, directives).
   // 4. GENERAL: All other entities and chronicles (FULL NAME ONLY, no partials)
   //    Avoids noise from common word fragments like "amulet" appearing everywhere.
   //
-  // FK references (relationships, chronicle cast) are shown as id_slug matches
-  // so the user can see the full picture of where this entity is connected.
+  // FK references (relationships, chronicle cast) are shown as non-actionable
+  // id_slug matches so the user can audit whether the sweep was comprehensive.
 
   const entityById = new Map(entities.map((e) => [e.id, e]));
 
-  // --- Build first-order entity set from relationships ---
-  const firstOrderEntityIds = new Set<string>();
+  // --- Build related entity set from relationships ---
+  const relatedEntityIds = new Set<string>();
   if (relationships) {
     for (const rel of relationships) {
-      if (rel.src === entityId) firstOrderEntityIds.add(rel.dst);
-      if (rel.dst === entityId) firstOrderEntityIds.add(rel.src);
+      if (rel.src === entityId) relatedEntityIds.add(rel.dst);
+      if (rel.dst === entityId) relatedEntityIds.add(rel.src);
     }
   }
 
@@ -410,8 +417,32 @@ export async function scanForReferences(
     }
   }
 
-  // --- Helper: scan with full + partial (for first-order/cast) ---
-  function scanTextFieldFull(
+  // --- Helper: scan all entity text fields (summary, description, descriptionHistory) ---
+  function scanEntityTextFields(
+    entity: ScanEntity,
+    scanFn: (
+      sourceType: 'entity' | 'chronicle',
+      sourceId: string,
+      sourceName: string,
+      field: string,
+      text: string | undefined | null,
+    ) => void,
+  ) {
+    scanFn('entity', entity.id, entity.name, 'summary', entity.summary);
+    scanFn('entity', entity.id, entity.name, 'description', entity.description);
+    if (entity.enrichment?.descriptionHistory) {
+      for (let i = 0; i < entity.enrichment.descriptionHistory.length; i++) {
+        scanFn(
+          'entity', entity.id, entity.name,
+          `enrichment.descriptionHistory[${i}].description`,
+          entity.enrichment.descriptionHistory[i].description,
+        );
+      }
+    }
+  }
+
+  // --- Full + partial scan (for self, related, cast) ---
+  function scanTextFieldFullAndPartial(
     sourceType: 'entity' | 'chronicle',
     sourceId: string,
     sourceName: string,
@@ -421,7 +452,7 @@ export async function scanForReferences(
     scanTextField(sourceType, sourceId, sourceName, field, text);
   }
 
-  // --- Helper: scan with full name only (for general sweep) ---
+  // --- Full name only scan (for general sweep) ---
   function scanTextFieldFullNameOnly(
     sourceType: 'entity' | 'chronicle',
     sourceId: string,
@@ -459,18 +490,16 @@ export async function scanForReferences(
   // =========================================================================
   const selfEntity = entityById.get(entityId);
   if (selfEntity) {
-    scanTextFieldFull('entity', selfEntity.id, selfEntity.name, 'summary', selfEntity.summary);
-    scanTextFieldFull('entity', selfEntity.id, selfEntity.name, 'description', selfEntity.description);
+    scanEntityTextFields(selfEntity, scanTextFieldFullAndPartial);
   }
 
   // =========================================================================
-  // 2. FIRST ORDER: Related entities (full + partial)
+  // 2. RELATED: Entities connected via relationship FK (full + partial)
   // =========================================================================
-  for (const relEntityId of firstOrderEntityIds) {
+  for (const relEntityId of relatedEntityIds) {
     const relEntity = entityById.get(relEntityId);
     if (!relEntity) continue;
-    scanTextFieldFull('entity', relEntity.id, relEntity.name, 'summary', relEntity.summary);
-    scanTextFieldFull('entity', relEntity.id, relEntity.name, 'description', relEntity.description);
+    scanEntityTextFields(relEntity, scanTextFieldFullAndPartial);
   }
 
   // =========================================================================
@@ -539,13 +568,13 @@ export async function scanForReferences(
     }
 
     // Text field matches (full + partial since this entity is in the cast)
-    scanTextFieldFull('chronicle', cId, cTitle, 'assembledContent', chronicle.assembledContent);
-    scanTextFieldFull('chronicle', cId, cTitle, 'finalContent', chronicle.finalContent);
-    scanTextFieldFull('chronicle', cId, cTitle, 'summary', chronicle.summary);
+    scanTextFieldFullAndPartial('chronicle', cId, cTitle, 'assembledContent', chronicle.assembledContent);
+    scanTextFieldFullAndPartial('chronicle', cId, cTitle, 'finalContent', chronicle.finalContent);
+    scanTextFieldFullAndPartial('chronicle', cId, cTitle, 'summary', chronicle.summary);
 
     if (chronicle.generationHistory) {
       for (const version of chronicle.generationHistory) {
-        scanTextFieldFull(
+        scanTextFieldFullAndPartial(
           'chronicle', cId, cTitle,
           `generationHistory.${version.versionId}`,
           version.content,
@@ -558,11 +587,10 @@ export async function scanForReferences(
   // 4. GENERAL SWEEP: All other entities and chronicles (FULL NAME ONLY)
   //    No partial matches here to avoid noise from common word fragments.
   // =========================================================================
-  const scannedEntityIds = new Set([entityId, ...firstOrderEntityIds]);
+  const scannedEntityIds = new Set([entityId, ...relatedEntityIds]);
   for (const entity of entities) {
     if (scannedEntityIds.has(entity.id)) continue;
-    scanTextFieldFullNameOnly('entity', entity.id, entity.name, 'summary', entity.summary);
-    scanTextFieldFullNameOnly('entity', entity.id, entity.name, 'description', entity.description);
+    scanEntityTextFields(entity, scanTextFieldFullNameOnly);
   }
 
   for (const chronicle of chronicles) {
@@ -610,6 +638,16 @@ export async function scanForReferences(
     scanTextFieldFullNameOnly('chronicle', cId, cTitle, 'assembledContent', chronicle.assembledContent);
     scanTextFieldFullNameOnly('chronicle', cId, cTitle, 'finalContent', chronicle.finalContent);
     scanTextFieldFullNameOnly('chronicle', cId, cTitle, 'summary', chronicle.summary);
+
+    if (chronicle.generationHistory) {
+      for (const version of chronicle.generationHistory) {
+        scanTextFieldFullNameOnly(
+          'chronicle', cId, cTitle,
+          `generationHistory.${version.versionId}`,
+          version.content,
+        );
+      }
+    }
   }
 
   // =========================================================================
@@ -800,7 +838,7 @@ export function buildRenamePatches(
 
 /**
  * Apply entity patches to an entity array. Returns a new array with patches applied.
- * Expects entities to have `id`, `name`, `summary`, `description` fields.
+ * Handles summary, description, and enrichment.descriptionHistory text replacements.
  */
 export function applyEntityPatches<T extends ScanEntity>(
   entities: T[],
@@ -811,24 +849,52 @@ export function applyEntityPatches<T extends ScanEntity>(
   const patchMap = new Map(patches.map((p) => [p.entityId, p]));
 
   return entities.map((entity) => {
+    // The target entity always gets its name updated, even without a text patch
+    const isTarget = entity.id === targetEntityId;
     const patch = patchMap.get(entity.id);
-    if (!patch) return entity;
+    if (!patch && !isTarget) return entity;
 
     const updated = { ...entity };
 
-    // Apply the name change for the target entity
-    if (entity.id === targetEntityId) {
+    if (isTarget) {
       updated.name = newName;
     }
 
+    if (!patch) return updated;
+
     // Apply text replacements
     for (const [key, value] of Object.entries(patch.changes)) {
-      if (key.startsWith('__replacements_')) {
-        const field = key.replace('__replacements_', '') as keyof T;
-        const replacements: FieldReplacement[] = JSON.parse(value);
+      if (!key.startsWith('__replacements_')) continue;
+      const field = key.replace('__replacements_', '');
+      const replacements: FieldReplacement[] = JSON.parse(value);
+
+      if (field === 'summary' || field === 'description') {
         const originalText = entity[field];
         if (typeof originalText === 'string') {
           (updated as any)[field] = applyReplacements(originalText, replacements);
+        }
+      } else if (field.startsWith('enrichment.descriptionHistory[')) {
+        // Parse index from: enrichment.descriptionHistory[N].description
+        const idxMatch = field.match(/\[(\d+)\]/);
+        if (idxMatch && entity.enrichment?.descriptionHistory) {
+          const idx = parseInt(idxMatch[1], 10);
+          // Shallow-copy enrichment chain on first write
+          if (!updated.enrichment || updated.enrichment === entity.enrichment) {
+            updated.enrichment = { ...entity.enrichment };
+          }
+          if (
+            !updated.enrichment!.descriptionHistory ||
+            updated.enrichment!.descriptionHistory === entity.enrichment.descriptionHistory
+          ) {
+            updated.enrichment!.descriptionHistory = [...entity.enrichment.descriptionHistory];
+          }
+          const entry = updated.enrichment!.descriptionHistory![idx];
+          if (entry) {
+            updated.enrichment!.descriptionHistory![idx] = {
+              ...entry,
+              description: applyReplacements(entry.description, replacements),
+            };
+          }
         }
       }
     }
