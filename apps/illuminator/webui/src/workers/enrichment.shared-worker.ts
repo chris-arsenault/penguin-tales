@@ -20,7 +20,7 @@ import {
 } from './enrichmentCore';
 import type { LLMClient } from '../lib/llmClient';
 import type { ImageClient } from '../lib/imageClient';
-import { saveEnrichmentResult } from '../lib/enrichmentStorage';
+import * as entityRepo from '../lib/db/entityRepository';
 
 // SharedWorker context
 const ctx = self as unknown as SharedWorkerGlobalScope;
@@ -48,24 +48,52 @@ function safePostMessage(port: MessagePort, message: WorkerOutbound): void {
 }
 
 async function persistResult(task: WorkerTask, result?: EnrichmentResult): Promise<void> {
-  if (!result) return;
-  if (!task.projectId || !task.simulationRunId) return;
+  if (!result || !task.entityId) return;
 
   try {
-    await saveEnrichmentResult({
-      projectId: task.projectId,
-      simulationRunId: task.simulationRunId,
-      entityId: task.entityId,
-      entityName: task.entityName,
-      entityKind: task.entityKind,
-      type: task.type,
-      result,
-      imageType: task.imageType,
-      chronicleId: task.chronicleId,
-      imageRefId: task.imageRefId,
-    });
+    if (task.type === 'description' && result.description) {
+      await entityRepo.applyDescriptionResult(task.entityId, {
+        text: {
+          aliases: result.aliases || [],
+          visualThesis: result.visualThesis,
+          visualTraits: result.visualTraits || [],
+          generatedAt: result.generatedAt,
+          model: result.model,
+          estimatedCost: result.estimatedCost,
+          actualCost: result.actualCost,
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+          debug: result.debug,
+          chainDebug: result.chainDebug,
+        },
+      }, result.summary, result.description);
+    } else if (task.type === 'image' && result.imageId && task.imageType !== 'chronicle') {
+      await entityRepo.applyImageResult(task.entityId, {
+        imageId: result.imageId,
+        generatedAt: result.generatedAt,
+        model: result.model,
+        revisedPrompt: result.revisedPrompt,
+        estimatedCost: result.estimatedCost,
+        actualCost: result.actualCost,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        width: result.width,
+        height: result.height,
+        aspect: result.aspect,
+      });
+    } else if (task.type === 'entityChronicle' && result.chronicleId) {
+      await entityRepo.applyEntityChronicleResult(task.entityId, {
+        chronicleId: result.chronicleId,
+        generatedAt: result.generatedAt,
+        model: result.model,
+        estimatedCost: result.estimatedCost,
+        actualCost: result.actualCost,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+      });
+    }
   } catch (err) {
-    console.warn('[SharedWorker] Failed to persist enrichment result:', err);
+    console.warn('[SharedWorker] Failed to persist to Dexie:', err);
   }
 }
 

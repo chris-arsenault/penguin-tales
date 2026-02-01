@@ -73,7 +73,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         projectId="mock-project"
         schema={mockSchema}
         worldData={mockWorldData}
-        onEnrichmentComplete={(enrichedWorld) => console.log('Enrichment complete:', enrichedWorld)}
         activeSection="configure"
         onSectionChange={(section) => console.log('Section changed:', section)}
       />

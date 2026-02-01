@@ -15,7 +15,7 @@ import {
 } from '../workers/enrichmentCore';
 import type { LLMClient } from '../lib/llmClient';
 import type { ImageClient } from '../lib/imageClient';
-import { saveEnrichmentResult } from '../lib/enrichmentStorage';
+import * as entityRepo from '../lib/db/entityRepository';
 
 const ctx = self as unknown as ServiceWorkerGlobalScope;
 
@@ -122,44 +122,52 @@ function safePostMessage(handleId: string, message: WorkerOutbound): void {
 }
 
 async function persistResult(task: WorkerTask, result?: EnrichmentResult): Promise<void> {
-  if (!result) {
-    log('warn', 'Persist skipped - missing result', { taskId: task.id });
-    return;
-  }
-  if (!task.projectId || !task.simulationRunId) {
-    log('warn', 'Persist skipped - missing project or simulationRunId', {
-      taskId: task.id,
-      projectId: task.projectId,
-      simulationRunId: task.simulationRunId,
-    });
-    return;
-  }
+  if (!result || !task.entityId) return;
 
   try {
-    log('info', 'Persist result start', {
-      taskId: task.id,
-      entityId: task.entityId,
-      type: task.type,
-    });
-    await saveEnrichmentResult({
-      projectId: task.projectId,
-      simulationRunId: task.simulationRunId,
-      entityId: task.entityId,
-      entityName: task.entityName,
-      entityKind: task.entityKind,
-      type: task.type,
-      result,
-      imageType: task.imageType,
-      chronicleId: task.chronicleId,
-      imageRefId: task.imageRefId,
-    });
-    log('info', 'Persist result complete', {
-      taskId: task.id,
-      entityId: task.entityId,
-      type: task.type,
-    });
+    if (task.type === 'description' && result.description) {
+      await entityRepo.applyDescriptionResult(task.entityId, {
+        text: {
+          aliases: result.aliases || [],
+          visualThesis: result.visualThesis,
+          visualTraits: result.visualTraits || [],
+          generatedAt: result.generatedAt,
+          model: result.model,
+          estimatedCost: result.estimatedCost,
+          actualCost: result.actualCost,
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+          debug: result.debug,
+          chainDebug: result.chainDebug,
+        },
+      }, result.summary, result.description);
+    } else if (task.type === 'image' && result.imageId && task.imageType !== 'chronicle') {
+      await entityRepo.applyImageResult(task.entityId, {
+        imageId: result.imageId,
+        generatedAt: result.generatedAt,
+        model: result.model,
+        revisedPrompt: result.revisedPrompt,
+        estimatedCost: result.estimatedCost,
+        actualCost: result.actualCost,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        width: result.width,
+        height: result.height,
+        aspect: result.aspect,
+      });
+    } else if (task.type === 'entityChronicle' && result.chronicleId) {
+      await entityRepo.applyEntityChronicleResult(task.entityId, {
+        chronicleId: result.chronicleId,
+        generatedAt: result.generatedAt,
+        model: result.model,
+        estimatedCost: result.estimatedCost,
+        actualCost: result.actualCost,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+      });
+    }
   } catch (err) {
-    log('error', 'Persist result failed', {
+    log('error', 'Persist to Dexie failed', {
       taskId: task.id,
       error: err instanceof Error ? err.message : String(err),
     });

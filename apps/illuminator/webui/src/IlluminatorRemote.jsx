@@ -5,13 +5,13 @@
  * - projectId: Current project ID
  * - schema: Read-only world schema (entityKinds, cultures)
  * - worldData: Simulation results from lore-weave
- * - onEnrichmentComplete: Callback when enrichment changes
  *
  * Architecture:
  * - Entity-centric view (Entities tab is primary)
  * - UI-side queue management
  * - Worker is a pure executor
- * - Enrichment state stored on entities and persisted
+ * - Dexie (IndexedDB) is the canonical persistence layer
+ * - CustomEvent 'illuminator:worlddata-changed' signals host to reload
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
@@ -31,7 +31,6 @@ import StaticPagesPanel from './components/StaticPagesPanel';
 import DynamicsGenerationModal from './components/DynamicsGenerationModal';
 import SummaryRevisionModal from './components/SummaryRevisionModal';
 import EntityRenameModal from './components/EntityRenameModal';
-import { patchNarrativeHistory } from './lib/entityRename';
 import RevisionFilterModal from './components/RevisionFilterModal';
 import BackportConfigModal from './components/BackportConfigModal';
 import { useEnrichmentQueue } from './hooks/useEnrichmentQueue';
@@ -59,10 +58,10 @@ import {
 import { buildEntityIndex, buildRelationshipIndex, resolveEraInfo } from './lib/worldData';
 import { resolveStyleSelection } from './components/StyleSelector';
 import { exportImagePrompts, downloadImagePromptExport } from './lib/workerStorage';
-import { getEnrichmentResults } from './lib/enrichmentStorage';
-import { applyEnrichmentResult } from './lib/enrichmentTypes';
 import { getResolvedLLMCallSettings } from './lib/llmModelSettings';
-import { resolveAnchorPhrase, extractWordsAroundIndex } from './lib/fuzzyAnchor';
+import * as entityRepo from './lib/db/entityRepository';
+import * as eventRepo from './lib/db/eventRepository';
+import { useEntityStore } from './lib/db/entityStore';
 import {
   buildProminenceScale,
   DEFAULT_PROMINENCE_DISTRIBUTION,
@@ -169,71 +168,6 @@ const resolveEntityEraId = (entity) => {
   return undefined;
 };
 
-const shouldApplyPersistedResult = (enrichment, type, result) => {
-  if (!result?.generatedAt) return true;
-  if (type === 'description') {
-    // Text enrichment metadata now in enrichment.text (not enrichment.description)
-    return (enrichment?.text?.generatedAt || 0) <= result.generatedAt;
-  }
-  if (type === 'image') {
-    return (enrichment?.image?.generatedAt || 0) <= result.generatedAt;
-  }
-  if (type === 'entityChronicle') {
-    return (enrichment?.entityChronicle?.generatedAt || 0) <= result.generatedAt;
-  }
-  return true;
-};
-
-const mergePersistedResults = (entities, records) => {
-  if (!records.length || !entities.length) return entities;
-
-  const recordsByEntity = new Map();
-  for (const record of records) {
-    if (record.type === 'paletteExpansion') continue;
-    if (record.type === 'image' && record.imageType === 'chronicle') continue;
-    if (!recordsByEntity.has(record.entityId)) {
-      recordsByEntity.set(record.entityId, []);
-    }
-    recordsByEntity.get(record.entityId).push(record);
-  }
-
-  if (recordsByEntity.size === 0) return entities;
-
-  let didChange = false;
-  const next = entities.map((entity) => {
-    const entityRecords = recordsByEntity.get(entity.id);
-    if (!entityRecords) return entity;
-
-    let result = { ...entity };
-    let changed = false;
-    for (const record of entityRecords) {
-      if (!shouldApplyPersistedResult(result.enrichment, record.type, record.result)) continue;
-      const output = applyEnrichmentResult(
-        { enrichment: result.enrichment },
-        record.type,
-        record.result,
-        entity.lockedSummary
-      );
-      result = {
-        ...result,
-        enrichment: output.enrichment,
-        // Apply entity field updates from text enrichment
-        ...(output.summary !== undefined && { summary: output.summary }),
-        ...(output.description !== undefined && { description: output.description }),
-      };
-      changed = true;
-    }
-
-    if (changed) {
-      didChange = true;
-      return result;
-    }
-    return entity;
-  });
-
-  return didChange ? next : entities;
-};
-
 // Default world context
 const DEFAULT_WORLD_CONTEXT = {
   name: '',
@@ -249,7 +183,6 @@ export default function IlluminatorRemote({
   projectId,
   schema,
   worldData,
-  onEnrichmentComplete,
   worldContext: externalWorldContext,
   onWorldContextChange,
   entityGuidance: externalEntityGuidance,
@@ -297,9 +230,8 @@ export default function IlluminatorRemote({
   });
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [chronicleRefreshTrigger, setChronicleRefreshTrigger] = useState(0);
-  const [renameTargetId, setRenameTargetId] = useState(null);
-  // Holds patched narrativeHistory from rename so the persistence effect doesn't overwrite it
-  const narrativeHistoryPatchRef = useRef(null);
+  // renameModal: { entityId, mode: 'rename' | 'patch' } | null
+  const [renameModal, setRenameModal] = useState(null);
 
   // Persist API keys when enabled
   useEffect(() => {
@@ -472,13 +404,13 @@ export default function IlluminatorRemote({
 
   // Entities with enrichment state
   const [entities, setEntities] = useState([]);
-  const persistedEnrichmentRef = useRef({ projectId: null, simulationRunId: null });
+  const [narrativeEvents, setNarrativeEvents] = useState([]);
   // Track which simulation run we've initialized — after init, local state is authoritative
   const initializedRunIdRef = useRef(null);
 
-  // Initialize entities from worldData (one-shot per simulation run).
-  // After initialization, local setEntities calls are authoritative. The persistence
-  // hook handles syncing local → worldData. We never overwrite local state from worldData.
+  // Initialize entities from worldData on first load. Dexie seed effect will overwrite
+  // with canonical data if already seeded. We only set from worldData when there's a
+  // new simulationRunId we haven't seen yet.
   useEffect(() => {
     if (!worldData?.hardState) {
       setEntities([]);
@@ -493,7 +425,7 @@ export default function IlluminatorRemote({
 
     initializedRunIdRef.current = runId;
 
-    // Fresh initialization from worldData (includes persisted enrichment from last session)
+    // Fresh initialization from worldData (Dexie seed effect will overwrite with canonical data)
     setEntities(worldData.hardState);
   }, [worldData]);
 
@@ -586,134 +518,115 @@ export default function IlluminatorRemote({
     return map;
   }, [entities, renownedThreshold]);
 
+  // Shared helper: write to Dexie → reload local state → notify host
+  const reloadAndNotify = useCallback(async (invalidateIds) => {
+    const [freshEntities, freshEvents] = await Promise.all([
+      entityRepo.getEntitiesForRun(simulationRunId),
+      eventRepo.getNarrativeEventsForRun(simulationRunId),
+    ]);
+    if (invalidateIds?.length) {
+      const store = useEntityStore.getState();
+      for (const id of invalidateIds) store.invalidate(id);
+    }
+    setEntities(freshEntities);
+    setNarrativeEvents(freshEvents);
+    window.dispatchEvent(new CustomEvent('illuminator:worlddata-changed', {
+      detail: { simulationRunId },
+    }));
+  }, [simulationRunId]);
+
   // Handle assigning an existing image from the library to an entity
-  const handleAssignImage = useCallback((entityId, imageId, imageMetadata) => {
-    const enrichment = {
-      image: {
-        imageId,
-        generatedAt: imageMetadata?.generatedAt || Date.now(),
-        model: imageMetadata?.model || 'assigned',
-        revisedPrompt: imageMetadata?.revisedPrompt,
-        // No cost for assignment - image already exists
-        estimatedCost: 0,
-        actualCost: 0,
-      },
-    };
-
-    setEntities((prev) =>
-      prev.map((entity) =>
-        entity.id === entityId
-          ? { ...entity, enrichment: { ...entity.enrichment, ...enrichment } }
-          : entity
-      )
-    );
-  }, []);
-
-  // Push current description to version history before overwriting
-  function pushDescriptionHistory(entity, source) {
-    if (!entity.description) return entity.enrichment || {};
-    const history = [...(entity.enrichment?.descriptionHistory || [])];
-    history.push({
-      description: entity.description,
-      replacedAt: Date.now(),
-      source,
-    });
-    return { ...entity.enrichment, descriptionHistory: history };
-  }
+  const handleAssignImage = useCallback(async (entityId, imageId, imageMetadata) => {
+    await entityRepo.assignImage(entityId, imageId, imageMetadata);
+    await reloadAndNotify([entityId]);
+  }, [reloadAndNotify]);
 
   // Handle entity enrichment update from queue
   // output is ApplyEnrichmentOutput with { enrichment, summary?, description? }
-  const handleEntityUpdate = useCallback((entityId, output) => {
-    setEntities((prev) =>
-      prev.map((entity) => {
-        if (entity.id !== entityId) return entity;
-        // Push history if description is being overwritten
-        const baseEnrichment = output.description !== undefined && entity.description
-          ? pushDescriptionHistory(entity, 'description-task')
-          : entity.enrichment;
-        return {
-          ...entity,
-          enrichment: { ...baseEnrichment, ...output.enrichment },
-          ...(output.summary !== undefined && { summary: output.summary }),
-          ...(output.description !== undefined && { description: output.description }),
-        };
-      })
-    );
-  }, []);
+  const handleEntityUpdate = useCallback(async (entityId, output) => {
+    if (output.enrichment?.image) {
+      await entityRepo.applyImageResult(entityId, output.enrichment.image);
+    } else if (output.enrichment?.entityChronicle) {
+      await entityRepo.applyEntityChronicleResult(entityId, output.enrichment.entityChronicle);
+    } else {
+      await entityRepo.applyDescriptionResult(
+        entityId, output.enrichment, output.summary, output.description,
+      );
+    }
+    await reloadAndNotify([entityId]);
+  }, [reloadAndNotify]);
 
   // Undo last description change — pop from history
-  const handleUndoDescription = useCallback((entityId) => {
-    setEntities((prev) =>
-      prev.map((entity) => {
-        if (entity.id !== entityId) return entity;
-        const history = [...(entity.enrichment?.descriptionHistory || [])];
-        if (history.length === 0) return entity;
-        const previous = history.pop();
-        return {
-          ...entity,
-          description: previous.description,
-          enrichment: { ...entity.enrichment, descriptionHistory: history },
-        };
-      })
-    );
-  }, []);
+  const handleUndoDescription = useCallback(async (entityId) => {
+    await entityRepo.undoDescription(entityId);
+    await reloadAndNotify([entityId]);
+  }, [reloadAndNotify]);
 
   // Handle backref image config update
-  const handleUpdateBackrefs = useCallback((entityId, updatedBackrefs) => {
-    setEntities((prev) =>
-      prev.map((entity) =>
-        entity.id === entityId
-          ? {
-              ...entity,
-              enrichment: {
-                ...entity.enrichment,
-                chronicleBackrefs: updatedBackrefs,
-              },
-            }
-          : entity
-      )
-    );
-  }, []);
+  const handleUpdateBackrefs = useCallback(async (entityId, updatedBackrefs) => {
+    await entityRepo.updateBackrefs(entityId, updatedBackrefs);
+    await reloadAndNotify([entityId]);
+  }, [reloadAndNotify]);
 
   // Extract simulationRunId from worldData for content association
   const simulationRunId = worldData?.metadata?.simulationRunId;
 
-  // Load persisted enrichment results for the active simulation
+  // Seed Dexie from worldData and load canonical entities from the DAL.
+  // Runs once per simulationRunId.
+  const entityStore = useEntityStore;
+  const seedWorldDataRef = useRef(worldData);
+  seedWorldDataRef.current = worldData;
+
   useEffect(() => {
-    if (!projectId || !simulationRunId || !worldData?.hardState?.length) return;
-    if (
-      persistedEnrichmentRef.current.projectId === projectId &&
-      persistedEnrichmentRef.current.simulationRunId === simulationRunId
-    ) {
-      return;
-    }
-
-    persistedEnrichmentRef.current = { projectId, simulationRunId };
+    if (!simulationRunId || !seedWorldDataRef.current?.hardState?.length) return;
     let cancelled = false;
+    const wd = seedWorldDataRef.current;
 
-    getEnrichmentResults(projectId, simulationRunId)
-      .then((records) => {
-        if (cancelled || !records.length) return;
+    (async () => {
+      try {
+        console.log('[Illuminator] Seed effect running', { simulationRunId, hasNarrativeHistory: !!wd.narrativeHistory?.length });
 
-        setEntities((prev) => {
-          const worldEntities = worldData?.hardState || prev;
-          const worldIds = new Set(worldEntities.map((entity) => entity.id));
-          const prevMatchesWorld =
-            prev.length === worldEntities.length &&
-            prev.every((entity) => worldIds.has(entity.id));
-          const baseEntities = prevMatchesWorld ? prev : worldEntities;
+        // Seed Dexie from worldData if not already done for this run
+        const entitySeeded = await entityRepo.isSeeded(simulationRunId);
+        console.log('[Illuminator] Entity seed check', { entitySeeded });
+        if (!entitySeeded) {
+          await entityRepo.seedEntities(simulationRunId, wd.hardState);
+          console.log('[Illuminator] Entities seeded', { count: wd.hardState.length });
+        }
 
-          return mergePersistedResults(baseEntities, records);
+        const eventSeeded = wd.narrativeHistory?.length
+          ? await eventRepo.isNarrativeEventsSeeded(simulationRunId)
+          : true;
+        console.log('[Illuminator] Event seed check', { eventSeeded, narrativeHistoryLength: wd.narrativeHistory?.length });
+        if (wd.narrativeHistory?.length && !eventSeeded) {
+          await eventRepo.seedNarrativeEvents(simulationRunId, wd.narrativeHistory);
+        }
+
+        if (cancelled) return;
+
+        // Initialize zustand coordinator (loads entity ID list)
+        await entityStore.getState().initialize(simulationRunId);
+
+        // Load canonical data from Dexie into local state (backward compat)
+        const dexieEntities = await entityRepo.getEntitiesForRun(simulationRunId);
+        const dexieEvents = await eventRepo.getNarrativeEventsForRun(simulationRunId);
+        console.log('[Illuminator] Loaded from Dexie', {
+          entityCount: dexieEntities.length,
+          eventCount: dexieEvents.length,
         });
-      })
-      .catch((err) => {
-        console.warn('[Illuminator] Failed to load persisted enrichments:', err);
-      });
+        if (!cancelled && dexieEntities.length > 0) {
+          setEntities(dexieEntities);
+        }
+        if (!cancelled && dexieEvents.length > 0) {
+          setNarrativeEvents(dexieEvents);
+        }
+      } catch (err) {
+        console.warn('[Illuminator] DAL seed/load failed:', err);
+      }
+    })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId, simulationRunId, worldData]);
+    return () => { cancelled = true; };
+  }, [simulationRunId]);
 
   // Queue management
   const {
@@ -746,61 +659,6 @@ export default function IlluminatorRemote({
       });
     }
   }, [anthropicApiKey, openaiApiKey, config, imageGenSettings.imageSize, imageGenSettings.imageQuality, initializeWorker]);
-
-  // Persist local entity changes back to worldData via onEnrichmentComplete.
-  // Uses reference equality — any setEntities call creates new objects,
-  // so !== catches all changes without field-by-field comparison.
-  useEffect(() => {
-    if (!worldData?.hardState?.length || !onEnrichmentComplete) return;
-    // Don't persist before initialization
-    if (!initializedRunIdRef.current) return;
-
-    let didChange = false;
-    const enrichedHardState = worldData.hardState.map((worldEntity) => {
-      const local = entityById.get(worldEntity.id);
-      if (!local) return worldEntity;
-
-      // Compare by reference — any setEntities call creates new objects
-      if (local.enrichment === worldEntity.enrichment &&
-          local.summary === worldEntity.summary &&
-          local.description === worldEntity.description &&
-          local.name === worldEntity.name &&
-          local.narrativeHint === worldEntity.narrativeHint) {
-        return worldEntity;
-      }
-
-      didChange = true;
-      return {
-        ...worldEntity,
-        enrichment: local.enrichment,
-        summary: local.summary,
-        description: local.description,
-        name: local.name,
-        narrativeHint: local.narrativeHint,
-      };
-    });
-
-    // Consume any pending narrativeHistory patch from rename (prevents race condition
-    // where this effect overwrites patched events with stale worldData values)
-    const pendingNarrativeHistory = narrativeHistoryPatchRef.current;
-    if (pendingNarrativeHistory) {
-      narrativeHistoryPatchRef.current = null;
-      didChange = true;
-    }
-
-    if (!didChange) return;
-
-    onEnrichmentComplete({
-      ...worldData,
-      ...(pendingNarrativeHistory ? { narrativeHistory: pendingNarrativeHistory } : {}),
-      hardState: enrichedHardState,
-      metadata: {
-        ...worldData.metadata,
-        enriched: true,
-        enrichedAt: Date.now(),
-      },
-    });
-  }, [entityById, worldData, onEnrichmentComplete]);
 
   // Build world schema from props
   const worldSchema = useMemo(() => {
@@ -913,7 +771,7 @@ export default function IlluminatorRemote({
       if (type === 'description') {
         // Get entity events from narrative history (filtered by significance)
         const entityEvents = getEntityEvents(
-          worldData?.narrativeHistory || [],
+          narrativeEvents,
           {
             entityId: entity.id,
             minSignificance: config.minEventSignificance ?? 0.25,
@@ -980,7 +838,7 @@ export default function IlluminatorRemote({
       entityById,
       currentEra,
       worldData?.metadata?.era,
-      worldData?.narrativeHistory,
+      narrativeEvents,
       prominentByCulture,
       styleSelection,
       worldSchema?.cultures,
@@ -1139,30 +997,11 @@ export default function IlluminatorRemote({
     }).filter(Boolean);
   }, [entityById, relationshipsByEntity, prominenceScale, entityGuidance]);
 
-  const handleRevisionApplied = useCallback((patches, source = 'summary-revision') => {
+  const handleRevisionApplied = useCallback(async (patches, source = 'summary-revision') => {
     if (!patches?.length) return;
-    // Apply patches to entities
-    setEntities((prev) =>
-      prev.map((entity) => {
-        const patch = patches.find((p) => p.entityId === entity.id);
-        if (!patch) return entity;
-        const enrichment = patch.description !== undefined && entity.description
-          ? pushDescriptionHistory(entity, source)
-          : entity.enrichment;
-        // Bump text.generatedAt so mergePersistedResults won't overwrite
-        // with the older IndexedDB enrichment record on next reload
-        const bumpedEnrichment = patch.description !== undefined && enrichment?.text
-          ? { ...enrichment, text: { ...enrichment.text, generatedAt: Date.now() } }
-          : enrichment;
-        return {
-          ...entity,
-          enrichment: bumpedEnrichment,
-          ...(patch.summary !== undefined ? { summary: patch.summary } : {}),
-          ...(patch.description !== undefined ? { description: patch.description } : {}),
-        };
-      })
-    );
-  }, []);
+    const updatedIds = await entityRepo.applyRevisionPatches(patches, source);
+    await reloadAndNotify(updatedIds);
+  }, [reloadAndNotify]);
 
   const {
     run: revisionRun,
@@ -1369,66 +1208,15 @@ export default function IlluminatorRemote({
     setBackportConfig(null);
   }, [backportConfig, projectId, simulationRunId, startBackport]);
 
-  const handleAcceptBackport = useCallback(() => {
+  const handleAcceptBackport = useCallback(async () => {
     const cId = backportChronicleId;
     const patches = applyAcceptedBackportPatches();
-    handleRevisionApplied(patches, 'lore-backport');
+    await handleRevisionApplied(patches, 'lore-backport');
 
-    // Save new chronicle backrefs and revalidate existing ones against updated descriptions
+    // Revalidate backrefs + upsert new backref for this chronicle
     if (cId) {
-      const now = Date.now();
-      setEntities((prev) =>
-        prev.map((entity) => {
-          const patch = patches.find((p) => p.entityId === entity.id);
-          if (!patch) return entity;
-
-          const desc = patch.description || entity.description || '';
-          let backrefs = [...(entity.enrichment?.chronicleBackrefs || [])];
-
-          // Revalidate existing backrefs: re-resolve anchor phrases against updated description
-          if (patch.description && backrefs.length > 0) {
-            backrefs = backrefs.map((br) => {
-              // Check if existing anchor still resolves
-              const resolved = resolveAnchorPhrase(br.anchorPhrase, desc);
-              if (!resolved) return br; // keep as-is (LLM was told to preserve)
-              // Update to the resolved verbatim phrase (may have shifted)
-              return resolved.phrase !== br.anchorPhrase
-                ? { ...br, anchorPhrase: resolved.phrase }
-                : br;
-            });
-          }
-
-          // Upsert backref for this chronicle (one per chronicle per entity)
-          if (patch.anchorPhrase) {
-            const resolved = resolveAnchorPhrase(patch.anchorPhrase, desc);
-            if (resolved) {
-              const existingIdx = backrefs.findIndex((br) => br.chronicleId === cId);
-              if (existingIdx >= 0) {
-                // Update existing backref's anchor, preserve image config
-                backrefs[existingIdx] = {
-                  ...backrefs[existingIdx],
-                  anchorPhrase: resolved.phrase,
-                };
-              } else {
-                backrefs.push({
-                  entityId: entity.id,
-                  chronicleId: cId,
-                  anchorPhrase: resolved.phrase,
-                  createdAt: now,
-                });
-              }
-            }
-          }
-
-          return {
-            ...entity,
-            enrichment: {
-              ...entity.enrichment,
-              chronicleBackrefs: backrefs,
-            },
-          };
-        })
-      );
+      await entityRepo.revalidateBackrefs(patches, { chronicleId: cId });
+      await reloadAndNotify(patches.map((p) => p.entityId));
       // Mark chronicle as backported and refresh the chronicle list
       updateChronicleLoreBackported(cId, true).then(() => {
         setChronicleRefreshTrigger((n) => n + 1);
@@ -1436,7 +1224,7 @@ export default function IlluminatorRemote({
         console.warn('[Backport] Failed to set loreBackported flag:', err);
       });
     }
-  }, [applyAcceptedBackportPatches, handleRevisionApplied, backportChronicleId]);
+  }, [applyAcceptedBackportPatches, handleRevisionApplied, backportChronicleId, reloadAndNotify]);
 
   // ---- Auto-backport all chronicles ----
   const [autoBackportQueue, setAutoBackportQueue] = useState(null); // { ids: string[], total: number } | null
@@ -1544,95 +1332,43 @@ export default function IlluminatorRemote({
     });
   }, [projectId, simulationRunId, entityById, relationshipsByEntity, entityGuidance, prominenceScale, startCopyEdit]);
 
-  const handleAcceptCopyEdit = useCallback(() => {
+  const handleAcceptCopyEdit = useCallback(async () => {
     const patches = applyAcceptedCopyEditPatches();
-    handleRevisionApplied(patches, 'copy-edit');
+    await handleRevisionApplied(patches, 'copy-edit');
 
-    // Revalidate existing backrefs against updated descriptions
-    setEntities((prev) =>
-      prev.map((entity) => {
-        const patch = patches.find((p) => p.entityId === entity.id);
-        if (!patch?.description) return entity;
+    // Revalidate existing backrefs against updated descriptions (with fuzzy fallback)
+    await entityRepo.revalidateBackrefs(patches, { fuzzyFallback: true });
+    await reloadAndNotify(patches.map((p) => p.entityId));
+  }, [applyAcceptedCopyEditPatches, handleRevisionApplied, reloadAndNotify]);
 
-        const desc = patch.description;
-        let backrefs = [...(entity.enrichment?.chronicleBackrefs || [])];
-        if (backrefs.length === 0) return entity;
-
-        // Re-resolve anchor phrases against new description text
-        backrefs = backrefs.map((br) => {
-          const resolved = resolveAnchorPhrase(br.anchorPhrase, desc);
-          if (!resolved) {
-            // Fuzzy match failed — try proportional index fallback
-            const oldIndex = entity.description ? entity.description.indexOf(br.anchorPhrase) : -1;
-            if (oldIndex >= 0 && entity.description) {
-              const newIndex = Math.round(oldIndex / entity.description.length * desc.length);
-              const fallbackPhrase = extractWordsAroundIndex(desc, newIndex, 5);
-              if (fallbackPhrase) {
-                return { ...br, anchorPhrase: fallbackPhrase };
-              }
-            }
-            return br; // keep as-is if all fallbacks fail
-          }
-          return resolved.phrase !== br.anchorPhrase
-            ? { ...br, anchorPhrase: resolved.phrase }
-            : br;
-        });
-
-        return {
-          ...entity,
-          enrichment: {
-            ...entity.enrichment,
-            chronicleBackrefs: backrefs,
-          },
-        };
-      })
-    );
-  }, [applyAcceptedCopyEditPatches, handleRevisionApplied]);
-
-  // Entity rename
+  // Entity rename / patch events
   const handleStartRename = useCallback((entityId) => {
-    setRenameTargetId(entityId);
+    setRenameModal({ entityId, mode: 'rename' });
   }, []);
 
-  const handleRenameApplied = useCallback((patchedEntities, patchedNarrativeEvents) => {
-    setEntities(patchedEntities);
-    // Store patched events in ref — the persistence effect will pick them up
-    // on its next run, avoiding the race condition where it overwrites with stale data
-    if (patchedNarrativeEvents) {
-      narrativeHistoryPatchRef.current = patchedNarrativeEvents;
+  const handleStartPatchEvents = useCallback((entityId) => {
+    setRenameModal({ entityId, mode: 'patch' });
+  }, []);
+
+  const handleRenameApplied = useCallback(async ({ entityPatches, eventPatches, targetEntityId, newName }) => {
+    try {
+      // 1. Write entity patches to Dexie (source of truth)
+      const updatedIds = await entityRepo.applyRename(targetEntityId, newName, entityPatches, simulationRunId);
+
+      // 2. Write narrative event patches to Dexie
+      if (eventPatches.length > 0) {
+        await eventRepo.applyEventPatches(eventPatches, simulationRunId);
+      }
+
+      // 3. Reload from Dexie + notify host
+      await reloadAndNotify(updatedIds);
+    } catch (err) {
+      console.error('[Illuminator] Rename persist failed:', err);
     }
-    setRenameTargetId(null);
+
+    setRenameModal(null);
     setChronicleRefreshTrigger((n) => n + 1);
-  }, []);
-
-  // Patch narrative events — brute-force repair for a single entity
-  const handlePatchEvents = useCallback((entityId, oldName) => {
-    if (!worldData?.narrativeHistory) {
-      alert('No narrative history available.');
-      return;
-    }
-    const entity = entities.find((e) => e.id === entityId);
-    if (!entity) return;
-    const newName = entity.name;
-
-    const { events: patched, patchCount } = patchNarrativeHistory(
-      worldData.narrativeHistory,
-      entityId,
-      oldName,
-      newName,
-    );
-
-    if (patchCount === 0) {
-      alert(`No occurrences of "${oldName}" found in narrative events.`);
-      return;
-    }
-
-    // Store in ref for the persistence effect to pick up
-    narrativeHistoryPatchRef.current = patched;
-    // Trigger persistence by touching entities (forces the effect to run)
-    setEntities((prev) => prev.map((e) => (e.id === entityId ? { ...e } : e)));
-    alert(`Patched ${patchCount} narrative event(s): "${oldName}" → "${newName}"`);
-  }, [worldData, entities]);
+  }, [simulationRunId, reloadAndNotify]);
 
   // Historian review (scholarly annotations for entities and chronicles)
   const {
@@ -1801,18 +1537,8 @@ export default function IlluminatorRemote({
     if (notes.length === 0) return;
 
     if (targetType === 'entity' && targetId) {
-      setEntities((prev) =>
-        prev.map((entity) => {
-          if (entity.id !== targetId) return entity;
-          return {
-            ...entity,
-            enrichment: {
-              ...entity.enrichment,
-              historianNotes: notes,
-            },
-          };
-        })
-      );
+      await entityRepo.setHistorianNotes(targetId, notes);
+      await reloadAndNotify([targetId]);
     } else if (targetType === 'chronicle' && targetId) {
       try {
         await updateChronicleHistorianNotes(targetId, notes);
@@ -1820,7 +1546,7 @@ export default function IlluminatorRemote({
         console.error('[Historian] Failed to save chronicle notes:', err);
       }
     }
-  }, [applyAcceptedHistorianNotes, historianRun]);
+  }, [applyAcceptedHistorianNotes, historianRun, reloadAndNotify]);
 
   const handleEditHistorianNoteText = useCallback((noteId, newText) => {
     if (!historianRun) return;
@@ -2068,7 +1794,7 @@ export default function IlluminatorRemote({
               isHistorianActive={isHistorianActive}
               historianConfigured={isHistorianConfigured(historianConfig)}
               onRename={handleStartRename}
-              onPatchEvents={handlePatchEvents}
+              onPatchEvents={handleStartPatchEvents}
             />
           </div>
         )}
@@ -2314,17 +2040,18 @@ export default function IlluminatorRemote({
         onCancel={cancelHistorianReview}
       />
 
-      {/* Entity Rename Modal */}
-      {renameTargetId && (
+      {/* Entity Rename / Patch Modal */}
+      {renameModal && (
         <EntityRenameModal
-          entityId={renameTargetId}
+          entityId={renameModal.entityId}
           entities={entities}
           cultures={worldSchema?.cultures || []}
           simulationRunId={simulationRunId || ''}
           relationships={worldData?.relationships || []}
-          narrativeEvents={worldData?.narrativeHistory || []}
+          narrativeEvents={narrativeEvents}
+          mode={renameModal.mode}
           onApply={handleRenameApplied}
-          onClose={() => setRenameTargetId(null)}
+          onClose={() => setRenameModal(null)}
         />
       )}
     </div>

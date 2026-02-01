@@ -48,7 +48,6 @@ export default function IlluminatorHost({
   projectId,
   schema,
   worldData,
-  onWorldDataChange,
   worldContext,
   onWorldContextChange,
   entityGuidance,
@@ -70,7 +69,6 @@ export default function IlluminatorHost({
           projectId={projectId}
           schema={schema}
           worldData={worldData}
-          onEnrichmentComplete={onWorldDataChange}
           worldContext={worldContext}
           onWorldContextChange={onWorldContextChange}
           entityGuidance={entityGuidance}

@@ -686,6 +686,46 @@ export default function App() {
     return () => window.removeEventListener('canonry:navigate', handleCrossNavigation);
   }, []);
 
+  // Listen for Illuminator world data mutations (rename, patch, enrichment)
+  // The Illuminator writes to its own Dexie store, then dispatches this event.
+  // We read from Dexie and merge into archivistData so other tabs see the changes.
+  useEffect(() => {
+    const handler = async (e) => {
+      const { simulationRunId } = e.detail || {};
+      if (!simulationRunId) return;
+
+      try {
+        const [{ getEntitiesForRun }, { getNarrativeEventsForRun }] = await Promise.all([
+          import('illuminator/entityRepository'),
+          import('illuminator/eventRepository'),
+        ]);
+
+        const [entities, events] = await Promise.all([
+          getEntitiesForRun(simulationRunId),
+          getNarrativeEventsForRun(simulationRunId),
+        ]);
+
+        setArchivistData((prev) => {
+          if (!prev?.worldData) return prev;
+          if (prev.worldData.metadata?.simulationRunId !== simulationRunId) return prev;
+          return {
+            ...prev,
+            worldData: {
+              ...prev.worldData,
+              hardState: entities,
+              ...(events.length > 0 ? { narrativeHistory: events } : {}),
+            },
+          };
+        });
+      } catch (err) {
+        console.warn('[Canonry] Failed to load Illuminator world data from Dexie:', err);
+      }
+    };
+
+    window.addEventListener('illuminator:worlddata-changed', handler);
+    return () => window.removeEventListener('illuminator:worlddata-changed', handler);
+  }, []);
+
   // Listen for hash changes to switch tabs (enables back button across MFEs)
   // Hash formats: Archivist uses #/entity/{id}, Chronicler uses #/page/{id}
   useEffect(() => {
@@ -910,23 +950,6 @@ export default function App() {
       }
     }
   }, [reloadProjectFromDefaults, currentProject?.id]);
-
-  const handleIlluminatorWorldDataChange = useCallback(async (enrichedWorld) => {
-    // Extract loreData from enriched entities (with current imageRefs from ChronicleRecords)
-    const loreData = await extractLoreDataWithCurrentImageRefs(enrichedWorld);
-
-    // Load imageData from IndexedDB
-    const imageData = await loadImageDataForProject(currentProject?.id, enrichedWorld);
-
-    setArchivistData((prev) => {
-      if (prev?.worldData === enrichedWorld && prev?.loreData === loreData) return prev;
-      return {
-        worldData: enrichedWorld,
-        loreData,
-        imageData,
-      };
-    });
-  }, [currentProject?.id]);
 
   /**
    * Lazy image loader for Chronicler - loads images on-demand from IndexedDB
@@ -2098,7 +2121,6 @@ export default function App() {
                 projectId={currentProject?.id}
                 schema={schema}
                 worldData={archivistData?.worldData}
-                onWorldDataChange={handleIlluminatorWorldDataChange}
                 worldContext={worldContext}
                 onWorldContextChange={setWorldContext}
                 entityGuidance={entityGuidance}
