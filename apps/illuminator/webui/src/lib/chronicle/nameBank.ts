@@ -14,7 +14,7 @@ const NAMES_PER_CULTURE = 4;
 /**
  * Convert CultureDefinition (Canonry) to Culture (name-forge)
  */
-function toCulture(def: CultureDefinition): Culture | null {
+export function toCulture(def: CultureDefinition): Culture | null {
   if (!def.naming) return null;
 
   return {

@@ -71,6 +71,7 @@ interface EntityDetailViewProps {
   onHistorianReview?: (entityId: string) => void;
   isHistorianActive?: boolean;
   historianConfigured?: boolean;
+  onRename?: (entityId: string) => void;
 }
 
 function formatDate(timestamp: number | undefined): string {
@@ -229,6 +230,7 @@ export default function EntityDetailView({
   onHistorianReview,
   isHistorianActive,
   historianConfigured,
+  onRename,
 }: EntityDetailViewProps) {
   const effectiveProminenceScale = useMemo(() => {
     if (prominenceScale) return prominenceScale;
@@ -407,6 +409,25 @@ export default function EntityDetailView({
                     }}
                   >
                     Copy Edit
+                  </button>
+                )}
+                {onRename && (
+                  <button
+                    onClick={() => onRename(entity.id)}
+                    title="Rename this entity with full propagation across all references"
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-secondary)',
+                      fontSize: '10px',
+                      padding: '1px 6px',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      textTransform: 'none',
+                      letterSpacing: 'normal',
+                    }}
+                  >
+                    Rename
                   </button>
                 )}
                 {onHistorianReview && historianConfigured && (

@@ -1353,6 +1353,25 @@ export async function deleteChroniclesForSimulation(simulationRunId: string): Pr
 }
 
 // ============================================================================
+// Entity Rename Support
+// ============================================================================
+
+/**
+ * Write a fully-updated chronicle record back to IndexedDB.
+ * Used by the entity rename flow to persist chronicle patches.
+ */
+export async function putChronicle(record: ChronicleRecord): Promise<void> {
+  const db = await openChronicleDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to put chronicle'));
+    tx.objectStore(CHRONICLE_STORE_NAME).put(record);
+  });
+}
+
+// ============================================================================
 // Entity Usage Statistics
 // ============================================================================
 

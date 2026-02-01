@@ -30,7 +30,9 @@ import StyleLibraryEditor from './components/StyleLibraryEditor';
 import StaticPagesPanel from './components/StaticPagesPanel';
 import DynamicsGenerationModal from './components/DynamicsGenerationModal';
 import SummaryRevisionModal from './components/SummaryRevisionModal';
+import EntityRenameModal from './components/EntityRenameModal';
 import RevisionFilterModal from './components/RevisionFilterModal';
+import BackportConfigModal from './components/BackportConfigModal';
 import { useEnrichmentQueue } from './hooks/useEnrichmentQueue';
 import { useDynamicsGeneration } from './hooks/useDynamicsGeneration';
 import { useSummaryRevision } from './hooks/useSummaryRevision';
@@ -294,6 +296,7 @@ export default function IlluminatorRemote({
   });
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [chronicleRefreshTrigger, setChronicleRefreshTrigger] = useState(0);
+  const [renameTargetId, setRenameTargetId] = useState(null);
 
   // Persist API keys when enabled
   useEffect(() => {
@@ -1279,6 +1282,9 @@ export default function IlluminatorRemote({
     cancelBackport,
   } = useChronicleLoreBackport(enqueue, getEntityContextsForRevision);
 
+  // Backport config modal state
+  const [backportConfig, setBackportConfig] = useState(null);
+
   const handleBackportLore = useCallback(async (chronicleId) => {
     if (!projectId || !simulationRunId || !chronicleId) return;
 
@@ -1318,15 +1324,34 @@ export default function IlluminatorRemote({
       });
     }
 
+    // Open config modal instead of starting immediately
+    setBackportConfig({
+      chronicleId,
+      chronicleTitle: chronicle.title || 'Untitled Chronicle',
+      entities: castContexts,
+      chronicleText: chronicle.finalContent,
+      perspectiveSynthesisJson,
+    });
+  }, [projectId, simulationRunId, getEntityContextsForRevision]);
+
+  const handleBackportConfigStart = useCallback((selectedEntityIds, customInstructions) => {
+    if (!backportConfig || !projectId || !simulationRunId) return;
+
+    const selectedEntities = backportConfig.entities.filter(e => selectedEntityIds.includes(e.id));
+    if (selectedEntities.length === 0) return;
+
     startBackport({
       projectId,
       simulationRunId,
-      chronicleId,
-      chronicleText: chronicle.finalContent,
-      perspectiveSynthesisJson,
-      entities: castContexts,
+      chronicleId: backportConfig.chronicleId,
+      chronicleText: backportConfig.chronicleText,
+      perspectiveSynthesisJson: backportConfig.perspectiveSynthesisJson,
+      entities: selectedEntities,
+      customInstructions: customInstructions || undefined,
     });
-  }, [projectId, simulationRunId, getEntityContextsForRevision, startBackport]);
+
+    setBackportConfig(null);
+  }, [backportConfig, projectId, simulationRunId, startBackport]);
 
   const handleAcceptBackport = useCallback(() => {
     const cId = backportChronicleId;
@@ -1547,6 +1572,17 @@ export default function IlluminatorRemote({
       })
     );
   }, [applyAcceptedCopyEditPatches, handleRevisionApplied]);
+
+  // Entity rename
+  const handleStartRename = useCallback((entityId) => {
+    setRenameTargetId(entityId);
+  }, []);
+
+  const handleRenameApplied = useCallback((patchedEntities) => {
+    setEntities(patchedEntities);
+    setRenameTargetId(null);
+    setChronicleRefreshTrigger((n) => n + 1);
+  }, []);
 
   // Historian review (scholarly annotations for entities and chronicles)
   const {
@@ -1981,6 +2017,7 @@ export default function IlluminatorRemote({
               onHistorianReview={handleHistorianReview}
               isHistorianActive={isHistorianActive}
               historianConfigured={isHistorianConfigured(historianConfig)}
+              onRename={handleStartRename}
             />
           </div>
         )}
@@ -2186,7 +2223,16 @@ export default function IlluminatorRemote({
         getEntityContexts={getEntityContextsForRevision}
       />
 
-      {/* Chronicle Lore Backport Modal */}
+      {/* Backport Config Modal (pre-backport entity selection + instructions) */}
+      <BackportConfigModal
+        isOpen={backportConfig !== null}
+        chronicleTitle={backportConfig?.chronicleTitle || ''}
+        entities={backportConfig?.entities || []}
+        onStart={handleBackportConfigStart}
+        onCancel={() => setBackportConfig(null)}
+      />
+
+      {/* Chronicle Lore Backport Review Modal */}
       <SummaryRevisionModal
         run={backportRun}
         isActive={isBackportActive}
@@ -2216,6 +2262,19 @@ export default function IlluminatorRemote({
         onAccept={handleAcceptHistorianNotes}
         onCancel={cancelHistorianReview}
       />
+
+      {/* Entity Rename Modal */}
+      {renameTargetId && (
+        <EntityRenameModal
+          entityId={renameTargetId}
+          entities={entities}
+          cultures={worldSchema?.cultures || []}
+          simulationRunId={simulationRunId || ''}
+          relationships={worldData?.relationships || []}
+          onApply={handleRenameApplied}
+          onClose={() => setRenameTargetId(null)}
+        />
+      )}
     </div>
   );
 }
