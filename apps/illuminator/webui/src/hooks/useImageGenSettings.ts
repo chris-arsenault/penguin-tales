@@ -79,15 +79,17 @@ export function useImageGenSettings(
   externalSyncRef.current = onExternalSync;
 
   const updateSettings = useCallback((partial: Partial<ImageGenSettings>) => {
-    setSettings((prev) => {
-      const next = { ...prev, ...partial };
-      saveSettings(next);
-      return next;
-    });
+    setSettings((prev) => ({ ...prev, ...partial }));
   }, []);
 
-  // Forward changes to external sync if provided
+  // Defer localStorage write and external sync to after render
+  const isInitialMount = useRef(true);
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    saveSettings(settings);
     if (externalSyncRef.current) {
       externalSyncRef.current(settings);
     }

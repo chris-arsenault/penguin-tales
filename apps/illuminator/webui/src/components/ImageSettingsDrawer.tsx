@@ -112,7 +112,7 @@ function SpecialToggle({
             background: value === opt.id ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
             color: value === opt.id ? 'var(--accent-color)' : 'var(--text-muted)',
             cursor: 'pointer',
-            transition: 'all 0.15s ease',
+            transition: 'border-color 0.15s ease, background 0.15s ease, color 0.15s ease',
           }}
         >
           {opt.label}
@@ -451,7 +451,7 @@ export default function ImageSettingsDrawer({
                         background: activeArtisticCategory === cat ? 'rgba(168, 85, 247, 0.15)' : 'transparent',
                         color: activeArtisticCategory === cat ? 'var(--accent-color)' : 'var(--text-muted)',
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease',
+                        transition: 'border-color 0.15s ease, background 0.15s ease, color 0.15s ease',
                         fontWeight: activeArtisticCategory === cat ? 600 : 400,
                       }}
                     >
@@ -486,7 +486,7 @@ export default function ImageSettingsDrawer({
                           background: isSelected ? 'rgba(168, 85, 247, 0.12)' : 'transparent',
                           cursor: 'pointer',
                           textAlign: 'left',
-                          transition: 'all 0.15s ease',
+                          transition: 'border-color 0.15s ease, background 0.15s ease, color 0.15s ease',
                           width: '100%',
                         }}
                       >
@@ -541,7 +541,7 @@ export default function ImageSettingsDrawer({
                   {availableCompositionCategories.map((cat) => (
                     <button
                       key={cat}
-                      onClick={() => setActiveCategory(cat)}
+                      onClick={() => setActiveCompositionCategory(cat)}
                       style={{
                         padding: '3px 8px',
                         fontSize: '10px',
@@ -551,7 +551,7 @@ export default function ImageSettingsDrawer({
                         background: activeCompositionCategory === cat ? 'rgba(168, 85, 247, 0.15)' : 'transparent',
                         color: activeCompositionCategory === cat ? 'var(--accent-color)' : 'var(--text-muted)',
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease',
+                        transition: 'border-color 0.15s ease, background 0.15s ease, color 0.15s ease',
                         fontWeight: activeCompositionCategory === cat ? 600 : 400,
                       }}
                     >
@@ -586,7 +586,7 @@ export default function ImageSettingsDrawer({
                           background: isSelected ? 'rgba(168, 85, 247, 0.12)' : 'transparent',
                           cursor: 'pointer',
                           textAlign: 'left',
-                          transition: 'all 0.15s ease',
+                          transition: 'border-color 0.15s ease, background 0.15s ease, color 0.15s ease',
                           width: '100%',
                         }}
                       >
@@ -662,7 +662,7 @@ export default function ImageSettingsDrawer({
                               background: isSelected ? 'rgba(168, 85, 247, 0.12)' : 'var(--bg-tertiary)',
                               cursor: 'pointer',
                               textAlign: 'left',
-                              transition: 'all 0.15s ease',
+                              transition: 'border-color 0.15s ease, background 0.15s ease, color 0.15s ease',
                             }}
                           >
                             {palette.swatchColors && palette.swatchColors.length > 0 && (
@@ -723,7 +723,7 @@ export default function ImageSettingsDrawer({
                             background: isSelected ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
                             color: isSelected ? 'var(--accent-color)' : 'var(--text-secondary)',
                             cursor: 'pointer',
-                            transition: 'all 0.15s ease',
+                            transition: 'border-color 0.15s ease, background 0.15s ease, color 0.15s ease',
                             fontWeight: isSelected ? 600 : 400,
                           }}
                         >
@@ -759,7 +759,7 @@ export default function ImageSettingsDrawer({
                             background: isSelected ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
                             color: isSelected ? 'var(--accent-color)' : 'var(--text-secondary)',
                             cursor: 'pointer',
-                            transition: 'all 0.15s ease',
+                            transition: 'border-color 0.15s ease, background 0.15s ease, color 0.15s ease',
                             fontWeight: isSelected ? 600 : 400,
                           }}
                         >
@@ -861,7 +861,7 @@ export function ImageSettingsSummary({
           background: 'transparent',
           color: 'var(--accent-color)',
           cursor: 'pointer',
-          transition: 'all 0.15s ease',
+          transition: 'border-color 0.15s ease, background 0.15s ease, color 0.15s ease',
         }}
       >
         Settings
@@ -907,7 +907,7 @@ export function ImageSettingsTrigger({
         color: 'var(--text-secondary)',
         fontSize: '11px',
         cursor: 'pointer',
-        transition: 'all 0.15s ease',
+        transition: 'border-color 0.15s ease, background 0.15s ease, color 0.15s ease',
         textAlign: 'left',
       }}
       title="Open image generation settings"
