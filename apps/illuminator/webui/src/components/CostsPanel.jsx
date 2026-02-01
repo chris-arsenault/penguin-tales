@@ -18,7 +18,7 @@ import {
   getAllCosts,
   summarizeCosts,
   clearAllCosts,
-} from '../lib/costStorage';
+} from '../lib/db/costRepository';
 
 function CostCard({ title, children }) {
   return (

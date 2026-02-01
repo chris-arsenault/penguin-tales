@@ -7,7 +7,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { NarrativeStyle, StoryNarrativeStyle, DocumentNarrativeStyle, RoleDefinition } from '@canonry/world-schema';
 import { useWizard } from '../WizardContext';
-import { getNarrativeStyleUsageStats } from '../../../lib/chronicleStorage';
+import { getNarrativeStyleUsageStats } from '../../../lib/db/chronicleRepository';
 
 /** Get roles from either story or document style */
 function getRoles(style: NarrativeStyle): RoleDefinition[] {

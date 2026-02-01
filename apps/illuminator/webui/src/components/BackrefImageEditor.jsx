@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useImageUrls } from '../hooks/useImageUrl';
-import { getChronicle } from '../lib/chronicleStorage';
+import { getChronicle } from '../lib/db/chronicleRepository';
 
 /**
  * Collect all displayable image IDs from a chronicle record.

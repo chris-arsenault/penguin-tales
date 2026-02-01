@@ -42,8 +42,8 @@ import { useHistorianReview } from './hooks/useHistorianReview';
 import HistorianReviewModal from './components/HistorianReviewModal';
 import HistorianConfigEditor from './components/HistorianConfigEditor';
 import { DEFAULT_HISTORIAN_CONFIG, isHistorianConfigured } from './lib/historianTypes';
-import { getPublishedStaticPagesForProject } from './lib/staticPageStorage';
-import { getEntityUsageStats, getChronicle, getChroniclesForSimulation, updateChronicleLoreBackported, updateChronicleHistorianNotes } from './lib/chronicleStorage';
+import { getPublishedStaticPagesForProject } from './lib/db/staticPageRepository';
+import { getEntityUsageStats, getChronicle, getChroniclesForSimulation, updateChronicleLoreBackported, updateChronicleHistorianNotes } from './lib/db/chronicleRepository';
 import { useStyleLibrary } from './hooks/useStyleLibrary';
 import { useImageGenSettings } from './hooks/useImageGenSettings';
 import ImageSettingsDrawer, { ImageSettingsTrigger } from './components/ImageSettingsDrawer';
@@ -57,10 +57,11 @@ import {
 } from './lib/promptBuilders';
 import { buildEntityIndex, buildRelationshipIndex, resolveEraInfo } from './lib/worldData';
 import { resolveStyleSelection } from './components/StyleSelector';
-import { exportImagePrompts, downloadImagePromptExport } from './lib/workerStorage';
+import { exportImagePrompts, downloadImagePromptExport } from './lib/db/imageRepository';
 import { getResolvedLLMCallSettings } from './lib/llmModelSettings';
 import * as entityRepo from './lib/db/entityRepository';
 import * as eventRepo from './lib/db/eventRepository';
+import { migrateFromLegacyDbs } from './lib/db/migrateFromLegacyDbs';
 import { useEntityStore } from './lib/db/entityStore';
 import {
   buildProminenceScale,
@@ -585,6 +586,9 @@ export default function IlluminatorRemote({
     (async () => {
       try {
         console.log('[Illuminator] Seed effect running', { simulationRunId, hasNarrativeHistory: !!wd.narrativeHistory?.length });
+
+        // Migrate legacy IndexedDB databases into Dexie (no-op after first run)
+        await migrateFromLegacyDbs();
 
         // Seed Dexie from worldData if not already done for this run
         const entitySeeded = await entityRepo.isSeeded(simulationRunId);
@@ -1555,7 +1559,7 @@ export default function IlluminatorRemote({
     );
     // Update local state (the run object in the hook)
     // We need to update via the storage to keep in sync
-    import('./lib/historianStorage').then(({ updateHistorianRun: updateRun }) => {
+    import('./lib/db/historianRepository').then(({ updateHistorianRun: updateRun }) => {
       updateRun(historianRun.runId, { notes: updatedNotes });
     });
   }, [historianRun]);

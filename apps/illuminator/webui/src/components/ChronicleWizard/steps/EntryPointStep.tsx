@@ -17,7 +17,7 @@ import {
   getUniqueKinds,
   type EntityWithPotential,
 } from '../../../lib/chronicle/storyPotential';
-import { getEntityUsageStats } from '../../../lib/chronicleStorage';
+import { getEntityUsageStats } from '../../../lib/db/chronicleRepository';
 import {
   FilterChips,
   StoryPotentialRadarWithScore,

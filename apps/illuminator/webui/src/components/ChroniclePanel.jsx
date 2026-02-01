@@ -25,7 +25,7 @@ import {
   generateChronicleId,
   deriveTitleFromRoles,
   createChronicleShell,
-} from '../lib/chronicleStorage';
+} from '../lib/db/chronicleRepository';
 import { downloadChronicleExport } from '../lib/chronicleExport';
 
 const REFINEMENT_STEPS = new Set(['summary', 'image_refs', 'compare', 'combine', 'cover_image_scene', 'cover_image']);

@@ -24,7 +24,7 @@ import {
   updateRevisionRun,
   generateRevisionRunId,
   deleteRevisionRun,
-} from '../lib/summaryRevisionStorage';
+} from '../lib/db/summaryRevisionRepository';
 
 // ============================================================================
 // Types

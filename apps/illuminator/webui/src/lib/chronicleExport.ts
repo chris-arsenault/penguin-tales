@@ -6,7 +6,7 @@
  * during generation.
  */
 
-import type { ChronicleRecord } from './chronicleStorage';
+import type { ChronicleRecord } from './db/chronicleRepository';
 import type {
   PerspectiveSynthesisRecord,
   ChronicleImageRefs,

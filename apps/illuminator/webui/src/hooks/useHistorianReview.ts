@@ -23,7 +23,7 @@ import {
   updateHistorianRun,
   deleteHistorianRun,
   generateHistorianRunId,
-} from '../lib/historianStorage';
+} from '../lib/db/historianRepository';
 
 // ============================================================================
 // Types

@@ -16,7 +16,7 @@ import {
   validateRoleAssignments,
   type EntitySelectionMetrics,
 } from '../../../lib/chronicle/selectionWizard';
-import { getEntityUsageStats } from '../../../lib/chronicleStorage';
+import { getEntityUsageStats } from '../../../lib/db/chronicleRepository';
 import {
   EnsembleConstellation,
   RoleSlot,

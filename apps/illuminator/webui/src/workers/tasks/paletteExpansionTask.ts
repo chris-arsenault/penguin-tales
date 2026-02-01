@@ -1,6 +1,6 @@
 import type { WorkerTask } from '../../lib/enrichmentTypes';
-import { saveCostRecordWithDefaults, type CostType } from '../../lib/costStorage';
-import { updatePaletteItems } from '../../lib/traitRegistry';
+import { saveCostRecordWithDefaults, type CostType } from '../../lib/db/costRepository';
+import { updatePaletteItems } from '../../lib/db/traitRepository';
 import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
 import { parseJsonObject } from './textParsing';

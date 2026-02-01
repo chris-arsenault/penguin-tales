@@ -12,7 +12,7 @@ import {
   loadStyleLibrary,
   saveStyleLibrary,
   resetStyleLibrary,
-} from '../lib/styleLibraryStorage';
+} from '../lib/db/styleRepository';
 
 export interface UseStyleLibraryReturn {
   /** Current style library */

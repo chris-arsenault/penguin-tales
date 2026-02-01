@@ -1,7 +1,7 @@
 import type { WorkerTask } from '../../lib/enrichmentTypes';
 import { estimateImageCost, calculateActualImageCost } from '../../lib/costEstimation';
-import { saveImage, generateImageId, extractImageDimensions } from '../../lib/workerStorage';
-import { saveCostRecordWithDefaults } from '../../lib/costStorage';
+import { saveImage, generateImageId, extractImageDimensions } from '../../lib/db/imageRepository';
+import { saveCostRecordWithDefaults } from '../../lib/db/costRepository';
 import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
 import type { TaskHandler } from './taskTypes';

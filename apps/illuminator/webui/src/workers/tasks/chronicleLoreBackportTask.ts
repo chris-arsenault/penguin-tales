@@ -16,10 +16,10 @@ import type {
   SummaryRevisionLLMResponse,
   RevisionEntityContext,
 } from '../../lib/summaryRevisionTypes';
-import { getRevisionRun, updateRevisionRun } from '../../lib/summaryRevisionStorage';
+import { getRevisionRun, updateRevisionRun } from '../../lib/db/summaryRevisionRepository';
 import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
-import { saveCostRecordWithDefaults, type CostType } from '../../lib/costStorage';
+import { saveCostRecordWithDefaults, type CostType } from '../../lib/db/costRepository';
 
 // ============================================================================
 // System Prompt
@@ -137,8 +137,16 @@ Output ONLY valid JSON. The description field is an ARRAY OF STRINGS — each st
   ]
 }
 
+## Narrative Lens Entities
+
+Some entities may be marked as **[NARRATIVE LENS]** — these are not cast members but contextual frame entities (rules, occurrences, abilities) that shaped the chronicle's world without being characters in it. Apply a higher bar for changes:
+
+- Only update a lens entity if the chronicle reveals a genuinely new fact about the entity itself — a consequence, a new aspect, or a changed status.
+- Do NOT update a lens entity merely because it was referenced or invoked. Being mentioned as context is its normal role.
+- Most lens entities should have NO changes. When changes do occur, they should be brief and factual.
+
 Rules:
-- Include EVERY cast entity in the patches array.
+- Include EVERY cast and lens entity in the patches array.
 - Output the COMPLETE text for each field — not a diff. Every original fact must be present.
 - If no change is needed for a field, output the current text unchanged (description as a single-element array).
 - Omit anchorPhrase if the description is unchanged.`;
@@ -151,6 +159,7 @@ function buildUserPrompt(
   entities: RevisionEntityContext[],
   chronicleText: string,
   perspectiveSynthesisJson: string,
+  customInstructions?: string,
 ): string {
   const sections: string[] = [];
   let chronicleFormat = '';
@@ -190,11 +199,14 @@ function buildUserPrompt(
     }
   }
 
-  // Cast entities
-  const entityLines: string[] = [];
-  for (const e of entities) {
+  // Separate cast and lens entities
+  const castEntities = entities.filter(e => !e.isLens);
+  const lensEntities = entities.filter(e => e.isLens);
+
+  function formatEntityBlock(e: RevisionEntityContext): string {
     const parts: string[] = [];
-    parts.push(`### ${e.name} (${e.kind}${e.subtype ? ` / ${e.subtype}` : ''})`);
+    const lensTag = e.isLens ? ' [NARRATIVE LENS]' : '';
+    parts.push(`### ${e.name} (${e.kind}${e.subtype ? ` / ${e.subtype}` : ''})${lensTag}`);
     parts.push(`ID: ${e.id}`);
     parts.push(`Prominence: ${e.prominence} | Culture: ${e.culture} | Status: ${e.status}`);
 
@@ -232,18 +244,40 @@ function buildUserPrompt(
       parts.push(`Existing Anchor Phrases (PRESERVE in description):\n${e.existingAnchorPhrases.map((a: string) => `  - "${a}"`).join('\n')}`);
     }
 
-    entityLines.push(parts.join('\n'));
+    return parts.join('\n');
   }
 
-  sections.push(`=== CAST (${entities.length} entities) ===\n\n${entityLines.join('\n\n---\n\n')}`);
+  // Cast entities section
+  const castLines = castEntities.map(formatEntityBlock);
+  sections.push(`=== CAST (${castEntities.length} entities) ===\n\n${castLines.join('\n\n---\n\n')}`);
+
+  // Lens entities section (if any)
+  if (lensEntities.length > 0) {
+    const lensLines = lensEntities.map(formatEntityBlock);
+    sections.push(`=== NARRATIVE LENS (${lensEntities.length} ${lensEntities.length === 1 ? 'entity' : 'entities'}) ===\nThese entities provided contextual framing for the chronicle — they are not cast members. Apply a higher bar: only update if the chronicle reveals genuinely new facts about the entity itself.\n\n${lensLines.join('\n\n---\n\n')}`);
+  }
 
   // Per-entity task framing — re-anchor the model at each entity boundary
   const documentFormatNote = chronicleFormat === 'document'
     ? `\nThis chronicle is written in document format — it reports events and outcomes factually. Extract institutional outcomes, status changes, and territorial shifts. Attribute each fact to the entity that owns it.`
     : '';
 
-  const entityTaskBlocks = entities.map((e) =>
-    `--- UPDATE: ${e.name} (${e.kind}) ---
+  const criticalNote = customInstructions
+    ? `\nCRITICAL — USER INSTRUCTIONS: ${customInstructions}`
+    : '';
+
+  const entityTaskBlocks = entities.map((e) => {
+    if (e.isLens) {
+      return `--- UPDATE: ${e.name} (${e.kind}) [NARRATIVE LENS] ---
+This entity was the narrative lens — contextual framing, not a cast member. It was referenced or invoked but did not act as a character. Apply a HIGH BAR for changes.
+
+For ${e.name}, ask:
+1. Does the chronicle reveal a genuinely new fact about ${e.name} itself — a consequence, a new aspect, a status change, or a previously unknown property?
+2. Merely being referenced, invoked, or serving as backdrop is NOT new lore. Skip those.
+3. If there IS new lore: compress into 1 sentence. Most lens entities need NO update.
+4. Final check: would this change make sense without knowing this chronicle used ${e.name} as a lens?${criticalNote}`;
+    }
+    return `--- UPDATE: ${e.name} (${e.kind}) ---
 You are writing the standalone wiki article for ${e.name}. A reader may arrive at this page knowing nothing about this chronicle. Every sentence must be about ${e.name}. Every reference to another entity, event, or artifact must be introduced with a brief identifying clause or omitted.
 
 For ${e.name}, follow the thinking steps:
@@ -251,10 +285,14 @@ For ${e.name}, follow the thinking steps:
 2. Does each new fact already appear in the existing description? If so, skip it.
 3. For each new fact: is it a detail refinement (edit existing sentence) or a new fact (add content)?
 4. Compress each new fact into 1-2 sentences of entity-relevant wiki content. Do not reconstruct chronicle scenes.
-5. Final check: would every sentence make sense to someone who has never read this chronicle?`
-  ).join('\n\n');
+5. Final check: would every sentence make sense to someone who has never read this chronicle?${criticalNote}`;
+  }).join('\n\n');
 
-  sections.push(`=== YOUR TASK ===
+  const criticalSection = customInstructions
+    ? `\n\n## CRITICAL — User Instructions\n\nThe following user-provided instructions override default behavior. Apply them to EVERY entity update:\n\n${customInstructions}\n`
+    : '';
+
+  sections.push(`=== YOUR TASK ===${criticalSection}
 Process each entity below independently. For each one, reset your focus — you are writing that entity's wiki article, not summarizing the chronicle.${documentFormatNote}
 
 General rules:
@@ -321,10 +359,13 @@ async function executeChronicleLoreBackportTask(
 
   // Chronicle text is stored in worldDynamicsContext (repurposed)
   // Perspective synthesis JSON is stored in staticPagesContext (repurposed)
+  // Custom user instructions are stored in revisionGuidance (repurposed)
+  const customInstructions = run.revisionGuidance || undefined;
   const userPrompt = buildUserPrompt(
     entities,
     run.worldDynamicsContext,
     run.staticPagesContext,
+    customInstructions,
   );
 
   try {

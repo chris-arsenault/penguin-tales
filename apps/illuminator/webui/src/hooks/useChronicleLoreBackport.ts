@@ -22,7 +22,7 @@ import {
   updateRevisionRun,
   generateRevisionRunId,
   deleteRevisionRun,
-} from '../lib/summaryRevisionStorage';
+} from '../lib/db/summaryRevisionRepository';
 
 // ============================================================================
 // Types
@@ -39,6 +39,8 @@ export interface ChronicleLoreBackportConfig {
   perspectiveSynthesisJson: string;
   /** Cast entities with their context */
   entities: RevisionEntityContext[];
+  /** Optional custom instructions injected as CRITICAL directives into the backport prompt */
+  customInstructions?: string;
 }
 
 export interface UseChronicleLoreBackportReturn {
@@ -153,20 +155,20 @@ export function useChronicleLoreBackport(
 
     // Create run in IndexedDB
     // Repurpose context fields: worldDynamicsContext = chronicle text, staticPagesContext = perspective JSON
+    // revisionGuidance = custom user instructions for the backport
     const newRun = await createRevisionRun(runId, config.projectId, config.simulationRunId, batches, {
       worldDynamicsContext: config.chronicleText,
       staticPagesContext: config.perspectiveSynthesisJson,
       schemaContext: '',
-      revisionGuidance: '',
+      revisionGuidance: config.customInstructions || '',
     });
 
     setRun(newRun);
     setIsActive(true);
     setChronicleId(config.chronicleId);
 
-    // Dispatch the single batch
-    const contexts = getEntityContexts(batches[0].entityIds);
-    dispatchBatch(runId, contexts);
+    // Dispatch the single batch — use config.entities directly to preserve isLens flags
+    dispatchBatch(runId, config.entities);
 
     // Start polling
     startPolling(runId);

@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import IlluminatorRemote from './IlluminatorRemote';
 import './App.css';
-import { exportImagePrompts, downloadImagePromptExport } from './lib/workerStorage';
+import { exportImagePrompts, downloadImagePromptExport } from './lib/db/imageRepository';
 
 // Standalone entry point for development
 // In production, this is loaded via Module Federation from The Canonry

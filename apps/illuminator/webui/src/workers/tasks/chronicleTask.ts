@@ -29,8 +29,8 @@ import {
   updateChronicleCoverImageStatus,
   updateChronicleFailure,
   getChronicle,
-} from '../../lib/chronicleStorage';
-import { saveCostRecordWithDefaults, type CostType } from '../../lib/costStorage';
+} from '../../lib/db/chronicleRepository';
+import { saveCostRecordWithDefaults, type CostType } from '../../lib/db/costRepository';
 import { resolveAnchorPhrase } from '../../lib/fuzzyAnchor';
 import {
   selectEntitiesV2,
@@ -678,8 +678,9 @@ ${versionsBlock}`;
   }
 
   // Parse out combine instructions from the report
+  // Fuzzy match: any heading level (#, ##, ###), case-insensitive, optional colon
   const fullReport = compareCall.result.text;
-  const combineHeaderMatch = fullReport.match(/^## Combine Instructions\s*$/m);
+  const combineHeaderMatch = fullReport.match(/^#{1,4}\s+combine\s+instructions:?\s*$/im);
   let combineInstructions: string | undefined;
   if (combineHeaderMatch && combineHeaderMatch.index != null) {
     combineInstructions = fullReport.slice(combineHeaderMatch.index + combineHeaderMatch[0].length).trim();

@@ -6,7 +6,7 @@
  * as wikiLinkService.ts (lowercase ASCII slug, word-boundary matching).
  */
 
-import type { ChronicleRecord } from './chronicleStorage';
+import type { ChronicleRecord } from './db/chronicleRepository';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -746,8 +746,8 @@ export async function scanForReferences(
                 matchType: 'metadata',
                 matchedText: eff.relatedEntity.name,
                 position: 0,
-                contextBefore: 'Related entity:',
-                contextAfter: eff.description.slice(0, 40),
+                contextBefore: `Related entity (${pe.entity.name}):`,
+                contextAfter: '',
               });
             }
           }
@@ -822,7 +822,7 @@ export async function scanForReferences(
 // Patch building
 // ---------------------------------------------------------------------------
 
-interface FieldReplacement {
+export interface FieldReplacement {
   position: number;
   originalLength: number;
   replacement: string;
@@ -832,7 +832,7 @@ interface FieldReplacement {
  * Apply a set of replacements to a text string. Replacements must not overlap
  * and are applied in reverse order to preserve positions.
  */
-function applyReplacements(text: string, replacements: FieldReplacement[]): string {
+export function applyReplacements(text: string, replacements: FieldReplacement[]): string {
   // Sort by position descending so earlier positions aren't shifted
   const sorted = [...replacements].sort((a, b) => b.position - a.position);
   let result = text;
@@ -852,9 +852,10 @@ export function buildRenamePatches(
 ): RenamePatches {
   const decisionMap = new Map(decisions.map((d) => [d.matchId, d]));
 
-  // Group text-field replacements by source+field
-  // Key: `${sourceType}:${sourceId}:${field}`
-  const textReplacements = new Map<string, FieldReplacement[]>();
+  // Patch maps — accumulated directly during the match loop
+  const entityPatchMap = new Map<string, Record<string, string>>();
+  const chroniclePatchMap = new Map<string, Record<string, unknown>>();
+  const eventPatchMap = new Map<string, Record<string, string>>();
 
   // Track metadata updates per chronicle
   const chronicleMetaUpdates = new Map<string, Partial<ChronicleRecord>>();
@@ -901,47 +902,35 @@ export function buildRenamePatches(
         chronicleMetaUpdates.set(match.sourceId, meta);
       }
     } else {
-      // Text field replacement
-      const key = `${match.sourceType}:${match.sourceId}:${match.field}`;
-      const list = textReplacements.get(key) || [];
-      list.push({
+      // Text field replacement — accumulate directly into per-type patch maps
+      const replacement: FieldReplacement = {
         position: match.position,
         originalLength: match.matchedText.length,
         replacement: replacementText,
-      });
-      textReplacements.set(key, list);
-    }
-  }
+      };
 
-  // Build entity patches
-  const entityPatchMap = new Map<string, Record<string, string>>();
-
-  for (const [key, replacements] of textReplacements) {
-    const [sourceType, sourceId, ...fieldParts] = key.split(':');
-    const field = fieldParts.join(':');
-
-    if (sourceType === 'entity') {
-      const existing = entityPatchMap.get(sourceId) || {};
-      // We need the original text to apply replacements - but we don't have it here.
-      // Instead, store the field+replacements and let the caller apply them.
-      // Actually we can compute the result if we thread the original text through.
-      // Let's store the replacements and let applyEntityPatches resolve them.
-      existing[`__replacements_${field}`] = JSON.stringify(replacements);
-      entityPatchMap.set(sourceId, existing);
-    }
-  }
-
-  // Build chronicle patches
-  const chroniclePatchMap = new Map<string, Record<string, unknown>>();
-
-  for (const [key, replacements] of textReplacements) {
-    const [sourceType, sourceId, ...fieldParts] = key.split(':');
-    const field = fieldParts.join(':');
-
-    if (sourceType === 'chronicle') {
-      const existing = chroniclePatchMap.get(sourceId) || {};
-      existing[`__replacements_${field}`] = replacements;
-      chroniclePatchMap.set(sourceId, existing);
+      if (match.sourceType === 'entity') {
+        const existing = entityPatchMap.get(match.sourceId) || {};
+        const rKey = `__replacements_${match.field}`;
+        const list: FieldReplacement[] = existing[rKey] ? JSON.parse(existing[rKey]) : [];
+        list.push(replacement);
+        existing[rKey] = JSON.stringify(list);
+        entityPatchMap.set(match.sourceId, existing);
+      } else if (match.sourceType === 'chronicle') {
+        const existing = chroniclePatchMap.get(match.sourceId) || {};
+        const rKey = `__replacements_${match.field}`;
+        const list: FieldReplacement[] = (existing[rKey] as FieldReplacement[]) || [];
+        list.push(replacement);
+        existing[rKey] = list;
+        chroniclePatchMap.set(match.sourceId, existing);
+      } else if (match.sourceType === 'event') {
+        const existing = eventPatchMap.get(match.sourceId) || {};
+        const rKey = `__replacements_${match.field}`;
+        const list: FieldReplacement[] = existing[rKey] ? JSON.parse(existing[rKey]) : [];
+        list.push(replacement);
+        existing[rKey] = JSON.stringify(list);
+        eventPatchMap.set(match.sourceId, existing);
+      }
     }
   }
 
@@ -950,20 +939,6 @@ export function buildRenamePatches(
     const existing = chroniclePatchMap.get(chronicleId) || {};
     Object.assign(existing, meta);
     chroniclePatchMap.set(chronicleId, existing);
-  }
-
-  // Build event patches
-  const eventPatchMap = new Map<string, Record<string, string>>();
-
-  for (const [key, replacements] of textReplacements) {
-    const [sourceType, sourceId, ...fieldParts] = key.split(':');
-    const field = fieldParts.join(':');
-
-    if (sourceType === 'event') {
-      const existing = eventPatchMap.get(sourceId) || {};
-      existing[`__replacements_${field}`] = JSON.stringify(replacements);
-      eventPatchMap.set(sourceId, existing);
-    }
   }
 
   // Merge event metadata updates
@@ -994,7 +969,7 @@ export function buildRenamePatches(
 export function applyEntityPatches<T extends ScanEntity>(
   entities: T[],
   patches: EntityPatch[],
-  targetEntityId: string,
+  targetEntityId: string | null,
   newName: string,
 ): T[] {
   const patchMap = new Map(patches.map((p) => [p.entityId, p]));

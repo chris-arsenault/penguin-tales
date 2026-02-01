@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { searchImages, getImageDataUrl } from '../lib/workerStorage';
+import { searchImages, getImageDataUrl } from '../lib/db/imageRepository';
 
 const PAGE_SIZE = 12;
 

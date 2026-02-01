@@ -14,10 +14,10 @@ import type { WorkerTask } from '../../lib/enrichmentTypes';
 import type { TaskContext } from './taskTypes';
 import type { TaskResult } from '../types';
 import type { SummaryRevisionLLMResponse } from '../../lib/summaryRevisionTypes';
-import { getRevisionRun, updateRevisionRun } from '../../lib/summaryRevisionStorage';
+import { getRevisionRun, updateRevisionRun } from '../../lib/db/summaryRevisionRepository';
 import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
-import { saveCostRecordWithDefaults, type CostType } from '../../lib/costStorage';
+import { saveCostRecordWithDefaults, type CostType } from '../../lib/db/costRepository';
 
 // ============================================================================
 // System Prompt

@@ -137,4 +137,6 @@ export interface RevisionEntityContext {
   existingAnchorPhrases?: string[];
   /** Per-kind description focus guidance (from entityGuidance config) */
   kindFocus?: string;
+  /** True if this entity is the narrative lens (contextual frame, not a cast member) */
+  isLens?: boolean;
 }

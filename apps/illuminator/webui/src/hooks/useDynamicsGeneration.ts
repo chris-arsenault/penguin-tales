@@ -21,7 +21,7 @@ import {
   updateDynamicsRun,
   generateRunId,
   deleteDynamicsRun,
-} from '../lib/dynamicsGenerationStorage';
+} from '../lib/db/dynamicsRepository';
 import type { EntityContext, RelationshipContext } from '../lib/chronicleTypes';
 
 // ============================================================================

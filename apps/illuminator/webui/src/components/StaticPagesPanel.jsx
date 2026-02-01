@@ -12,7 +12,7 @@ import {
   createStaticPage,
   updateStaticPage,
   deleteStaticPage,
-} from '../lib/staticPageStorage';
+} from '../lib/db/staticPageRepository';
 
 export default function StaticPagesPanel({ projectId, entities }) {
   const [pages, setPages] = useState([]);

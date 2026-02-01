@@ -6,6 +6,8 @@
  */
 
 import type { NarrativeStyle } from '@canonry/world-schema';
+import type { ChronicleStep } from './enrichmentTypes';
+import type { HistorianNote } from './historianTypes';
 
 // =============================================================================
 // Chronicle Plan - Output of Step 1
@@ -675,4 +677,261 @@ export interface ChronicleTemporalContext {
 
   /** Human-readable temporal description */
   temporalDescription: string;
+}
+
+// =============================================================================
+// Chronicle Record - Persisted chronicle data
+// =============================================================================
+
+export interface ChronicleRecord {
+  chronicleId: string;
+  projectId: string;
+  /** Unique ID for the simulation run this chronicle belongs to */
+  simulationRunId: string;
+
+  // ========================================================================
+  // Chronicle Identity (chronicle-first architecture)
+  // ========================================================================
+
+  /** User-visible title for the chronicle */
+  title: string;
+
+  /** Narrative format (story vs document) */
+  format: ChronicleFormat;
+
+  /** Focus type: what is this chronicle about? */
+  focusType: ChronicleFocusType;
+
+  /** Role assignments define the chronicle's cast */
+  roleAssignments: ChronicleRoleAssignment[];
+
+  /** Optional narrative lens - contextual frame entity (rule, occurrence, ability) */
+  lens?: NarrativeLens;
+
+  /** Narrative style ID */
+  narrativeStyleId: string;
+  /** Narrative style snapshot (stored with the chronicle seed) */
+  narrativeStyle?: NarrativeStyle;
+
+  /** Selected entity IDs (all entities in the chronicle) */
+  selectedEntityIds: string[];
+
+  /** Selected event IDs */
+  selectedEventIds: string[];
+
+  /** Selected relationship IDs (src:dst:kind format) */
+  selectedRelationshipIds: string[];
+
+  /** Temporal context including focal era */
+  temporalContext?: ChronicleTemporalContext;
+
+  // ========================================================================
+  // Mechanical metadata (used for graph traversal, not identity)
+  // ========================================================================
+
+  /** Entry point used for candidate discovery - purely mechanical, not displayed */
+  entrypointId?: string;
+
+  // ========================================================================
+  // Generation metadata
+  // ========================================================================
+
+  /** Summary of what was selected for the prompt */
+  selectionSummary?: {
+    entityCount: number;
+    eventCount: number;
+    relationshipCount: number;
+  };
+
+  // Generation state
+  status: ChronicleStatus;
+  failureStep?: ChronicleStep;
+  failureReason?: string;
+  failedAt?: number;
+
+  // Content
+  assembledContent?: string;
+  assembledAt?: number;
+
+  // Generation prompts (stored for debugging/export - the ACTUAL prompts sent)
+  generationSystemPrompt?: string;
+  generationUserPrompt?: string;
+  /** Temperature used for the most recent generation */
+  generationTemperature?: number;
+  /** Prior generation versions (chronicle regeneration history) */
+  generationHistory?: ChronicleGenerationVersion[];
+  /** Version id that should be published on accept */
+  activeVersionId?: string;
+
+  // Generation context snapshot (stored for export - what was actually used)
+  // This is the FINAL context after perspective synthesis, not the original input
+  generationContext?: {
+    worldName: string;
+    worldDescription: string;
+    /** The actual tone sent to LLM (post-perspective: assembled + brief + motifs) */
+    tone: string;
+    /** The actual facts sent to LLM (post-perspective: faceted facts) */
+    canonFacts: string[];
+    /** Name bank for invented characters */
+    nameBank?: Record<string, string[]>;
+    /** Synthesized narrative voice from perspective synthesis */
+    narrativeVoice?: Record<string, string>;
+    /** Per-entity writing directives from perspective synthesis */
+    entityDirectives?: Array<{ entityId: string; entityName: string; directive: string }>;
+  };
+
+  // Perspective synthesis (required for all new chronicles)
+  perspectiveSynthesis?: PerspectiveSynthesisRecord;
+
+  // Cohesion validation
+  cohesionReport?: CohesionReport;
+  validatedAt?: number;
+
+  // Version comparison report (user-triggered, text only)
+  comparisonReport?: string;
+  comparisonReportGeneratedAt?: number;
+  combineInstructions?: string;
+
+  // Refinements
+  summary?: string;
+  summaryGeneratedAt?: number;
+  summaryModel?: string;
+  summaryTargetVersionId?: string;
+  imageRefs?: ChronicleImageRefs;
+  imageRefsGeneratedAt?: number;
+  imageRefsModel?: string;
+  imageRefsTargetVersionId?: string;
+  coverImage?: ChronicleCoverImage;
+  coverImageGeneratedAt?: number;
+  coverImageModel?: string;
+  validationStale?: boolean;
+
+  // Revision tracking
+  editVersion: number;
+  editedAt?: number;
+
+  // Final content
+  finalContent?: string;
+  acceptedAt?: number;
+
+  /** Whether lore from this chronicle has been backported to cast entity descriptions */
+  loreBackported?: boolean;
+
+  /** Historian annotations — scholarly margin notes anchored to chronicle text */
+  historianNotes?: HistorianNote[];
+
+  // Cost tracking (aggregated across all LLM calls)
+  totalEstimatedCost: number;
+  totalActualCost: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+
+  // Metadata
+  model: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * Stored snapshot of a chronicle generation version.
+ */
+export interface ChronicleGenerationVersion {
+  versionId: string;
+  generatedAt: number;
+  content: string;
+  wordCount: number;
+  model: string;
+  temperature?: number;
+  systemPrompt: string;
+  userPrompt: string;
+  cost?: { estimated: number; actual: number; inputTokens: number; outputTokens: number };
+}
+
+/**
+ * Shell record metadata (for creating before generation starts)
+ */
+export interface ChronicleShellMetadata {
+  projectId: string;
+  simulationRunId: string;
+  model: string;
+
+  // Chronicle identity
+  title?: string;
+  format: ChronicleFormat;
+  narrativeStyleId: string;
+  narrativeStyle?: NarrativeStyle;
+  roleAssignments: ChronicleRoleAssignment[];
+  lens?: NarrativeLens;
+  selectedEntityIds: string[];
+  selectedEventIds: string[];
+  selectedRelationshipIds: string[];
+  temporalContext?: ChronicleTemporalContext;
+
+  // Mechanical (optional)
+  entrypointId?: string;
+}
+
+/**
+ * Chronicle creation metadata
+ */
+export interface ChronicleMetadata {
+  projectId: string;
+  simulationRunId: string;
+  model: string;
+
+  // Chronicle identity
+  title?: string;
+  format: ChronicleFormat;
+
+  // Generation prompts (the ACTUAL prompts sent to LLM - canonical source of truth)
+  generationSystemPrompt?: string;
+  generationUserPrompt?: string;
+  generationTemperature?: number;
+  narrativeStyleId: string;
+  narrativeStyle?: NarrativeStyle;
+  roleAssignments: ChronicleRoleAssignment[];
+  lens?: NarrativeLens;
+  selectedEntityIds: string[];
+  selectedEventIds: string[];
+  selectedRelationshipIds: string[];
+  temporalContext?: ChronicleTemporalContext;
+
+  // Mechanical (optional)
+  entrypointId?: string;
+
+  // Generation result
+  assembledContent: string;
+  selectionSummary: {
+    entityCount: number;
+    eventCount: number;
+    relationshipCount: number;
+  };
+  perspectiveSynthesis?: PerspectiveSynthesisRecord;
+  cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number };
+}
+
+// =============================================================================
+// Entity Usage Statistics
+// =============================================================================
+
+/**
+ * Usage statistics for an entity across chronicles
+ */
+export interface EntityUsageStats {
+  entityId: string;
+  usageCount: number;
+  chronicleIds: string[];
+}
+
+// =============================================================================
+// Narrative Style Usage Statistics
+// =============================================================================
+
+/**
+ * Usage statistics for a narrative style across chronicles
+ */
+export interface NarrativeStyleUsageStats {
+  styleId: string;
+  usageCount: number;
+  chronicleIds: string[];
 }

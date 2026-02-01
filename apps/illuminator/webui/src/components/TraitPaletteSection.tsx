@@ -12,7 +12,7 @@ import {
   exportPalettes,
   type TraitPalette,
   type PaletteItem,
-} from '../lib/traitRegistry';
+} from '../lib/db/traitRepository';
 import type { QueueItem, EnrichmentType } from '../lib/enrichmentTypes';
 import type { EnrichedEntity } from '../hooks/useEnrichmentQueue';
 

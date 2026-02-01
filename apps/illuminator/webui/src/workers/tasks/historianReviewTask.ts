@@ -19,10 +19,10 @@ import type {
   HistorianLLMResponse,
   HistorianTargetType,
 } from '../../lib/historianTypes';
-import { getHistorianRun, updateHistorianRun } from '../../lib/historianStorage';
+import { getHistorianRun, updateHistorianRun } from '../../lib/db/historianRepository';
 import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
-import { saveCostRecordWithDefaults, type CostType } from '../../lib/costStorage';
+import { saveCostRecordWithDefaults, type CostType } from '../../lib/db/costRepository';
 
 // ============================================================================
 // System Prompt

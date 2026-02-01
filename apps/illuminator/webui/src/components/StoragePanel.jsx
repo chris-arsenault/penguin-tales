@@ -15,7 +15,7 @@ import {
   getImageBlob,
   formatBytes,
 } from '../../../../canonry/webui/src/storage/imageStore';
-import { downloadImagePromptExport } from '../lib/workerStorage';
+import { downloadImagePromptExport } from '../lib/db/imageRepository';
 import ImageModal from './ImageModal';
 
 const DEFAULT_PAGE_SIZE = 24;

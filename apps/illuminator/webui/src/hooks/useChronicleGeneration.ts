@@ -27,7 +27,7 @@ import {
   acceptChronicle as acceptChronicleInDb,
   updateChronicleFailure,
   type ChronicleRecord,
-} from '../lib/chronicleStorage';
+} from '../lib/db/chronicleRepository';
 
 // ============================================================================
 // Types

@@ -1,12 +1,12 @@
 import type { WorkerTask, DescriptionChainDebug } from '../../lib/enrichmentTypes';
 import type { EraTemporalInfo } from '../../lib/chronicleTypes';
-import { saveCostRecordWithDefaults, type CostType } from '../../lib/costStorage';
+import { saveCostRecordWithDefaults, type CostType } from '../../lib/db/costRepository';
 import {
   getTraitGuidance,
   registerUsedTraits,
   incrementPaletteUsage,
   type TraitGuidance,
-} from '../../lib/traitRegistry';
+} from '../../lib/db/traitRepository';
 import { runTextCall } from '../../lib/llmTextCall';
 import { getCallConfig } from './llmCallConfig';
 import { parseJsonObject } from './textParsing';

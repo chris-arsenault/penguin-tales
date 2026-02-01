@@ -12,8 +12,8 @@ import {
   getHistoricalTraits,
   type TraitPalette,
   type PaletteItem,
-} from './traitRegistry';
-import { saveCostRecordWithDefaults } from './costStorage';
+} from './db/traitRepository';
+import { saveCostRecordWithDefaults } from './db/costRepository';
 import { runTextCall } from './llmTextCall';
 import { parseJsonObject } from './jsonParsing';
 import { getCallConfig } from './llmModelSettings';

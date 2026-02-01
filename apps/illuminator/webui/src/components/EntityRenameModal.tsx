@@ -14,20 +14,20 @@ import { toCulture } from '../lib/chronicle/nameBank';
 import {
   scanForReferences,
   buildRenamePatches,
-  applyEntityPatches,
   applyChroniclePatches,
-  applyNarrativeEventPatches,
   type RenameMatch,
   type MatchDecision,
   type RenameScanResult,
   type ScanNarrativeEvent,
+  type EntityPatch,
+  type EventPatch,
 } from '../lib/entityRename';
 import {
   getChroniclesForSimulation,
   getChronicle,
   putChronicle,
   type ChronicleRecord,
-} from '../lib/chronicleStorage';
+} from '../lib/db/chronicleRepository';
 import type { CultureDefinition } from '@canonry/world-schema';
 
 // ---------------------------------------------------------------------------
@@ -58,6 +58,8 @@ interface Relationship {
   status?: string;
 }
 
+type ModalMode = 'rename' | 'patch';
+
 interface EntityRenameModalProps {
   entityId: string;
   entities: Entity[];
@@ -65,7 +67,14 @@ interface EntityRenameModalProps {
   simulationRunId: string;
   relationships?: Relationship[];
   narrativeEvents?: ScanNarrativeEvent[];
-  onApply: (patchedEntities: Entity[], patchedNarrativeEvents?: ScanNarrativeEvent[]) => void;
+  /** 'rename' = full rename flow, 'patch' = repair stale names in events */
+  mode?: ModalMode;
+  onApply: (manifest: {
+    entityPatches: EntityPatch[];
+    eventPatches: EventPatch[];
+    targetEntityId: string | null;
+    newName: string;
+  }) => void;
   onClose: () => void;
 }
 
@@ -371,13 +380,13 @@ function SourceSection({
             ` + ${group.connections.length} conn`}
         </span>
         {accepts > 0 && (
-          <span style={{ fontSize: '10px', color: '#22c55e' }}>{accepts}\u2713</span>
+          <span style={{ fontSize: '10px', color: '#22c55e' }}>{accepts}{'\u2713'}</span>
         )}
         {rejects > 0 && (
-          <span style={{ fontSize: '10px', color: '#ef4444' }}>{rejects}\u2717</span>
+          <span style={{ fontSize: '10px', color: '#ef4444' }}>{rejects}{'\u2717'}</span>
         )}
         {edits > 0 && (
-          <span style={{ fontSize: '10px', color: '#6366f1' }}>{edits}\u270E</span>
+          <span style={{ fontSize: '10px', color: '#6366f1' }}>{edits}{'\u270E'}</span>
         )}
 
         {/* Per-source bulk actions (stop propagation so click doesn't toggle) */}
@@ -393,7 +402,7 @@ function SourceSection({
             padding: '0 4px',
           }}
         >
-          all\u2713
+          {'all\u2713'}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onRejectAll(); }}
@@ -407,7 +416,7 @@ function SourceSection({
             padding: '0 4px',
           }}
         >
-          all\u2717
+          {'all\u2717'}
         </button>
       </div>
 
@@ -482,6 +491,7 @@ export default function EntityRenameModal({
   simulationRunId,
   relationships,
   narrativeEvents,
+  mode = 'rename',
   onApply,
   onClose,
 }: EntityRenameModalProps) {
@@ -490,8 +500,14 @@ export default function EntityRenameModal({
     [entities, entityId],
   );
 
+  const isPatch = mode === 'patch';
+
   const [phase, setPhase] = useState<Phase>('input');
-  const [newName, setNewName] = useState('');
+  // In patch mode: newName = entity.name (current, correct), oldNameInput = user-entered stale name
+  const [newName, setNewName] = useState(isPatch ? entity?.name || '' : '');
+  const [oldNameInput, setOldNameInput] = useState(
+    isPatch ? entityId.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '',
+  );
   const [scanResult, setScanResult] = useState<RenameScanResult | null>(null);
   const [decisions, setDecisions] = useState<Map<string, DecisionState>>(
     new Map(),
@@ -538,20 +554,50 @@ export default function EntityRenameModal({
   }, [entity, cultures]);
 
   // --- Scanning ---
+  const scanOldName = isPatch ? oldNameInput.trim() : entity.name;
+
   const handleScan = useCallback(async () => {
-    if (!newName.trim()) return;
+    if (isPatch ? !oldNameInput.trim() : !newName.trim()) return;
     setPhase('scanning');
+
+    console.log('[EntityRenameModal] handleScan starting', {
+      scanOldName,
+      newName,
+      entityCount: entities.length,
+      narrativeEventCount: narrativeEvents?.length ?? 0,
+    });
+
+    // Sample a narrative event to check if it has patched or original text
+    if (narrativeEvents && narrativeEvents.length > 0) {
+      const sample = narrativeEvents[0];
+      console.log('[EntityRenameModal] Sample narrative event', {
+        id: sample.id,
+        description: sample.description?.substring(0, 200),
+        action: (sample as any).action?.substring(0, 200),
+        hasSimulationRunId: 'simulationRunId' in sample,
+      });
+    }
 
     try {
       const chronicles = await getChroniclesForSimulation(simulationRunId);
       const result = await scanForReferences(
         entityId,
-        entity.name,
+        scanOldName,
         entities,
         chronicles,
         relationships,
         narrativeEvents,
       );
+      // Filter out no-op matches where the matched text already equals the new name
+      const effectiveName = isPatch ? entity.name : newName;
+      result.matches = result.matches.filter(
+        (m) => m.matchType === 'id_slug' || m.matchedText !== effectiveName,
+      );
+
+      console.log('[EntityRenameModal] Scan result', {
+        totalMatches: result.matches.length,
+        eventMatches: result.matches.filter((m: any) => m.sourceType === 'event').length,
+      });
       setScanResult(result);
 
       // Initialize decisions: accept for full+metadata, reject for partial.
@@ -573,7 +619,7 @@ export default function EntityRenameModal({
       console.error('[EntityRename] Scan failed:', err);
       setPhase('input');
     }
-  }, [newName, entityId, entity.name, entities, simulationRunId, relationships]);
+  }, [newName, oldNameInput, isPatch, scanOldName, entityId, entities, simulationRunId, relationships, narrativeEvents]);
 
   // --- Decision handling ---
   const handleChangeAction = useCallback(
@@ -686,17 +732,15 @@ export default function EntityRenameModal({
 
       setApplyProgress('Building patches...');
       const patches = buildRenamePatches(scanResult, newName, decisionArray);
+      console.log('[EntityRenameModal] Built patches', {
+        entityPatchCount: patches.entityPatches.length,
+        eventPatchCount: patches.eventPatches.length,
+        chroniclePatchCount: patches.chroniclePatches.length,
+        eventPatchIds: patches.eventPatches.map((p: any) => p.eventId),
+        eventPatchKeys: patches.eventPatches.map((p: any) => Object.keys(p.changes)),
+      });
 
-      setApplyProgress(
-        `Updating ${patches.entityPatches.length} entities...`,
-      );
-      const patchedEntities = applyEntityPatches(
-        entities,
-        patches.entityPatches,
-        entityId,
-        newName,
-      );
-
+      // Apply chronicle patches directly (chronicles have their own IDB store)
       let chronicleCount = 0;
       if (patches.chroniclePatches.length > 0) {
         setApplyProgress(
@@ -709,14 +753,9 @@ export default function EntityRenameModal({
         );
       }
 
-      // Apply narrative event patches
-      let patchedEvents: ScanNarrativeEvent[] | undefined;
-      if (patches.eventPatches.length > 0 && narrativeEvents) {
-        setApplyProgress(
-          `Updating ${patches.eventPatches.length} narrative events...`,
-        );
-        patchedEvents = applyNarrativeEventPatches(narrativeEvents, patches.eventPatches);
-      }
+      setApplyProgress(
+        `Persisting ${patches.entityPatches.length} entity patches...`,
+      );
 
       const parts = [`${patches.entityPatches.length} entities`, `${chronicleCount} chronicles`];
       if (patches.eventPatches.length > 0) {
@@ -724,13 +763,19 @@ export default function EntityRenameModal({
       }
       setApplyResult(`Updated ${parts.join(', ')}.`);
 
-      onApply(patchedEntities, patchedEvents);
+      // Pass patch manifest to parent — parent handles Dexie persistence
+      onApply({
+        entityPatches: patches.entityPatches,
+        eventPatches: patches.eventPatches,
+        targetEntityId: isPatch ? null : entityId,
+        newName,
+      });
       setPhase('done');
     } catch (err) {
       console.error('[EntityRename] Apply failed:', err);
       setApplyProgress(`Error: ${err}`);
     }
-  }, [scanResult, decisions, newName, entities, entityId, narrativeEvents, onApply]);
+  }, [scanResult, decisions, newName, entityId, onApply, isPatch]);
 
   // --- Stats ---
   const stats = useMemo(() => {
@@ -893,7 +938,9 @@ export default function EntityRenameModal({
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: '16px' }}>Rename Entity</h2>
+            <h2 style={{ margin: 0, fontSize: '16px' }}>
+              {isPatch ? 'Patch Stale Names' : 'Rename Entity'}
+            </h2>
             <p
               style={{
                 margin: '4px 0 0',
@@ -960,62 +1007,110 @@ export default function EntityRenameModal({
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '8px',
-                  alignItems: 'center',
-                  marginBottom: '12px',
-                }}
-              >
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && newName.trim()) handleScan();
-                  }}
-                  placeholder="Enter new name..."
-                  style={{
-                    flex: 1,
-                    background: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-color)',
-                    color: 'var(--text-primary)',
-                    fontSize: '14px',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    outline: 'none',
-                  }}
-                />
-                {entity.culture && (
-                  <button
-                    onClick={handleRollName}
-                    disabled={isRolling}
-                    className="illuminator-button illuminator-button-secondary"
+              {isPatch ? (
+                /* Patch mode: user enters the OLD stale name to find */
+                <>
+                  <div
                     style={{
-                      padding: '8px 16px',
-                      fontSize: '12px',
-                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      gap: '8px',
+                      alignItems: 'center',
+                      marginBottom: '12px',
                     }}
-                    title="Generate a culture-appropriate name using Name Forge"
                   >
-                    {isRolling ? 'Rolling...' : 'Roll Name'}
-                  </button>
-                )}
-              </div>
-
-              <p
-                style={{
-                  fontSize: '11px',
-                  color: 'var(--text-muted)',
-                  lineHeight: '1.6',
-                }}
-              >
-                Enter a new name or use Roll Name to generate one from Name
-                Forge. The scan will find all references to &ldquo;
-                {entity.name}&rdquo; across related entities and chronicles.
-              </p>
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={oldNameInput}
+                      onChange={(e) => setOldNameInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && oldNameInput.trim()) handleScan();
+                      }}
+                      placeholder="Enter old/stale name to find..."
+                      style={{
+                        flex: 1,
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-primary)',
+                        fontSize: '14px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+                  <p
+                    style={{
+                      fontSize: '11px',
+                      color: 'var(--text-muted)',
+                      lineHeight: '1.6',
+                    }}
+                  >
+                    Enter the old or stale name to search for. All occurrences
+                    will be shown for review and replaced with the current name
+                    &ldquo;{entity.name}&rdquo;.
+                  </p>
+                </>
+              ) : (
+                /* Rename mode: user enters the NEW name */
+                <>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '8px',
+                      alignItems: 'center',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newName.trim()) handleScan();
+                      }}
+                      placeholder="Enter new name..."
+                      style={{
+                        flex: 1,
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-primary)',
+                        fontSize: '14px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        outline: 'none',
+                      }}
+                    />
+                    {entity.culture && (
+                      <button
+                        onClick={handleRollName}
+                        disabled={isRolling}
+                        className="illuminator-button illuminator-button-secondary"
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '12px',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title="Generate a culture-appropriate name using Name Forge"
+                      >
+                        {isRolling ? 'Rolling...' : 'Roll Name'}
+                      </button>
+                    )}
+                  </div>
+                  <p
+                    style={{
+                      fontSize: '11px',
+                      color: 'var(--text-muted)',
+                      lineHeight: '1.6',
+                    }}
+                  >
+                    Enter a new name or use Roll Name to generate one from Name
+                    Forge. The scan will find all references to &ldquo;
+                    {entity.name}&rdquo; across related entities and chronicles.
+                  </p>
+                </>
+              )}
             </div>
           )}
 
@@ -1032,7 +1127,7 @@ export default function EntityRenameModal({
                 Scanning entities and chronicles...
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                Looking for references to &ldquo;{entity.name}&rdquo;
+                Looking for references to &ldquo;{scanOldName}&rdquo;
               </div>
             </div>
           )}
@@ -1056,7 +1151,7 @@ export default function EntityRenameModal({
                 }}
               >
                 <span>
-                  <strong>{entity.name}</strong> &rarr;{' '}
+                  <strong>{isPatch ? oldNameInput : entity.name}</strong> &rarr;{' '}
                   <strong>{newName}</strong>
                 </span>
                 <span style={{ color: 'var(--text-muted)' }}>|</span>
@@ -1198,7 +1293,7 @@ export default function EntityRenameModal({
                   marginBottom: '8px',
                 }}
               >
-                {phase === 'applying' ? applyProgress : 'Rename Complete'}
+                {phase === 'applying' ? applyProgress : isPatch ? 'Patch Complete' : 'Rename Complete'}
               </div>
               {phase === 'done' && applyResult && (
                 <div
@@ -1229,12 +1324,12 @@ export default function EntityRenameModal({
           {phase === 'input' && (
             <button
               onClick={handleScan}
-              disabled={!newName.trim()}
+              disabled={isPatch ? !oldNameInput.trim() : !newName.trim()}
               className="illuminator-button"
               style={{
                 padding: '6px 20px',
                 fontSize: '12px',
-                opacity: newName.trim() ? 1 : 0.5,
+                opacity: (isPatch ? oldNameInput.trim() : newName.trim()) ? 1 : 0.5,
               }}
             >
               Scan References
@@ -1260,7 +1355,7 @@ export default function EntityRenameModal({
                     stats.accepts === 0 && stats.edits === 0 ? 0.5 : 1,
                 }}
               >
-                Apply Rename ({stats.accepts + stats.edits} changes)
+                {isPatch ? 'Apply Patch' : 'Apply Rename'} ({stats.accepts + stats.edits} changes)
               </button>
             </>
           )}
