@@ -760,7 +760,9 @@ export default function IlluminatorRemote({
       // Compare by reference — any setEntities call creates new objects
       if (local.enrichment === worldEntity.enrichment &&
           local.summary === worldEntity.summary &&
-          local.description === worldEntity.description) {
+          local.description === worldEntity.description &&
+          local.name === worldEntity.name &&
+          local.narrativeHint === worldEntity.narrativeHint) {
         return worldEntity;
       }
 
@@ -770,6 +772,8 @@ export default function IlluminatorRemote({
         enrichment: local.enrichment,
         summary: local.summary,
         description: local.description,
+        name: local.name,
+        narrativeHint: local.narrativeHint,
       };
     });
 
@@ -1578,11 +1582,24 @@ export default function IlluminatorRemote({
     setRenameTargetId(entityId);
   }, []);
 
-  const handleRenameApplied = useCallback((patchedEntities) => {
+  const handleRenameApplied = useCallback((patchedEntities, patchedNarrativeEvents) => {
     setEntities(patchedEntities);
+    // Persist patched narrative events into worldData
+    if (patchedNarrativeEvents && worldData && onEnrichmentComplete) {
+      onEnrichmentComplete({
+        ...worldData,
+        hardState: patchedEntities,
+        narrativeHistory: patchedNarrativeEvents,
+        metadata: {
+          ...worldData.metadata,
+          enriched: true,
+          enrichedAt: Date.now(),
+        },
+      });
+    }
     setRenameTargetId(null);
     setChronicleRefreshTrigger((n) => n + 1);
-  }, []);
+  }, [worldData, onEnrichmentComplete]);
 
   // Historian review (scholarly annotations for entities and chronicles)
   const {
@@ -2271,6 +2288,7 @@ export default function IlluminatorRemote({
           cultures={worldSchema?.cultures || []}
           simulationRunId={simulationRunId || ''}
           relationships={worldData?.relationships || []}
+          narrativeEvents={worldData?.narrativeHistory || []}
           onApply={handleRenameApplied}
           onClose={() => setRenameTargetId(null)}
         />

@@ -16,10 +16,10 @@ export interface RenameMatch {
   /** Unique match ID */
   id: string;
   /** Where the match was found */
-  sourceType: 'entity' | 'chronicle';
-  /** Entity ID or chronicle ID */
+  sourceType: 'entity' | 'chronicle' | 'event';
+  /** Entity ID, chronicle ID, or event ID */
   sourceId: string;
-  /** Entity name or chronicle title (for display) */
+  /** Entity name, chronicle title, or event description snippet (for display) */
   sourceName: string;
   /** Which field contains the match */
   field: string;
@@ -61,9 +61,15 @@ export interface ChroniclePatch {
   fieldUpdates: Record<string, unknown>;
 }
 
+export interface EventPatch {
+  eventId: string;
+  changes: Record<string, string>;
+}
+
 export interface RenamePatches {
   entityPatches: EntityPatch[];
   chroniclePatches: ChroniclePatch[];
+  eventPatches: EventPatch[];
 }
 
 // ---------------------------------------------------------------------------
@@ -268,6 +274,7 @@ export interface ScanEntity {
   subtype?: string;
   summary?: string;
   description?: string;
+  narrativeHint?: string;
   enrichment?: {
     descriptionHistory?: Array<{
       description: string;
@@ -275,6 +282,20 @@ export interface ScanEntity {
       source: string;
     }>;
   };
+}
+
+export interface ScanNarrativeEvent {
+  id: string;
+  subject: { id: string; name: string };
+  action: string;
+  description: string;
+  participantEffects: Array<{
+    entity: { id: string; name: string };
+    effects: Array<{
+      description: string;
+      relatedEntity?: { id: string; name: string };
+    }>;
+  }>;
 }
 
 let matchIdCounter = 0;
@@ -300,6 +321,7 @@ export async function scanForReferences(
   entities: ScanEntity[],
   chronicles: ChronicleRecord[],
   relationships?: ScanRelationship[],
+  narrativeEvents?: ScanNarrativeEvent[],
 ): Promise<RenameScanResult> {
   matchIdCounter = 0;
   const matches: RenameMatch[] = [];
@@ -331,7 +353,7 @@ export async function scanForReferences(
   }
 
   function scanTextField(
-    sourceType: 'entity' | 'chronicle',
+    sourceType: 'entity' | 'chronicle' | 'event',
     sourceId: string,
     sourceName: string,
     field: string,
@@ -417,11 +439,11 @@ export async function scanForReferences(
     }
   }
 
-  // --- Helper: scan all entity text fields (summary, description, descriptionHistory) ---
+  // --- Helper: scan all entity text fields (summary, description, narrativeHint, descriptionHistory) ---
   function scanEntityTextFields(
     entity: ScanEntity,
     scanFn: (
-      sourceType: 'entity' | 'chronicle',
+      sourceType: 'entity' | 'chronicle' | 'event',
       sourceId: string,
       sourceName: string,
       field: string,
@@ -430,6 +452,7 @@ export async function scanForReferences(
   ) {
     scanFn('entity', entity.id, entity.name, 'summary', entity.summary);
     scanFn('entity', entity.id, entity.name, 'description', entity.description);
+    scanFn('entity', entity.id, entity.name, 'narrativeHint', entity.narrativeHint);
     if (entity.enrichment?.descriptionHistory) {
       for (let i = 0; i < entity.enrichment.descriptionHistory.length; i++) {
         scanFn(
@@ -443,7 +466,7 @@ export async function scanForReferences(
 
   // --- Full + partial scan (for self, related, cast) ---
   function scanTextFieldFullAndPartial(
-    sourceType: 'entity' | 'chronicle',
+    sourceType: 'entity' | 'chronicle' | 'event',
     sourceId: string,
     sourceName: string,
     field: string,
@@ -454,7 +477,7 @@ export async function scanForReferences(
 
   // --- Full name only scan (for general sweep) ---
   function scanTextFieldFullNameOnly(
-    sourceType: 'entity' | 'chronicle',
+    sourceType: 'entity' | 'chronicle' | 'event',
     sourceId: string,
     sourceName: string,
     field: string,
@@ -651,6 +674,107 @@ export async function scanForReferences(
   }
 
   // =========================================================================
+  // 5. NARRATIVE EVENTS: Events from simulation history
+  //    Participant events (entity is subject or participant) → full + partial
+  //    Non-participant events → full name only
+  // =========================================================================
+  if (narrativeEvents) {
+    // Build set of events where entity is a participant
+    const participantEventIds = new Set<string>();
+    for (const event of narrativeEvents) {
+      if (event.subject.id === entityId) {
+        participantEventIds.add(event.id);
+        continue;
+      }
+      for (const pe of event.participantEffects) {
+        if (pe.entity.id === entityId) {
+          participantEventIds.add(event.id);
+          break;
+        }
+      }
+    }
+
+    for (const event of narrativeEvents) {
+      const eId = event.id;
+      const eName = event.description.length > 60
+        ? event.description.slice(0, 57) + '...'
+        : event.description;
+      const isParticipant = participantEventIds.has(eId);
+      const scan = isParticipant ? scanTextFieldFullAndPartial : scanTextFieldFullNameOnly;
+
+      // Structured name fields (metadata matches for participant events)
+      if (isParticipant) {
+        if (event.subject.id === entityId) {
+          matches.push({
+            id: nextMatchId(),
+            sourceType: 'event',
+            sourceId: eId,
+            sourceName: eName,
+            field: 'subject.name',
+            matchType: 'metadata',
+            matchedText: event.subject.name,
+            position: 0,
+            contextBefore: 'Subject:',
+            contextAfter: '',
+          });
+        }
+        for (let pi = 0; pi < event.participantEffects.length; pi++) {
+          const pe = event.participantEffects[pi];
+          if (pe.entity.id === entityId) {
+            matches.push({
+              id: nextMatchId(),
+              sourceType: 'event',
+              sourceId: eId,
+              sourceName: eName,
+              field: `participantEffects[${pi}].entity.name`,
+              matchType: 'metadata',
+              matchedText: pe.entity.name,
+              position: 0,
+              contextBefore: 'Participant:',
+              contextAfter: '',
+            });
+          }
+          for (let ei = 0; ei < pe.effects.length; ei++) {
+            const eff = pe.effects[ei];
+            if (eff.relatedEntity && eff.relatedEntity.id === entityId) {
+              matches.push({
+                id: nextMatchId(),
+                sourceType: 'event',
+                sourceId: eId,
+                sourceName: eName,
+                field: `participantEffects[${pi}].effects[${ei}].relatedEntity.name`,
+                matchType: 'metadata',
+                matchedText: eff.relatedEntity.name,
+                position: 0,
+                contextBefore: 'Related entity:',
+                contextAfter: eff.description.slice(0, 40),
+              });
+            }
+          }
+        }
+      }
+
+      // Free-text fields
+      scan('event', eId, eName, 'description', event.description);
+      scan('event', eId, eName, 'action', event.action);
+
+      // Scan effect descriptions for participant events
+      if (isParticipant) {
+        for (let pi = 0; pi < event.participantEffects.length; pi++) {
+          const pe = event.participantEffects[pi];
+          for (let ei = 0; ei < pe.effects.length; ei++) {
+            scan(
+              'event', eId, eName,
+              `participantEffects[${pi}].effects[${ei}].description`,
+              pe.effects[ei].description,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // =========================================================================
   // FK references (informational) - show the user all hard connections
   // =========================================================================
   if (relationships) {
@@ -735,8 +859,8 @@ export function buildRenamePatches(
   // Track metadata updates per chronicle
   const chronicleMetaUpdates = new Map<string, Partial<ChronicleRecord>>();
 
-  // Track entity field updates
-  const entityFieldUpdates = new Map<string, Record<string, string>>();
+  // Track metadata updates per event (structured name fields)
+  const eventMetaUpdates = new Map<string, Record<string, string>>();
 
   for (const match of scanResult.matches) {
     const decision = decisionMap.get(match.id);
@@ -745,32 +869,37 @@ export function buildRenamePatches(
     const replacementText = decision.action === 'edit' ? (decision.editText ?? newName) : newName;
 
     if (match.matchType === 'metadata') {
-      // Metadata: update denormalized fields directly
-      const meta = chronicleMetaUpdates.get(match.sourceId) || {};
+      if (match.sourceType === 'event') {
+        // Event metadata: structured name fields (subject.name, participant names, etc.)
+        const meta = eventMetaUpdates.get(match.sourceId) || {};
+        meta[match.field] = replacementText;
+        eventMetaUpdates.set(match.sourceId, meta);
+      } else {
+        // Chronicle metadata: denormalized fields
+        const meta = chronicleMetaUpdates.get(match.sourceId) || {};
 
-      if (match.field.startsWith('roleAssignments[')) {
-        // Extract index
-        const idxMatch = match.field.match(/\[(\d+)\]/);
-        if (idxMatch) {
-          const idx = parseInt(idxMatch[1], 10);
-          if (!meta.roleAssignments) {
-            // Will be filled from the chronicle later during apply
-            meta._roleAssignmentUpdates = meta._roleAssignmentUpdates || [];
-            (meta as any)._roleAssignmentUpdates.push({ index: idx, entityName: replacementText });
+        if (match.field.startsWith('roleAssignments[')) {
+          const idxMatch = match.field.match(/\[(\d+)\]/);
+          if (idxMatch) {
+            const idx = parseInt(idxMatch[1], 10);
+            if (!meta.roleAssignments) {
+              meta._roleAssignmentUpdates = meta._roleAssignmentUpdates || [];
+              (meta as any)._roleAssignmentUpdates.push({ index: idx, entityName: replacementText });
+            }
+          }
+        } else if (match.field === 'lens.entityName') {
+          (meta as any)._lensNameUpdate = replacementText;
+        } else if (match.field.startsWith('generationContext.entityDirectives[')) {
+          const idxMatch = match.field.match(/\[(\d+)\]/);
+          if (idxMatch) {
+            const idx = parseInt(idxMatch[1], 10);
+            (meta as any)._directiveUpdates = (meta as any)._directiveUpdates || [];
+            (meta as any)._directiveUpdates.push({ index: idx, entityName: replacementText });
           }
         }
-      } else if (match.field === 'lens.entityName') {
-        (meta as any)._lensNameUpdate = replacementText;
-      } else if (match.field.startsWith('generationContext.entityDirectives[')) {
-        const idxMatch = match.field.match(/\[(\d+)\]/);
-        if (idxMatch) {
-          const idx = parseInt(idxMatch[1], 10);
-          (meta as any)._directiveUpdates = (meta as any)._directiveUpdates || [];
-          (meta as any)._directiveUpdates.push({ index: idx, entityName: replacementText });
-        }
-      }
 
-      chronicleMetaUpdates.set(match.sourceId, meta);
+        chronicleMetaUpdates.set(match.sourceId, meta);
+      }
     } else {
       // Text field replacement
       const key = `${match.sourceType}:${match.sourceId}:${match.field}`;
@@ -823,12 +952,34 @@ export function buildRenamePatches(
     chroniclePatchMap.set(chronicleId, existing);
   }
 
+  // Build event patches
+  const eventPatchMap = new Map<string, Record<string, string>>();
+
+  for (const [key, replacements] of textReplacements) {
+    const [sourceType, sourceId, ...fieldParts] = key.split(':');
+    const field = fieldParts.join(':');
+
+    if (sourceType === 'event') {
+      const existing = eventPatchMap.get(sourceId) || {};
+      existing[`__replacements_${field}`] = JSON.stringify(replacements);
+      eventPatchMap.set(sourceId, existing);
+    }
+  }
+
+  // Merge event metadata updates
+  for (const [eventId, meta] of eventMetaUpdates) {
+    const existing = eventPatchMap.get(eventId) || {};
+    Object.assign(existing, meta);
+    eventPatchMap.set(eventId, existing);
+  }
+
   return {
     entityPatches: [...entityPatchMap].map(([entityId, changes]) => ({ entityId, changes })),
     chroniclePatches: [...chroniclePatchMap].map(([chronicleId, fieldUpdates]) => ({
       chronicleId,
       fieldUpdates,
     })),
+    eventPatches: [...eventPatchMap].map(([eventId, changes]) => ({ eventId, changes })),
   };
 }
 
@@ -876,8 +1027,8 @@ export function applyEntityPatches<T extends ScanEntity>(
       const field = key.replace('__replacements_', '');
       const replacements: FieldReplacement[] = JSON.parse(value);
 
-      if (field === 'summary' || field === 'description') {
-        const originalText = entity[field];
+      if (field === 'summary' || field === 'description' || field === 'narrativeHint') {
+        const originalText = (entity as any)[field];
         if (typeof originalText === 'string') {
           (updated as any)[field] = applyReplacements(originalText, replacements);
         }
@@ -1006,4 +1157,98 @@ export async function applyChroniclePatches(
   }
 
   return successCount;
+}
+
+/**
+ * Apply narrative event patches to an event array. Returns a new array with patches applied.
+ * Handles both structured name fields (metadata) and text replacements.
+ */
+export function applyNarrativeEventPatches<T extends ScanNarrativeEvent>(
+  events: T[],
+  patches: EventPatch[],
+): T[] {
+  if (patches.length === 0) return events;
+
+  const patchMap = new Map(patches.map((p) => [p.eventId, p]));
+
+  return events.map((event) => {
+    const patch = patchMap.get(event.id);
+    if (!patch) return event;
+
+    const updated: any = { ...event };
+
+    for (const [key, value] of Object.entries(patch.changes)) {
+      if (key.startsWith('__replacements_')) {
+        // Text field replacements
+        const field = key.replace('__replacements_', '');
+        const replacements: FieldReplacement[] = JSON.parse(value);
+
+        if (field === 'description' && typeof updated.description === 'string') {
+          updated.description = applyReplacements(updated.description, replacements);
+        } else if (field === 'action' && typeof updated.action === 'string') {
+          updated.action = applyReplacements(updated.action, replacements);
+        } else if (field.startsWith('participantEffects[')) {
+          // Parse: participantEffects[N].effects[M].description
+          const idxMatch = field.match(/participantEffects\[(\d+)\]\.effects\[(\d+)\]\.description/);
+          if (idxMatch) {
+            const pi = parseInt(idxMatch[1], 10);
+            const ei = parseInt(idxMatch[2], 10);
+            if (!updated.participantEffects || updated.participantEffects === event.participantEffects) {
+              updated.participantEffects = [...event.participantEffects];
+            }
+            if (updated.participantEffects[pi]) {
+              const pe = { ...updated.participantEffects[pi] };
+              if (pe.effects === event.participantEffects[pi].effects) {
+                pe.effects = [...event.participantEffects[pi].effects];
+              }
+              if (pe.effects[ei]) {
+                pe.effects[ei] = { ...pe.effects[ei], description: applyReplacements(pe.effects[ei].description, replacements) };
+              }
+              updated.participantEffects[pi] = pe;
+            }
+          }
+        }
+      } else if (key === 'subject.name') {
+        // Structured name field: subject.name
+        updated.subject = { ...event.subject, name: value };
+      } else if (key.startsWith('participantEffects[')) {
+        // Structured name: participantEffects[N].entity.name or participantEffects[N].effects[M].relatedEntity.name
+        if (!updated.participantEffects || updated.participantEffects === event.participantEffects) {
+          updated.participantEffects = [...event.participantEffects];
+        }
+
+        const entityNameMatch = key.match(/^participantEffects\[(\d+)\]\.entity\.name$/);
+        if (entityNameMatch) {
+          const pi = parseInt(entityNameMatch[1], 10);
+          if (updated.participantEffects[pi]) {
+            updated.participantEffects[pi] = {
+              ...updated.participantEffects[pi],
+              entity: { ...updated.participantEffects[pi].entity, name: value },
+            };
+          }
+        }
+
+        const relatedMatch = key.match(/^participantEffects\[(\d+)\]\.effects\[(\d+)\]\.relatedEntity\.name$/);
+        if (relatedMatch) {
+          const pi = parseInt(relatedMatch[1], 10);
+          const ei = parseInt(relatedMatch[2], 10);
+          if (updated.participantEffects[pi]) {
+            const pe = { ...updated.participantEffects[pi] };
+            if (pe.effects === event.participantEffects[pi]?.effects) {
+              pe.effects = [...event.participantEffects[pi].effects];
+            }
+            if (pe.effects[ei]?.relatedEntity) {
+              pe.effects[ei] = {
+                ...pe.effects[ei],
+                relatedEntity: { ...pe.effects[ei].relatedEntity!, name: value },
+              };
+            }
+            updated.participantEffects[pi] = pe;
+          }
+        }
+      }
+    }
+
+    return updated as T;
+  });
 }

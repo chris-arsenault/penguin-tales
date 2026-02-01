@@ -16,9 +16,11 @@ import {
   buildRenamePatches,
   applyEntityPatches,
   applyChroniclePatches,
+  applyNarrativeEventPatches,
   type RenameMatch,
   type MatchDecision,
   type RenameScanResult,
+  type ScanNarrativeEvent,
 } from '../lib/entityRename';
 import {
   getChroniclesForSimulation,
@@ -62,7 +64,8 @@ interface EntityRenameModalProps {
   cultures: CultureDefinition[];
   simulationRunId: string;
   relationships?: Relationship[];
-  onApply: (patchedEntities: Entity[]) => void;
+  narrativeEvents?: ScanNarrativeEvent[];
+  onApply: (patchedEntities: Entity[], patchedNarrativeEvents?: ScanNarrativeEvent[]) => void;
   onClose: () => void;
 }
 
@@ -79,7 +82,7 @@ interface DecisionState {
 interface SourceGroup {
   sourceId: string;
   sourceName: string;
-  sourceType: 'entity' | 'chronicle';
+  sourceType: 'entity' | 'chronicle' | 'event';
   /** True for the entity being renamed */
   isSelf: boolean;
   /** Contextual label: "related", "general", "cast", etc. */
@@ -478,6 +481,7 @@ export default function EntityRenameModal({
   cultures,
   simulationRunId,
   relationships,
+  narrativeEvents,
   onApply,
   onClose,
 }: EntityRenameModalProps) {
@@ -546,6 +550,7 @@ export default function EntityRenameModal({
         entities,
         chronicles,
         relationships,
+        narrativeEvents,
       );
       setScanResult(result);
 
@@ -692,31 +697,40 @@ export default function EntityRenameModal({
         newName,
       );
 
+      let chronicleCount = 0;
       if (patches.chroniclePatches.length > 0) {
         setApplyProgress(
           `Updating ${patches.chroniclePatches.length} chronicles...`,
         );
-        const successCount = await applyChroniclePatches(
+        chronicleCount = await applyChroniclePatches(
           patches.chroniclePatches,
           getChronicle,
           putChronicle,
         );
-        setApplyResult(
-          `Updated ${patches.entityPatches.length} entities, ${successCount} chronicles.`,
-        );
-      } else {
-        setApplyResult(
-          `Updated ${patches.entityPatches.length} entities, 0 chronicles.`,
-        );
       }
 
-      onApply(patchedEntities);
+      // Apply narrative event patches
+      let patchedEvents: ScanNarrativeEvent[] | undefined;
+      if (patches.eventPatches.length > 0 && narrativeEvents) {
+        setApplyProgress(
+          `Updating ${patches.eventPatches.length} narrative events...`,
+        );
+        patchedEvents = applyNarrativeEventPatches(narrativeEvents, patches.eventPatches);
+      }
+
+      const parts = [`${patches.entityPatches.length} entities`, `${chronicleCount} chronicles`];
+      if (patches.eventPatches.length > 0) {
+        parts.push(`${patches.eventPatches.length} events`);
+      }
+      setApplyResult(`Updated ${parts.join(', ')}.`);
+
+      onApply(patchedEntities, patchedEvents);
       setPhase('done');
     } catch (err) {
       console.error('[EntityRename] Apply failed:', err);
       setApplyProgress(`Error: ${err}`);
     }
-  }, [scanResult, decisions, newName, entities, entityId, onApply]);
+  }, [scanResult, decisions, newName, entities, entityId, narrativeEvents, onApply]);
 
   // --- Stats ---
   const stats = useMemo(() => {
@@ -743,7 +757,7 @@ export default function EntityRenameModal({
     // Build a map of sourceId → { matches, connections }
     const groupMap = new Map<string, {
       sourceName: string;
-      sourceType: 'entity' | 'chronicle';
+      sourceType: 'entity' | 'chronicle' | 'event';
       matches: RenameMatch[];
       connections: RenameMatch[];
     }>();
@@ -788,6 +802,8 @@ export default function EntityRenameModal({
         tier = 'this entity';
       } else if (entry.sourceType === 'entity') {
         tier = relatedEntityIds.has(sourceId) ? 'related' : 'general';
+      } else if (entry.sourceType === 'event') {
+        tier = 'event';
       } else {
         tier = 'cast';
       }
@@ -803,14 +819,15 @@ export default function EntityRenameModal({
       });
     }
 
-    // Sort: self first, then entities (related before general), then chronicles
+    // Sort: self first, then entities (related before general), then events, then chronicles
+    const typeOrder: Record<string, number> = { entity: 0, event: 1, chronicle: 2 };
     groups.sort((a, b) => {
       if (a.isSelf) return -1;
       if (b.isSelf) return 1;
-      // entities before chronicles
-      if (a.sourceType !== b.sourceType) {
-        return a.sourceType === 'entity' ? -1 : 1;
-      }
+      // entities before events before chronicles
+      const typeA = typeOrder[a.sourceType] ?? 9;
+      const typeB = typeOrder[b.sourceType] ?? 9;
+      if (typeA !== typeB) return typeA - typeB;
       // related before general
       if (a.tier !== b.tier) {
         if (a.tier === 'related') return -1;
