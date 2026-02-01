@@ -411,7 +411,7 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
     name: 'Scientific Drawing',
     description: 'Technical illustration with symbols, charts, and measurement notation',
     promptFragment:
-      'technical scientific illustration, precise cross-section diagrams, measurement notation with numbers and units, abstract symbols and glyphs instead of words, data charts and graphs, specimen plate arrangement, fine ruled lines and annotation arrows, systematic grid layout, no readable English text, only mathematical symbols and formulae',
+      'technical scientific illustration for peer-reviewed journal, precise cross-section diagrams, measurement notation with numbers and units, abstract symbols and glyphs instead of words, data charts and graphs, specimen plate arrangement, fine ruled lines and annotation arrows, systematic grid layout, professional academic quality, no readable English text, only mathematical symbols and formulae, not a children\'s book illustration',
     targetCategory: 'object',
   },
   {
@@ -419,7 +419,7 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
     name: 'Schematic',
     description: 'Engineering blueprint with precise measurements and assembly views',
     promptFragment:
-      'engineering schematic, blueprint layout on drafting paper, precise dimension lines with numeric measurements, exploded assembly views, orthographic projections, cutaway cross-sections, abstract engineering symbols, no readable English text, only numbers and technical notation',
+      'engineering schematic, blueprint layout on drafting paper, precise dimension lines with numeric measurements, exploded assembly views, orthographic projections, cutaway cross-sections, abstract engineering symbols, professional technical drawing quality, no readable English text, only numbers and technical notation, not a cartoon or children\'s illustration',
     targetCategory: 'object',
   },
 
