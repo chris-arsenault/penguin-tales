@@ -72,6 +72,7 @@ interface EntityDetailViewProps {
   isHistorianActive?: boolean;
   historianConfigured?: boolean;
   onRename?: (entityId: string) => void;
+  onPatchEvents?: (entityId: string, oldName: string) => void;
 }
 
 function formatDate(timestamp: number | undefined): string {
@@ -231,6 +232,7 @@ export default function EntityDetailView({
   isHistorianActive,
   historianConfigured,
   onRename,
+  onPatchEvents,
 }: EntityDetailViewProps) {
   const effectiveProminenceScale = useMemo(() => {
     if (prominenceScale) return prominenceScale;
@@ -428,6 +430,33 @@ export default function EntityDetailView({
                     }}
                   >
                     Rename
+                  </button>
+                )}
+                {onPatchEvents && (
+                  <button
+                    onClick={() => {
+                      const oldName = prompt(
+                        `Patch narrative events: enter the OLD name to replace.\n\nEntity ID: ${entity.id}\nCurrent name: ${entity.name}`,
+                        entity.id.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+                      );
+                      if (oldName?.trim()) {
+                        onPatchEvents(entity.id, oldName.trim());
+                      }
+                    }}
+                    title="Repair stale names in narrative event history for this entity"
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-secondary)',
+                      fontSize: '10px',
+                      padding: '1px 6px',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      textTransform: 'none',
+                      letterSpacing: 'normal',
+                    }}
+                  >
+                    Patch Events
                   </button>
                 )}
                 {onHistorianReview && historianConfigured && (

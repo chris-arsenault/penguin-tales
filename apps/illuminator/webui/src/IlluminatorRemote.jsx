@@ -31,6 +31,7 @@ import StaticPagesPanel from './components/StaticPagesPanel';
 import DynamicsGenerationModal from './components/DynamicsGenerationModal';
 import SummaryRevisionModal from './components/SummaryRevisionModal';
 import EntityRenameModal from './components/EntityRenameModal';
+import { patchNarrativeHistory } from './lib/entityRename';
 import RevisionFilterModal from './components/RevisionFilterModal';
 import BackportConfigModal from './components/BackportConfigModal';
 import { useEnrichmentQueue } from './hooks/useEnrichmentQueue';
@@ -297,6 +298,8 @@ export default function IlluminatorRemote({
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [chronicleRefreshTrigger, setChronicleRefreshTrigger] = useState(0);
   const [renameTargetId, setRenameTargetId] = useState(null);
+  // Holds patched narrativeHistory from rename so the persistence effect doesn't overwrite it
+  const narrativeHistoryPatchRef = useRef(null);
 
   // Persist API keys when enabled
   useEffect(() => {
@@ -777,10 +780,19 @@ export default function IlluminatorRemote({
       };
     });
 
+    // Consume any pending narrativeHistory patch from rename (prevents race condition
+    // where this effect overwrites patched events with stale worldData values)
+    const pendingNarrativeHistory = narrativeHistoryPatchRef.current;
+    if (pendingNarrativeHistory) {
+      narrativeHistoryPatchRef.current = null;
+      didChange = true;
+    }
+
     if (!didChange) return;
 
     onEnrichmentComplete({
       ...worldData,
+      ...(pendingNarrativeHistory ? { narrativeHistory: pendingNarrativeHistory } : {}),
       hardState: enrichedHardState,
       metadata: {
         ...worldData.metadata,
@@ -1584,22 +1596,43 @@ export default function IlluminatorRemote({
 
   const handleRenameApplied = useCallback((patchedEntities, patchedNarrativeEvents) => {
     setEntities(patchedEntities);
-    // Persist patched narrative events into worldData
-    if (patchedNarrativeEvents && worldData && onEnrichmentComplete) {
-      onEnrichmentComplete({
-        ...worldData,
-        hardState: patchedEntities,
-        narrativeHistory: patchedNarrativeEvents,
-        metadata: {
-          ...worldData.metadata,
-          enriched: true,
-          enrichedAt: Date.now(),
-        },
-      });
+    // Store patched events in ref — the persistence effect will pick them up
+    // on its next run, avoiding the race condition where it overwrites with stale data
+    if (patchedNarrativeEvents) {
+      narrativeHistoryPatchRef.current = patchedNarrativeEvents;
     }
     setRenameTargetId(null);
     setChronicleRefreshTrigger((n) => n + 1);
-  }, [worldData, onEnrichmentComplete]);
+  }, []);
+
+  // Patch narrative events — brute-force repair for a single entity
+  const handlePatchEvents = useCallback((entityId, oldName) => {
+    if (!worldData?.narrativeHistory) {
+      alert('No narrative history available.');
+      return;
+    }
+    const entity = entities.find((e) => e.id === entityId);
+    if (!entity) return;
+    const newName = entity.name;
+
+    const { events: patched, patchCount } = patchNarrativeHistory(
+      worldData.narrativeHistory,
+      entityId,
+      oldName,
+      newName,
+    );
+
+    if (patchCount === 0) {
+      alert(`No occurrences of "${oldName}" found in narrative events.`);
+      return;
+    }
+
+    // Store in ref for the persistence effect to pick up
+    narrativeHistoryPatchRef.current = patched;
+    // Trigger persistence by touching entities (forces the effect to run)
+    setEntities((prev) => prev.map((e) => (e.id === entityId ? { ...e } : e)));
+    alert(`Patched ${patchCount} narrative event(s): "${oldName}" → "${newName}"`);
+  }, [worldData, entities]);
 
   // Historian review (scholarly annotations for entities and chronicles)
   const {
@@ -2035,6 +2068,7 @@ export default function IlluminatorRemote({
               isHistorianActive={isHistorianActive}
               historianConfigured={isHistorianConfigured(historianConfig)}
               onRename={handleStartRename}
+              onPatchEvents={handlePatchEvents}
             />
           </div>
         )}

@@ -1252,3 +1252,138 @@ export function applyNarrativeEventPatches<T extends ScanNarrativeEvent>(
     return updated as T;
   });
 }
+
+// ---------------------------------------------------------------------------
+// Brute-force narrative history patch (for repairing already-broken data)
+// ---------------------------------------------------------------------------
+
+/**
+ * Case-insensitive replace of `oldName` with `newName` in a string.
+ * Preserves surrounding text.
+ */
+function replaceAllCaseInsensitive(text: string, oldName: string, newName: string): string {
+  if (!text || !oldName) return text;
+  // Escape regex special chars in oldName
+  const escaped = oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(escaped, 'gi'), newName);
+}
+
+/**
+ * Brute-force patch of all narrative events for a single entity rename.
+ *
+ * Unlike the scan-based approach (which uses position-based replacements and
+ * per-match decisions), this function does a simple find-and-replace across
+ * ALL name fields and text fields in every event where the entity appears.
+ *
+ * Use this to repair data that was missed by a previous rename, or as a
+ * one-shot fix when you don't need per-match granularity.
+ *
+ * @returns { events: patched array, patchCount: number of events modified }
+ */
+export function patchNarrativeHistory<T extends ScanNarrativeEvent>(
+  events: T[],
+  entityId: string,
+  oldName: string,
+  newName: string,
+): { events: T[]; patchCount: number } {
+  let patchCount = 0;
+
+  const patched = events.map((event) => {
+    // Quick check: is this entity involved at all?
+    const isSubject = event.subject.id === entityId;
+    const participantIdx = event.participantEffects.findIndex(
+      (pe) => pe.entity.id === entityId,
+    );
+    // Also check if old name appears anywhere in the event text
+    const hasTextMatch = event.description.toLowerCase().includes(oldName.toLowerCase())
+      || event.action.toLowerCase().includes(oldName.toLowerCase());
+
+    const hasRelatedRef = event.participantEffects.some((pe) =>
+      pe.effects.some((eff) => eff.relatedEntity?.id === entityId),
+    );
+
+    if (!isSubject && participantIdx === -1 && !hasTextMatch && !hasRelatedRef) {
+      return event;
+    }
+
+    let didChange = false;
+    const updated: any = { ...event };
+
+    // Patch subject.name
+    if (isSubject && event.subject.name !== newName) {
+      updated.subject = { ...event.subject, name: newName };
+      didChange = true;
+    }
+
+    // Patch participantEffects
+    const newPE = [...event.participantEffects];
+    for (let pi = 0; pi < newPE.length; pi++) {
+      const pe = newPE[pi];
+      let peChanged = false;
+      let updatedPE: any = pe;
+
+      // Participant entity.name
+      if (pe.entity.id === entityId && pe.entity.name !== newName) {
+        updatedPE = { ...pe, entity: { ...pe.entity, name: newName } };
+        peChanged = true;
+      }
+
+      // Effects
+      const newEffects = [...(updatedPE.effects || pe.effects)];
+      for (let ei = 0; ei < newEffects.length; ei++) {
+        const eff = newEffects[ei];
+        let effChanged = false;
+        let updatedEff: any = eff;
+
+        // relatedEntity.name
+        if (eff.relatedEntity?.id === entityId && eff.relatedEntity.name !== newName) {
+          updatedEff = { ...eff, relatedEntity: { ...eff.relatedEntity, name: newName } };
+          effChanged = true;
+        }
+
+        // effect.description (free text)
+        const patchedDesc = replaceAllCaseInsensitive(updatedEff.description, oldName, newName);
+        if (patchedDesc !== updatedEff.description) {
+          updatedEff = { ...(effChanged ? updatedEff : eff), description: patchedDesc };
+          effChanged = true;
+        }
+
+        if (effChanged) {
+          newEffects[ei] = updatedEff;
+          peChanged = true;
+        }
+      }
+
+      if (peChanged) {
+        updatedPE = { ...(updatedPE === pe ? pe : updatedPE), effects: newEffects };
+        newPE[pi] = updatedPE;
+        didChange = true;
+      }
+    }
+
+    if (didChange) {
+      updated.participantEffects = newPE;
+    }
+
+    // Patch top-level text fields
+    const patchedDesc = replaceAllCaseInsensitive(updated.description || event.description, oldName, newName);
+    if (patchedDesc !== (updated.description || event.description)) {
+      updated.description = patchedDesc;
+      didChange = true;
+    }
+
+    const patchedAction = replaceAllCaseInsensitive(updated.action || event.action, oldName, newName);
+    if (patchedAction !== (updated.action || event.action)) {
+      updated.action = patchedAction;
+      didChange = true;
+    }
+
+    if (didChange) {
+      patchCount++;
+      return updated as T;
+    }
+    return event;
+  });
+
+  return { events: patched, patchCount };
+}
