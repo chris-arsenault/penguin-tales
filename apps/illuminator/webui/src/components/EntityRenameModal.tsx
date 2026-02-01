@@ -2,7 +2,9 @@
  * EntityRenameModal - Three-phase entity rename with full propagation
  *
  * Phase 1: Name input (roll from name-forge or free text)
- * Phase 2: Preview all matches with per-match accept/reject/edit
+ * Phase 2: Preview — collapsible accordion grouped by source (entity/chronicle).
+ *          Each source shows all its matches together so the user can reason
+ *          about one entity or chronicle at a time.
  * Phase 3: Apply changes
  */
 
@@ -73,8 +75,23 @@ interface DecisionState {
   editText: string;
 }
 
+/** A source entity or chronicle with all its matches grouped together. */
+interface SourceGroup {
+  sourceId: string;
+  sourceName: string;
+  sourceType: 'entity' | 'chronicle';
+  /** True for the entity being renamed */
+  isSelf: boolean;
+  /** Contextual label: "related", "general", "cast", etc. */
+  tier: string;
+  /** Actionable matches (full, partial, metadata) */
+  matches: RenameMatch[];
+  /** Non-actionable FK references */
+  connections: RenameMatch[];
+}
+
 // ---------------------------------------------------------------------------
-// Match Row Component
+// Constants
 // ---------------------------------------------------------------------------
 
 const TYPE_COLORS: Record<string, string> = {
@@ -86,13 +103,14 @@ const TYPE_COLORS: Record<string, string> = {
 const TYPE_LABELS: Record<string, string> = {
   full: 'full',
   partial: 'partial',
-  metadata: 'metadata',
+  metadata: 'meta',
   id_slug: 'connection',
 };
 
-/**
- * Actionable match row — shows diff preview and accept/reject/edit controls.
- */
+// ---------------------------------------------------------------------------
+// Match Row — actionable match with diff + accept/reject/edit
+// ---------------------------------------------------------------------------
+
 function MatchRow({
   match,
   decision,
@@ -112,7 +130,7 @@ function MatchRow({
   return (
     <div
       style={{
-        padding: '8px 12px',
+        padding: '6px 10px',
         background:
           decision.action === 'reject'
             ? 'var(--bg-secondary)'
@@ -120,16 +138,16 @@ function MatchRow({
         borderRadius: '4px',
         border: '1px solid var(--border-color)',
         opacity: decision.action === 'reject' ? 0.5 : 1,
-        marginBottom: '4px',
+        marginBottom: '3px',
       }}
     >
-      {/* Source label + type badge */}
+      {/* Field label + type badge */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          marginBottom: '4px',
+          marginBottom: '3px',
           fontSize: '10px',
           color: 'var(--text-muted)',
         }}
@@ -147,11 +165,10 @@ function MatchRow({
         >
           {TYPE_LABELS[match.matchType] || match.matchType}
         </span>
-        <span>{match.sourceName}</span>
         <span style={{ opacity: 0.6 }}>{match.field}</span>
         {match.partialFragment && (
           <span style={{ fontStyle: 'italic' }}>
-            fragment: &ldquo;{match.partialFragment}&rdquo;
+            &ldquo;{match.partialFragment}&rdquo;
           </span>
         )}
       </div>
@@ -164,7 +181,7 @@ function MatchRow({
           fontFamily: 'monospace',
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
-          marginBottom: '6px',
+          marginBottom: '4px',
         }}
       >
         <span style={{ color: 'var(--text-muted)' }}>
@@ -197,7 +214,7 @@ function MatchRow({
       </div>
 
       {/* Action controls */}
-      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
         {(['accept', 'reject', 'edit'] as DecisionAction[]).map((action) => (
           <button
             key={action}
@@ -226,7 +243,6 @@ function MatchRow({
             {action}
           </button>
         ))}
-
         {decision.action === 'edit' && (
           <input
             type="text"
@@ -250,48 +266,204 @@ function MatchRow({
   );
 }
 
-/**
- * Non-actionable connection row — shows FK reference as informational context.
- * No diff, no accept/reject/edit. Helps the user audit sweep coverage.
- */
-function ConnectionRow({ match }: { match: RenameMatch }) {
+// ---------------------------------------------------------------------------
+// Source Section — collapsible accordion for one entity or chronicle
+// ---------------------------------------------------------------------------
+
+function SourceSection({
+  group,
+  expanded,
+  onToggle,
+  decisions,
+  newName,
+  onChangeAction,
+  onChangeEditText,
+  onAcceptAll,
+  onRejectAll,
+}: {
+  group: SourceGroup;
+  expanded: boolean;
+  onToggle: () => void;
+  decisions: Map<string, DecisionState>;
+  newName: string;
+  onChangeAction: (matchId: string, action: DecisionAction) => void;
+  onChangeEditText: (matchId: string, text: string) => void;
+  onAcceptAll: () => void;
+  onRejectAll: () => void;
+}) {
+  // Per-source stats
+  let accepts = 0, rejects = 0, edits = 0;
+  for (const m of group.matches) {
+    const d = decisions.get(m.id);
+    if (!d) continue;
+    if (d.action === 'accept') accepts++;
+    else if (d.action === 'reject') rejects++;
+    else if (d.action === 'edit') edits++;
+  }
+  const total = group.matches.length;
+
   return (
     <div
       style={{
-        padding: '6px 12px',
-        background: 'var(--bg-secondary)',
-        borderRadius: '4px',
+        marginBottom: '4px',
         border: '1px solid var(--border-color)',
-        marginBottom: '3px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        fontSize: '11px',
+        borderRadius: '6px',
+        overflow: 'hidden',
       }}
     >
-      <span
+      {/* Clickable header */}
+      <div
+        onClick={onToggle}
         style={{
-          background: TYPE_COLORS.id_slug,
-          color: '#fff',
-          padding: '0 4px',
-          borderRadius: '2px',
-          fontSize: '9px',
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          flexShrink: 0,
+          padding: '8px 12px',
+          background: 'var(--bg-secondary)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          userSelect: 'none',
         }}
       >
-        {TYPE_LABELS.id_slug}
-      </span>
-      <span style={{ color: 'var(--text-muted)' }}>
-        {match.contextBefore}
-      </span>
-      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-        {match.sourceName}
-      </span>
-      <span style={{ color: 'var(--text-muted)' }}>
-        {match.contextAfter}
-      </span>
+        {/* Expand indicator */}
+        <span
+          style={{
+            fontSize: '10px',
+            color: 'var(--text-muted)',
+            width: '10px',
+            flexShrink: 0,
+          }}
+        >
+          {expanded ? '\u25BC' : '\u25B6'}
+        </span>
+
+        {/* Source name */}
+        <span
+          style={{
+            fontSize: '12px',
+            fontWeight: 500,
+            color: 'var(--text-primary)',
+          }}
+        >
+          {group.sourceName}
+        </span>
+
+        {/* Type + tier badge */}
+        <span
+          style={{
+            fontSize: '9px',
+            color: 'var(--text-muted)',
+            background: 'var(--bg-primary)',
+            padding: '1px 6px',
+            borderRadius: '3px',
+            border: '1px solid var(--border-color)',
+          }}
+        >
+          {group.sourceType}{group.tier ? `, ${group.tier}` : ''}
+        </span>
+
+        {/* Match stats */}
+        <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+          {total} {total === 1 ? 'match' : 'matches'}
+          {group.connections.length > 0 &&
+            ` + ${group.connections.length} conn`}
+        </span>
+        {accepts > 0 && (
+          <span style={{ fontSize: '10px', color: '#22c55e' }}>{accepts}\u2713</span>
+        )}
+        {rejects > 0 && (
+          <span style={{ fontSize: '10px', color: '#ef4444' }}>{rejects}\u2717</span>
+        )}
+        {edits > 0 && (
+          <span style={{ fontSize: '10px', color: '#6366f1' }}>{edits}\u270E</span>
+        )}
+
+        {/* Per-source bulk actions (stop propagation so click doesn't toggle) */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onAcceptAll(); }}
+          title="Accept all matches in this source"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#22c55e',
+            fontSize: '10px',
+            cursor: 'pointer',
+            padding: '0 4px',
+          }}
+        >
+          all\u2713
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onRejectAll(); }}
+          title="Reject all matches in this source"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#ef4444',
+            fontSize: '10px',
+            cursor: 'pointer',
+            padding: '0 4px',
+          }}
+        >
+          all\u2717
+        </button>
+      </div>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div style={{ padding: '6px 8px' }}>
+          {group.matches.map((match) => {
+            const decision = decisions.get(match.id) || {
+              action: 'reject' as DecisionAction,
+              editText: newName,
+            };
+            return (
+              <MatchRow
+                key={match.id}
+                match={match}
+                decision={decision}
+                newName={newName}
+                onChangeAction={(action) => onChangeAction(match.id, action)}
+                onChangeEditText={(text) => onChangeEditText(match.id, text)}
+              />
+            );
+          })}
+
+          {/* Connection info for this source */}
+          {group.connections.length > 0 && (
+            <div style={{ marginTop: '4px' }}>
+              {group.connections.map((conn) => (
+                <div
+                  key={conn.id}
+                  style={{
+                    padding: '3px 10px',
+                    fontSize: '10px',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    gap: '6px',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span
+                    style={{
+                      background: TYPE_COLORS.id_slug,
+                      color: '#fff',
+                      padding: '0 3px',
+                      borderRadius: '2px',
+                      fontSize: '8px',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    FK
+                  </span>
+                  <span>{conn.contextBefore}</span>
+                  <span>{conn.contextAfter}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -320,6 +492,7 @@ export default function EntityRenameModal({
   const [decisions, setDecisions] = useState<Map<string, DecisionState>>(
     new Map(),
   );
+  const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
   const [applyProgress, setApplyProgress] = useState('');
   const [applyResult, setApplyResult] = useState('');
   const [isRolling, setIsRolling] = useState(false);
@@ -387,6 +560,9 @@ export default function EntityRenameModal({
         });
       }
       setDecisions(initial);
+
+      // Self entity starts expanded
+      setExpandedSources(new Set([entityId]));
       setPhase('preview');
     } catch (err) {
       console.error('[EntityRename] Scan failed:', err);
@@ -425,7 +601,7 @@ export default function EntityRenameModal({
     [newName],
   );
 
-  // --- Bulk actions ---
+  // --- Bulk actions (global) ---
   const handleAcceptAll = useCallback(() => {
     setDecisions((prev) => {
       const next = new Map(prev);
@@ -452,13 +628,48 @@ export default function EntityRenameModal({
     });
   }, [scanResult]);
 
+  // --- Bulk actions (per-source) ---
+  const handleAcceptSource = useCallback((matchIds: string[]) => {
+    setDecisions((prev) => {
+      const next = new Map(prev);
+      for (const id of matchIds) {
+        const current = next.get(id);
+        if (current) next.set(id, { ...current, action: 'accept' });
+      }
+      return next;
+    });
+  }, []);
+
+  const handleRejectSource = useCallback((matchIds: string[]) => {
+    setDecisions((prev) => {
+      const next = new Map(prev);
+      for (const id of matchIds) {
+        const current = next.get(id);
+        if (current) next.set(id, { ...current, action: 'reject' });
+      }
+      return next;
+    });
+  }, []);
+
+  // --- Expand/collapse ---
+  const toggleSource = useCallback((sourceId: string) => {
+    setExpandedSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(sourceId)) {
+        next.delete(sourceId);
+      } else {
+        next.add(sourceId);
+      }
+      return next;
+    });
+  }, []);
+
   // --- Apply ---
   const handleApply = useCallback(async () => {
     if (!scanResult) return;
     setPhase('applying');
 
     try {
-      // Build decisions array
       const decisionArray: MatchDecision[] = [];
       for (const [matchId, state] of decisions) {
         decisionArray.push({
@@ -471,7 +682,6 @@ export default function EntityRenameModal({
       setApplyProgress('Building patches...');
       const patches = buildRenamePatches(scanResult, newName, decisionArray);
 
-      // Apply entity patches
       setApplyProgress(
         `Updating ${patches.entityPatches.length} entities...`,
       );
@@ -482,7 +692,6 @@ export default function EntityRenameModal({
         newName,
       );
 
-      // Apply chronicle patches
       if (patches.chroniclePatches.length > 0) {
         setApplyProgress(
           `Updating ${patches.chroniclePatches.length} chronicles...`,
@@ -501,7 +710,6 @@ export default function EntityRenameModal({
         );
       }
 
-      // Notify parent
       onApply(patchedEntities);
       setPhase('done');
     } catch (err) {
@@ -513,10 +721,7 @@ export default function EntityRenameModal({
   // --- Stats ---
   const stats = useMemo(() => {
     if (!scanResult) return { accepts: 0, rejects: 0, edits: 0, total: 0, connections: 0 };
-    let accepts = 0,
-      rejects = 0,
-      edits = 0,
-      connections = 0;
+    let accepts = 0, rejects = 0, edits = 0, connections = 0;
     for (const match of scanResult.matches) {
       if (match.matchType === 'id_slug') {
         connections++;
@@ -531,73 +736,101 @@ export default function EntityRenameModal({
     return { accepts, rejects, edits, total: accepts + rejects + edits, connections };
   }, [scanResult, decisions]);
 
-  // --- Grouped matches ---
-  const groupedMatches = useMemo(() => {
+  // --- Source groups (accordion data) ---
+  const sourceGroups = useMemo(() => {
     if (!scanResult) return [];
 
-    const groups: Array<{
-      label: string;
+    // Build a map of sourceId → { matches, connections }
+    const groupMap = new Map<string, {
+      sourceName: string;
+      sourceType: 'entity' | 'chronicle';
       matches: RenameMatch[];
-    }> = [];
+      connections: RenameMatch[];
+    }>();
 
-    // Group: self entity (description + summary + history)
-    const selfMatches = scanResult.matches.filter(
-      (m) => m.sourceType === 'entity' && m.sourceId === entityId && m.matchType !== 'id_slug',
-    );
-    if (selfMatches.length > 0) {
-      groups.push({ label: 'This Entity', matches: selfMatches });
+    for (const match of scanResult.matches) {
+      let entry = groupMap.get(match.sourceId);
+      if (!entry) {
+        entry = {
+          sourceName: match.sourceName,
+          sourceType: match.sourceType,
+          matches: [],
+          connections: [],
+        };
+        groupMap.set(match.sourceId, entry);
+      }
+      if (match.matchType === 'id_slug') {
+        entry.connections.push(match);
+      } else {
+        entry.matches.push(match);
+      }
     }
 
-    // Group: other entities (related + general sweep hits)
-    const otherEntityMatches = scanResult.matches.filter(
-      (m) => m.sourceType === 'entity' && m.sourceId !== entityId && m.matchType !== 'id_slug',
-    );
-    if (otherEntityMatches.length > 0) {
+    // Determine tier labels based on scan structure
+    const relatedEntityIds = new Set<string>();
+    if (relationships) {
+      for (const rel of relationships) {
+        if (rel.src === entityId) relatedEntityIds.add(rel.dst);
+        if (rel.dst === entityId) relatedEntityIds.add(rel.src);
+      }
+    }
+
+    // Convert to sorted array: self first, then entities, then chronicles
+    const groups: SourceGroup[] = [];
+    for (const [sourceId, entry] of groupMap) {
+      // Skip sources with only connections and no actionable matches —
+      // they'll appear as connection rows inside related source groups or
+      // at the bottom if truly orphaned.
+      const isSelf = sourceId === entityId && entry.sourceType === 'entity';
+
+      let tier = '';
+      if (isSelf) {
+        tier = 'this entity';
+      } else if (entry.sourceType === 'entity') {
+        tier = relatedEntityIds.has(sourceId) ? 'related' : 'general';
+      } else {
+        tier = 'cast';
+      }
+
       groups.push({
-        label: `Other Entities (${new Set(otherEntityMatches.map((m) => m.sourceId)).size})`,
-        matches: otherEntityMatches,
+        sourceId,
+        sourceName: entry.sourceName,
+        sourceType: entry.sourceType,
+        isSelf,
+        tier,
+        matches: entry.matches,
+        connections: entry.connections,
       });
     }
 
-    // Group: chronicle metadata (denormalized entityName fields)
-    const chronicleMetaMatches = scanResult.matches.filter(
-      (m) => m.sourceType === 'chronicle' && m.matchType === 'metadata',
-    );
-    if (chronicleMetaMatches.length > 0) {
-      groups.push({
-        label: `Chronicle Metadata (${new Set(chronicleMetaMatches.map((m) => m.sourceId)).size})`,
-        matches: chronicleMetaMatches,
-      });
-    }
-
-    // Group: chronicle text (prose content across all versions)
-    const chronicleTextMatches = scanResult.matches.filter(
-      (m) =>
-        m.sourceType === 'chronicle' &&
-        (m.matchType === 'full' || m.matchType === 'partial'),
-    );
-    if (chronicleTextMatches.length > 0) {
-      groups.push({
-        label: `Chronicle Text (${new Set(chronicleTextMatches.map((m) => m.sourceId)).size})`,
-        matches: chronicleTextMatches,
-      });
-    }
-
-    // Group: Connections (informational, non-actionable)
-    // FK references showing all hard links to this entity — helps the user
-    // audit whether the text sweep covered everything it should.
-    const connectionMatches = scanResult.matches.filter(
-      (m) => m.matchType === 'id_slug',
-    );
-    if (connectionMatches.length > 0) {
-      groups.push({
-        label: `Connections (${connectionMatches.length} relationships + chronicle cast)`,
-        matches: connectionMatches,
-      });
-    }
+    // Sort: self first, then entities (related before general), then chronicles
+    groups.sort((a, b) => {
+      if (a.isSelf) return -1;
+      if (b.isSelf) return 1;
+      // entities before chronicles
+      if (a.sourceType !== b.sourceType) {
+        return a.sourceType === 'entity' ? -1 : 1;
+      }
+      // related before general
+      if (a.tier !== b.tier) {
+        if (a.tier === 'related') return -1;
+        if (b.tier === 'related') return 1;
+      }
+      return a.sourceName.localeCompare(b.sourceName);
+    });
 
     return groups;
-  }, [scanResult, entityId]);
+  }, [scanResult, entityId, relationships]);
+
+  // Separate: sources with actionable matches vs connection-only sources
+  const actionableGroups = useMemo(
+    () => sourceGroups.filter((g) => g.matches.length > 0),
+    [sourceGroups],
+  );
+  const connectionOnlyGroups = useMemo(
+    () => sourceGroups.filter((g) => g.matches.length === 0 && g.connections.length > 0),
+    [sourceGroups],
+  );
 
   // ---------------------------------------------------------------------------
   // Render
@@ -643,9 +876,7 @@ export default function EntityRenameModal({
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: '16px' }}>
-              Rename Entity
-            </h2>
+            <h2 style={{ margin: 0, fontSize: '16px' }}>Rename Entity</h2>
             <p
               style={{
                 margin: '4px 0 0',
@@ -766,8 +997,7 @@ export default function EntityRenameModal({
               >
                 Enter a new name or use Roll Name to generate one from Name
                 Forge. The scan will find all references to &ldquo;
-                {entity.name}&rdquo; across entities and chronicles, including
-                partial name matches.
+                {entity.name}&rdquo; across related entities and chronicles.
               </p>
             </div>
           )}
@@ -784,31 +1014,27 @@ export default function EntityRenameModal({
               >
                 Scanning entities and chronicles...
               </div>
-              <div
-                style={{
-                  fontSize: '11px',
-                  color: 'var(--text-muted)',
-                }}
-              >
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                 Looking for references to &ldquo;{entity.name}&rdquo;
               </div>
             </div>
           )}
 
-          {/* Phase 2: Preview */}
+          {/* Phase 2: Preview — accordion grouped by source */}
           {phase === 'preview' && scanResult && (
             <div>
-              {/* Summary stats */}
+              {/* Summary stats bar */}
               <div
                 style={{
                   marginBottom: '12px',
-                  padding: '10px 14px',
+                  padding: '8px 14px',
                   background: 'var(--bg-secondary)',
                   borderRadius: '6px',
                   border: '1px solid var(--border-color)',
                   display: 'flex',
-                  gap: '16px',
+                  gap: '12px',
                   alignItems: 'center',
+                  flexWrap: 'wrap',
                   fontSize: '12px',
                 }}
               >
@@ -817,12 +1043,8 @@ export default function EntityRenameModal({
                   <strong>{newName}</strong>
                 </span>
                 <span style={{ color: 'var(--text-muted)' }}>|</span>
-                <span style={{ color: '#22c55e' }}>
-                  {stats.accepts} accept
-                </span>
-                <span style={{ color: '#ef4444' }}>
-                  {stats.rejects} reject
-                </span>
+                <span style={{ color: '#22c55e' }}>{stats.accepts} accept</span>
+                <span style={{ color: '#ef4444' }}>{stats.rejects} reject</span>
                 <span style={{ color: '#6366f1' }}>{stats.edits} edit</span>
                 <span style={{ color: 'var(--text-muted)' }}>
                   / {stats.total} total
@@ -861,49 +1083,80 @@ export default function EntityRenameModal({
                 </button>
               </div>
 
-              {/* Grouped matches */}
-              {groupedMatches.map((group) => (
-                <div key={group.label} style={{ marginBottom: '16px' }}>
+              {/* Accordion: one section per source */}
+              {actionableGroups.map((group) => (
+                <SourceSection
+                  key={group.sourceId}
+                  group={group}
+                  expanded={expandedSources.has(group.sourceId)}
+                  onToggle={() => toggleSource(group.sourceId)}
+                  decisions={decisions}
+                  newName={newName}
+                  onChangeAction={handleChangeAction}
+                  onChangeEditText={handleChangeEditText}
+                  onAcceptAll={() => handleAcceptSource(group.matches.map((m) => m.id))}
+                  onRejectAll={() => handleRejectSource(group.matches.map((m) => m.id))}
+                />
+              ))}
+
+              {/* Connection-only sources (no text matches, just FK refs) */}
+              {connectionOnlyGroups.length > 0 && (
+                <div style={{ marginTop: '12px' }}>
                   <div
                     style={{
-                      fontSize: '11px',
+                      fontSize: '10px',
                       fontWeight: 600,
                       color: 'var(--text-muted)',
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px',
                       marginBottom: '6px',
                       padding: '0 2px',
+                      borderTop: '1px solid var(--border-color)',
+                      paddingTop: '10px',
                     }}
                   >
-                    {group.label}
+                    Connections without text matches ({connectionOnlyGroups.length})
                   </div>
-                  {group.matches.map((match) => {
-                    if (match.matchType === 'id_slug') {
-                      return <ConnectionRow key={match.id} match={match} />;
-                    }
-                    const decision = decisions.get(match.id) || {
-                      action: 'reject' as DecisionAction,
-                      editText: newName,
-                    };
-                    return (
-                      <MatchRow
-                        key={match.id}
-                        match={match}
-                        decision={decision}
-                        newName={newName}
-                        onChangeAction={(action) =>
-                          handleChangeAction(match.id, action)
-                        }
-                        onChangeEditText={(text) =>
-                          handleChangeEditText(match.id, text)
-                        }
-                      />
-                    );
-                  })}
+                  {connectionOnlyGroups.map((group) => (
+                    <div
+                      key={group.sourceId}
+                      style={{
+                        padding: '4px 12px',
+                        fontSize: '10px',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        gap: '6px',
+                        alignItems: 'center',
+                        marginBottom: '2px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          background: TYPE_COLORS.id_slug,
+                          color: '#fff',
+                          padding: '0 3px',
+                          borderRadius: '2px',
+                          fontSize: '8px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        FK
+                      </span>
+                      <span style={{ color: 'var(--text-primary)' }}>
+                        {group.sourceName}
+                      </span>
+                      <span>
+                        ({group.sourceType}
+                        {group.connections.length > 1
+                          ? `, ${group.connections.length} refs`
+                          : ''})
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
 
-              {scanResult.matches.length === 0 && (
+              {actionableGroups.length === 0 && connectionOnlyGroups.length === 0 && (
                 <div
                   style={{
                     textAlign: 'center',
