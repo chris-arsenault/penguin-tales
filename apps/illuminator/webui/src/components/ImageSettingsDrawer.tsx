@@ -46,12 +46,13 @@ const COMPOSITION_CATEGORY_LABELS: Record<string, string> = {
   pose: 'Pose',
   collective: 'Collective',
   place: 'Place',
+  landscape: 'Landscape',
   object: 'Object',
   concept: 'Concept',
   event: 'Event',
 };
 
-const COMPOSITION_CATEGORY_ORDER = ['character', 'pair', 'pose', 'collective', 'place', 'object', 'concept', 'event'];
+const COMPOSITION_CATEGORY_ORDER = ['character', 'pair', 'pose', 'collective', 'place', 'landscape', 'object', 'concept', 'event'];
 
 const ARTISTIC_CATEGORY_LABELS: Record<string, string> = {
   painting: 'Painting',

@@ -10,7 +10,7 @@ import type { EntityCategory } from './entityKind.js';
  * Categories for composition styles.
  * Extends EntityCategory with composition-specific groupings.
  */
-export type CompositionCategory = EntityCategory | 'pair' | 'pose';
+export type CompositionCategory = EntityCategory | 'pair' | 'pose' | 'landscape';
 
 /**
  * Composition style - defines framing and visual arrangement
@@ -297,6 +297,59 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
     description: 'Neighborhood or quarter perspective showing character',
     promptFragment: 'district overview, neighborhood character, mixed building heights, winding streets, local atmosphere, community feeling, distinct architectural style',
     targetCategory: 'place',
+  },
+
+  // ===========================
+  // LANDSCAPE compositions
+  // ===========================
+  {
+    id: 'panoramic-vista',
+    name: 'Panoramic Vista',
+    description: 'Wide horizontal sweep from an elevated vantage point',
+    promptFragment: 'panoramic landscape vista, wide horizontal composition, elevated vantage point, sweeping valley or ridgeline, full horizon visible, layered depth from foreground to distant mountains, sense of vastness and open space',
+    targetCategory: 'landscape',
+  },
+  {
+    id: 'river-path',
+    name: 'River Path',
+    description: 'Natural watercourse or path drawing the eye into depth',
+    promptFragment: 'landscape with winding river or natural path as compositional guide, leading line drawing eye deep into frame, watercourse cutting through terrain, atmospheric perspective, mist or haze adding depth layers',
+    targetCategory: 'landscape',
+  },
+  {
+    id: 'weather-front',
+    name: 'Weather Front',
+    description: 'Landscape dominated by atmospheric drama',
+    promptFragment: 'dramatic atmospheric landscape, massive weather system dominating sky, storm front or fog bank or aurora, volumetric light shafts piercing cloud layers, the sky as primary subject, land as grounding element beneath overwhelming atmosphere',
+    targetCategory: 'landscape',
+  },
+  {
+    id: 'monolith',
+    name: 'Monolith',
+    description: 'Single overwhelming natural formation that dominates the frame',
+    promptFragment: 'monumental natural formation filling the frame, sheer geological scale, shot from a position that makes the viewer feel insignificant, Half Dome or Uluru or volcanic caldera grandeur, the formation barely contained by the image edges',
+    targetCategory: 'landscape',
+  },
+  {
+    id: 'cascade',
+    name: 'Cascade',
+    description: 'Water in dramatic freefall at overwhelming scale',
+    promptFragment: 'massive waterfall or cascade system, water in freefall at staggering scale, mist rising and catching light, spray refracting into rainbows, terraced mineral shelves or sheer cliff face, the implied roar of falling water, National Geographic cover quality',
+    targetCategory: 'landscape',
+  },
+  {
+    id: 'impossible-spire',
+    name: 'Impossible Spire',
+    description: 'Fantasy-scale vertical landscape defying geological sense',
+    promptFragment: 'impossible vertical landscape at fantasy scale, towering rock pillars or crystalline spires rising from cloud seas, floating geological formations, vertical composition emphasizing absurd height, Final Fantasy vista grandeur, beauty beyond natural geology',
+    targetCategory: 'landscape',
+  },
+  {
+    id: 'primordial-glow',
+    name: 'Primordial Glow',
+    description: 'Landscape lit by its own geology',
+    promptFragment: 'landscape illuminated by geological light sources, bioluminescent caverns or volcanic lava rivers meeting ocean, geothermal pools in unearthly mineral colors, magma glow through translucent rock, the land itself as light source, primordial and ancient feeling',
+    targetCategory: 'landscape',
   },
 
   // ===========================

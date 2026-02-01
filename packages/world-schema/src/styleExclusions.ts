@@ -36,7 +36,7 @@ export const DEFAULT_RANDOM_EXCLUSIONS: RandomExclusionRule[] = [
     reason: 'Document/archival styles clash with non-artifact subjects',
     styles: ['cat:document'],
     compositions: [
-      'cat:character', 'cat:pair', 'cat:pose', 'cat:place', 'cat:concept',
+      'cat:character', 'cat:pair', 'cat:pose', 'cat:place', 'cat:landscape', 'cat:concept',
       'group-scene', 'action-battle', 'formation', 'council-chamber',
       'chronicle-panorama', 'chronicle-overview', 'chronicle-intimate',
       'chronicle-symbolic', 'chronicle-tableau', 'chronicle-folk',

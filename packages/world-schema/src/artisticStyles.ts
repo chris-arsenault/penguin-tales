@@ -248,9 +248,9 @@ export const DEFAULT_ARTISTIC_STYLES: ArtisticStyle[] = [
   {
     id: 'non-euclidean',
     name: 'Non-Euclidean Perspective',
-    description: 'Escher-like impossible spaces with warped geometry and recursive depth',
-    promptFragment: 'non-Euclidean perspective, MC Escher impossible geometry, warped spatial dimensions, recursive architecture, paradoxical staircases, gravity-defying composition, hyperbolic space',
-    keywords: ['non-euclidean', 'escher', 'impossible', 'recursive'],
+    description: 'Warped spatial geometry where perspective rules break down',
+    promptFragment: 'non-Euclidean perspective, warped spatial dimensions, hyperbolic geometry, impossible vanishing points, curved horizon lines, space folding inward, fisheye distortion of reality, gravitational lensing effect, multiple simultaneous viewpoints',
+    keywords: ['non-euclidean', 'warped', 'impossible', 'hyperbolic'],
     category: 'experimental',
   },
   {
