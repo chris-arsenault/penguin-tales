@@ -518,6 +518,9 @@ export default function IlluminatorRemote({
     return map;
   }, [entities, renownedThreshold]);
 
+  // Extract simulationRunId from worldData for content association
+  const simulationRunId = worldData?.metadata?.simulationRunId;
+
   // Shared helper: write to Dexie → reload local state → notify host
   const reloadAndNotify = useCallback(async (invalidateIds) => {
     const [freshEntities, freshEvents] = await Promise.all([
@@ -567,9 +570,6 @@ export default function IlluminatorRemote({
     await entityRepo.updateBackrefs(entityId, updatedBackrefs);
     await reloadAndNotify([entityId]);
   }, [reloadAndNotify]);
-
-  // Extract simulationRunId from worldData for content association
-  const simulationRunId = worldData?.metadata?.simulationRunId;
 
   // Seed Dexie from worldData and load canonical entities from the DAL.
   // Runs once per simulationRunId.
