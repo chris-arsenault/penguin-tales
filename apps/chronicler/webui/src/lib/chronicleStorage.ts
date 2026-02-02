@@ -100,24 +100,27 @@ export async function getCompletedChroniclesForSimulation(simulationRunId: strin
 
   try {
     const db = await openIlluminatorDb();
+    try {
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
+        const store = tx.objectStore(CHRONICLE_STORE_NAME);
+        const index = store.index('simulationRunId');
+        const request = index.getAll(IDBKeyRange.only(simulationRunId));
 
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
-      const store = tx.objectStore(CHRONICLE_STORE_NAME);
-      const index = store.index('simulationRunId');
-      const request = index.getAll(IDBKeyRange.only(simulationRunId));
+        request.onsuccess = () => {
+          const allChronicles = request.result as ChronicleRecord[];
+          // Filter to only completed chronicles
+          const completed = allChronicles.filter((c) => c.status === 'complete' && c.acceptedAt);
+          // Sort by acceptedAt descending
+          completed.sort((a, b) => (b.acceptedAt || 0) - (a.acceptedAt || 0));
+          resolve(completed);
+        };
 
-      request.onsuccess = () => {
-        const allChronicles = request.result as ChronicleRecord[];
-        // Filter to only completed chronicles
-        const completed = allChronicles.filter((c) => c.status === 'complete' && c.acceptedAt);
-        // Sort by acceptedAt descending
-        completed.sort((a, b) => (b.acceptedAt || 0) - (a.acceptedAt || 0));
-        resolve(completed);
-      };
-
-      request.onerror = () => reject(request.error || new Error('Failed to get chronicles'));
-    });
+        request.onerror = () => reject(request.error || new Error('Failed to get chronicles'));
+      });
+    } finally {
+      db.close();
+    }
   } catch (err) {
     console.error('[chronicleStorage] Failed to load chronicles:', err);
     return [];
@@ -132,14 +135,17 @@ export async function getChronicle(chronicleId: string): Promise<ChronicleRecord
 
   try {
     const db = await openIlluminatorDb();
+    try {
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
+        const request = tx.objectStore(CHRONICLE_STORE_NAME).get(chronicleId);
 
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
-      const request = tx.objectStore(CHRONICLE_STORE_NAME).get(chronicleId);
-
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error || new Error('Failed to get chronicle'));
-    });
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error || new Error('Failed to get chronicle'));
+      });
+    } finally {
+      db.close();
+    }
   } catch (err) {
     console.error('[chronicleStorage] Failed to load chronicle:', err);
     return null;

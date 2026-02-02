@@ -17,16 +17,19 @@ export async function getCompletedChroniclesForSimulation(simulationRunId) {
 
   try {
     const db = await openIlluminatorDb();
+    try {
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
+        const store = tx.objectStore(CHRONICLE_STORE_NAME);
+        const index = store.index('simulationRunId');
+        const request = index.getAll(IDBKeyRange.only(simulationRunId));
 
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
-      const store = tx.objectStore(CHRONICLE_STORE_NAME);
-      const index = store.index('simulationRunId');
-      const request = index.getAll(IDBKeyRange.only(simulationRunId));
-
-      request.onsuccess = () => resolve(filterCompleted(request.result || []));
-      request.onerror = () => reject(request.error || new Error('Failed to get chronicles'));
-    });
+        request.onsuccess = () => resolve(filterCompleted(request.result || []));
+        request.onerror = () => reject(request.error || new Error('Failed to get chronicles'));
+      });
+    } finally {
+      db.close();
+    }
   } catch (err) {
     console.error('[chronicleStorage] Failed to load chronicles:', err);
     return [];
@@ -38,16 +41,19 @@ export async function getCompletedChroniclesForProject(projectId) {
 
   try {
     const db = await openIlluminatorDb();
+    try {
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
+        const store = tx.objectStore(CHRONICLE_STORE_NAME);
+        const index = store.index('projectId');
+        const request = index.getAll(IDBKeyRange.only(projectId));
 
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
-      const store = tx.objectStore(CHRONICLE_STORE_NAME);
-      const index = store.index('projectId');
-      const request = index.getAll(IDBKeyRange.only(projectId));
-
-      request.onsuccess = () => resolve(filterCompleted(request.result || []));
-      request.onerror = () => reject(request.error || new Error('Failed to get chronicles'));
-    });
+        request.onsuccess = () => resolve(filterCompleted(request.result || []));
+        request.onerror = () => reject(request.error || new Error('Failed to get chronicles'));
+      });
+    } finally {
+      db.close();
+    }
   } catch (err) {
     console.error('[chronicleStorage] Failed to load chronicles:', err);
     return [];

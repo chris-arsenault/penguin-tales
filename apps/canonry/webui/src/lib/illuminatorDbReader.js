@@ -1,42 +1,35 @@
 /**
- * Shared read/write connection to the Illuminator Dexie database.
+ * Read/write access to the Illuminator Dexie database.
  *
  * Opens the `illuminator` IndexedDB without specifying a version,
  * which uses the current version without triggering schema upgrades.
  * Dexie owns the schema — this module reads and writes via raw IDB.
  *
- * Handles `onversionchange` so Dexie can upgrade the schema without
- * being blocked by this connection.
+ * IMPORTANT: Connections are NOT cached. Each call opens a fresh
+ * connection that the caller must close after use.
+ * Caching was removed because long-lived connections block Dexie
+ * schema upgrades in the Illuminator MFE (same-page MFE architecture).
  */
 
 const DB_NAME = 'illuminator';
 
-let dbPromise = null;
-
 export function openIlluminatorDb() {
-  if (dbPromise) return dbPromise;
-
-  dbPromise = new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME);
 
     request.onsuccess = () => {
       const db = request.result;
 
-      // Close this connection when another tab/MFE needs to upgrade the schema.
-      // The next call to openIlluminatorDb() will reconnect at the new version.
+      // If another connection triggers a version upgrade while we're
+      // still open, close immediately so we don't block it.
       db.onversionchange = () => {
-        console.log('[IlluminatorDbReader] Version change detected, closing connection');
         db.close();
-        dbPromise = null;
       };
 
       resolve(db);
     };
     request.onerror = () => {
-      dbPromise = null;
       reject(request.error || new Error('Failed to open illuminator DB'));
     };
   });
-
-  return dbPromise;
 }

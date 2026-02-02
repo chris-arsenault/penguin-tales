@@ -65,19 +65,22 @@ function countWords(content) {
  */
 export async function getStaticPagesForProject(projectId) {
   const db = await openIlluminatorDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STATIC_PAGE_STORE_NAME, 'readonly');
-    const store = tx.objectStore(STATIC_PAGE_STORE_NAME);
-    const index = store.index('projectId');
-    const req = index.getAll(projectId);
-    req.onsuccess = () => {
-      const pages = req.result || [];
-      pages.sort((a, b) => b.updatedAt - a.updatedAt);
-      resolve(pages);
-    };
-    req.onerror = () => reject(req.error || new Error('Failed to get static pages for project'));
-  });
+  try {
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STATIC_PAGE_STORE_NAME, 'readonly');
+      const store = tx.objectStore(STATIC_PAGE_STORE_NAME);
+      const index = store.index('projectId');
+      const req = index.getAll(projectId);
+      req.onsuccess = () => {
+        const pages = req.result || [];
+        pages.sort((a, b) => b.updatedAt - a.updatedAt);
+        resolve(pages);
+      };
+      req.onerror = () => reject(req.error || new Error('Failed to get static pages for project'));
+    });
+  } finally {
+    db.close();
+  }
 }
 
 /**
@@ -97,34 +100,38 @@ export async function importStaticPages(projectId, pages, options = {}) {
   const db = await openIlluminatorDb();
   const now = Date.now();
 
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STATIC_PAGE_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STATIC_PAGE_STORE_NAME);
+  try {
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STATIC_PAGE_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STATIC_PAGE_STORE_NAME);
 
-    let importedCount = 0;
+      let importedCount = 0;
 
-    for (const pageData of pages) {
-      const page = {
-        pageId: options.preserveIds && pageData.pageId ? pageData.pageId : generatePageId(),
-        projectId,
-        title: pageData.title || 'Untitled',
-        slug: pageData.slug || generateSlug(pageData.title || 'untitled'),
-        content: pageData.content || '',
-        summary: pageData.summary,
-        status: pageData.status || 'draft',
-        createdAt: pageData.createdAt || now,
-        updatedAt: pageData.updatedAt || now,
-        linkedEntityIds: extractEntityLinks(pageData.content || ''),
-        wordCount: countWords(pageData.content || ''),
-      };
+      for (const pageData of pages) {
+        const page = {
+          pageId: options.preserveIds && pageData.pageId ? pageData.pageId : generatePageId(),
+          projectId,
+          title: pageData.title || 'Untitled',
+          slug: pageData.slug || generateSlug(pageData.title || 'untitled'),
+          content: pageData.content || '',
+          summary: pageData.summary,
+          status: pageData.status || 'draft',
+          createdAt: pageData.createdAt || now,
+          updatedAt: pageData.updatedAt || now,
+          linkedEntityIds: extractEntityLinks(pageData.content || ''),
+          wordCount: countWords(pageData.content || ''),
+        };
 
-      store.put(page);
-      importedCount++;
-    }
+        store.put(page);
+        importedCount++;
+      }
 
-    tx.oncomplete = () => resolve(importedCount);
-    tx.onerror = () => reject(tx.error || new Error('Failed to import static pages'));
-  });
+      tx.oncomplete = () => resolve(importedCount);
+      tx.onerror = () => reject(tx.error || new Error('Failed to import static pages'));
+    });
+  } finally {
+    db.close();
+  }
 }
 
 /**
@@ -135,18 +142,21 @@ export async function deleteStaticPagesForProject(projectId) {
   if (pages.length === 0) return 0;
 
   const db = await openIlluminatorDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STATIC_PAGE_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STATIC_PAGE_STORE_NAME);
 
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STATIC_PAGE_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STATIC_PAGE_STORE_NAME);
+      for (const page of pages) {
+        store.delete(page.pageId);
+      }
 
-    for (const page of pages) {
-      store.delete(page.pageId);
-    }
-
-    tx.oncomplete = () => resolve(pages.length);
-    tx.onerror = () => reject(tx.error || new Error('Failed to delete static pages for project'));
-  });
+      tx.oncomplete = () => resolve(pages.length);
+      tx.onerror = () => reject(tx.error || new Error('Failed to delete static pages for project'));
+    });
+  } finally {
+    db.close();
+  }
 }
 
 /**
