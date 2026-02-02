@@ -1383,12 +1383,12 @@ export default function ChronicleReviewPanel({
     setShowTitleAcceptModal(false);
   }, [onRejectPendingTitle]);
 
-  // Show accept modal when pending title appears on a published chronicle
+  // Show accept modal when pending title appears
   useEffect(() => {
-    if (item?.pendingTitle && item?.finalContent) {
+    if (item?.pendingTitle) {
       setShowTitleAcceptModal(true);
     }
-  }, [item?.pendingTitle, item?.finalContent]);
+  }, [item?.pendingTitle]);
 
   // Image modal state for full-size viewing
   const [imageModal, setImageModal] = useState({ open: false, imageId: '', title: '' });
@@ -1404,6 +1404,90 @@ export default function ChronicleReviewPanel({
       onClose={() => setImageModal({ open: false, imageId: '', title: '' })}
     />
   );
+
+  const renderTitleAcceptModal = () => {
+    if (!showTitleAcceptModal || !item?.pendingTitle) return null;
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}
+        onClick={() => { handleRejectTitle(); }}
+      >
+        <div
+          style={{
+            background: 'var(--bg-primary)',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '480px',
+            width: '90%',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>
+            Accept New Title?
+          </h3>
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>Current</div>
+            <div style={{ fontSize: '15px', fontWeight: 500 }}>{item.title}</div>
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>New</div>
+            <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{item.pendingTitle}</div>
+          </div>
+          {item.pendingTitleCandidates?.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Candidates considered</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                {item.pendingTitleCandidates.map((c, i) => (
+                  <div key={i}>
+                    <span style={{ opacity: 0.5 }}>&#x25C7;</span> {c}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button
+              onClick={handleRejectTitle}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              Keep Current
+            </button>
+            <button
+              onClick={handleAcceptTitle}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                background: '#2563eb',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                color: 'white',
+              }}
+            >
+              Accept New
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (!item) return null;
 
@@ -1950,6 +2034,7 @@ export default function ChronicleReviewPanel({
         )}
 
         <ExpandableSeedSection seed={seedData} defaultExpanded={false} />
+        {renderTitleAcceptModal()}
         {renderImageModal()}
       </div>
     );
@@ -2265,87 +2350,7 @@ export default function ChronicleReviewPanel({
           <PerspectiveSynthesisViewer synthesis={item.perspectiveSynthesis} />
         )}
 
-        {/* Title Accept Modal */}
-        {showTitleAcceptModal && item.pendingTitle && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(0, 0, 0, 0.6)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-            }}
-            onClick={() => { handleRejectTitle(); }}
-          >
-            <div
-              style={{
-                background: 'var(--bg-primary)',
-                borderRadius: '12px',
-                padding: '24px',
-                maxWidth: '480px',
-                width: '90%',
-                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>
-                Accept New Title?
-              </h3>
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>Current</div>
-                <div style={{ fontSize: '15px', fontWeight: 500 }}>{item.title}</div>
-              </div>
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>New</div>
-                <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{item.pendingTitle}</div>
-              </div>
-              {item.pendingTitleCandidates?.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Candidates considered</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                    {item.pendingTitleCandidates.map((c, i) => (
-                      <div key={i}>
-                        <span style={{ opacity: 0.5 }}>&#x25C7;</span> {c}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={handleRejectTitle}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  Keep Current
-                </button>
-                <button
-                  onClick={handleAcceptTitle}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    background: '#2563eb',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    color: 'white',
-                  }}
-                >
-                  Accept New
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {renderTitleAcceptModal()}
         {renderImageModal()}
       </div>
     );

@@ -447,8 +447,7 @@ export async function updateChronicleSummary(
 
 /**
  * Update chronicle with title generation results.
- * For published chronicles (finalContent exists), writes to pending fields.
- * For draft chronicles, writes directly to title.
+ * Always writes to pending fields — user must accept via modal.
  */
 export async function updateChronicleTitle(
   chronicleId: string,
@@ -460,15 +459,8 @@ export async function updateChronicleTitle(
   const record = await db.chronicles.get(chronicleId);
   if (!record) throw new Error(`Chronicle ${chronicleId} not found`);
 
-  if (record.finalContent) {
-    // Published: write to pending fields, user must accept
-    record.pendingTitle = title;
-    record.pendingTitleCandidates = candidates;
-  } else {
-    // Draft: apply directly
-    record.title = title;
-    record.titleCandidates = candidates;
-  }
+  record.pendingTitle = title;
+  record.pendingTitleCandidates = candidates;
   record.titleGeneratedAt = Date.now();
   record.titleModel = model;
   record.totalEstimatedCost += cost.estimated;
@@ -481,7 +473,7 @@ export async function updateChronicleTitle(
 }
 
 /**
- * Accept a pending title on a published chronicle
+ * Accept a pending title
  */
 export async function acceptPendingTitle(chronicleId: string): Promise<void> {
   const record = await db.chronicles.get(chronicleId);
