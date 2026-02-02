@@ -265,12 +265,22 @@ export interface WikiPage {
   lastUpdated: number;
 }
 
+/** Historian annotation note (read-only in Chronicler, managed in Illuminator) */
+export interface WikiHistorianNote {
+  noteId: string;
+  anchorPhrase: string;
+  text: string;
+  type: string;
+}
+
 export interface WikiContent {
   sections: WikiSection[];
   summary?: string;
   /** Cover image ID for chronicle pages */
   coverImageId?: string;
   infobox?: WikiInfobox;
+  /** Enabled historian annotations for this page */
+  historianNotes?: WikiHistorianNote[];
 }
 
 /** Image display size for chronicle inline images */

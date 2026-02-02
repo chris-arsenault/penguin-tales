@@ -298,6 +298,7 @@ export default function ChroniclePanel({
   onHistorianReview,
   isHistorianActive,
   historianConfigured,
+  onToggleHistorianNoteEnabled,
 }) {
   const [selectedItemId, setSelectedItemId] = useState(() => {
     const saved = localStorage.getItem('illuminator:chronicle:selectedItemId');
@@ -1876,6 +1877,7 @@ export default function ChroniclePanel({
                   onBackportLore={onBackportLore ? () => onBackportLore(selectedItem.chronicleId) : undefined}
                   onHistorianReview={onHistorianReview && historianConfigured ? (tone) => onHistorianReview(selectedItem.chronicleId, tone) : undefined}
                   isHistorianActive={isHistorianActive}
+                  onToggleHistorianNoteEnabled={onToggleHistorianNoteEnabled}
                   isGenerating={isGenerating}
                   refinements={refinementState}
                   entities={entities}

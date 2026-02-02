@@ -10,7 +10,7 @@
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import MDEditor from '@uiw/react-md-editor';
-import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, DisambiguationEntry, ImageAspect } from '../types/world.ts';
+import type { WikiPage, WikiSection, WikiSectionImage, WikiHistorianNote, HardState, ImageMetadata, DisambiguationEntry, ImageAspect } from '../types/world.ts';
 import { useImageUrl, useImageStore } from '@penguin-tales/image-store';
 import { SeedModal, type ChronicleSeedData } from './ChronicleSeedViewer.tsx';
 import { applyWikiLinks } from '../lib/wikiBuilder.ts';
@@ -125,6 +125,92 @@ function ChronicleImage({
         <figcaption className={styles.imageCaption}>{image.caption}</figcaption>
       )}
     </figure>
+  );
+}
+
+// ============================================================================
+// Historian Callouts
+// ============================================================================
+
+const HISTORIAN_NOTE_COLORS: Record<string, string> = {
+  commentary: '#8b7355',
+  correction: '#c0392b',
+  tangent: '#7d6b91',
+  skepticism: '#d4a017',
+  pedantic: '#5b7a5e',
+};
+
+const HISTORIAN_NOTE_ICONS: Record<string, string> = {
+  commentary: '✦',
+  correction: '!',
+  tangent: '~',
+  skepticism: '?',
+  pedantic: '#',
+};
+
+const HISTORIAN_NOTE_LABELS: Record<string, string> = {
+  commentary: 'Commentary',
+  correction: 'Correction',
+  tangent: 'Tangent',
+  skepticism: 'Skepticism',
+  pedantic: 'Pedantic',
+};
+
+function HistorianCallouts({ notes, sectionContent }: { notes: WikiHistorianNote[]; sectionContent: string }) {
+  // Filter to notes whose anchor phrase appears in this section
+  const sectionNotes = useMemo(() => {
+    if (!sectionContent) return notes; // no section content = show all passed notes
+    const matched = notes
+      .filter(n => sectionContent.indexOf(n.anchorPhrase) >= 0)
+      .map(n => ({
+        ...n,
+        position: sectionContent.indexOf(n.anchorPhrase),
+      }))
+      .sort((a, b) => a.position - b.position);
+    return matched;
+  }, [notes, sectionContent]);
+
+  if (sectionNotes.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: '8px', marginBottom: '12px' }}>
+      {sectionNotes.map(note => {
+        const color = HISTORIAN_NOTE_COLORS[note.type] || HISTORIAN_NOTE_COLORS.commentary;
+        const icon = HISTORIAN_NOTE_ICONS[note.type] || '✦';
+        const label = HISTORIAN_NOTE_LABELS[note.type] || 'Commentary';
+        return (
+          <div
+            key={note.noteId}
+            style={{
+              margin: '8px 0 8px 16px',
+              padding: '10px 14px',
+              background: 'rgba(139, 115, 85, 0.08)',
+              borderLeft: `3px solid ${color}`,
+              borderRadius: '0 4px 4px 0',
+              fontSize: '13px',
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontStyle: 'italic',
+              color: 'var(--color-text-muted)',
+              lineHeight: '1.6',
+            }}
+          >
+            <div style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              color,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              marginBottom: '4px',
+              fontStyle: 'normal',
+              fontFamily: 'system-ui, sans-serif',
+            }}>
+              {icon} {label}
+            </div>
+            {note.text}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -1102,8 +1188,21 @@ export default function WikiPageView({
                 onImageOpen={handleInlineImageOpen}
               />
             )}
+            {page.content.historianNotes && page.content.historianNotes.length > 0 && (
+              <HistorianCallouts notes={page.content.historianNotes} sectionContent={section.content} />
+            )}
           </div>
         ))}
+
+          {/* Unmatched historian notes (not anchored to any section) */}
+          {page.content.historianNotes && page.content.historianNotes.length > 0 && (() => {
+            const allSectionContent = page.content.sections.map(s => s.content).join('\n');
+            const unmatched = page.content.historianNotes.filter(
+              n => allSectionContent.indexOf(n.anchorPhrase) < 0
+            );
+            if (unmatched.length === 0) return null;
+            return <HistorianCallouts notes={unmatched} sectionContent="" />;
+          })()}
 
           {/* Backlinks */}
           {backlinks.length > 0 && (

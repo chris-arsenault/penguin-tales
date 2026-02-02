@@ -45,6 +45,7 @@ import PrePrintPanel from './components/PrePrintPanel';
 import { DEFAULT_HISTORIAN_CONFIG, isHistorianConfigured } from './lib/historianTypes';
 import { getPublishedStaticPagesForProject } from './lib/db/staticPageRepository';
 import { getEntityUsageStats, getChronicle, getChroniclesForSimulation, updateChronicleLoreBackported, updateChronicleHistorianNotes } from './lib/db/chronicleRepository';
+import { useChronicleStore } from './lib/db/chronicleStore';
 import { useStyleLibrary } from './hooks/useStyleLibrary';
 import { useImageGenSettings } from './hooks/useImageGenSettings';
 import ImageSettingsDrawer, { ImageSettingsTrigger } from './components/ImageSettingsDrawer';
@@ -1386,39 +1387,73 @@ export default function IlluminatorRemote({
     cancelReview: cancelHistorianReview,
   } = useHistorianReview(enqueue);
 
-  // Collect previous historian notes for memory/continuity (sample from all entities)
+  // Configurable caps for historian voice-continuity sampling
+  const HISTORIAN_SAMPLING = useMemo(() => ({
+    maxTotal: 15,       // Total notes in the sample
+    maxPerTarget: 3,    // Max notes from any single entity/chronicle
+  }), []);
+
+  // Collect previous historian notes for memory/continuity (sample from entities + chronicles)
   const collectPreviousNotes = useCallback(() => {
-    const allNotes = [];
+    const { maxTotal, maxPerTarget } = HISTORIAN_SAMPLING;
+
+    // Group enabled notes by target name
+    const byTarget = {};
+
+    // Entity notes
     for (const entity of entities) {
-      const notes = entity.enrichment?.historianNotes || [];
-      for (const note of notes) {
-        allNotes.push({
+      const notes = (entity.enrichment?.historianNotes || []).filter(n => n.enabled !== false);
+      if (notes.length > 0) {
+        byTarget[entity.name] = notes.map(n => ({
           targetName: entity.name,
-          anchorPhrase: note.anchorPhrase,
-          text: note.text,
-          type: note.type,
-        });
+          anchorPhrase: n.anchorPhrase,
+          text: n.text,
+          type: n.type,
+        }));
       }
     }
-    // Take a representative sample (max 15, biased toward variety)
+
+    // Chronicle notes
+    const chronicleRecords = useChronicleStore.getState().chronicles;
+    for (const chronicle of Object.values(chronicleRecords)) {
+      const notes = (chronicle.historianNotes || []).filter(n => n.enabled !== false);
+      if (notes.length > 0) {
+        const name = chronicle.title || chronicle.chronicleId;
+        byTarget[name] = (byTarget[name] || []).concat(notes.map(n => ({
+          targetName: name,
+          anchorPhrase: n.anchorPhrase,
+          text: n.text,
+          type: n.type,
+        })));
+      }
+    }
+
+    // Cap each target at maxPerTarget
+    const targets = Object.keys(byTarget);
+    for (const target of targets) {
+      if (byTarget[target].length > maxPerTarget) {
+        byTarget[target] = byTarget[target].slice(0, maxPerTarget);
+      }
+    }
+
+    // Round-robin across targets to fill up to maxTotal
     const sample = [];
-    const byType = {};
-    for (const note of allNotes) {
-      if (!byType[note.type]) byType[note.type] = [];
-      byType[note.type].push(note);
-    }
-    const types = Object.keys(byType);
-    let idx = 0;
-    while (sample.length < 15 && idx < allNotes.length) {
-      const type = types[idx % types.length];
-      const bucket = byType[type];
-      if (bucket && bucket.length > 0) {
-        sample.push(bucket.shift());
+    let round = 0;
+    while (sample.length < maxTotal && round < maxPerTarget) {
+      let added = false;
+      for (const target of targets) {
+        if (sample.length >= maxTotal) break;
+        if (round < byTarget[target].length) {
+          sample.push(byTarget[target][round]);
+          added = true;
+        }
       }
-      idx++;
+      if (!added) break;
+      round++;
     }
+
     return sample;
-  }, [entities]);
+  }, [entities, HISTORIAN_SAMPLING]);
 
   const handleHistorianReview = useCallback((entityId, tone) => {
     if (!projectId || !simulationRunId || !entityId) return;
@@ -1550,11 +1585,36 @@ export default function IlluminatorRemote({
     } else if (targetType === 'chronicle' && targetId) {
       try {
         await updateChronicleHistorianNotes(targetId, notes);
+        await useChronicleStore.getState().refreshChronicle(targetId);
       } catch (err) {
         console.error('[Historian] Failed to save chronicle notes:', err);
       }
     }
   }, [applyAcceptedHistorianNotes, historianRun, reloadAndNotify]);
+
+  const handleToggleHistorianNoteEnabled = useCallback(async (targetType, targetId, noteId, enabled) => {
+    if (targetType === 'entity' && targetId) {
+      const entity = entities.find((e) => e.id === targetId);
+      if (!entity?.enrichment?.historianNotes) return;
+      const updatedNotes = entity.enrichment.historianNotes.map((n) =>
+        n.noteId === noteId ? { ...n, enabled } : n
+      );
+      await entityRepo.setHistorianNotes(targetId, updatedNotes);
+      await reloadAndNotify([targetId]);
+    } else if (targetType === 'chronicle' && targetId) {
+      try {
+        const chronicle = await getChronicle(targetId);
+        if (!chronicle?.historianNotes) return;
+        const updatedNotes = chronicle.historianNotes.map((n) =>
+          n.noteId === noteId ? { ...n, enabled } : n
+        );
+        await updateChronicleHistorianNotes(targetId, updatedNotes);
+        await useChronicleStore.getState().refreshChronicle(targetId);
+      } catch (err) {
+        console.error('[Historian] Failed to toggle note enabled:', err);
+      }
+    }
+  }, [entities, reloadAndNotify]);
 
   const handleEditHistorianNoteText = useCallback((noteId, newText) => {
     if (!historianRun) return;
@@ -1801,6 +1861,7 @@ export default function IlluminatorRemote({
               onHistorianReview={handleHistorianReview}
               isHistorianActive={isHistorianActive}
               historianConfigured={isHistorianConfigured(historianConfig)}
+              onToggleHistorianNoteEnabled={handleToggleHistorianNoteEnabled}
               onRename={handleStartRename}
               onPatchEvents={handleStartPatchEvents}
             />
@@ -1833,6 +1894,7 @@ export default function IlluminatorRemote({
               onHistorianReview={handleChronicleHistorianReview}
               isHistorianActive={isHistorianActive}
               historianConfigured={isHistorianConfigured(historianConfig)}
+              onToggleHistorianNoteEnabled={handleToggleHistorianNoteEnabled}
             />
           </div>
         )}

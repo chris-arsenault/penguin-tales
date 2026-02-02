@@ -807,6 +807,9 @@ function buildChroniclePageFromChronicle(
       coverImageId: chronicle.coverImage?.status === 'complete' && chronicle.coverImage?.generatedImageId
         ? chronicle.coverImage.generatedImageId
         : undefined,
+      historianNotes: (chronicle.historianNotes || [])
+        .filter((n: any) => n.enabled !== false)
+        .map((n: any) => ({ noteId: n.noteId, anchorPhrase: n.anchorPhrase, text: n.text, type: n.type })),
     },
     categories: [],
     linkedEntities,
@@ -1378,6 +1381,9 @@ function buildEntityPage(
       sections,
       summary: summary || undefined,
       infobox,
+      historianNotes: ((entity as any).enrichment?.historianNotes || [])
+        .filter((n: any) => n.enabled !== false)
+        .map((n: any) => ({ noteId: n.noteId, anchorPhrase: n.anchorPhrase, text: n.text, type: n.type })),
     },
     categories,
     linkedEntities,

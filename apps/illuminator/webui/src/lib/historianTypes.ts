@@ -38,6 +38,8 @@ export interface HistorianNote {
   text: string;
   /** Note type for styling and filtering */
   type: HistorianNoteType;
+  /** Whether this note is active (displayed in Chronicler, included in exports/sampling). Defaults to true. */
+  enabled: boolean;
 }
 
 // =============================================================================

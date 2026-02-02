@@ -406,6 +406,7 @@ async function executeHistorianReviewTask(
         anchorPhrase: n.anchorPhrase,
         text: n.text,
         type: n.type,
+        enabled: true,
       }));
 
     // Write notes to run, mark as reviewing

@@ -16,31 +16,31 @@ const TONE_OPTIONS = [
     value: 'witty',
     label: 'Witty',
     description: 'Sarcastic, playful, sly',
-    symbol: '\u2736',  // ✶
+    symbol: '✶',
   },
   {
     value: 'weary',
     label: 'Weary',
     description: 'Resigned satire, black humor',
-    symbol: '\u25CB',  // ○
+    symbol: '○',
   },
   {
     value: 'forensic',
     label: 'Forensic',
     description: 'Clinical, methodical, cold',
-    symbol: '\u25C8',  // ◈
+    symbol: '◈',
   },
   {
     value: 'elegiac',
     label: 'Elegiac',
     description: 'Mournful, lyrical, grief',
-    symbol: '\u25C7',  // ◇
+    symbol: '◇',
   },
   {
     value: 'cantankerous',
     label: 'Cantankerous',
     description: 'Irritable, exacting, sharp',
-    symbol: '\u266F',  // ♯
+    symbol: '♯',
   },
 ];
 
@@ -82,17 +82,17 @@ export default function HistorianToneSelector({ onSelect, disabled, hasNotes, st
         style={{
           background: 'var(--bg-tertiary)',
           border: '1px solid var(--border-color)',
-          color: disabled ? 'var(--text-muted)' : '#8b7355',
-          fontSize: '10px',
-          padding: '1px 6px',
-          borderRadius: '3px',
+          color: disabled ? 'var(--text-muted)' : 'var(--text-secondary)',
+          fontSize: '12px',
+          padding: '8px 16px',
+          borderRadius: '4px',
           cursor: disabled ? 'not-allowed' : 'pointer',
           textTransform: 'none',
           letterSpacing: 'normal',
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled ? 0.6 : 1,
         }}
       >
-        {hasNotes ? 'Re-annotate' : 'Historian'} \u25BE
+        {hasNotes ? 'Re-annotate' : 'Historian'} ▾
       </button>
 
       {isOpen && (
@@ -112,7 +112,7 @@ export default function HistorianToneSelector({ onSelect, disabled, hasNotes, st
         >
           <div style={{
             padding: '6px 8px 4px',
-            fontSize: '10px',
+            fontSize: '11px',
             color: 'var(--text-muted)',
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
@@ -154,10 +154,10 @@ export default function HistorianToneSelector({ onSelect, disabled, hasNotes, st
                 {option.symbol}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
                   {option.label}
                 </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '1px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '1px' }}>
                   {option.description}
                 </div>
               </div>

@@ -381,7 +381,10 @@ export function buildChronicleExport(chronicle: ChronicleRecord): ChronicleExpor
   }
 
   if (chronicle.historianNotes && chronicle.historianNotes.length > 0) {
-    exportData.historianNotes = chronicle.historianNotes;
+    const enabledNotes = chronicle.historianNotes.filter(n => n.enabled !== false);
+    if (enabledNotes.length > 0) {
+      exportData.historianNotes = enabledNotes;
+    }
   }
 
   return exportData;
