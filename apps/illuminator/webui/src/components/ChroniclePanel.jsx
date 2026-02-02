@@ -10,7 +10,11 @@ import ChronicleReviewPanel from './ChronicleReviewPanel';
 import { ChronicleWizard } from './ChronicleWizard';
 import { buildChronicleContext } from '../lib/chronicleContextBuilder';
 import { generateNameBank, extractCultureIds } from '../lib/chronicle/nameBank';
-import { useChronicleGeneration, deriveStatus } from '../hooks/useChronicleGeneration';
+import { deriveStatus } from '../hooks/useChronicleGeneration';
+import { useChronicleStore } from '../lib/db/chronicleStore';
+import { useChronicleNavItems, useSelectedChronicle } from '../lib/db/chronicleSelectors';
+import { useChronicleActions } from '../hooks/useChronicleActions';
+import { useChronicleQueueWatcher } from '../hooks/useChronicleQueueWatcher';
 import { buildChronicleScenePrompt } from '../lib/promptBuilders';
 import { resolveStyleSelection } from './StyleSelector';
 import { getCoverImageConfig } from '../lib/coverImageStyles';
@@ -133,7 +137,7 @@ function ChronicleItemCard({ item, isSelected, onClick }) {
     }
 
     // Cover image generated
-    if (item.coverImage?.status === 'complete') {
+    if (item.coverImageComplete) {
       syms.push({ symbol: '\u25A3', title: 'Cover image generated', color: '#10b981' });
     }
 
@@ -148,16 +152,16 @@ function ChronicleItemCard({ item, isSelected, onClick }) {
     }
 
     return syms;
-  }, [item.focusType, item.primaryCount, item.perspectiveSynthesis, item.combineInstructions, item.coverImage?.status, item.loreBackported, item.lens]);
+  }, [item.focusType, item.primaryCount, item.perspectiveSynthesis, item.combineInstructions, item.coverImageComplete, item.loreBackported, item.lens]);
 
   // Compact numeric badge: cast count + scene image count
   const castCount = (item.primaryCount || 0) + (item.supportingCount || 0);
-  const sceneCount = item.imageRefs?.refs?.filter(r => r.type === 'prompt_request' && r.status === 'complete').length || 0;
-  const hasCover = item.coverImage?.status === 'complete';
+  const sceneCount = item.imageRefCompleteCount || 0;
+  const hasCover = item.coverImageComplete;
   const imageCount = sceneCount + (hasCover ? 1 : 0);
 
   // Narrative style name for subtitle
-  const styleName = item.narrativeStyle?.name || null;
+  const styleName = item.narrativeStyleName || null;
 
   const status = getStatusLabel();
 
@@ -342,23 +346,43 @@ export default function ChroniclePanel({
   // Style library loading state (derived from prop)
   const stylesLoading = !styleLibrary;
 
-  // Use the chronicle generation hook
-  // Returns chronicle records Map<chronicleId, ChronicleRecord> loaded from IndexedDB
+  // Initialize chronicle store when simulation changes
+  useEffect(() => {
+    if (simulationRunId) {
+      useChronicleStore.getState().initialize(simulationRunId);
+    }
+  }, [simulationRunId]);
+
+  // Bridge enrichment queue completions to targeted store refreshes
+  useChronicleQueueWatcher(queue);
+
+  // Enqueue-dependent actions (generate, compare, combine)
   const {
-    chronicles,
     generateV2,
     generateSummary,
     generateTitle,
+    generateImageRefs: _generateImageRefs,
     regenerateWithTemperature,
     compareVersions,
     combineVersions,
-    acceptChronicle,
-    cancelChronicle,
-    restartChronicle,
-    isGenerating,
-    refresh,
-    refreshChronicle,
-  } = useChronicleGeneration(projectId, simulationRunId, queue, onEnqueue);
+  } = useChronicleActions(onEnqueue);
+
+  // Lifecycle actions from store (no queue dependency)
+  const acceptChronicle = useChronicleStore((s) => s.acceptChronicle);
+  const cancelChronicle = useChronicleStore((s) => s.cancelChronicle);
+  const restartChronicle = useChronicleStore((s) => s.restartChronicle);
+
+  const isGenerating = queue.some(
+    (item) => item.type === 'entityChronicle' &&
+              (item.status === 'queued' || item.status === 'running')
+  );
+
+  // Refresh helpers
+  const refresh = useCallback(() => useChronicleStore.getState().refreshAll(), []);
+  const refreshChronicle = useCallback(
+    (id) => useChronicleStore.getState().refreshChronicle(id),
+    [],
+  );
 
   // External refresh trigger (e.g. after lore backport)
   useEffect(() => {
@@ -425,109 +449,11 @@ export default function ChroniclePanel({
     return deriveStatus(chronicle);
   }, [queue]);
 
-  // Build list of chronicle items from storage (chronicle-first architecture)
-  const chronicleItems = useMemo(() => {
-    const items = [];
-
-    // Get all chronicles from storage
-    const allChronicles = Array.from(chronicles.values());
-    // Sort by most recent first
-    allChronicles.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-
-    for (const chronicle of allChronicles) {
-      // Derive display name from title or role assignments
-      const displayName = chronicle.title ||
-        (chronicle.roleAssignments?.length > 0
-          ? chronicle.roleAssignments.filter(r => r.isPrimary).map(r => r.entityName).join(' & ') ||
-            chronicle.roleAssignments[0]?.entityName
-          : '') ||
-        'Untitled Chronicle';
-
-      // Count primary and supporting roles
-      const primaryCount = chronicle.roleAssignments?.filter(r => r.isPrimary).length || 0;
-      const supportingCount = (chronicle.roleAssignments?.length || 0) - primaryCount;
-
-      items.push({
-        id: chronicle.chronicleId,
-        type: 'chronicles',
-        chronicleId: chronicle.chronicleId,
-        entrypointId: chronicle.entrypointId,
-        name: displayName,
-        status: getEffectiveStatus(chronicle.chronicleId, chronicle),
-
-        // Chronicle-first metadata
-        title: chronicle.title,
-        format: chronicle.format,
-        focusType: chronicle.focusType,
-        roleAssignments: chronicle.roleAssignments,
-        narrativeStyleId: chronicle.narrativeStyleId,
-        narrativeStyle: chronicle.narrativeStyle,
-        primaryCount,
-        supportingCount,
-        selectedEntityIds: chronicle.selectedEntityIds,
-        selectedEventIds: chronicle.selectedEventIds,
-        selectedRelationshipIds: chronicle.selectedRelationshipIds,
-        temporalContext: chronicle.temporalContext,
-
-        // Pipeline data
-        assembledContent: chronicle.assembledContent,
-        cohesionReport: chronicle.cohesionReport,
-        finalContent: chronicle.finalContent,
-        failureStep: chronicle.failureStep,
-        failureReason: chronicle.failureReason,
-        editVersion: chronicle.editVersion ?? 0,
-        generationSystemPrompt: chronicle.generationSystemPrompt,
-        generationUserPrompt: chronicle.generationUserPrompt,
-        generationTemperature: chronicle.generationTemperature,
-        generationHistory: chronicle.generationHistory,
-        activeVersionId: chronicle.activeVersionId,
-
-        // V2-specific
-        selectionSummary: chronicle.selectionSummary,
-        perspectiveSynthesis: chronicle.perspectiveSynthesis,
-
-        // Comparison report
-        comparisonReport: chronicle.comparisonReport,
-        comparisonReportGeneratedAt: chronicle.comparisonReportGeneratedAt,
-        combineInstructions: chronicle.combineInstructions,
-
-        // Refinement fields
-        summary: chronicle.summary,
-        summaryGeneratedAt: chronicle.summaryGeneratedAt,
-        summaryModel: chronicle.summaryModel,
-        summaryTargetVersionId: chronicle.summaryTargetVersionId,
-        titleCandidates: chronicle.titleCandidates,
-        titleGeneratedAt: chronicle.titleGeneratedAt,
-        titleModel: chronicle.titleModel,
-        pendingTitle: chronicle.pendingTitle,
-        pendingTitleCandidates: chronicle.pendingTitleCandidates,
-        imageRefs: chronicle.imageRefs,
-        imageRefsGeneratedAt: chronicle.imageRefsGeneratedAt,
-        imageRefsModel: chronicle.imageRefsModel,
-        imageRefsTargetVersionId: chronicle.imageRefsTargetVersionId,
-        coverImage: chronicle.coverImage,
-        coverImageGeneratedAt: chronicle.coverImageGeneratedAt,
-        coverImageModel: chronicle.coverImageModel,
-        validationStale: chronicle.validationStale,
-
-        // Lore backport
-        loreBackported: chronicle.loreBackported,
-
-        // Historian notes
-        historianNotes: chronicle.historianNotes,
-
-        // Timestamps
-        createdAt: chronicle.createdAt,
-        updatedAt: chronicle.updatedAt,
-        model: chronicle.model,
-      });
-    }
-
-    return items;
-  }, [chronicles, getEffectiveStatus]);
+  // Lightweight nav items from Zustand store (shallow-compared, only re-renders on nav-relevant changes)
+  const chronicleItems = useChronicleNavItems(getEffectiveStatus);
 
   const getChronicleTypeLabel = useCallback((item) => {
-    if (item?.narrativeStyle?.name) return item.narrativeStyle.name;
+    if (item?.narrativeStyleName) return item.narrativeStyleName;
     if (item?.narrativeStyleId) {
       return narrativeStyleNameMap.get(item.narrativeStyleId) || item.narrativeStyleId;
     }
@@ -556,21 +482,11 @@ export default function ChroniclePanel({
       );
     }
 
-    const getLength = (item) => {
-      const text = item.finalContent || item.assembledContent || '';
-      if (!text) return 0;
-      return text.trim().split(/\s+/).filter(Boolean).length;
-    };
+    const getLength = (item) => item.wordCount || 0;
 
-    const getEraOrder = (item) => {
-      const focalEra = item.temporalContext?.focalEra;
-      if (!focalEra) return Number.MAX_SAFE_INTEGER;
-      if (typeof focalEra.order === 'number') return focalEra.order;
-      if (typeof focalEra.startTick === 'number') return focalEra.startTick;
-      return Number.MAX_SAFE_INTEGER;
-    };
+    const getEraOrder = (item) => typeof item.focalEraOrder === 'number' ? item.focalEraOrder : Number.MAX_SAFE_INTEGER;
 
-    const getEraName = (item) => item.temporalContext?.focalEra?.name || '';
+    const getEraName = (item) => item.focalEraName || '';
 
     const sorted = [...items].sort((a, b) => {
       switch (sortMode) {
@@ -680,10 +596,31 @@ export default function ChroniclePanel({
     return labels.map((label) => ({ label, items: groups.get(label) }));
   }, [visibleChronicleItems, getChronicleTypeLabel, groupByType]);
 
-  // Get selected item
+  // Selected chronicle from store — only re-renders when THIS chronicle changes
+  const selectedChronicle = useSelectedChronicle(selectedItemId);
+
+  // Build selectedItem with derived fields for compatibility with existing callbacks/UI
   const selectedItem = useMemo(() => {
-    return chronicleItems.find((item) => item.id === selectedItemId);
-  }, [chronicleItems, selectedItemId]);
+    if (!selectedChronicle) return undefined;
+    const record = selectedChronicle;
+    const displayName = record.title ||
+      (record.roleAssignments?.length > 0
+        ? record.roleAssignments.filter(r => r.isPrimary).map(r => r.entityName).join(' & ') ||
+          record.roleAssignments[0]?.entityName
+        : '') ||
+      'Untitled Chronicle';
+
+    return {
+      ...record,
+      id: record.chronicleId,
+      type: 'chronicles',
+      name: displayName,
+      status: getEffectiveStatus(record.chronicleId, record),
+      primaryCount: record.roleAssignments?.filter(r => r.isPrimary).length || 0,
+      supportingCount: (record.roleAssignments?.length || 0) - (record.roleAssignments?.filter(r => r.isPrimary).length || 0),
+      editVersion: record.editVersion ?? 0,
+    };
+  }, [selectedChronicle, getEffectiveStatus]);
 
   // Get the narrative style from the selected chronicle's stored seed data
   const selectedNarrativeStyle = useMemo(() => {
@@ -729,9 +666,6 @@ export default function ChroniclePanel({
       },
     };
   }, [selectedItem, queue]);
-
-  // Note: chronicle refresh on task completion is handled by the queue
-  // watcher in useChronicleGeneration (targeted single-chronicle reload).
 
   // Clear selection if stored item no longer exists in current data
   useEffect(() => {
@@ -840,15 +774,15 @@ export default function ChroniclePanel({
     if (!selectedItem) return;
     const { acceptPendingTitle } = await import('../lib/db/chronicleRepository');
     await acceptPendingTitle(selectedItem.chronicleId);
-    await refresh();
-  }, [selectedItem, refresh]);
+    await refreshChronicle(selectedItem.chronicleId);
+  }, [selectedItem, refreshChronicle]);
 
   const handleRejectPendingTitle = useCallback(async () => {
     if (!selectedItem) return;
     const { rejectPendingTitle } = await import('../lib/db/chronicleRepository');
     await rejectPendingTitle(selectedItem.chronicleId);
-    await refresh();
-  }, [selectedItem, refresh]);
+    await refreshChronicle(selectedItem.chronicleId);
+  }, [selectedItem, refreshChronicle]);
 
   const handleGenerateImageRefs = useCallback(() => {
     if (!selectedItem || !generationContext) return;
@@ -944,7 +878,7 @@ export default function ChroniclePanel({
 
     // Mark as generating
     updateChronicleCoverImageStatus(selectedItem.chronicleId, { status: 'generating' })
-      .then(() => refresh());
+      .then(() => refreshChronicle(selectedItem.chronicleId));
 
     // Resolve user's style selections (handles random/none properly)
     const resolved = resolveStyleSelection({
@@ -995,7 +929,7 @@ export default function ChroniclePanel({
         imageQuality: chronicleImageQuality,
       },
     ]);
-  }, [selectedItem, styleLibrary, chronicleStyleSelection, worldContext, onEnqueue, refresh, chronicleImageSize, chronicleImageQuality]);
+  }, [selectedItem, styleLibrary, chronicleStyleSelection, worldContext, onEnqueue, refreshChronicle, chronicleImageSize, chronicleImageQuality]);
 
   const handleRegenerateWithTemperature = useCallback((temperature) => {
     if (!selectedItem) return;
@@ -1030,7 +964,7 @@ export default function ChroniclePanel({
   const handleRestartConfirm = useCallback(async () => {
     if (pendingRestartChronicleId) {
       // Get the chronicle record to extract seed before deleting
-      const chronicle = chronicles.get(pendingRestartChronicleId);
+      const chronicle = useChronicleStore.getState().chronicles[pendingRestartChronicleId];
       if (chronicle) {
         // Extract seed from the chronicle record
         const seed = {
@@ -1053,7 +987,7 @@ export default function ChroniclePanel({
     }
     setShowRestartModal(false);
     setPendingRestartChronicleId(null);
-  }, [pendingRestartChronicleId, restartChronicle, chronicles]);
+  }, [pendingRestartChronicleId, restartChronicle]);
 
   const handleRestartCancel = useCallback(() => {
     setShowRestartModal(false);
@@ -1300,7 +1234,7 @@ export default function ChroniclePanel({
     setSelectedItemId(chronicleId);
     // Close the wizard
     setShowWizard(false);
-  }, [worldData, worldContext, styleLibrary, generateV2, simulationRunId, refresh, entityGuidance]);
+  }, [worldData, worldContext, styleLibrary, generateV2, simulationRunId, refresh, entityGuidance, cultureIdentities]);
 
   // Handle generating a chronicle image
   const handleGenerateChronicleImage = useCallback(
@@ -1310,7 +1244,7 @@ export default function ChroniclePanel({
       // First, update the image ref status to 'generating'
       updateChronicleImageRef(selectedItem.chronicleId, ref.refId, {
         status: 'generating',
-      }).then(() => refresh());
+      }).then(() => refreshChronicle(selectedItem.chronicleId));
 
       // Use the chronicleId as the entityId for storage - chronicle images belong to chronicles, not entities
       const chronicleEntity = {
@@ -1335,7 +1269,7 @@ export default function ChroniclePanel({
         },
       ]);
     },
-    [selectedItem, onEnqueue, refresh, chronicleImageSize, chronicleImageQuality]
+    [selectedItem, onEnqueue, refreshChronicle, chronicleImageSize, chronicleImageQuality]
   );
 
   const handleResetChronicleImage = useCallback(
@@ -1345,9 +1279,9 @@ export default function ChroniclePanel({
         status: 'pending',
         error: '',
         generatedImageId: '',
-      }).then(() => refresh());
+      }).then(() => refreshChronicle(selectedItem.chronicleId));
     },
-    [selectedItem, refresh]
+    [selectedItem, refreshChronicle]
   );
 
   const handleUpdateChronicleAnchorText = useCallback(
@@ -1355,9 +1289,9 @@ export default function ChroniclePanel({
       if (!selectedItem?.chronicleId) return;
       updateChronicleImageRef(selectedItem.chronicleId, ref.refId, {
         anchorText,
-      }).then(() => refresh());
+      }).then(() => refreshChronicle(selectedItem.chronicleId));
     },
-    [selectedItem, refresh]
+    [selectedItem, refreshChronicle]
   );
 
   const handleUpdateChronicleImageSize = useCallback(
@@ -1367,9 +1301,9 @@ export default function ChroniclePanel({
       if (size === 'full-width') {
         updates.justification = null;
       }
-      updateChronicleImageRef(selectedItem.chronicleId, ref.refId, updates).then(() => refresh());
+      updateChronicleImageRef(selectedItem.chronicleId, ref.refId, updates).then(() => refreshChronicle(selectedItem.chronicleId));
     },
-    [selectedItem, refresh]
+    [selectedItem, refreshChronicle]
   );
 
   const handleUpdateChronicleImageJustification = useCallback(
@@ -1377,9 +1311,9 @@ export default function ChroniclePanel({
       if (!selectedItem?.chronicleId) return;
       updateChronicleImageRef(selectedItem.chronicleId, ref.refId, {
         justification,
-      }).then(() => refresh());
+      }).then(() => refreshChronicle(selectedItem.chronicleId));
     },
-    [selectedItem, refresh]
+    [selectedItem, refreshChronicle]
   );
 
   const handleUpdateChronicleTemporalContext = useCallback(
@@ -1433,31 +1367,31 @@ export default function ChroniclePanel({
         ),
       };
 
-      updateChronicleTemporalContext(selectedItem.chronicleId, nextContext).then(() => refresh());
+      updateChronicleTemporalContext(selectedItem.chronicleId, nextContext).then(() => refreshChronicle(selectedItem.chronicleId));
     },
-    [selectedItem, wizardEras, wizardEvents, entities, refresh]
+    [selectedItem, wizardEras, wizardEvents, entities, refreshChronicle]
   );
 
   const handleUpdateChronicleActiveVersion = useCallback(
     (versionId) => {
       if (!selectedItem?.chronicleId || !versionId) return;
-      updateChronicleActiveVersion(selectedItem.chronicleId, versionId).then(() => refresh());
+      updateChronicleActiveVersion(selectedItem.chronicleId, versionId).then(() => refreshChronicle(selectedItem.chronicleId));
     },
-    [selectedItem, refresh]
+    [selectedItem, refreshChronicle]
   );
 
   const handleUpdateCombineInstructions = useCallback(
     (instructions) => {
       if (!selectedItem?.chronicleId) return;
-      updateChronicleCombineInstructions(selectedItem.chronicleId, instructions || undefined).then(() => refresh());
+      updateChronicleCombineInstructions(selectedItem.chronicleId, instructions || undefined).then(() => refreshChronicle(selectedItem.chronicleId));
     },
-    [selectedItem, refresh]
+    [selectedItem, refreshChronicle]
   );
 
   const handleUnpublish = useCallback(() => {
     if (!selectedItem?.chronicleId) return;
-    unpublishChronicle(selectedItem.chronicleId).then(() => refresh());
-  }, [selectedItem, refresh]);
+    unpublishChronicle(selectedItem.chronicleId).then(() => refreshChronicle(selectedItem.chronicleId));
+  }, [selectedItem, refreshChronicle]);
 
   // Handle export of completed chronicle
   // Uses ONLY stored data from the chronicle record - no reconstruction
@@ -1468,14 +1402,14 @@ export default function ChroniclePanel({
     }
 
     // Get the full chronicle record from storage
-    const chronicle = chronicles.get(selectedItem.chronicleId);
+    const chronicle = useChronicleStore.getState().chronicles[selectedItem.chronicleId];
     if (!chronicle) {
       console.error('[Chronicle] Cannot export: chronicle not found in storage');
       return;
     }
 
     downloadChronicleExport(chronicle);
-  }, [selectedItem, chronicles]);
+  }, [selectedItem]);
 
   // Track completed chronicle image tasks and update chronicle records
   const processedChronicleImageTasksRef = useRef(new Set());
@@ -1499,13 +1433,13 @@ export default function ChroniclePanel({
           updateChronicleCoverImageStatus(task.chronicleId, {
             status: 'complete',
             generatedImageId: task.result.imageId,
-          }).then(() => refresh());
+          }).then(() => refreshChronicle(task.chronicleId));
         } else {
           // Update the chronicle's image ref with the generated image ID
           updateChronicleImageRef(task.chronicleId, task.imageRefId, {
             status: 'complete',
             generatedImageId: task.result.imageId,
-          }).then(() => refresh());
+          }).then(() => refreshChronicle(task.chronicleId));
         }
       }
 
@@ -1524,16 +1458,16 @@ export default function ChroniclePanel({
           updateChronicleCoverImageStatus(task.chronicleId, {
             status: 'failed',
             error: task.error || 'Image generation failed',
-          }).then(() => refresh());
+          }).then(() => refreshChronicle(task.chronicleId));
         } else {
           updateChronicleImageRef(task.chronicleId, task.imageRefId, {
             status: 'failed',
             error: task.error || 'Image generation failed',
-          }).then(() => refresh());
+          }).then(() => refreshChronicle(task.chronicleId));
         }
       }
     }
-  }, [queue, refresh]);
+  }, [queue, refreshChronicle]);
 
   // Calculate stats
   const stats = useMemo(() => {

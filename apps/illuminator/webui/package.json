@@ -16,8 +16,10 @@
     "@uiw/react-md-editor": "^4.0.11",
     "dexie": "^4.3.0",
     "diff": "^8.0.3",
+    "jszip": "^3.10.1",
     "name-forge": "file:../../name-forge",
     "react": "^19.0.0",
+    "react-arborist": "^3.4.3",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.11"
   },
