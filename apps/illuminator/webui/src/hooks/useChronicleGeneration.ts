@@ -340,6 +340,55 @@ export function useChronicleGeneration(
     [chronicles, onEnqueue, buildEntityRef]
   );
 
+  const generateTitle = useCallback(
+    (chronicleId: string) => {
+      const chronicle = chronicles.get(chronicleId);
+      if (!chronicle) {
+        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
+        return;
+      }
+      const content = chronicle.finalContent || chronicle.assembledContent;
+      if (!content) {
+        console.error('[Chronicle] No content to generate title from');
+        return;
+      }
+
+      const primaryRole = chronicle.roleAssignments?.[0];
+      const entity = primaryRole
+        ? {
+            id: primaryRole.entityId,
+            name: primaryRole.entityName,
+            kind: primaryRole.entityKind,
+            subtype: '',
+            prominence: 'recognized',
+            culture: '',
+            status: 'active',
+            description: '',
+            tags: {},
+          }
+        : {
+            id: chronicleId,
+            name: chronicle.title || 'Chronicle',
+            kind: 'chronicle',
+            subtype: '',
+            prominence: 'recognized',
+            culture: '',
+            status: 'active',
+            description: '',
+            tags: {},
+          };
+
+      onEnqueue([{
+        entity,
+        type: 'entityChronicle' as EnrichmentType,
+        prompt: '',
+        chronicleStep: 'title' as ChronicleStep,
+        chronicleId,
+      }]);
+    },
+    [chronicles, onEnqueue]
+  );
+
   const generateImageRefs = useCallback(
     (chronicleId: string, context: ChronicleGenerationContext) => {
       const chronicle = chronicles.get(chronicleId);
@@ -634,6 +683,7 @@ export function useChronicleGeneration(
     chronicles,
     generateV2,
     generateSummary,
+    generateTitle,
     generateImageRefs,
     regenerateWithTemperature,
     compareVersions,

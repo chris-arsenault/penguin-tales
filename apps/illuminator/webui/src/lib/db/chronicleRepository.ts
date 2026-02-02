@@ -427,16 +427,12 @@ export async function updateChronicleSummary(
   summary: string,
   cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number },
   model: string,
-  title?: string,
   targetVersionId?: string
 ): Promise<void> {
   const record = await db.chronicles.get(chronicleId);
   if (!record) throw new Error(`Chronicle ${chronicleId} not found`);
 
   record.summary = summary;
-  if (title) {
-    record.title = title;
-  }
   record.summaryGeneratedAt = Date.now();
   record.summaryModel = model;
   record.summaryTargetVersionId = targetVersionId;
@@ -444,6 +440,72 @@ export async function updateChronicleSummary(
   record.totalActualCost += cost.actual;
   record.totalInputTokens += cost.inputTokens;
   record.totalOutputTokens += cost.outputTokens;
+  record.updatedAt = Date.now();
+
+  await db.chronicles.put(record);
+}
+
+/**
+ * Update chronicle with title generation results.
+ * For published chronicles (finalContent exists), writes to pending fields.
+ * For draft chronicles, writes directly to title.
+ */
+export async function updateChronicleTitle(
+  chronicleId: string,
+  title: string,
+  candidates: string[],
+  cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number },
+  model: string,
+): Promise<void> {
+  const record = await db.chronicles.get(chronicleId);
+  if (!record) throw new Error(`Chronicle ${chronicleId} not found`);
+
+  if (record.finalContent) {
+    // Published: write to pending fields, user must accept
+    record.pendingTitle = title;
+    record.pendingTitleCandidates = candidates;
+  } else {
+    // Draft: apply directly
+    record.title = title;
+    record.titleCandidates = candidates;
+  }
+  record.titleGeneratedAt = Date.now();
+  record.titleModel = model;
+  record.totalEstimatedCost += cost.estimated;
+  record.totalActualCost += cost.actual;
+  record.totalInputTokens += cost.inputTokens;
+  record.totalOutputTokens += cost.outputTokens;
+  record.updatedAt = Date.now();
+
+  await db.chronicles.put(record);
+}
+
+/**
+ * Accept a pending title on a published chronicle
+ */
+export async function acceptPendingTitle(chronicleId: string): Promise<void> {
+  const record = await db.chronicles.get(chronicleId);
+  if (!record) throw new Error(`Chronicle ${chronicleId} not found`);
+  if (!record.pendingTitle) throw new Error(`No pending title for chronicle ${chronicleId}`);
+
+  record.title = record.pendingTitle;
+  record.titleCandidates = record.pendingTitleCandidates;
+  record.pendingTitle = undefined;
+  record.pendingTitleCandidates = undefined;
+  record.updatedAt = Date.now();
+
+  await db.chronicles.put(record);
+}
+
+/**
+ * Reject a pending title on a published chronicle
+ */
+export async function rejectPendingTitle(chronicleId: string): Promise<void> {
+  const record = await db.chronicles.get(chronicleId);
+  if (!record) throw new Error(`Chronicle ${chronicleId} not found`);
+
+  record.pendingTitle = undefined;
+  record.pendingTitleCandidates = undefined;
   record.updatedAt = Date.now();
 
   await db.chronicles.put(record);

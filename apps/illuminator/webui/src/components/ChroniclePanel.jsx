@@ -348,6 +348,7 @@ export default function ChroniclePanel({
     chronicles,
     generateV2,
     generateSummary,
+    generateTitle,
     regenerateWithTemperature,
     compareVersions,
     combineVersions,
@@ -701,6 +702,11 @@ export default function ChroniclePanel({
         model: selectedItem.summaryModel,
         running: isRunning('summary'),
       },
+      title: {
+        generatedAt: selectedItem.titleGeneratedAt,
+        model: selectedItem.titleModel,
+        running: isRunning('title'),
+      },
       imageRefs: {
         generatedAt: selectedItem.imageRefsGeneratedAt,
         model: selectedItem.imageRefsModel,
@@ -728,6 +734,16 @@ export default function ChroniclePanel({
     }
     prevCoverSceneRunningRef.current = running;
   }, [refinementState?.coverImageScene?.running, refresh]);
+
+  // Watch for title step completion and refresh chronicles
+  const prevTitleRunningRef = useRef(false);
+  useEffect(() => {
+    const running = refinementState?.title?.running ?? false;
+    if (prevTitleRunningRef.current && !running) {
+      refresh();
+    }
+    prevTitleRunningRef.current = running;
+  }, [refinementState?.title?.running, refresh]);
 
   // Clear selection if stored item no longer exists in current data
   useEffect(() => {
@@ -826,6 +842,25 @@ export default function ChroniclePanel({
     if (!selectedItem || !generationContext) return;
     generateSummary(selectedItem.chronicleId, generationContext);
   }, [selectedItem, generationContext, generateSummary]);
+
+  const handleGenerateTitle = useCallback(() => {
+    if (!selectedItem) return;
+    generateTitle(selectedItem.chronicleId);
+  }, [selectedItem, generateTitle]);
+
+  const handleAcceptPendingTitle = useCallback(async () => {
+    if (!selectedItem) return;
+    const { acceptPendingTitle } = await import('../lib/db/chronicleRepository');
+    await acceptPendingTitle(selectedItem.chronicleId);
+    await refresh();
+  }, [selectedItem, refresh]);
+
+  const handleRejectPendingTitle = useCallback(async () => {
+    if (!selectedItem) return;
+    const { rejectPendingTitle } = await import('../lib/db/chronicleRepository');
+    await rejectPendingTitle(selectedItem.chronicleId);
+    await refresh();
+  }, [selectedItem, refresh]);
 
   const handleGenerateImageRefs = useCallback(() => {
     if (!selectedItem || !generationContext) return;
@@ -1890,6 +1925,9 @@ export default function ChroniclePanel({
                   onAccept={handleAcceptChronicle}
                   onRegenerate={handleRegenerate}
                   onGenerateSummary={handleGenerateSummary}
+                  onGenerateTitle={handleGenerateTitle}
+                  onAcceptPendingTitle={handleAcceptPendingTitle}
+                  onRejectPendingTitle={handleRejectPendingTitle}
                   onGenerateImageRefs={handleGenerateImageRefs}
                   onGenerateCoverImageScene={handleGenerateCoverImageScene}
                   onGenerateCoverImage={handleGenerateCoverImage}

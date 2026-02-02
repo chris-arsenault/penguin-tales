@@ -704,6 +704,7 @@ function RefinementOptionsPanel({
   item,
   onValidate,
   onGenerateSummary,
+  onGenerateTitle,
   onGenerateImageRefs,
   onGenerateCoverImageScene,
   onGenerateCoverImage,
@@ -733,6 +734,7 @@ function RefinementOptionsPanel({
 }) {
   const formatTimestamp = (timestamp) => new Date(timestamp).toLocaleString();
   const summaryState = refinements?.summary || {};
+  const titleState = refinements?.title || {};
   const imageRefsState = refinements?.imageRefs || {};
 
   return (
@@ -752,7 +754,7 @@ function RefinementOptionsPanel({
         {/* Summary */}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 500 }}>Add Summary</div>
+            <div style={{ fontSize: '13px', fontWeight: 500 }}>Summary</div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               Generate a short summary for chronicle listings.
             </div>
@@ -796,6 +798,66 @@ function RefinementOptionsPanel({
               }}
             >
               {summaryState.generatedAt ? 'Regenerate' : 'Generate'}
+            </button>
+          )}
+        </div>
+
+        {/* Title */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: 500 }}>Title</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Generate an evocative title using two-pass synthesis.
+            </div>
+            {titleState.generatedAt && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Done - {formatTimestamp(titleState.generatedAt)}
+                {titleState.model ? ` - ${titleState.model}` : ''}
+              </div>
+            )}
+            {item.titleCandidates?.length > 0 && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
+                <span style={{ color: 'var(--text-secondary)' }}>
+                  ◆ {item.title}
+                </span>
+                <br />
+                {item.titleCandidates.map((c, i) => (
+                  <span key={i}>
+                    <span style={{ opacity: 0.6 }}>◇</span> {c}
+                    {i < item.titleCandidates.length - 1 ? <br /> : null}
+                  </span>
+                ))}
+              </div>
+            )}
+            {!titleState.generatedAt && !titleState.running && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Not run yet
+              </div>
+            )}
+            {titleState.running && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Running...
+              </div>
+            )}
+          </div>
+          {onGenerateTitle && (
+            <button
+              onClick={onGenerateTitle}
+              disabled={isGenerating || titleState.running}
+              style={{
+                padding: '8px 14px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                cursor: isGenerating || titleState.running ? 'not-allowed' : 'pointer',
+                opacity: isGenerating || titleState.running ? 0.6 : 1,
+                fontSize: '12px',
+                height: '32px',
+                alignSelf: 'center',
+              }}
+            >
+              {titleState.generatedAt ? 'Regenerate' : 'Generate'}
             </button>
           )}
         </div>
@@ -1242,6 +1304,9 @@ export default function ChronicleReviewPanel({
   onCombineVersions,
   onCorrectSuggestions,
   onGenerateSummary,
+  onGenerateTitle,
+  onAcceptPendingTitle,
+  onRejectPendingTitle,
   onGenerateImageRefs,
   onRevalidate,
   onGenerateChronicleImage,
@@ -1299,6 +1364,31 @@ export default function ChronicleReviewPanel({
   // Combine instructions editing state
   const [editingCombineInstructions, setEditingCombineInstructions] = useState(false);
   const [combineInstructionsDraft, setCombineInstructionsDraft] = useState('');
+
+  // Title regeneration modal state (for published chronicles)
+  const [showTitleAcceptModal, setShowTitleAcceptModal] = useState(false);
+
+  const handleGenerateTitleForPublished = useCallback(() => {
+    if (!onGenerateTitle) return;
+    onGenerateTitle();
+  }, [onGenerateTitle]);
+
+  const handleAcceptTitle = useCallback(async () => {
+    if (onAcceptPendingTitle) await onAcceptPendingTitle();
+    setShowTitleAcceptModal(false);
+  }, [onAcceptPendingTitle]);
+
+  const handleRejectTitle = useCallback(async () => {
+    if (onRejectPendingTitle) await onRejectPendingTitle();
+    setShowTitleAcceptModal(false);
+  }, [onRejectPendingTitle]);
+
+  // Show accept modal when pending title appears on a published chronicle
+  useEffect(() => {
+    if (item?.pendingTitle && item?.finalContent) {
+      setShowTitleAcceptModal(true);
+    }
+  }, [item?.pendingTitle, item?.finalContent]);
 
   // Image modal state for full-size viewing
   const [imageModal, setImageModal] = useState({ open: false, imageId: '', title: '' });
@@ -1825,6 +1915,7 @@ export default function ChronicleReviewPanel({
           item={item}
           onValidate={onValidate}
           onGenerateSummary={onGenerateSummary}
+          onGenerateTitle={onGenerateTitle}
           onGenerateImageRefs={onGenerateImageRefs}
           onGenerateCoverImageScene={onGenerateCoverImageScene}
           onGenerateCoverImage={onGenerateCoverImage}
@@ -2030,6 +2121,25 @@ export default function ChronicleReviewPanel({
                 &#x21C4; Backported
               </span>
             )}
+            {onGenerateTitle && (
+              <button
+                onClick={handleGenerateTitleForPublished}
+                disabled={isGenerating || refinements?.title?.running}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '12px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '4px',
+                  cursor: isGenerating || refinements?.title?.running ? 'not-allowed' : 'pointer',
+                  color: 'var(--text-secondary)',
+                  opacity: isGenerating || refinements?.title?.running ? 0.6 : 1,
+                }}
+                title="Generate a new title for this chronicle"
+              >
+                {refinements?.title?.running ? 'Generating...' : 'Regenerate Title'}
+              </button>
+            )}
             {onExport && (
               <button
                 onClick={onExport}
@@ -2153,6 +2263,88 @@ export default function ChronicleReviewPanel({
         {/* 5. Reference — CONTEXT */}
         {item.perspectiveSynthesis && (
           <PerspectiveSynthesisViewer synthesis={item.perspectiveSynthesis} />
+        )}
+
+        {/* Title Accept Modal */}
+        {showTitleAcceptModal && item.pendingTitle && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0, 0, 0, 0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }}
+            onClick={() => { handleRejectTitle(); }}
+          >
+            <div
+              style={{
+                background: 'var(--bg-primary)',
+                borderRadius: '12px',
+                padding: '24px',
+                maxWidth: '480px',
+                width: '90%',
+                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>
+                Accept New Title?
+              </h3>
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>Current</div>
+                <div style={{ fontSize: '15px', fontWeight: 500 }}>{item.title}</div>
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>New</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{item.pendingTitle}</div>
+              </div>
+              {item.pendingTitleCandidates?.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Candidates considered</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    {item.pendingTitleCandidates.map((c, i) => (
+                      <div key={i}>
+                        <span style={{ opacity: 0.5 }}>&#x25C7;</span> {c}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleRejectTitle}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  Keep Current
+                </button>
+                <button
+                  onClick={handleAcceptTitle}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    background: '#2563eb',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: 'white',
+                  }}
+                >
+                  Accept New
+                </button>
+              </div>
+            </div>
+          </div>
         )}
         {renderImageModal()}
       </div>

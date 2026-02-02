@@ -797,6 +797,11 @@ export interface ChronicleRecord {
   summaryGeneratedAt?: number;
   summaryModel?: string;
   summaryTargetVersionId?: string;
+  titleCandidates?: string[];
+  titleGeneratedAt?: number;
+  titleModel?: string;
+  pendingTitle?: string;
+  pendingTitleCandidates?: string[];
   imageRefs?: ChronicleImageRefs;
   imageRefsGeneratedAt?: number;
   imageRefsModel?: string;

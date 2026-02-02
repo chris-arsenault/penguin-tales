@@ -277,6 +277,7 @@ export type ChronicleStep =
   | 'validate'
   | 'edit'
   | 'summary'
+  | 'title'
   | 'image_refs'
   | 'cover_image_scene'  // Generate cover image scene description
   | 'cover_image'  // Generate cover image from scene description

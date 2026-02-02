@@ -23,6 +23,7 @@ import {
   regenerateChronicleAssembly,
   updateChronicleComparisonReport,
   updateChronicleSummary,
+  updateChronicleTitle,
   updateChronicleImageRefs,
   updateChronicleImageRef,
   updateChronicleCoverImage,
@@ -110,6 +111,10 @@ async function executeEntityChronicleTask(
       return { success: false, error: 'Chronicle context required for summary step' };
     }
     return executeSummaryStep(task, chronicleRecord, context);
+  }
+
+  if (step === 'title') {
+    return executeTitleStep(task, chronicleRecord, context);
   }
 
   if (step === 'image_refs') {
@@ -1208,45 +1213,24 @@ async function executeSummaryStep(
     return { success: false, error: 'Chronicle has no assembled content to summarize' };
   }
 
-  const summaryCallConfig = getCallConfig(config, 'chronicle.summary');
-  const titleCallConfig = getCallConfig(config, 'chronicle.title');
+  const callConfig = getCallConfig(config, 'chronicle.summary');
   const chronicleId = chronicleRecord.chronicleId;
 
-  const narrativeStyle = chronicleRecord.narrativeStyle;
-  const styleName = narrativeStyle?.name;
-  const styleDescription = narrativeStyle?.description;
-
-  // --- Pass 1: Summary + Title Candidates in parallel ---
   const summaryPrompt = buildSummaryPrompt(summaryContent);
-  const titleCandidatesPrompt = buildTitleCandidatesPrompt(summaryContent, styleName, styleDescription);
-
-  const [summaryCall, titleCandidatesCall] = await Promise.all([
-    runTextCall({
-      llmClient,
-      callType: 'chronicle.summary',
-      callConfig: summaryCallConfig,
-      systemPrompt: 'You are a careful editor who writes concise, faithful summaries. Always respond with valid JSON.',
-      prompt: summaryPrompt,
-      temperature: 0.3,
-    }),
-    runTextCall({
-      llmClient,
-      callType: 'chronicle.title',
-      callConfig: titleCallConfig,
-      systemPrompt: 'You are a creative title writer. Always respond with valid JSON.',
-      prompt: titleCandidatesPrompt,
-      temperature: 0.75,
-    }),
-  ]);
-
-  const debugParts = [summaryCall.result.debug, titleCandidatesCall.result.debug].filter(Boolean);
-  const debug = debugParts.length > 0 ? debugParts.join('\n---\n') : undefined;
+  const summaryCall = await runTextCall({
+    llmClient,
+    callType: 'chronicle.summary',
+    callConfig,
+    systemPrompt: 'You are a careful editor who writes concise, faithful summaries. Always respond with valid JSON.',
+    prompt: summaryPrompt,
+    temperature: 0.3,
+  });
+  const debug = summaryCall.result.debug;
 
   if (isAborted()) {
     return { success: false, error: 'Task aborted', debug };
   }
 
-  // Parse summary
   if (summaryCall.result.error || !summaryCall.result.text) {
     return { success: false, error: `Summary failed: ${summaryCall.result.error || 'Empty response'}`, debug };
   }
@@ -1265,71 +1249,14 @@ async function executeSummaryStep(
     }
   }
 
-  // Parse title candidates
-  let title: string | undefined;
-  let candidates: string[] = [];
-  if (!titleCandidatesCall.result.error && titleCandidatesCall.result.text) {
-    try {
-      const parsed = parseJsonObject<Record<string, unknown>>(titleCandidatesCall.result.text, 'title candidates response');
-      if (Array.isArray(parsed.titles)) {
-        candidates = parsed.titles.filter((t): t is string => typeof t === 'string' && t.trim().length > 0).map(t => t.trim());
-      }
-    } catch {
-      // Title candidates failed — not fatal, we'll just skip synthesis
-    }
-  }
-
-  // --- Pass 2: Title Synthesis (if we have candidates) ---
-  let titleSynthesisCall: Awaited<ReturnType<typeof runTextCall>> | undefined;
-  if (candidates.length >= 2) {
-    const synthesisPrompt = buildTitleSynthesisPrompt(candidates, summaryContent, styleName, styleDescription);
-    titleSynthesisCall = await runTextCall({
-      llmClient,
-      callType: 'chronicle.title',
-      callConfig: titleCallConfig,
-      systemPrompt: 'You are a creative title writer. Always respond with valid JSON.',
-      prompt: synthesisPrompt,
-      temperature: 0.6,
-    });
-
-    if (isAborted()) {
-      return { success: false, error: 'Task aborted', debug };
-    }
-
-    if (!titleSynthesisCall.result.error && titleSynthesisCall.result.text) {
-      try {
-        const parsed = parseJsonObject<Record<string, unknown>>(titleSynthesisCall.result.text, 'title synthesis response');
-        if (typeof parsed.title === 'string' && parsed.title.trim()) {
-          title = parsed.title.trim();
-        }
-      } catch {
-        // Synthesis parse failed — fall back to best candidate
-      }
-    }
-
-    // If synthesis failed, use first candidate as fallback
-    if (!title && candidates.length > 0) {
-      title = candidates[0];
-    }
-  } else if (candidates.length === 1) {
-    title = candidates[0];
-  }
-
-  // Enforce title case regardless of what the LLM produced
-  if (title) {
-    title = toTitleCase(title);
-  }
-
-  // --- Combine costs from all calls ---
-  const allCalls = [summaryCall, titleCandidatesCall, ...(titleSynthesisCall ? [titleSynthesisCall] : [])];
-  const totalCost = {
-    estimated: allCalls.reduce((sum, c) => sum + c.estimate.estimatedCost, 0),
-    actual: allCalls.reduce((sum, c) => sum + c.usage.actualCost, 0),
-    inputTokens: allCalls.reduce((sum, c) => sum + c.usage.inputTokens, 0),
-    outputTokens: allCalls.reduce((sum, c) => sum + c.usage.outputTokens, 0),
+  const summaryCost = {
+    estimated: summaryCall.estimate.estimatedCost,
+    actual: summaryCall.usage.actualCost,
+    inputTokens: summaryCall.usage.inputTokens,
+    outputTokens: summaryCall.usage.outputTokens,
   };
 
-  await updateChronicleSummary(chronicleId, summaryText, totalCost, summaryCallConfig.model, title, summaryVersionId);
+  await updateChronicleSummary(chronicleId, summaryText, summaryCost, callConfig.model, summaryVersionId);
 
   await saveCostRecordWithDefaults({
     projectId: task.projectId,
@@ -1339,7 +1266,145 @@ async function executeSummaryStep(
     entityKind: task.entityKind,
     chronicleId,
     type: 'chronicleSummary' as CostType,
-    model: summaryCallConfig.model,
+    model: callConfig.model,
+    estimatedCost: summaryCost.estimated,
+    actualCost: summaryCost.actual,
+    inputTokens: summaryCost.inputTokens,
+    outputTokens: summaryCost.outputTokens,
+  });
+
+  return {
+    success: true,
+    result: {
+      chronicleId,
+      generatedAt: Date.now(),
+      model: callConfig.model,
+      estimatedCost: summaryCost.estimated,
+      actualCost: summaryCost.actual,
+      inputTokens: summaryCost.inputTokens,
+      outputTokens: summaryCost.outputTokens,
+    },
+    debug,
+  };
+}
+
+async function executeTitleStep(
+  task: WorkerTask,
+  chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
+  context: TaskContext
+): Promise<TaskResult> {
+  const { config, llmClient, isAborted } = context;
+
+  if (!chronicleRecord) {
+    return { success: false, error: 'Chronicle record missing for title' };
+  }
+
+  // Use finalContent for published chronicles, assembled content for drafts
+  const content = chronicleRecord.finalContent || chronicleRecord.assembledContent;
+  if (!content) {
+    return { success: false, error: 'Chronicle has no content to generate title from' };
+  }
+
+  const callConfig = getCallConfig(config, 'chronicle.title');
+  const chronicleId = chronicleRecord.chronicleId;
+  const narrativeStyle = chronicleRecord.narrativeStyle;
+  const styleName = narrativeStyle?.name;
+  const styleDescription = narrativeStyle?.description;
+
+  // --- Pass 1: Generate candidates ---
+  const candidatesPrompt = buildTitleCandidatesPrompt(content, styleName, styleDescription);
+  const candidatesCall = await runTextCall({
+    llmClient,
+    callType: 'chronicle.title',
+    callConfig,
+    systemPrompt: 'You are a creative title writer. Always respond with valid JSON.',
+    prompt: candidatesPrompt,
+    temperature: 0.75,
+  });
+
+  const debugParts: string[] = [];
+  if (candidatesCall.result.debug) debugParts.push(candidatesCall.result.debug);
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted', debug: debugParts.join('\n---\n') || undefined };
+  }
+
+  let candidates: string[] = [];
+  if (!candidatesCall.result.error && candidatesCall.result.text) {
+    try {
+      const parsed = parseJsonObject<Record<string, unknown>>(candidatesCall.result.text, 'title candidates response');
+      if (Array.isArray(parsed.titles)) {
+        candidates = parsed.titles.filter((t): t is string => typeof t === 'string' && t.trim().length > 0).map(t => t.trim());
+      }
+    } catch {
+      // Candidates parse failed
+    }
+  }
+
+  if (candidates.length === 0) {
+    return { success: false, error: 'Title generation produced no candidates', debug: debugParts.join('\n---\n') || undefined };
+  }
+
+  // --- Pass 2: Synthesize final title ---
+  let title: string;
+  let synthesisCall: Awaited<ReturnType<typeof runTextCall>> | undefined;
+
+  if (candidates.length >= 2) {
+    const synthesisPrompt = buildTitleSynthesisPrompt(candidates, content, styleName, styleDescription);
+    synthesisCall = await runTextCall({
+      llmClient,
+      callType: 'chronicle.title',
+      callConfig,
+      systemPrompt: 'You are a creative title writer. Always respond with valid JSON.',
+      prompt: synthesisPrompt,
+      temperature: 0.6,
+    });
+    if (synthesisCall.result.debug) debugParts.push(synthesisCall.result.debug);
+
+    if (isAborted()) {
+      return { success: false, error: 'Task aborted', debug: debugParts.join('\n---\n') || undefined };
+    }
+
+    title = candidates[0]; // fallback
+    if (!synthesisCall.result.error && synthesisCall.result.text) {
+      try {
+        const parsed = parseJsonObject<Record<string, unknown>>(synthesisCall.result.text, 'title synthesis response');
+        if (typeof parsed.title === 'string' && parsed.title.trim()) {
+          title = parsed.title.trim();
+        }
+      } catch {
+        // Synthesis parse failed — use first candidate
+      }
+    }
+  } else {
+    title = candidates[0];
+  }
+
+  // Enforce title case
+  title = toTitleCase(title);
+
+  // Combine costs
+  const allCalls = [candidatesCall, ...(synthesisCall ? [synthesisCall] : [])];
+  const totalCost = {
+    estimated: allCalls.reduce((sum, c) => sum + c.estimate.estimatedCost, 0),
+    actual: allCalls.reduce((sum, c) => sum + c.usage.actualCost, 0),
+    inputTokens: allCalls.reduce((sum, c) => sum + c.usage.inputTokens, 0),
+    outputTokens: allCalls.reduce((sum, c) => sum + c.usage.outputTokens, 0),
+  };
+
+  const debug = debugParts.length > 0 ? debugParts.join('\n---\n') : undefined;
+
+  await updateChronicleTitle(chronicleId, title, candidates, totalCost, callConfig.model);
+
+  await saveCostRecordWithDefaults({
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    chronicleId,
+    type: 'chronicleSummary' as CostType,
+    model: callConfig.model,
     estimatedCost: totalCost.estimated,
     actualCost: totalCost.actual,
     inputTokens: totalCost.inputTokens,
@@ -1350,8 +1415,10 @@ async function executeSummaryStep(
     success: true,
     result: {
       chronicleId,
+      title,
+      candidates,
       generatedAt: Date.now(),
-      model: summaryCallConfig.model,
+      model: callConfig.model,
       estimatedCost: totalCost.estimated,
       actualCost: totalCost.actual,
       inputTokens: totalCost.inputTokens,
