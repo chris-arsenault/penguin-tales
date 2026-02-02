@@ -72,7 +72,7 @@ interface EntityDetailViewProps {
   onHistorianReview?: (entityId: string, tone: string) => void;
   isHistorianActive?: boolean;
   historianConfigured?: boolean;
-  onToggleHistorianNoteEnabled?: (targetType: string, targetId: string, noteId: string, enabled: boolean) => void;
+  onUpdateHistorianNote?: (targetType: string, targetId: string, noteId: string, updates: Record<string, unknown>) => void;
   onRename?: (entityId: string) => void;
   onPatchEvents?: (entityId: string) => void;
 }
@@ -233,7 +233,7 @@ export default function EntityDetailView({
   onHistorianReview,
   isHistorianActive,
   historianConfigured,
-  onToggleHistorianNoteEnabled,
+  onUpdateHistorianNote,
   onRename,
   onPatchEvents,
 }: EntityDetailViewProps) {
@@ -474,9 +474,10 @@ export default function EntityDetailView({
               {enrichment?.historianNotes && enrichment.historianNotes.length > 0 && (
                 <HistorianMarginNotes
                   notes={enrichment.historianNotes}
+                  sourceText={entity.description}
                   style={{ marginTop: '12px' }}
-                  onToggleEnabled={onToggleHistorianNoteEnabled
-                    ? (noteId: string, enabled: boolean) => onToggleHistorianNoteEnabled('entity', entity.id, noteId, enabled)
+                  onUpdateNote={onUpdateHistorianNote
+                    ? (noteId: string, updates: Record<string, unknown>) => onUpdateHistorianNote('entity', entity.id, noteId, updates)
                     : undefined}
                 />
               )}

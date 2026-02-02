@@ -423,7 +423,7 @@ export default function EntityBrowser({
   onHistorianReview,
   isHistorianActive,
   historianConfigured,
-  onToggleHistorianNoteEnabled,
+  onUpdateHistorianNote,
   onRename,
   onPatchEvents,
 }) {
@@ -1201,7 +1201,7 @@ export default function EntityBrowser({
           onHistorianReview={onHistorianReview}
           isHistorianActive={isHistorianActive}
           historianConfigured={historianConfigured}
-          onToggleHistorianNoteEnabled={onToggleHistorianNoteEnabled}
+          onUpdateHistorianNote={onUpdateHistorianNote}
           onRename={onRename}
           onPatchEvents={onPatchEvents}
         />

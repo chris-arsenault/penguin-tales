@@ -29,6 +29,9 @@ export type HistorianNoteType =
   | 'skepticism'    // Disputes or questions the account
   | 'pedantic';     // Scholarly pedantic correction (names, dates, terminology)
 
+/** Display mode for a historian note */
+export type HistorianNoteDisplay = 'disabled' | 'popout' | 'full';
+
 export interface HistorianNote {
   /** Unique note ID */
   noteId: string;
@@ -38,8 +41,30 @@ export interface HistorianNote {
   text: string;
   /** Note type for styling and filtering */
   type: HistorianNoteType;
-  /** Whether this note is active (displayed in Chronicler, included in exports/sampling). Defaults to true. */
-  enabled: boolean;
+  /**
+   * Display mode:
+   * - 'full': rendered inline in Chronicler, included in exports/sampling (default)
+   * - 'popout': rendered inline but visually collapsed/minimized in Chronicler
+   * - 'disabled': functionally absent from Chronicler, exports, and sampling
+   *
+   * Legacy notes without this field are treated as 'full'.
+   * Notes with `enabled: false` (legacy) are treated as 'disabled'.
+   */
+  display?: HistorianNoteDisplay;
+  /** @deprecated Use `display` instead. Kept for backward compat reads. */
+  enabled?: boolean;
+}
+
+/** Resolve effective display mode, handling legacy `enabled` field */
+export function noteDisplay(note: Pick<HistorianNote, 'display' | 'enabled'>): HistorianNoteDisplay {
+  if (note.display) return note.display;
+  if (note.enabled === false) return 'disabled';
+  return 'full';
+}
+
+/** Whether a note is functionally active (not disabled) */
+export function isNoteActive(note: Pick<HistorianNote, 'display' | 'enabled'>): boolean {
+  return noteDisplay(note) !== 'disabled';
 }
 
 // =============================================================================

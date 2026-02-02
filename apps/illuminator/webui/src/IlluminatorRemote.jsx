@@ -42,7 +42,7 @@ import { useHistorianReview } from './hooks/useHistorianReview';
 import HistorianReviewModal from './components/HistorianReviewModal';
 import HistorianConfigEditor from './components/HistorianConfigEditor';
 import PrePrintPanel from './components/PrePrintPanel';
-import { DEFAULT_HISTORIAN_CONFIG, isHistorianConfigured } from './lib/historianTypes';
+import { DEFAULT_HISTORIAN_CONFIG, isHistorianConfigured, isNoteActive } from './lib/historianTypes';
 import { getPublishedStaticPagesForProject } from './lib/db/staticPageRepository';
 import { getEntityUsageStats, getChronicle, getChroniclesForSimulation, updateChronicleLoreBackported, updateChronicleHistorianNotes } from './lib/db/chronicleRepository';
 import { useChronicleStore } from './lib/db/chronicleStore';
@@ -1402,7 +1402,7 @@ export default function IlluminatorRemote({
 
     // Entity notes
     for (const entity of entities) {
-      const notes = (entity.enrichment?.historianNotes || []).filter(n => n.enabled !== false);
+      const notes = (entity.enrichment?.historianNotes || []).filter(isNoteActive);
       if (notes.length > 0) {
         byTarget[entity.name] = notes.map(n => ({
           targetName: entity.name,
@@ -1416,7 +1416,7 @@ export default function IlluminatorRemote({
     // Chronicle notes
     const chronicleRecords = useChronicleStore.getState().chronicles;
     for (const chronicle of Object.values(chronicleRecords)) {
-      const notes = (chronicle.historianNotes || []).filter(n => n.enabled !== false);
+      const notes = (chronicle.historianNotes || []).filter(isNoteActive);
       if (notes.length > 0) {
         const name = chronicle.title || chronicle.chronicleId;
         byTarget[name] = (byTarget[name] || []).concat(notes.map(n => ({
@@ -1592,12 +1592,12 @@ export default function IlluminatorRemote({
     }
   }, [applyAcceptedHistorianNotes, historianRun, reloadAndNotify]);
 
-  const handleToggleHistorianNoteEnabled = useCallback(async (targetType, targetId, noteId, enabled) => {
+  const handleUpdateHistorianNote = useCallback(async (targetType, targetId, noteId, updates) => {
     if (targetType === 'entity' && targetId) {
       const entity = entities.find((e) => e.id === targetId);
       if (!entity?.enrichment?.historianNotes) return;
       const updatedNotes = entity.enrichment.historianNotes.map((n) =>
-        n.noteId === noteId ? { ...n, enabled } : n
+        n.noteId === noteId ? { ...n, ...updates } : n
       );
       await entityRepo.setHistorianNotes(targetId, updatedNotes);
       await reloadAndNotify([targetId]);
@@ -1606,12 +1606,12 @@ export default function IlluminatorRemote({
         const chronicle = await getChronicle(targetId);
         if (!chronicle?.historianNotes) return;
         const updatedNotes = chronicle.historianNotes.map((n) =>
-          n.noteId === noteId ? { ...n, enabled } : n
+          n.noteId === noteId ? { ...n, ...updates } : n
         );
         await updateChronicleHistorianNotes(targetId, updatedNotes);
         await useChronicleStore.getState().refreshChronicle(targetId);
       } catch (err) {
-        console.error('[Historian] Failed to toggle note enabled:', err);
+        console.error('[Historian] Failed to update note:', err);
       }
     }
   }, [entities, reloadAndNotify]);
@@ -1861,7 +1861,7 @@ export default function IlluminatorRemote({
               onHistorianReview={handleHistorianReview}
               isHistorianActive={isHistorianActive}
               historianConfigured={isHistorianConfigured(historianConfig)}
-              onToggleHistorianNoteEnabled={handleToggleHistorianNoteEnabled}
+              onUpdateHistorianNote={handleUpdateHistorianNote}
               onRename={handleStartRename}
               onPatchEvents={handleStartPatchEvents}
             />
@@ -1894,7 +1894,7 @@ export default function IlluminatorRemote({
               onHistorianReview={handleChronicleHistorianReview}
               isHistorianActive={isHistorianActive}
               historianConfigured={isHistorianConfigured(historianConfig)}
-              onToggleHistorianNoteEnabled={handleToggleHistorianNoteEnabled}
+              onUpdateHistorianNote={handleUpdateHistorianNote}
             />
           </div>
         )}

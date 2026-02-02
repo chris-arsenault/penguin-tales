@@ -160,6 +160,49 @@ function HistorianCallout({ note }: { note: WikiHistorianNote }) {
   const color = HISTORIAN_NOTE_COLORS[note.type] || HISTORIAN_NOTE_COLORS.commentary;
   const icon = HISTORIAN_NOTE_ICONS[note.type] || '✦';
   const label = HISTORIAN_NOTE_LABELS[note.type] || 'Commentary';
+  const [popoutExpanded, setPopoutExpanded] = React.useState(false);
+
+  if (note.display === 'popout') {
+    return (
+      <div
+        onClick={() => setPopoutExpanded(!popoutExpanded)}
+        style={{
+          margin: '4px 0 4px 16px',
+          padding: popoutExpanded ? '8px 12px' : '3px 10px',
+          background: 'rgba(139, 115, 85, 0.05)',
+          borderLeft: `2px solid ${color}`,
+          borderRadius: '0 3px 3px 0',
+          fontSize: '11px',
+          cursor: 'pointer',
+          color: 'var(--color-text-muted)',
+          transition: 'padding 0.15s',
+        }}
+      >
+        {popoutExpanded ? (
+          <>
+            <div style={{
+              fontSize: '9px', fontWeight: 700, color, textTransform: 'uppercase',
+              letterSpacing: '0.5px', marginBottom: '3px', fontStyle: 'normal',
+              fontFamily: 'system-ui, sans-serif',
+            }}>
+              {icon} {label}
+            </div>
+            <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic', lineHeight: '1.5' }}>
+              {note.text}
+            </div>
+          </>
+        ) : (
+          <span style={{ fontFamily: 'system-ui, sans-serif' }}>
+            <span style={{ color, fontWeight: 700 }}>{icon}</span>{' '}
+            <span style={{ fontStyle: 'italic', fontFamily: 'Georgia, serif', opacity: 0.7 }}>
+              {note.text.length > 60 ? note.text.slice(0, 60) + '…' : note.text}
+            </span>
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -226,14 +269,14 @@ function SectionWithImages({
   const images = section.images || [];
   const content = section.content;
 
-  // Match historian notes to this section's content
+  // Match historian notes to this section's content using fuzzy anchor resolution
   const matchedNotes = useMemo(() => {
     if (!historianNotes || historianNotes.length === 0) return [];
     return historianNotes
       .map(n => {
-        const idx = content.indexOf(n.anchorPhrase);
-        if (idx < 0) return null;
-        return { note: n, position: idx + n.anchorPhrase.length };
+        const resolved = resolveAnchorPhrase(n.anchorPhrase, content);
+        if (!resolved) return null;
+        return { note: n, position: resolved.index + resolved.phrase.length };
       })
       .filter((x): x is { note: WikiHistorianNote; position: number } => x !== null)
       .sort((a, b) => a.position - b.position);
@@ -1208,7 +1251,7 @@ export default function WikiPageView({
           {page.content.historianNotes && page.content.historianNotes.length > 0 && (() => {
             const allSectionContent = page.content.sections.map(s => s.content).join('\n');
             const unmatched = page.content.historianNotes.filter(
-              n => allSectionContent.indexOf(n.anchorPhrase) < 0
+              n => !resolveAnchorPhrase(n.anchorPhrase, allSectionContent)
             );
             if (unmatched.length === 0) return null;
             return (

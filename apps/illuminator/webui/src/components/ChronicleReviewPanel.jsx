@@ -1342,7 +1342,7 @@ export default function ChronicleReviewPanel({
   // Historian review
   onHistorianReview,
   isHistorianActive,
-  onToggleHistorianNoteEnabled,
+  onUpdateHistorianNote,
 
   // State
   isGenerating,
@@ -2286,8 +2286,9 @@ export default function ChronicleReviewPanel({
           <div style={{ marginTop: '16px' }}>
             <HistorianMarginNotes
               notes={item.historianNotes}
-              onToggleEnabled={onToggleHistorianNoteEnabled
-                ? (noteId, enabled) => onToggleHistorianNoteEnabled('chronicle', item.chronicleId, noteId, enabled)
+              sourceText={item.finalContent}
+              onUpdateNote={onUpdateHistorianNote
+                ? (noteId, updates) => onUpdateHistorianNote('chronicle', item.chronicleId, noteId, updates)
                 : undefined}
             />
           </div>

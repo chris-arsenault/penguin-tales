@@ -271,6 +271,8 @@ export interface WikiHistorianNote {
   anchorPhrase: string;
   text: string;
   type: string;
+  /** Display mode: 'full' (inline callout) or 'popout' (collapsed/minimal) */
+  display: 'full' | 'popout';
 }
 
 export interface WikiContent {

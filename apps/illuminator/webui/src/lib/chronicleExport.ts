@@ -12,6 +12,7 @@ import type {
   ChronicleImageRefs,
 } from './chronicleTypes';
 import type { HistorianNote } from './historianTypes';
+import { isNoteActive } from './historianTypes';
 
 // =============================================================================
 // Export Types
@@ -381,7 +382,7 @@ export function buildChronicleExport(chronicle: ChronicleRecord): ChronicleExpor
   }
 
   if (chronicle.historianNotes && chronicle.historianNotes.length > 0) {
-    const enabledNotes = chronicle.historianNotes.filter(n => n.enabled !== false);
+    const enabledNotes = chronicle.historianNotes.filter(isNoteActive);
     if (enabledNotes.length > 0) {
       exportData.historianNotes = enabledNotes;
     }
