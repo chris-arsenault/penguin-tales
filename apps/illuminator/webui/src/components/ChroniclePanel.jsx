@@ -1874,7 +1874,7 @@ export default function ChroniclePanel({
                   onUnpublish={handleUnpublish}
                   onExport={handleExport}
                   onBackportLore={onBackportLore ? () => onBackportLore(selectedItem.chronicleId) : undefined}
-                  onHistorianReview={onHistorianReview && historianConfigured ? () => onHistorianReview(selectedItem.chronicleId) : undefined}
+                  onHistorianReview={onHistorianReview && historianConfigured ? (tone) => onHistorianReview(selectedItem.chronicleId, tone) : undefined}
                   isHistorianActive={isHistorianActive}
                   isGenerating={isGenerating}
                   refinements={refinementState}

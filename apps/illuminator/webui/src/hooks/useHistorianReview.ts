@@ -16,6 +16,7 @@ import type {
   HistorianNote,
   HistorianConfig,
   HistorianTargetType,
+  HistorianTone,
 } from '../lib/historianTypes';
 import {
   createHistorianRun,
@@ -42,6 +43,8 @@ export interface HistorianReviewConfig {
   previousNotesJson: string;
   /** The historian persona config */
   historianConfig: HistorianConfig;
+  /** Tone/mood for this review session */
+  tone: HistorianTone;
 }
 
 export interface UseHistorianReviewReturn {
@@ -145,6 +148,7 @@ export function useHistorianReview(
       projectId: config.projectId,
       simulationRunId: config.simulationRunId,
       status: 'pending',
+      tone: config.tone,
       targetType: config.targetType,
       targetId: config.targetId,
       targetName: config.targetName,

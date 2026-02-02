@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { QueueItem, NetworkDebugInfo, DescriptionChainDebug, ChronicleBackref } from '../lib/enrichmentTypes';
 import HistorianMarginNotes from './HistorianMarginNotes';
+import HistorianToneSelector from './HistorianToneSelector';
 import {
   buildProminenceScale,
   DEFAULT_PROMINENCE_DISTRIBUTION,
@@ -68,7 +69,7 @@ interface EntityDetailViewProps {
   onUndoDescription?: (entityId: string) => void;
   onCopyEdit?: (entityId: string) => void;
   isCopyEditActive?: boolean;
-  onHistorianReview?: (entityId: string) => void;
+  onHistorianReview?: (entityId: string, tone: string) => void;
   isHistorianActive?: boolean;
   historianConfigured?: boolean;
   onRename?: (entityId: string) => void;
@@ -452,25 +453,11 @@ export default function EntityDetailView({
                   </button>
                 )}
                 {onHistorianReview && historianConfigured && (
-                  <button
-                    onClick={() => onHistorianReview(entity.id)}
+                  <HistorianToneSelector
+                    onSelect={(tone: string) => onHistorianReview(entity.id, tone)}
                     disabled={isHistorianActive}
-                    title="Generate scholarly margin notes from the historian"
-                    style={{
-                      background: 'var(--bg-tertiary)',
-                      border: '1px solid var(--border-color)',
-                      color: isHistorianActive ? 'var(--text-muted)' : '#8b7355',
-                      fontSize: '10px',
-                      padding: '1px 6px',
-                      borderRadius: '3px',
-                      cursor: isHistorianActive ? 'not-allowed' : 'pointer',
-                      textTransform: 'none',
-                      letterSpacing: 'normal',
-                      opacity: isHistorianActive ? 0.5 : 1,
-                    }}
-                  >
-                    Historian
-                  </button>
+                    hasNotes={enrichment?.historianNotes && enrichment.historianNotes.length > 0}
+                  />
                 )}
               </div>
               {enrichment?.historianNotes && enrichment.historianNotes.length > 0 ? (

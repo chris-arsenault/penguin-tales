@@ -8,14 +8,25 @@
  */
 
 // =============================================================================
+// Tone Presets
+// =============================================================================
+
+export type HistorianTone =
+  | 'witty'          // Tongue-in-cheek, sarcastic, playful
+  | 'weary'          // Resigned satire, black humor, aloof compassion
+  | 'forensic'       // Cold, clinical, methodical — the historian as detective
+  | 'elegiac'        // Mournful, lyrical, focused on loss and what's been forgotten
+  | 'cantankerous';  // Irritable, contrarian, perpetually annoyed by sloppy scholarship
+
+// =============================================================================
 // Note Types
 // =============================================================================
 
 export type HistorianNoteType =
-  | 'commentary'    // Resigned observation, weary admiration, black humor
+  | 'commentary'    // General observation, admiration, color — tone-dependent
   | 'correction'    // Factual inconsistency or inaccuracy callout
-  | 'tangent'       // Personal digression, tired aside, memory surfacing unbidden
-  | 'skepticism'    // Disputes or questions the account with quiet exasperation
+  | 'tangent'       // Personal digression, aside, memory
+  | 'skepticism'    // Disputes or questions the account
   | 'pedantic';     // Scholarly pedantic correction (names, dates, terminology)
 
 export interface HistorianNote {
@@ -85,6 +96,9 @@ export interface HistorianRun {
   simulationRunId: string;
   status: HistorianRunStatus;
   error?: string;
+
+  /** Tone used for this review */
+  tone: HistorianTone;
 
   /** What kind of content is being annotated */
   targetType: HistorianTargetType;

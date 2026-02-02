@@ -273,8 +273,8 @@ export default function HistorianConfigEditor({ config, onChange }) {
           lineHeight: '1.5',
         }}>
           Define the scholarly voice that annotates your world's entities and chronicles.
-          This historian will add margin notes — resigned corrections, weary observations,
-          dry asides — in a consistent voice across all content.
+          This historian will add margin notes — corrections, observations, asides —
+          in a consistent voice across all content. Tone varies per review.
         </div>
         {!isConfigured && (
           <div style={{

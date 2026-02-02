@@ -41,6 +41,7 @@ import { useCopyEdit } from './hooks/useCopyEdit';
 import { useHistorianReview } from './hooks/useHistorianReview';
 import HistorianReviewModal from './components/HistorianReviewModal';
 import HistorianConfigEditor from './components/HistorianConfigEditor';
+import PrePrintPanel from './components/PrePrintPanel';
 import { DEFAULT_HISTORIAN_CONFIG, isHistorianConfigured } from './lib/historianTypes';
 import { getPublishedStaticPagesForProject } from './lib/db/staticPageRepository';
 import { getEntityUsageStats, getChronicle, getChroniclesForSimulation, updateChronicleLoreBackported, updateChronicleHistorianNotes } from './lib/db/chronicleRepository';
@@ -97,6 +98,7 @@ const TABS = [
   { id: 'storage', label: 'Storage' },       // 11. Manage images
   { id: 'traits', label: 'Traits' },         // 12. Visual trait palettes
   { id: 'historian', label: 'Historian' },   // 13. Historian persona config
+  { id: 'preprint', label: 'Pre-Print' },   // 14. Print preparation
 ];
 
 // Default image prompt template for Claude formatting
@@ -1418,7 +1420,7 @@ export default function IlluminatorRemote({
     return sample;
   }, [entities]);
 
-  const handleHistorianReview = useCallback((entityId) => {
+  const handleHistorianReview = useCallback((entityId, tone) => {
     if (!projectId || !simulationRunId || !entityId) return;
     if (!isHistorianConfigured(historianConfig)) return;
 
@@ -1475,10 +1477,11 @@ export default function IlluminatorRemote({
       contextJson,
       previousNotesJson: JSON.stringify(previousNotes),
       historianConfig,
+      tone: tone || 'weary',
     });
   }, [projectId, simulationRunId, entityById, relationshipsByEntity, worldContext, historianConfig, prominenceScale, collectPreviousNotes, startHistorianReview]);
 
-  const handleChronicleHistorianReview = useCallback(async (chronicleId) => {
+  const handleChronicleHistorianReview = useCallback(async (chronicleId, tone) => {
     if (!projectId || !simulationRunId || !chronicleId) return;
     if (!isHistorianConfigured(historianConfig)) return;
 
@@ -1531,6 +1534,7 @@ export default function IlluminatorRemote({
       contextJson,
       previousNotesJson: JSON.stringify(previousNotes),
       historianConfig,
+      tone: tone || 'weary',
     });
   }, [projectId, simulationRunId, entityById, worldContext, historianConfig, collectPreviousNotes, startHistorianReview]);
 
@@ -1958,6 +1962,16 @@ export default function IlluminatorRemote({
             <HistorianConfigEditor
               config={historianConfig}
               onChange={updateHistorianConfig}
+            />
+          </div>
+        )}
+
+        {activeTab === 'preprint' && (
+          <div className="illuminator-content">
+            <PrePrintPanel
+              entities={entities}
+              projectId={projectId}
+              simulationRunId={simulationRunId}
             />
           </div>
         )}

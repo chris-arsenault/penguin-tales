@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import { TONE_META } from './HistorianToneSelector';
 
 // ============================================================================
 // Note Type Icons & Colors
@@ -329,6 +330,11 @@ export default function HistorianReviewModal({
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
               {run.targetType === 'entity' ? 'Entity Description' : 'Chronicle Narrative'}
+              {run.tone && TONE_META[run.tone] && (
+                <span style={{ marginLeft: '6px', color: '#8b7355' }}>
+                  {TONE_META[run.tone].symbol} {TONE_META[run.tone].label}
+                </span>
+              )}
               {isReviewing && ` · ${acceptedCount}/${notes.length} notes accepted`}
             </div>
           </div>

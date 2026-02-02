@@ -11,6 +11,7 @@ import ChronicleImagePanel from './ChronicleImagePanel';
 import ImageModal from './ImageModal';
 import { ExpandableSeedSection } from './ChronicleSeedViewer';
 import HistorianMarginNotes from './HistorianMarginNotes';
+import HistorianToneSelector from './HistorianToneSelector';
 import { useImageUrl } from '../hooks/useImageUrl';
 
 // ============================================================================
@@ -2161,25 +2162,12 @@ export default function ChronicleReviewPanel({
           <h3 style={{ margin: 0, fontSize: '16px' }}>Completed Chronicle</h3>
           <div style={{ display: 'flex', gap: '8px' }}>
             {onHistorianReview && (
-              <button
-                onClick={onHistorianReview}
+              <HistorianToneSelector
+                onSelect={(tone) => onHistorianReview(tone)}
                 disabled={isGenerating || isHistorianActive}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '12px',
-                  background: 'var(--bg-tertiary)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '4px',
-                  cursor: isGenerating || isHistorianActive ? 'not-allowed' : 'pointer',
-                  color: isHistorianActive ? 'var(--text-muted)' : '#8b7355',
-                  opacity: isGenerating || isHistorianActive ? 0.6 : 1,
-                }}
-                title={item.historianNotes?.length
-                  ? "Re-generate historian annotations for this chronicle"
-                  : "Generate scholarly margin notes from the historian"}
-              >
-                {item.historianNotes?.length ? 'Re-annotate' : 'Historian Notes'}
-              </button>
+                hasNotes={item.historianNotes?.length > 0}
+                style={{ display: 'inline-block' }}
+              />
             )}
             {onBackportLore && (
               <button
