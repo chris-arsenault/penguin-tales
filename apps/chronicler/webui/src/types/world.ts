@@ -40,6 +40,14 @@ export type HardState = CanonryWorldEntity & {
       model?: string;
     };
     chronicleBackrefs?: ChronicleBackref[];
+    historianNotes?: Array<{
+      noteId: string;
+      anchorPhrase: string;
+      text: string;
+      type: string;
+      display?: 'disabled' | 'popout' | 'full';
+      enabled?: boolean;
+    }>;
   };
 };
 export type WorldState = Omit<CanonryWorldOutput, 'hardState'> & {

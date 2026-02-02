@@ -83,6 +83,17 @@ export interface ChronicleRecord {
     error?: string;
   };
 
+  // Historian annotations
+  historianNotes?: Array<{
+    noteId: string;
+    anchorPhrase: string;
+    text: string;
+    type: string;
+    display?: 'disabled' | 'popout' | 'full';
+    /** @deprecated Use `display` instead */
+    enabled?: boolean;
+  }>;
+
   // Timestamps
   acceptedAt?: number;
   createdAt: number;
