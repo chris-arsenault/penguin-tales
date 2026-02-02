@@ -862,20 +862,88 @@ Produce the final chronicle by selecting the strongest elements from each versio
 // ============================================================================
 
 function buildSummaryPrompt(content: string): string {
-  return `Generate a title and summary for the chronicle below.
+  return `Generate a summary for the chronicle below.
 
 Rules:
-- Title: A compelling, evocative title (3-8 words) that captures the essence of the chronicle
-- Do NOT start the title with "The". Open with a name, action, image, or phrase instead.
 - Summary: 2-4 sentences summarizing the key events and outcome
-- Keep both factual and faithful to the chronicle
-- Mention key entities in the summary
+- Keep it factual and faithful to the chronicle
+- Mention key entities by name
 
 Chronicle:
 ${content}
 
 Return ONLY valid JSON in this exact format:
-{"title": "...", "summary": "..."}`;
+{"summary": "..."}`;
+}
+
+const TITLE_NUDGES = [
+  'Try a poetic image or metaphor.',
+  'Frame it around a turning point or decisive action.',
+  'Reference a place, object, or sensory detail from the chronicle.',
+  'Evoke a consequence, aftermath, or irony.',
+  'Use juxtaposition or contrast between two ideas.',
+  'Capture a mood or atmosphere rather than a plot point.',
+  'Use a fragment, question, or incomplete thought.',
+];
+
+function pickNudge(): string {
+  return TITLE_NUDGES[Math.floor(Math.random() * TITLE_NUDGES.length)];
+}
+
+function buildTitleCandidatesPrompt(
+  content: string,
+  narrativeStyleName?: string,
+  narrativeStyleDescription?: string
+): string {
+  const styleContext = narrativeStyleName
+    ? `\nNarrative style: "${narrativeStyleName}"${narrativeStyleDescription ? ` — ${narrativeStyleDescription}` : ''}\nThe title should feel at home in this style's tone and register.\n`
+    : '';
+
+  return `Generate 5 candidate titles for the chronicle below.
+${styleContext}
+Rules:
+- Each title: 3-8 words, evocative, faithful to the content
+- Each candidate must use a DIFFERENT structural approach (not just synonyms)
+- Vary wildly — mix abstract, concrete, character-focused, thematic, tonal
+- Avoid formulaic patterns: no "X's Y" possessives, no starting with "The"
+- ${pickNudge()}
+
+Chronicle:
+${content}
+
+Return ONLY valid JSON in this exact format:
+{"titles": ["...", "...", "...", "...", "..."]}`;
+}
+
+function buildTitleSynthesisPrompt(
+  candidates: string[],
+  content: string,
+  narrativeStyleName?: string,
+  narrativeStyleDescription?: string
+): string {
+  const styleContext = narrativeStyleName
+    ? `\nNarrative style: "${narrativeStyleName}"${narrativeStyleDescription ? ` — ${narrativeStyleDescription}` : ''}\nThe final title must match this style's tone.\n`
+    : '';
+
+  const candidateList = candidates.map((t, i) => `${i + 1}. ${t}`).join('\n');
+
+  return `Here are 5 candidate titles for a chronicle:
+
+${candidateList}
+${styleContext}
+Your job: synthesize a FINAL title by combining, remixing, or riffing on the strongest elements from these candidates. You may pick one if it's already perfect, but prefer to create something new that merges the best words, rhythms, or ideas from multiple candidates.
+
+Rules:
+- 3-8 words
+- Must feel distinct from any single candidate — a mashup, not a selection
+- Match the narrative style's tone and register
+- No "X's Y" possessives, no starting with "The"
+
+Chronicle (for reference):
+${content}
+
+Return ONLY valid JSON in this exact format:
+{"title": "..."}`;
 }
 
 function formatImageRefEntities(
@@ -1114,55 +1182,123 @@ async function executeSummaryStep(
     return { success: false, error: 'Chronicle has no assembled content to summarize' };
   }
 
-  const callConfig = getCallConfig(config, 'chronicle.summary');
+  const summaryCallConfig = getCallConfig(config, 'chronicle.summary');
+  const titleCallConfig = getCallConfig(config, 'chronicle.title');
   const chronicleId = chronicleRecord.chronicleId;
+
+  const narrativeStyle = chronicleRecord.narrativeStyle;
+  const styleName = narrativeStyle?.name;
+  const styleDescription = narrativeStyle?.description;
+
+  // --- Pass 1: Summary + Title Candidates in parallel ---
   const summaryPrompt = buildSummaryPrompt(summaryContent);
-  const summaryCall = await runTextCall({
-    llmClient,
-    callType: 'chronicle.summary',
-    callConfig,
-    systemPrompt: 'You are a careful editor who writes concise, faithful summaries. Always respond with valid JSON.',
-    prompt: summaryPrompt,
-    temperature: 0.3,
-  });
-  const summaryResult = summaryCall.result;
-  const debug = summaryResult.debug;
+  const titleCandidatesPrompt = buildTitleCandidatesPrompt(summaryContent, styleName, styleDescription);
+
+  const [summaryCall, titleCandidatesCall] = await Promise.all([
+    runTextCall({
+      llmClient,
+      callType: 'chronicle.summary',
+      callConfig: summaryCallConfig,
+      systemPrompt: 'You are a careful editor who writes concise, faithful summaries. Always respond with valid JSON.',
+      prompt: summaryPrompt,
+      temperature: 0.3,
+    }),
+    runTextCall({
+      llmClient,
+      callType: 'chronicle.title',
+      callConfig: titleCallConfig,
+      systemPrompt: 'You are a creative title writer. Always respond with valid JSON.',
+      prompt: titleCandidatesPrompt,
+      temperature: 0.75,
+    }),
+  ]);
+
+  const debugParts = [summaryCall.result.debug, titleCandidatesCall.result.debug].filter(Boolean);
+  const debug = debugParts.length > 0 ? debugParts.join('\n---\n') : undefined;
 
   if (isAborted()) {
     return { success: false, error: 'Task aborted', debug };
   }
 
-  if (summaryResult.error || !summaryResult.text) {
-    return { success: false, error: `Summary failed: ${summaryResult.error || 'Empty response'}`, debug };
+  // Parse summary
+  if (summaryCall.result.error || !summaryCall.result.text) {
+    return { success: false, error: `Summary failed: ${summaryCall.result.error || 'Empty response'}`, debug };
   }
 
-  // Parse JSON response for title and summary
-  let title: string | undefined;
   let summaryText: string;
-
   try {
-    const parsed = parseJsonObject<Record<string, unknown>>(summaryResult.text, 'summary response');
-    title = typeof parsed.title === 'string' ? parsed.title.trim() : undefined;
+    const parsed = parseJsonObject<Record<string, unknown>>(summaryCall.result.text, 'summary response');
     summaryText = typeof parsed.summary === 'string' ? parsed.summary.trim() : '';
     if (!summaryText) {
       return { success: false, error: 'Summary response missing summary field', debug };
     }
   } catch {
-    // Fallback: treat entire response as summary (backwards compat)
-    summaryText = stripLeadingWrapper(summaryResult.text).replace(/\s+/g, ' ').trim();
+    summaryText = stripLeadingWrapper(summaryCall.result.text).replace(/\s+/g, ' ').trim();
     if (!summaryText) {
       return { success: false, error: 'Summary response empty', debug };
     }
   }
 
-  const summaryCost = {
-    estimated: summaryCall.estimate.estimatedCost,
-    actual: summaryCall.usage.actualCost,
-    inputTokens: summaryCall.usage.inputTokens,
-    outputTokens: summaryCall.usage.outputTokens,
+  // Parse title candidates
+  let title: string | undefined;
+  let candidates: string[] = [];
+  if (!titleCandidatesCall.result.error && titleCandidatesCall.result.text) {
+    try {
+      const parsed = parseJsonObject<Record<string, unknown>>(titleCandidatesCall.result.text, 'title candidates response');
+      if (Array.isArray(parsed.titles)) {
+        candidates = parsed.titles.filter((t): t is string => typeof t === 'string' && t.trim().length > 0).map(t => t.trim());
+      }
+    } catch {
+      // Title candidates failed — not fatal, we'll just skip synthesis
+    }
+  }
+
+  // --- Pass 2: Title Synthesis (if we have candidates) ---
+  let titleSynthesisCall: Awaited<ReturnType<typeof runTextCall>> | undefined;
+  if (candidates.length >= 2) {
+    const synthesisPrompt = buildTitleSynthesisPrompt(candidates, summaryContent, styleName, styleDescription);
+    titleSynthesisCall = await runTextCall({
+      llmClient,
+      callType: 'chronicle.title',
+      callConfig: titleCallConfig,
+      systemPrompt: 'You are a creative title writer. Always respond with valid JSON.',
+      prompt: synthesisPrompt,
+      temperature: 0.6,
+    });
+
+    if (isAborted()) {
+      return { success: false, error: 'Task aborted', debug };
+    }
+
+    if (!titleSynthesisCall.result.error && titleSynthesisCall.result.text) {
+      try {
+        const parsed = parseJsonObject<Record<string, unknown>>(titleSynthesisCall.result.text, 'title synthesis response');
+        if (typeof parsed.title === 'string' && parsed.title.trim()) {
+          title = parsed.title.trim();
+        }
+      } catch {
+        // Synthesis parse failed — fall back to best candidate
+      }
+    }
+
+    // If synthesis failed, use first candidate as fallback
+    if (!title && candidates.length > 0) {
+      title = candidates[0];
+    }
+  } else if (candidates.length === 1) {
+    title = candidates[0];
+  }
+
+  // --- Combine costs from all calls ---
+  const allCalls = [summaryCall, titleCandidatesCall, ...(titleSynthesisCall ? [titleSynthesisCall] : [])];
+  const totalCost = {
+    estimated: allCalls.reduce((sum, c) => sum + c.estimate.estimatedCost, 0),
+    actual: allCalls.reduce((sum, c) => sum + c.usage.actualCost, 0),
+    inputTokens: allCalls.reduce((sum, c) => sum + c.usage.inputTokens, 0),
+    outputTokens: allCalls.reduce((sum, c) => sum + c.usage.outputTokens, 0),
   };
 
-  await updateChronicleSummary(chronicleId, summaryText, summaryCost, callConfig.model, title, summaryVersionId);
+  await updateChronicleSummary(chronicleId, summaryText, totalCost, summaryCallConfig.model, title, summaryVersionId);
 
   await saveCostRecordWithDefaults({
     projectId: task.projectId,
@@ -1172,11 +1308,11 @@ async function executeSummaryStep(
     entityKind: task.entityKind,
     chronicleId,
     type: 'chronicleSummary' as CostType,
-    model: callConfig.model,
-    estimatedCost: summaryCost.estimated,
-    actualCost: summaryCost.actual,
-    inputTokens: summaryCost.inputTokens,
-    outputTokens: summaryCost.outputTokens,
+    model: summaryCallConfig.model,
+    estimatedCost: totalCost.estimated,
+    actualCost: totalCost.actual,
+    inputTokens: totalCost.inputTokens,
+    outputTokens: totalCost.outputTokens,
   });
 
   return {
@@ -1184,11 +1320,11 @@ async function executeSummaryStep(
     result: {
       chronicleId,
       generatedAt: Date.now(),
-      model: callConfig.model,
-      estimatedCost: summaryCost.estimated,
-      actualCost: summaryCost.actual,
-      inputTokens: summaryCost.inputTokens,
-      outputTokens: summaryCost.outputTokens,
+      model: summaryCallConfig.model,
+      estimatedCost: totalCost.estimated,
+      actualCost: totalCost.actual,
+      inputTokens: totalCost.inputTokens,
+      outputTokens: totalCost.outputTokens,
     },
     debug,
   };

@@ -22,7 +22,8 @@ export type LLMCallType =
   | 'chronicle.generation'       // Single-shot V2 generation
   | 'chronicle.compare'          // Comparative analysis of multiple drafts (report only)
   | 'chronicle.combine'          // Synthesize multiple drafts into one
-  | 'chronicle.summary'          // Title + summary
+  | 'chronicle.summary'          // Summary only
+  | 'chronicle.title'            // Two-pass title generation (candidates + synthesis)
   | 'chronicle.imageRefs'        // Image reference extraction
   | 'chronicle.coverImageScene'  // Cover image scene/montage description
 
@@ -56,6 +57,7 @@ export const ALL_LLM_CALL_TYPES: LLMCallType[] = [
   'chronicle.compare',
   'chronicle.combine',
   'chronicle.summary',
+  'chronicle.title',
   'chronicle.imageRefs',
   'chronicle.coverImageScene',
   'palette.expansion',
@@ -227,7 +229,7 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
   },
   'chronicle.summary': {
     label: 'Summary',
-    description: 'Generates title and summary for the chronicle',
+    description: 'Generates a concise summary for the chronicle',
     category: 'chronicle',
     defaults: {
       model: 'claude-haiku-4-5-20251001',
@@ -235,6 +237,17 @@ export const LLM_CALL_METADATA: Record<LLMCallType, LLMCallMetadata> = {
       maxTokens: 512,
     },
     recommendedModels: ['claude-haiku-4-5-20251001'],
+  },
+  'chronicle.title': {
+    label: 'Title',
+    description: 'Two-pass title generation: candidates then synthesis',
+    category: 'chronicle',
+    defaults: {
+      model: 'claude-haiku-4-5-20251001',
+      thinkingBudget: 0,
+      maxTokens: 256,
+    },
+    recommendedModels: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'],
   },
   'chronicle.imageRefs': {
     label: 'Image References',
@@ -365,7 +378,7 @@ export function getCallTypesByCategory(): Record<LLMCallCategory, LLMCallType[]>
     description: ['description.narrative', 'description.visualThesis', 'description.visualTraits', 'description.copyEdit'],
     image: ['image.promptFormatting', 'image.chronicleFormatting'],
     perspective: ['perspective.synthesis'],
-    chronicle: ['chronicle.generation', 'chronicle.compare', 'chronicle.combine', 'chronicle.summary', 'chronicle.imageRefs', 'chronicle.coverImageScene'],
+    chronicle: ['chronicle.generation', 'chronicle.compare', 'chronicle.combine', 'chronicle.summary', 'chronicle.title', 'chronicle.imageRefs', 'chronicle.coverImageScene'],
     palette: ['palette.expansion'],
     dynamics: ['dynamics.generation'],
     revision: ['revision.summary', 'revision.loreBackport'],
