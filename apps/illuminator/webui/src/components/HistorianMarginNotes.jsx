@@ -130,6 +130,11 @@ function NoteItem({ note, sourceText, onUpdateNote }) {
   const [expanded, setExpanded] = useState(false);
   const [editingAnchor, setEditingAnchor] = useState(false);
 
+  const anchorMissing = useMemo(() => {
+    if (!sourceText || !note.anchorPhrase) return false;
+    return !resolveAnchorPhrase(note.anchorPhrase, sourceText);
+  }, [note.anchorPhrase, sourceText]);
+
   const cycleDisplay = useCallback(() => {
     if (!onUpdateNote) return;
     const idx = DISPLAY_MODES.indexOf(display);
@@ -214,18 +219,29 @@ function NoteItem({ note, sourceText, onUpdateNote }) {
             onClick={() => !editingAnchor && setEditingAnchor(true)}
             style={{
               fontSize: '10px',
-              color: 'var(--text-muted)',
+              color: anchorMissing ? '#ef4444' : 'var(--text-muted)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               flex: 1,
               cursor: onUpdateNote ? 'pointer' : 'default',
             }}
-            title={`Anchor: "${note.anchorPhrase}"${onUpdateNote ? ' (click to edit)' : ''}`}
+            title={`Anchor: "${note.anchorPhrase}"${anchorMissing ? ' (not found in source text)' : ''}${onUpdateNote ? ' — click to edit' : ''}`}
           >
             "{note.anchorPhrase}"
           </span>
         </div>
+
+        {/* Anchor not found warning */}
+        {anchorMissing && !editingAnchor && (
+          <div style={{
+            fontSize: '11px',
+            color: '#ef4444',
+            marginTop: '4px',
+          }}>
+            Anchor text not found in source
+          </div>
+        )}
 
         {/* Anchor editor */}
         {editingAnchor && onUpdateNote && (
