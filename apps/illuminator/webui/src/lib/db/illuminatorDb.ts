@@ -18,6 +18,7 @@ import type { SummaryRevisionRun } from '../summaryRevisionTypes';
 import type { DynamicsRun } from '../dynamicsGenerationTypes';
 import type { StaticPage, StaticPageStatus } from '../staticPageTypes';
 import type { StyleLibrary } from '@canonry/world-schema';
+import type { ContentTreeState } from '../preprint/prePrintTypes';
 
 // ---------------------------------------------------------------------------
 // Types — entities + events (v1)
@@ -67,6 +68,7 @@ export type {
   StaticPage, StaticPageStatus,
   StyleLibrary,
   StyleLibraryRecord,
+  ContentTreeState,
 };
 
 // ---------------------------------------------------------------------------
@@ -87,6 +89,7 @@ class IlluminatorDatabase extends Dexie {
   dynamicsRuns!: Table<DynamicsRun, string>;
   staticPages!: Table<StaticPage, string>;
   styleLibrary!: Table<StyleLibraryRecord, string>;
+  contentTrees!: Table<ContentTreeState, [string, string]>;
 
   constructor() {
     super('illuminator');
@@ -170,7 +173,37 @@ class IlluminatorDatabase extends Dexie {
 
         console.log(`[IlluminatorDB] v3 upgrade complete: ${migrated}/${allImages.length} blobs migrated`);
       });
+
+    // v4 — content tree for pre-print ordering
+    this.version(4).stores({
+      // All existing tables (must redeclare)
+      entities: 'id, simulationRunId, kind, [simulationRunId+kind]',
+      narrativeEvents: 'id, simulationRunId',
+      chronicles: 'chronicleId, simulationRunId, projectId',
+      images: 'imageId, projectId, entityId, chronicleId, entityKind, entityCulture, model, imageType, generatedAt',
+      costs: 'id, projectId, simulationRunId, entityId, chronicleId, type, model, timestamp',
+      traitPalettes: 'id, projectId, entityKind',
+      usedTraits: 'id, projectId, simulationRunId, entityKind, entityId',
+      historianRuns: 'runId, projectId, status, createdAt',
+      summaryRevisionRuns: 'runId, projectId, status, createdAt',
+      dynamicsRuns: 'runId, projectId, status, createdAt',
+      staticPages: 'pageId, projectId, slug, status, updatedAt',
+      styleLibrary: 'id',
+      imageBlobs: 'imageId',
+
+      // New: content tree for pre-print book structure
+      contentTrees: '[projectId+simulationRunId]',
+    });
   }
 }
 
 export const db = new IlluminatorDatabase();
+
+// When another connection (e.g. a new page load) needs to upgrade the schema,
+// close THIS connection so the upgrade isn't blocked. This is critical in
+// workers (service worker, shared worker) which persist across page navigations
+// and would otherwise block schema upgrades indefinitely.
+db.on('versionchange', () => {
+  console.log('[IlluminatorDB] Version change detected, closing connection for upgrade');
+  db.close();
+});
