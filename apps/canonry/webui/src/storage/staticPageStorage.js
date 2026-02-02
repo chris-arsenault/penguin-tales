@@ -1,50 +1,17 @@
 /**
  * Static Page Storage for Canonry
  *
- * Provides access to static pages stored in IndexedDB.
+ * Reads/writes static pages in the illuminator Dexie database.
  * Used for project export/import and reload defaults functionality.
  */
 
-// ============================================================================
-// Database Configuration (same as Illuminator/Chronicler)
-// ============================================================================
-
-const STATIC_PAGE_DB_NAME = 'canonry-static-pages';
-const STATIC_PAGE_DB_VERSION = 1;
-const STATIC_PAGE_STORE_NAME = 'static-pages';
+import { openIlluminatorDb } from '../lib/illuminatorDbReader';
 
 // ============================================================================
-// Database Connection
+// Database Configuration
 // ============================================================================
 
-let staticPageDbPromise = null;
-
-function openStaticPageDb() {
-  if (staticPageDbPromise) return staticPageDbPromise;
-
-  staticPageDbPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(STATIC_PAGE_DB_NAME, STATIC_PAGE_DB_VERSION);
-
-    request.onupgradeneeded = () => {
-      const db = request.result;
-
-      if (!db.objectStoreNames.contains(STATIC_PAGE_STORE_NAME)) {
-        const store = db.createObjectStore(STATIC_PAGE_STORE_NAME, { keyPath: 'pageId' });
-
-        store.createIndex('projectId', 'projectId', { unique: false });
-        store.createIndex('status', 'status', { unique: false });
-        store.createIndex('slug', 'slug', { unique: false });
-        store.createIndex('createdAt', 'createdAt', { unique: false });
-        store.createIndex('updatedAt', 'updatedAt', { unique: false });
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error('Failed to open static page DB'));
-  });
-
-  return staticPageDbPromise;
-}
+const STATIC_PAGE_STORE_NAME = 'staticPages';
 
 // ============================================================================
 // Utility Functions
@@ -97,7 +64,7 @@ function countWords(content) {
  * Get all static pages for a project (both draft and published)
  */
 export async function getStaticPagesForProject(projectId) {
-  const db = await openStaticPageDb();
+  const db = await openIlluminatorDb();
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STATIC_PAGE_STORE_NAME, 'readonly');
@@ -127,7 +94,7 @@ export async function importStaticPages(projectId, pages, options = {}) {
     return 0;
   }
 
-  const db = await openStaticPageDb();
+  const db = await openIlluminatorDb();
   const now = Date.now();
 
   return new Promise((resolve, reject) => {
@@ -167,7 +134,7 @@ export async function deleteStaticPagesForProject(projectId) {
   const pages = await getStaticPagesForProject(projectId);
   if (pages.length === 0) return 0;
 
-  const db = await openStaticPageDb();
+  const db = await openIlluminatorDb();
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STATIC_PAGE_STORE_NAME, 'readwrite');

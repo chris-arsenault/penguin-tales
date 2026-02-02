@@ -1,17 +1,13 @@
 /**
  * Static Page Storage Module (Read-only for Chronicler)
  *
- * Reads static pages from IndexedDB. Pages are created/edited
- * in Illuminator, but displayed here in Chronicler.
+ * Reads static pages from the illuminator Dexie database.
+ * Pages are created/edited in Illuminator, but displayed here in Chronicler.
  */
 
-// ============================================================================
-// Database Configuration (same as Illuminator)
-// ============================================================================
+import { openIlluminatorDb } from './illuminatorDbReader';
 
-const STATIC_PAGE_DB_NAME = 'canonry-static-pages';
-const STATIC_PAGE_DB_VERSION = 1;
-const STATIC_PAGE_STORE_NAME = 'static-pages';
+const STATIC_PAGE_STORE_NAME = 'staticPages';
 
 // ============================================================================
 // Types (same as Illuminator)
@@ -40,39 +36,6 @@ export interface StaticPage {
 }
 
 // ============================================================================
-// Database Connection
-// ============================================================================
-
-let staticPageDbPromise: Promise<IDBDatabase> | null = null;
-
-function openStaticPageDb(): Promise<IDBDatabase> {
-  if (staticPageDbPromise) return staticPageDbPromise;
-
-  staticPageDbPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(STATIC_PAGE_DB_NAME, STATIC_PAGE_DB_VERSION);
-
-    request.onupgradeneeded = () => {
-      const db = request.result;
-
-      if (!db.objectStoreNames.contains(STATIC_PAGE_STORE_NAME)) {
-        const store = db.createObjectStore(STATIC_PAGE_STORE_NAME, { keyPath: 'pageId' });
-
-        store.createIndex('projectId', 'projectId', { unique: false });
-        store.createIndex('status', 'status', { unique: false });
-        store.createIndex('slug', 'slug', { unique: false });
-        store.createIndex('createdAt', 'createdAt', { unique: false });
-        store.createIndex('updatedAt', 'updatedAt', { unique: false });
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error('Failed to open static page DB'));
-  });
-
-  return staticPageDbPromise;
-}
-
-// ============================================================================
 // Read-only Storage Operations
 // ============================================================================
 
@@ -80,7 +43,7 @@ function openStaticPageDb(): Promise<IDBDatabase> {
  * Get a single static page by ID
  */
 export async function getStaticPage(pageId: string): Promise<StaticPage | undefined> {
-  const db = await openStaticPageDb();
+  const db = await openIlluminatorDb();
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STATIC_PAGE_STORE_NAME, 'readonly');
@@ -94,7 +57,7 @@ export async function getStaticPage(pageId: string): Promise<StaticPage | undefi
  * Get published static pages for a project (main read function for Chronicler)
  */
 export async function getPublishedStaticPagesForProject(projectId: string): Promise<StaticPage[]> {
-  const db = await openStaticPageDb();
+  const db = await openIlluminatorDb();
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STATIC_PAGE_STORE_NAME, 'readonly');
@@ -110,4 +73,3 @@ export async function getPublishedStaticPagesForProject(projectId: string): Prom
     req.onerror = () => reject(req.error || new Error('Failed to get static pages for project'));
   });
 }
-

@@ -1,13 +1,12 @@
 /**
- * Chronicle Storage - Read-only access to canonry-chronicles IndexedDB
+ * Chronicle Storage - Read-only access to chronicles in the illuminator DB
  *
- * Chronicles are stored in the 'canonry-chronicles' database by Illuminator.
+ * Chronicles are stored in the 'illuminator' Dexie database by Illuminator.
  * Chronicler reads completed chronicles directly from here.
  */
 
-// Must match Illuminator's chronicleStorage.ts
-const CHRONICLE_DB_NAME = 'canonry-chronicles';
-const CHRONICLE_DB_VERSION = 1;
+import { openIlluminatorDb } from './illuminatorDbReader';
+
 const CHRONICLE_STORE_NAME = 'chronicles';
 
 /**
@@ -93,41 +92,6 @@ export interface ChronicleRecord {
   model: string;
 }
 
-let chronicleDbPromise: Promise<IDBDatabase> | null = null;
-
-/**
- * Open the chronicles database (read-only access)
- */
-function openChronicleDb(): Promise<IDBDatabase> {
-  if (chronicleDbPromise) return chronicleDbPromise;
-
-  chronicleDbPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(CHRONICLE_DB_NAME, CHRONICLE_DB_VERSION);
-
-    request.onupgradeneeded = () => {
-      // If we're creating/upgrading, the DB doesn't exist or is older
-      // Just create the structure - Illuminator will populate it
-      const db = request.result;
-      if (!db.objectStoreNames.contains(CHRONICLE_STORE_NAME)) {
-        const store = db.createObjectStore(CHRONICLE_STORE_NAME, { keyPath: 'chronicleId' });
-        store.createIndex('projectId', 'projectId', { unique: false });
-        store.createIndex('simulationRunId', 'simulationRunId', { unique: false });
-        store.createIndex('status', 'status', { unique: false });
-        store.createIndex('createdAt', 'createdAt', { unique: false });
-        store.createIndex('updatedAt', 'updatedAt', { unique: false });
-        store.createIndex('focusType', 'focusType', { unique: false });
-        store.createIndex('narrativeStyleId', 'narrativeStyleId', { unique: false });
-        store.createIndex('entrypointId', 'entrypointId', { unique: false });
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error('Failed to open chronicle DB'));
-  });
-
-  return chronicleDbPromise;
-}
-
 /**
  * Get all completed chronicles for a simulation run
  */
@@ -135,7 +99,7 @@ export async function getCompletedChroniclesForSimulation(simulationRunId: strin
   if (!simulationRunId) return [];
 
   try {
-    const db = await openChronicleDb();
+    const db = await openIlluminatorDb();
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
@@ -167,7 +131,7 @@ export async function getChronicle(chronicleId: string): Promise<ChronicleRecord
   if (!chronicleId) return null;
 
   try {
-    const db = await openChronicleDb();
+    const db = await openIlluminatorDb();
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
