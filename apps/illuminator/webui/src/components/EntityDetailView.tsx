@@ -462,25 +462,23 @@ export default function EntityDetailView({
                   />
                 )}
               </div>
-              {enrichment?.historianNotes && enrichment.historianNotes.length > 0 ? (
+              <p style={{
+                fontSize: '14px',
+                color: 'var(--text-secondary)',
+                lineHeight: '1.7',
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+              }}>
+                {entity.description}
+              </p>
+              {enrichment?.historianNotes && enrichment.historianNotes.length > 0 && (
                 <HistorianMarginNotes
-                  text={entity.description}
                   notes={enrichment.historianNotes}
-                  style={{ margin: 0 }}
+                  style={{ marginTop: '12px' }}
                   onToggleEnabled={onToggleHistorianNoteEnabled
                     ? (noteId: string, enabled: boolean) => onToggleHistorianNoteEnabled('entity', entity.id, noteId, enabled)
                     : undefined}
                 />
-              ) : (
-                <p style={{
-                  fontSize: '14px',
-                  color: 'var(--text-secondary)',
-                  lineHeight: '1.7',
-                  margin: 0,
-                  whiteSpace: 'pre-wrap',
-                }}>
-                  {entity.description}
-                </p>
               )}
             </div>
           )}

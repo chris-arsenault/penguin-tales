@@ -2285,7 +2285,6 @@ export default function ChronicleReviewPanel({
         {item.historianNotes?.length > 0 && (
           <div style={{ marginTop: '16px' }}>
             <HistorianMarginNotes
-              text={item.finalContent}
               notes={item.historianNotes}
               onToggleEnabled={onToggleHistorianNoteEnabled
                 ? (noteId, enabled) => onToggleHistorianNoteEnabled('chronicle', item.chronicleId, noteId, enabled)
