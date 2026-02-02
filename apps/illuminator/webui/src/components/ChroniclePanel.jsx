@@ -770,10 +770,10 @@ export default function ChroniclePanel({
     generateTitle(selectedItem.chronicleId);
   }, [selectedItem, generateTitle]);
 
-  const handleAcceptPendingTitle = useCallback(async () => {
+  const handleAcceptPendingTitle = useCallback(async (chosenTitle) => {
     if (!selectedItem) return;
     const { acceptPendingTitle } = await import('../lib/db/chronicleRepository');
-    await acceptPendingTitle(selectedItem.chronicleId);
+    await acceptPendingTitle(selectedItem.chronicleId, chosenTitle || undefined);
     await refreshChronicle(selectedItem.chronicleId);
   }, [selectedItem, refreshChronicle]);
 

@@ -475,12 +475,12 @@ export async function updateChronicleTitle(
 /**
  * Accept a pending title
  */
-export async function acceptPendingTitle(chronicleId: string): Promise<void> {
+export async function acceptPendingTitle(chronicleId: string, chosenTitle?: string): Promise<void> {
   const record = await db.chronicles.get(chronicleId);
   if (!record) throw new Error(`Chronicle ${chronicleId} not found`);
   if (!record.pendingTitle) throw new Error(`No pending title for chronicle ${chronicleId}`);
 
-  record.title = record.pendingTitle;
+  record.title = chosenTitle || record.pendingTitle;
   record.titleCandidates = record.pendingTitleCandidates;
   record.pendingTitle = undefined;
   record.pendingTitleCandidates = undefined;

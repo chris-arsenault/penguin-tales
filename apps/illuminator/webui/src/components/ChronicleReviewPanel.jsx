@@ -1374,8 +1374,8 @@ export default function ChronicleReviewPanel({
     onGenerateTitle();
   }, [onGenerateTitle]);
 
-  const handleAcceptTitle = useCallback(async () => {
-    if (onAcceptPendingTitle) await onAcceptPendingTitle();
+  const handleAcceptTitle = useCallback(async (chosenTitle) => {
+    if (onAcceptPendingTitle) await onAcceptPendingTitle(chosenTitle);
     setShowTitleAcceptModal(false);
   }, [onAcceptPendingTitle]);
 
@@ -1442,63 +1442,60 @@ export default function ChronicleReviewPanel({
               </div>
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </>
-          ) : hasPending ? (
+          ) : (
             <>
               <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>
-                Accept New Title?
+                Choose Title
               </h3>
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>Current</div>
-                <div style={{ fontSize: '15px', fontWeight: 500 }}>{item.title}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
+                {/* Synthesis result (recommended) */}
+                <button
+                  onClick={() => handleAcceptTitle(item.pendingTitle)}
+                  style={{
+                    display: 'flex', alignItems: 'baseline', gap: '8px',
+                    padding: '10px 12px', fontSize: '14px', fontWeight: 600,
+                    background: 'var(--bg-secondary)', border: '2px solid #2563eb',
+                    borderRadius: '8px', cursor: 'pointer', color: 'var(--text-primary)',
+                    textAlign: 'left', width: '100%',
+                  }}
+                >
+                  <span style={{ color: '#2563eb', fontSize: '12px', flexShrink: 0 }}>&#x2726;</span>
+                  {item.pendingTitle}
+                </button>
+                {/* Individual candidates */}
+                {item.pendingTitleCandidates?.filter(c => c !== item.pendingTitle).map((candidate, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleAcceptTitle(candidate)}
+                    style={{
+                      display: 'flex', alignItems: 'baseline', gap: '8px',
+                      padding: '8px 12px', fontSize: '13px',
+                      background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                      borderRadius: '6px', cursor: 'pointer', color: 'var(--text-secondary)',
+                      textAlign: 'left', width: '100%',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-muted)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+                  >
+                    <span style={{ opacity: 0.4, fontSize: '11px', flexShrink: 0 }}>&#x25C7;</span>
+                    {candidate}
+                  </button>
+                ))}
               </div>
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>New</div>
-                <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{item.pendingTitle}</div>
-              </div>
-              {item.pendingTitleCandidates?.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Candidates considered</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                    {item.pendingTitleCandidates.map((c, i) => (
-                      <div key={i}>
-                        <span style={{ opacity: 0.5 }}>&#x25C7;</span> {c}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <button
                   onClick={handleRejectTitle}
                   style={{
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    color: 'var(--text-secondary)',
+                    padding: '8px 16px', fontSize: '13px',
+                    background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                    borderRadius: '6px', cursor: 'pointer', color: 'var(--text-secondary)',
                   }}
                 >
                   Keep Current
                 </button>
-                <button
-                  onClick={handleAcceptTitle}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    background: '#2563eb',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    color: 'white',
-                  }}
-                >
-                  Accept New
-                </button>
               </div>
             </>
-          ) : null}
+          )}
         </div>
       </div>
     );
