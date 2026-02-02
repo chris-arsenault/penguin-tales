@@ -156,60 +156,38 @@ const HISTORIAN_NOTE_LABELS: Record<string, string> = {
   pedantic: 'Pedantic',
 };
 
-function HistorianCallouts({ notes, sectionContent }: { notes: WikiHistorianNote[]; sectionContent: string }) {
-  // Filter to notes whose anchor phrase appears in this section
-  const sectionNotes = useMemo(() => {
-    if (!sectionContent) return notes; // no section content = show all passed notes
-    const matched = notes
-      .filter(n => sectionContent.indexOf(n.anchorPhrase) >= 0)
-      .map(n => ({
-        ...n,
-        position: sectionContent.indexOf(n.anchorPhrase),
-      }))
-      .sort((a, b) => a.position - b.position);
-    return matched;
-  }, [notes, sectionContent]);
-
-  if (sectionNotes.length === 0) return null;
-
+function HistorianCallout({ note }: { note: WikiHistorianNote }) {
+  const color = HISTORIAN_NOTE_COLORS[note.type] || HISTORIAN_NOTE_COLORS.commentary;
+  const icon = HISTORIAN_NOTE_ICONS[note.type] || '✦';
+  const label = HISTORIAN_NOTE_LABELS[note.type] || 'Commentary';
   return (
-    <div style={{ marginTop: '8px', marginBottom: '12px' }}>
-      {sectionNotes.map(note => {
-        const color = HISTORIAN_NOTE_COLORS[note.type] || HISTORIAN_NOTE_COLORS.commentary;
-        const icon = HISTORIAN_NOTE_ICONS[note.type] || '✦';
-        const label = HISTORIAN_NOTE_LABELS[note.type] || 'Commentary';
-        return (
-          <div
-            key={note.noteId}
-            style={{
-              margin: '8px 0 8px 16px',
-              padding: '10px 14px',
-              background: 'rgba(139, 115, 85, 0.08)',
-              borderLeft: `3px solid ${color}`,
-              borderRadius: '0 4px 4px 0',
-              fontSize: '13px',
-              fontFamily: 'Georgia, "Times New Roman", serif',
-              fontStyle: 'italic',
-              color: 'var(--color-text-muted)',
-              lineHeight: '1.6',
-            }}
-          >
-            <div style={{
-              fontSize: '10px',
-              fontWeight: 700,
-              color,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              marginBottom: '4px',
-              fontStyle: 'normal',
-              fontFamily: 'system-ui, sans-serif',
-            }}>
-              {icon} {label}
-            </div>
-            {note.text}
-          </div>
-        );
-      })}
+    <div
+      style={{
+        margin: '8px 0 8px 16px',
+        padding: '10px 14px',
+        background: 'rgba(139, 115, 85, 0.08)',
+        borderLeft: `3px solid ${color}`,
+        borderRadius: '0 4px 4px 0',
+        fontSize: '13px',
+        fontFamily: 'Georgia, "Times New Roman", serif',
+        fontStyle: 'italic',
+        color: 'var(--color-text-muted)',
+        lineHeight: '1.6',
+      }}
+    >
+      <div style={{
+        fontSize: '10px',
+        fontWeight: 700,
+        color,
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        marginBottom: '4px',
+        fontStyle: 'normal',
+        fontFamily: 'system-ui, sans-serif',
+      }}>
+        {icon} {label}
+      </div>
+      {note.text}
     </div>
   );
 }
@@ -233,6 +211,7 @@ function SectionWithImages({
   onHoverEnter,
   onHoverLeave,
   onImageOpen,
+  historianNotes,
 }: {
   section: WikiSection;
   entityNameMap: Map<string, string>;
@@ -242,9 +221,25 @@ function SectionWithImages({
   onHoverEnter?: (pageId: string, e: React.MouseEvent) => void;
   onHoverLeave?: () => void;
   onImageOpen?: (imageUrl: string, image: WikiSectionImage) => void;
+  historianNotes?: WikiHistorianNote[];
 }) {
   const images = section.images || [];
-  if (images.length === 0) {
+  const content = section.content;
+
+  // Match historian notes to this section's content
+  const matchedNotes = useMemo(() => {
+    if (!historianNotes || historianNotes.length === 0) return [];
+    return historianNotes
+      .map(n => {
+        const idx = content.indexOf(n.anchorPhrase);
+        if (idx < 0) return null;
+        return { note: n, position: idx + n.anchorPhrase.length };
+      })
+      .filter((x): x is { note: WikiHistorianNote; position: number } => x !== null)
+      .sort((a, b) => a.position - b.position);
+  }, [historianNotes, content]);
+
+  if (images.length === 0 && matchedNotes.length === 0) {
     return (
       <MarkdownSection
         content={section.content}
@@ -258,47 +253,59 @@ function SectionWithImages({
     );
   }
 
-  const content = section.content;
+  // Build a unified list of insert points (images + notes) sorted by position
+  type InsertItem =
+    | { kind: 'image'; image: WikiSectionImage; position: number }
+    | { kind: 'note'; note: WikiHistorianNote; position: number };
 
-  // Find anchor position for ALL images and sort by position
-  const positionedImages: Array<{ image: WikiSectionImage; position: number }> = [];
+  const insertItems: InsertItem[] = [];
 
+  // Image positions
   for (const img of images) {
-    // Fuzzy anchor resolution: handles LLM paraphrases
     const resolved = img.anchorText ? resolveAnchorPhrase(img.anchorText, content) : null;
     let position = resolved ? resolved.index : -1;
-    // Use anchorIndex as fallback if fuzzy match fails
     if (position < 0 && img.anchorIndex !== undefined && img.anchorIndex < content.length) {
       position = img.anchorIndex;
     }
-    // If still not found, use end of content
     if (position < 0) {
       position = content.length;
     }
-    positionedImages.push({ image: img, position });
+    insertItems.push({ kind: 'image', image: img, position });
+  }
+
+  // Note positions
+  for (const { note, position } of matchedNotes) {
+    insertItems.push({ kind: 'note', note, position });
   }
 
   // Sort by position
-  positionedImages.sort((a, b) => a.position - b.position);
+  insertItems.sort((a, b) => a.position - b.position);
 
-  // Build fragments: split content at paragraph boundaries after each image's anchor
+  // Build fragments: split content at paragraph boundaries after each insert point
   const fragments: Array<
     | { type: 'text'; content: string }
     | { type: 'image'; image: WikiSectionImage }
+    | { type: 'note'; note: WikiHistorianNote }
   > = [];
   let lastIndex = 0;
 
-  for (const { image, position } of positionedImages) {
+  for (const item of insertItems) {
     // Find paragraph boundary after the anchor
-    const anchorEnd = position + (image.anchorText?.length || 0);
+    const anchorEnd = item.kind === 'image'
+      ? item.position + (item.image.anchorText?.length || 0)
+      : item.position;
     const paragraphEnd = content.indexOf('\n\n', anchorEnd);
     const insertPoint = paragraphEnd >= 0 ? paragraphEnd : content.length;
 
-    // Add text before this image
+    // Add text before this insert
     if (insertPoint > lastIndex) {
       fragments.push({ type: 'text', content: content.slice(lastIndex, insertPoint) });
     }
-    fragments.push({ type: 'image', image });
+    if (item.kind === 'image') {
+      fragments.push({ type: 'image', image: item.image });
+    } else {
+      fragments.push({ type: 'note', note: item.note });
+    }
     lastIndex = paragraphEnd >= 0 ? paragraphEnd + 2 : insertPoint;
   }
 
@@ -313,7 +320,6 @@ function SectionWithImages({
         if (fragment.type === 'image') {
           const isFloat = isFloatImage(fragment.image.size);
           if (isFloat) {
-            // Float images don't need clearfix, they float naturally
             return (
               <ChronicleImage
                 key={`img-${fragment.image.refId}-${i}`}
@@ -322,7 +328,6 @@ function SectionWithImages({
               />
             );
           } else {
-            // Block images need clearfix before them
             return (
               <React.Fragment key={`img-${fragment.image.refId}-${i}`}>
                 <div className={styles.clearfix} />
@@ -333,6 +338,13 @@ function SectionWithImages({
               </React.Fragment>
             );
           }
+        } else if (fragment.type === 'note') {
+          return (
+            <HistorianCallout
+              key={`note-${fragment.note.noteId}`}
+              note={fragment.note}
+            />
+          );
         } else {
           return (
             <MarkdownSection
@@ -1186,10 +1198,8 @@ export default function WikiPageView({
                 onHoverEnter={handleEntityHoverEnter}
                 onHoverLeave={handleEntityHoverLeave}
                 onImageOpen={handleInlineImageOpen}
+                historianNotes={page.content.historianNotes}
               />
-            )}
-            {page.content.historianNotes && page.content.historianNotes.length > 0 && (
-              <HistorianCallouts notes={page.content.historianNotes} sectionContent={section.content} />
             )}
           </div>
         ))}
@@ -1201,7 +1211,13 @@ export default function WikiPageView({
               n => allSectionContent.indexOf(n.anchorPhrase) < 0
             );
             if (unmatched.length === 0) return null;
-            return <HistorianCallouts notes={unmatched} sectionContent="" />;
+            return (
+              <div style={{ marginTop: '8px', marginBottom: '12px' }}>
+                {unmatched.map(note => (
+                  <HistorianCallout key={note.noteId} note={note} />
+                ))}
+              </div>
+            );
           })()}
 
           {/* Backlinks */}
