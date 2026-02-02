@@ -905,23 +905,23 @@ function toTitleCase(title: string): string {
 }
 
 const STORY_TITLE_NUDGES = [
-  'Try a single character name or epithet (like "Macbeth", "Beowulf", "The Great Gatsby").',
-  'Try a place name or landmark from the chronicle (like "Wuthering Heights", "Middlemarch").',
-  'Try a symbolic object or artifact (like "The Sword in the Stone", "The Bell Jar").',
-  'Try a mythic or legendary framing (like "The Odyssey", "The Silmarillion").',
-  'Try a short evocative phrase about the central conflict (like "A Storm of Swords", "The Fall of Gondolin").',
-  'Try a character relationship or title (like "The Prince and the Pauper", "The King in Yellow").',
-  'Try a thematic concept (like "Pride and Prejudice", "War and Peace", "Dune").',
+  'One candidate should reference a key place or landmark from the chronicle.',
+  'One candidate should use a thematic tension or contrast (like "Pride and Prejudice", "War and Peace").',
+  'One candidate should reference a pivotal event or turning point from the chronicle.',
+  'One candidate should evoke the tone or mood of the story (like "A Farewell to Arms", "The Sound and the Fury").',
+  'One candidate should reference a symbolic object, title, or role from the chronicle.',
+  'One candidate should frame the central relationship or conflict.',
+  'One candidate should capture what changed or what was lost.',
 ];
 
 const DOCUMENT_TITLE_NUDGES = [
-  'Try a formal document title style (like "The Art of War", "The Prince", "Leviathan").',
-  'Try a subject heading (like "A Treatise on Power", "Meditations", "The Republic").',
-  'Try naming it after the subject matter (like "Poetics", "Ethics", "Histories").',
-  'Try a declarative or assertive title (like "The Rights of Man", "Common Sense").',
-  'Try an institutional or formal style (like "Proceedings of...", "Chronicle of...", "The Record of...").',
-  'Try a geographic or temporal reference (like "Letters from a Stoic", "The Annals").',
-  'Try a topical reference (like "On Liberty", "Concerning the City of God").',
+  'One candidate should use a formal document heading style (like "A Treatise on...", "Concerning...").',
+  'One candidate should name the subject matter directly (like "The Art of War", "Poetics").',
+  'One candidate should reference the document\'s origin or author context.',
+  'One candidate should use a declarative or topical style (like "On Liberty", "Common Sense").',
+  'One candidate should reference the key institution, place, or authority involved.',
+  'One candidate should capture the document\'s purpose or occasion.',
+  'One candidate should use a formal chronicle or record style.',
 ];
 
 function pickNudge(format: 'story' | 'document'): string {
@@ -988,18 +988,20 @@ function buildTitleCandidatesPrompt(content: string, ctx: TitlePromptContext): s
   if (ctx.format === 'document') {
     return `Generate 5 candidate titles for the in-universe document below.
 ${styleContext}
-Think about how real documents, treatises, and historical texts are titled. Great document titles are often:
-- The subject itself: "Meditations", "Poetics", "Leviathan", "The Republic"
-- Formal headings: "A Treatise on...", "The Chronicle of...", "Concerning..."
-- Named after people/places: "The Prince", "Letters from a Stoic"
-- Topical declarations: "On Liberty", "The Art of War", "Common Sense"
+Great document titles are concise and authoritative. They use varied approaches:
+- Subject-focused: "The Art of War", "Poetics", "The Republic", "Leviathan"
+- Formal heading: "A Treatise on Power", "Concerning the Nature of...", "The Chronicle of..."
+- Topical: "On Liberty", "Common Sense", "The Rights of Man"
+- Named reference: "The Prince", "Letters from a Stoic", "The Annals"
+
+The title should sound like a real historical document, treatise, or text — authoritative and specific to its subject matter.
 
 Rules:
-- Each title: 1-7 words
+- Each title: 2-7 words
 - Title Case capitalization
 - Each candidate must use a DIFFERENT structural approach
-- Titles should sound like real document/text names, not descriptive phrases
 - Match the formality and genre of the document type
+- Titles must be specific to the document's actual subject, not generic
 - ${pickNudge('document')}
 
 Document:
@@ -1011,21 +1013,21 @@ Return ONLY valid JSON in this exact format:
 
   return `Generate 5 candidate titles for the story below.
 ${styleContext}
-Think about how great works of fiction are titled. Real book titles are often:
-- A character name or epithet: "Macbeth", "Beowulf", "Emma", "Circe"
-- A place: "Wuthering Heights", "Middlemarch", "Dune"
-- A symbolic object: "The Bell Jar", "The Sword in the Stone"
-- A short thematic phrase: "Pride and Prejudice", "War and Peace"
-- A mythic/legendary reference: "The Odyssey", "The Silmarillion"
+Great titles are concise and evocative. They range from 2-6 words and use varied approaches:
+- Thematic: "Pride and Prejudice", "A Farewell to Arms", "The Sound and the Fury"
+- Place/setting: "Wuthering Heights", "The Tower of Babel", "Dune"
+- Character + context: "The Great Gatsby", "The Once and Future King"
+- Event/image: "A Storm of Swords", "The Fall of Gondolin", "Blood Meridian"
+- Symbolic: "The Bell Jar", "Brave New World", "The Long Dark"
 
-Titles should feel like something you'd see on a book spine — concise, evocative, memorable. NOT a description or summary of the plot.
+The title should capture the ESSENCE of the chronicle — its central tension, setting, or theme — in a way that intrigues. It should NOT be a bare entity name or a plot summary.
 
 Rules:
-- Each title: 1-6 words (shorter is better — most great titles are 1-3 words)
+- Each title: 2-6 words
 - Title Case capitalization
-- Each candidate must use a DIFFERENT structural approach
-- Strongly prefer proper nouns, place names, object names, or short symbolic phrases from the content
-- Avoid descriptive or explanatory titles — "The Fall of the Kingdom" is weaker than "Ashenmoor"
+- Each candidate must use a DIFFERENT structural approach (thematic, place-based, event-based, symbolic, character-focused)
+- Do NOT use bare character or entity names alone as titles — a name needs context (e.g. "Macbeth" works because it's a famous play, but "Aerirei" alone means nothing to a reader)
+- Titles must be meaningful and evocative even to someone who hasn't read the chronicle
 - At most ONE title may start with "The"
 - ${pickNudge('story')}
 
@@ -1053,13 +1055,13 @@ function buildTitleSynthesisPrompt(
 
 ${candidateList}
 ${styleContext}
-Your job: create the BEST possible title. You may pick one candidate if it's already excellent, or synthesize something new from the strongest elements. The result must sound like a real ${ctx.format === 'document' ? 'document or text name' : 'book title'} — something concise and memorable, not a description.
+Your job: create the BEST possible title. You may pick one candidate if it's already excellent, or synthesize something new by combining the strongest elements. The result must sound like a real ${ctx.format === 'document' ? 'document or text name' : 'book title'} — concise, evocative, and meaningful.
 
 Rules:
-- 1-${ctx.format === 'document' ? '7' : '6'} words (shorter is almost always better)
+- 2-${ctx.format === 'document' ? '7' : '6'} words
 - Title Case capitalization
-- Must sound like a real published title, not a plot summary
-- Prefer proper nouns, place names, or evocative single words when possible
+- Must be meaningful and evocative even to someone unfamiliar with the content
+- Do NOT use bare entity names alone — names need context to work as titles
 
 ${ctx.format === 'story' ? 'Story' : 'Document'} (for reference):
 ${content}
