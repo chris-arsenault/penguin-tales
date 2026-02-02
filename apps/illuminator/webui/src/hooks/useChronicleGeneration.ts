@@ -23,6 +23,7 @@ import type { ChronicleGenerationContext, ChronicleTemporalContext } from '../li
 import type { QueueItem, EnrichmentType, ChronicleStep, AcceptedChronicle } from '../lib/enrichmentTypes';
 import {
   getChroniclesForSimulation,
+  getChronicle,
   deleteChronicle as deleteChronicleInDb,
   acceptChronicle as acceptChronicleInDb,
   updateChronicleFailure,
@@ -158,6 +159,24 @@ export function useChronicleGeneration(
   }, [simulationRunId]);
 
   // -------------------------------------------------------------------------
+  // Reload a single chronicle (merge into existing map without full reload)
+  // -------------------------------------------------------------------------
+
+  const refreshChronicle = useCallback(async (chronicleId: string) => {
+    try {
+      const record = await getChronicle(chronicleId);
+      if (!record) return;
+      setChronicles((prev) => {
+        const next = new Map(prev);
+        next.set(chronicleId, record);
+        return next;
+      });
+    } catch (err) {
+      console.error(`[Chronicle] Failed to refresh chronicle ${chronicleId}:`, err);
+    }
+  }, []);
+
+  // -------------------------------------------------------------------------
   // Load on mount and when simulation changes
   // -------------------------------------------------------------------------
 
@@ -184,16 +203,27 @@ export function useChronicleGeneration(
     );
 
     if (completedTasks.length > 0) {
-      // Mark as processed
+      // Mark as processed and collect unique chronicle IDs
+      const chronicleIds = new Set<string>();
       for (const task of completedTasks) {
         processedCompletionsRef.current.add(task.id);
-        console.log(`[Chronicle] Task ${task.id} completed (${task.status}), reloading from IndexedDB`);
+        if (task.chronicleId) {
+          chronicleIds.add(task.chronicleId);
+        }
+        console.log(`[Chronicle] Task ${task.id} completed (${task.status}), refreshing chronicle ${task.chronicleId ?? '(unknown)'}`);
       }
 
-      // Reload from IndexedDB to get fresh data
-      loadChronicles();
+      // Targeted refresh of only the changed chronicles
+      if (chronicleIds.size > 0) {
+        for (const id of chronicleIds) {
+          refreshChronicle(id);
+        }
+      } else {
+        // Fallback to full reload if no chronicleId available
+        loadChronicles();
+      }
     }
-  }, [queue, loadChronicles]);
+  }, [queue, refreshChronicle, loadChronicles]);
 
   // -------------------------------------------------------------------------
   // Compute isGenerating from queue
@@ -693,5 +723,6 @@ export function useChronicleGeneration(
     restartChronicle,
     isGenerating,
     refresh,
+    refreshChronicle,
   };
 }

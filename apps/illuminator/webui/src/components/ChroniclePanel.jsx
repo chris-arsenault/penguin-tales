@@ -357,6 +357,7 @@ export default function ChroniclePanel({
     restartChronicle,
     isGenerating,
     refresh,
+    refreshChronicle,
   } = useChronicleGeneration(projectId, simulationRunId, queue, onEnqueue);
 
   // External refresh trigger (e.g. after lore backport)
@@ -729,26 +730,8 @@ export default function ChroniclePanel({
     };
   }, [selectedItem, queue]);
 
-  // Watch for cover_image_scene completion and refresh chronicles
-  const prevCoverSceneRunningRef = useRef(false);
-  useEffect(() => {
-    const running = refinementState?.coverImageScene?.running ?? false;
-    if (prevCoverSceneRunningRef.current && !running) {
-      // Transitioned from running to not-running — refresh to pick up new data
-      refresh();
-    }
-    prevCoverSceneRunningRef.current = running;
-  }, [refinementState?.coverImageScene?.running, refresh]);
-
-  // Watch for title step completion and refresh chronicles
-  const prevTitleRunningRef = useRef(false);
-  useEffect(() => {
-    const running = refinementState?.title?.running ?? false;
-    if (prevTitleRunningRef.current && !running) {
-      refresh();
-    }
-    prevTitleRunningRef.current = running;
-  }, [refinementState?.title?.running, refresh]);
+  // Note: chronicle refresh on task completion is handled by the queue
+  // watcher in useChronicleGeneration (targeted single-chronicle reload).
 
   // Clear selection if stored item no longer exists in current data
   useEffect(() => {
