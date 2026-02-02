@@ -5,7 +5,7 @@
  * the specific data they care about changes.
  */
 
-import { useShallow } from 'zustand/react/shallow';
+import { useMemo } from 'react';
 import { useChronicleStore } from './chronicleStore';
 import type { ChronicleRecord } from './chronicleRepository';
 
@@ -100,23 +100,22 @@ function buildNavItem(
 
 /**
  * Sorted nav items for the chronicle list sidebar.
- * Uses shallow comparison — won't re-render when non-nav fields change
- * (e.g. assembledContent, pendingTitle, cohesionReport).
+ * Subscribes to the chronicles record (reference-stable per chronicle),
+ * derives lightweight nav items in a useMemo.
  */
 export function useChronicleNavItems(
   getEffectiveStatus: (chronicleId: string, record: ChronicleRecord) => string,
 ): ChronicleNavItem[] {
-  return useChronicleStore(
-    useShallow((state) => {
-      const items: ChronicleNavItem[] = [];
-      for (const record of Object.values(state.chronicles)) {
-        items.push(buildNavItem(record, getEffectiveStatus));
-      }
-      // Sort by most recent first
-      items.sort((a, b) => b.updatedAt - a.updatedAt);
-      return items;
-    }),
-  );
+  const chronicles = useChronicleStore((state) => state.chronicles);
+
+  return useMemo(() => {
+    const items: ChronicleNavItem[] = [];
+    for (const record of Object.values(chronicles)) {
+      items.push(buildNavItem(record, getEffectiveStatus));
+    }
+    items.sort((a, b) => b.updatedAt - a.updatedAt);
+    return items;
+  }, [chronicles, getEffectiveStatus]);
 }
 
 /**
