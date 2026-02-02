@@ -9,10 +9,22 @@ const BLOBS_STORE = 'imageBlobs';
  * This opens it at whatever version it's currently at, avoiding
  * any upgrade triggers or conflicts with Illuminator's Dexie instance.
  */
-function openDb(): Promise<IDBDatabase> {
+function openDb(onVersionChange?: () => void): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME);
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+
+      // Close this connection when another context (e.g. Dexie in Illuminator)
+      // needs to upgrade the schema. Without this, cached connections block
+      // schema upgrades indefinitely in same-page MFE architectures.
+      db.onversionchange = () => {
+        db.close();
+        onVersionChange?.();
+      };
+
+      resolve(db);
+    };
     request.onerror = () => reject(new Error(`Failed to open ${DB_NAME}: ${request.error?.message}`));
   });
 }
@@ -82,7 +94,11 @@ export class IndexedDBBackend implements ImageBackend {
 
   async initialize(): Promise<void> {
     if (this.db) return;
-    this.db = await openDb();
+    this.db = await openDb(() => {
+      // Connection was closed due to a schema upgrade in another context.
+      // Clear the cached reference so the next operation reconnects.
+      this.db = null;
+    });
   }
 
   async getImageUrl(imageId: string, _size?: ImageSize): Promise<string | null> {
