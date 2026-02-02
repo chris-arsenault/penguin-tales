@@ -1368,8 +1368,9 @@ export default function ChronicleReviewPanel({
   // Title regeneration modal state (for published chronicles)
   const [showTitleAcceptModal, setShowTitleAcceptModal] = useState(false);
 
-  const handleGenerateTitleForPublished = useCallback(() => {
+  const handleGenerateTitleWithModal = useCallback(() => {
     if (!onGenerateTitle) return;
+    setShowTitleAcceptModal(true);
     onGenerateTitle();
   }, [onGenerateTitle]);
 
@@ -1382,13 +1383,6 @@ export default function ChronicleReviewPanel({
     if (onRejectPendingTitle) await onRejectPendingTitle();
     setShowTitleAcceptModal(false);
   }, [onRejectPendingTitle]);
-
-  // Show accept modal when pending title appears
-  useEffect(() => {
-    if (item?.pendingTitle) {
-      setShowTitleAcceptModal(true);
-    }
-  }, [item?.pendingTitle]);
 
   // Image modal state for full-size viewing
   const [imageModal, setImageModal] = useState({ open: false, imageId: '', title: '' });
@@ -1405,8 +1399,10 @@ export default function ChronicleReviewPanel({
     />
   );
 
+  const titleRunning = refinements?.title?.running;
   const renderTitleAcceptModal = () => {
-    if (!showTitleAcceptModal || !item?.pendingTitle) return null;
+    if (!showTitleAcceptModal) return null;
+    const hasPending = !!item?.pendingTitle;
     return (
       <div
         style={{
@@ -1418,7 +1414,7 @@ export default function ChronicleReviewPanel({
           justifyContent: 'center',
           zIndex: 1000,
         }}
-        onClick={() => { handleRejectTitle(); }}
+        onClick={() => { if (hasPending) handleRejectTitle(); }}
       >
         <div
           style={{
@@ -1431,59 +1427,78 @@ export default function ChronicleReviewPanel({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>
-            Accept New Title?
-          </h3>
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>Current</div>
-            <div style={{ fontSize: '15px', fontWeight: 500 }}>{item.title}</div>
-          </div>
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>New</div>
-            <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{item.pendingTitle}</div>
-          </div>
-          {item.pendingTitleCandidates?.length > 0 && (
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Candidates considered</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {item.pendingTitleCandidates.map((c, i) => (
-                  <div key={i}>
-                    <span style={{ opacity: 0.5 }}>&#x25C7;</span> {c}
-                  </div>
-                ))}
+          {!hasPending ? (
+            <>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>
+                Generating Title...
+              </h3>
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>Current</div>
+                <div style={{ fontSize: '15px', fontWeight: 500 }}>{item.title}</div>
               </div>
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-            <button
-              onClick={handleRejectTitle}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                color: 'var(--text-secondary)',
-              }}
-            >
-              Keep Current
-            </button>
-            <button
-              onClick={handleAcceptTitle}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                background: '#2563eb',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                color: 'white',
-              }}
-            >
-              Accept New
-            </button>
-          </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                <span style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid var(--text-muted)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                Two-pass title synthesis in progress...
+              </div>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </>
+          ) : hasPending ? (
+            <>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>
+                Accept New Title?
+              </h3>
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>Current</div>
+                <div style={{ fontSize: '15px', fontWeight: 500 }}>{item.title}</div>
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>New</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{item.pendingTitle}</div>
+              </div>
+              {item.pendingTitleCandidates?.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Candidates considered</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    {item.pendingTitleCandidates.map((c, i) => (
+                      <div key={i}>
+                        <span style={{ opacity: 0.5 }}>&#x25C7;</span> {c}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleRejectTitle}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  Keep Current
+                </button>
+                <button
+                  onClick={handleAcceptTitle}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    background: '#2563eb',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: 'white',
+                  }}
+                >
+                  Accept New
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
     );
@@ -1999,7 +2014,7 @@ export default function ChronicleReviewPanel({
           item={item}
           onValidate={onValidate}
           onGenerateSummary={onGenerateSummary}
-          onGenerateTitle={onGenerateTitle}
+          onGenerateTitle={handleGenerateTitleWithModal}
           onGenerateImageRefs={onGenerateImageRefs}
           onGenerateCoverImageScene={onGenerateCoverImageScene}
           onGenerateCoverImage={onGenerateCoverImage}
@@ -2208,7 +2223,7 @@ export default function ChronicleReviewPanel({
             )}
             {onGenerateTitle && (
               <button
-                onClick={handleGenerateTitleForPublished}
+                onClick={handleGenerateTitleWithModal}
                 disabled={isGenerating || refinements?.title?.running}
                 style={{
                   padding: '8px 16px',
