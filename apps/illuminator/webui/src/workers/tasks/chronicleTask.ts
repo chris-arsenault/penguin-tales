@@ -904,41 +904,132 @@ function toTitleCase(title: string): string {
     .join('');
 }
 
-const TITLE_NUDGES = [
-  'Try a poetic image or metaphor.',
-  'Frame it around a turning point or decisive action.',
-  'Reference a place, object, or sensory detail from the chronicle.',
-  'Evoke a consequence, aftermath, or irony.',
-  'Use juxtaposition or contrast between two ideas.',
-  'Capture a mood or atmosphere rather than a plot point.',
-  'Use a fragment, question, or incomplete thought.',
+const STORY_TITLE_NUDGES = [
+  'Try a single character name or epithet (like "Macbeth", "Beowulf", "The Great Gatsby").',
+  'Try a place name or landmark from the chronicle (like "Wuthering Heights", "Middlemarch").',
+  'Try a symbolic object or artifact (like "The Sword in the Stone", "The Bell Jar").',
+  'Try a mythic or legendary framing (like "The Odyssey", "The Silmarillion").',
+  'Try a short evocative phrase about the central conflict (like "A Storm of Swords", "The Fall of Gondolin").',
+  'Try a character relationship or title (like "The Prince and the Pauper", "The King in Yellow").',
+  'Try a thematic concept (like "Pride and Prejudice", "War and Peace", "Dune").',
 ];
 
-function pickNudge(): string {
-  return TITLE_NUDGES[Math.floor(Math.random() * TITLE_NUDGES.length)];
+const DOCUMENT_TITLE_NUDGES = [
+  'Try a formal document title style (like "The Art of War", "The Prince", "Leviathan").',
+  'Try a subject heading (like "A Treatise on Power", "Meditations", "The Republic").',
+  'Try naming it after the subject matter (like "Poetics", "Ethics", "Histories").',
+  'Try a declarative or assertive title (like "The Rights of Man", "Common Sense").',
+  'Try an institutional or formal style (like "Proceedings of...", "Chronicle of...", "The Record of...").',
+  'Try a geographic or temporal reference (like "Letters from a Stoic", "The Annals").',
+  'Try a topical reference (like "On Liberty", "Concerning the City of God").',
+];
+
+function pickNudge(format: 'story' | 'document'): string {
+  const nudges = format === 'document' ? DOCUMENT_TITLE_NUDGES : STORY_TITLE_NUDGES;
+  return nudges[Math.floor(Math.random() * nudges.length)];
 }
 
-function buildTitleCandidatesPrompt(
-  content: string,
+function buildStyleContext(
+  format: 'story' | 'document',
   narrativeStyleName?: string,
-  narrativeStyleDescription?: string
+  narrativeStyleDescription?: string,
+  narrativeInstructions?: string,
+  proseInstructions?: string,
+  documentInstructions?: string,
 ): string {
-  const styleContext = narrativeStyleName
-    ? `\nNarrative style: "${narrativeStyleName}"${narrativeStyleDescription ? ` — ${narrativeStyleDescription}` : ''}\nThe title should feel at home in this style's tone and register.\n`
-    : '';
+  if (!narrativeStyleName) return '';
 
-  return `Generate 5 candidate titles for the chronicle below.
+  let ctx = `\nNarrative style: "${narrativeStyleName}"`;
+  if (narrativeStyleDescription) ctx += ` — ${narrativeStyleDescription}`;
+
+  if (format === 'story') {
+    if (proseInstructions) {
+      // Prose instructions give the best sense of tone/register for titling
+      ctx += `\n\nProse style guidance (for tone reference):\n${proseInstructions}`;
+    }
+    if (narrativeInstructions) {
+      // First ~300 chars of narrative instructions give structural context
+      const truncated = narrativeInstructions.length > 400
+        ? narrativeInstructions.slice(0, 400) + '...'
+        : narrativeInstructions;
+      ctx += `\n\nNarrative structure (for context):\n${truncated}`;
+    }
+  } else {
+    if (documentInstructions) {
+      const truncated = documentInstructions.length > 500
+        ? documentInstructions.slice(0, 500) + '...'
+        : documentInstructions;
+      ctx += `\n\nDocument style guidance:\n${truncated}`;
+    }
+  }
+
+  return ctx + '\n';
+}
+
+interface TitlePromptContext {
+  format: 'story' | 'document';
+  narrativeStyleName?: string;
+  narrativeStyleDescription?: string;
+  narrativeInstructions?: string;
+  proseInstructions?: string;
+  documentInstructions?: string;
+}
+
+function buildTitleCandidatesPrompt(content: string, ctx: TitlePromptContext): string {
+  const styleContext = buildStyleContext(
+    ctx.format,
+    ctx.narrativeStyleName,
+    ctx.narrativeStyleDescription,
+    ctx.narrativeInstructions,
+    ctx.proseInstructions,
+    ctx.documentInstructions,
+  );
+
+  if (ctx.format === 'document') {
+    return `Generate 5 candidate titles for the in-universe document below.
 ${styleContext}
-Rules:
-- Each title: 3-8 words, evocative, faithful to the content
-- Title Case capitalization
-- Each candidate must use a DIFFERENT structural approach (not just synonyms)
-- Vary wildly — mix abstract, concrete, character-focused, thematic, tonal
-- Every title must read as a coherent phrase a reader would recognize as a title
-- Avoid formulaic patterns: no "X's Y" possessives, no starting with "The"
-- ${pickNudge()}
+Think about how real documents, treatises, and historical texts are titled. Great document titles are often:
+- The subject itself: "Meditations", "Poetics", "Leviathan", "The Republic"
+- Formal headings: "A Treatise on...", "The Chronicle of...", "Concerning..."
+- Named after people/places: "The Prince", "Letters from a Stoic"
+- Topical declarations: "On Liberty", "The Art of War", "Common Sense"
 
-Chronicle:
+Rules:
+- Each title: 1-7 words
+- Title Case capitalization
+- Each candidate must use a DIFFERENT structural approach
+- Titles should sound like real document/text names, not descriptive phrases
+- Match the formality and genre of the document type
+- ${pickNudge('document')}
+
+Document:
+${content}
+
+Return ONLY valid JSON in this exact format:
+{"titles": ["...", "...", "...", "...", "..."]}`;
+  }
+
+  return `Generate 5 candidate titles for the story below.
+${styleContext}
+Think about how great works of fiction are titled. Real book titles are often:
+- A character name or epithet: "Macbeth", "Beowulf", "Emma", "Circe"
+- A place: "Wuthering Heights", "Middlemarch", "Dune"
+- A symbolic object: "The Bell Jar", "The Sword in the Stone"
+- A short thematic phrase: "Pride and Prejudice", "War and Peace"
+- A mythic/legendary reference: "The Odyssey", "The Silmarillion"
+
+Titles should feel like something you'd see on a book spine — concise, evocative, memorable. NOT a description or summary of the plot.
+
+Rules:
+- Each title: 1-6 words (shorter is better — most great titles are 1-3 words)
+- Title Case capitalization
+- Each candidate must use a DIFFERENT structural approach
+- Strongly prefer proper nouns, place names, object names, or short symbolic phrases from the content
+- Avoid descriptive or explanatory titles — "The Fall of the Kingdom" is weaker than "Ashenmoor"
+- At most ONE title may start with "The"
+- ${pickNudge('story')}
+
+Story:
 ${content}
 
 Return ONLY valid JSON in this exact format:
@@ -948,29 +1039,29 @@ Return ONLY valid JSON in this exact format:
 function buildTitleSynthesisPrompt(
   candidates: string[],
   content: string,
-  narrativeStyleName?: string,
-  narrativeStyleDescription?: string
+  ctx: TitlePromptContext,
 ): string {
-  const styleContext = narrativeStyleName
-    ? `\nNarrative style: "${narrativeStyleName}"${narrativeStyleDescription ? ` — ${narrativeStyleDescription}` : ''}\nThe final title must match this style's tone.\n`
+  const styleContext = ctx.narrativeStyleName
+    ? `\nNarrative style: "${ctx.narrativeStyleName}"${ctx.narrativeStyleDescription ? ` — ${ctx.narrativeStyleDescription}` : ''}\n`
     : '';
 
   const candidateList = candidates.map((t, i) => `${i + 1}. ${t}`).join('\n');
 
-  return `Here are 5 candidate titles for a chronicle:
+  const formatLabel = ctx.format === 'document' ? 'document' : 'story';
+
+  return `Here are 5 candidate titles for a ${formatLabel}:
 
 ${candidateList}
 ${styleContext}
-Your job: synthesize a FINAL title by combining, remixing, or riffing on the strongest elements from these candidates. You may pick one if it's already perfect, but prefer to create something new that merges the best words, rhythms, or ideas from multiple candidates. The result must read as a coherent, natural title — not a collage of fragments.
+Your job: create the BEST possible title. You may pick one candidate if it's already excellent, or synthesize something new from the strongest elements. The result must sound like a real ${ctx.format === 'document' ? 'document or text name' : 'book title'} — something concise and memorable, not a description.
 
 Rules:
-- 3-8 words
+- 1-${ctx.format === 'document' ? '7' : '6'} words (shorter is almost always better)
 - Title Case capitalization
-- Must read as a single coherent phrase, not disconnected words stitched together
-- Match the narrative style's tone and register
-- No "X's Y" possessives, no starting with "The"
+- Must sound like a real published title, not a plot summary
+- Prefer proper nouns, place names, or evocative single words when possible
 
-Chronicle (for reference):
+${ctx.format === 'story' ? 'Story' : 'Document'} (for reference):
 ${content}
 
 Return ONLY valid JSON in this exact format:
@@ -1308,11 +1399,19 @@ async function executeTitleStep(
   const callConfig = getCallConfig(config, 'chronicle.title');
   const chronicleId = chronicleRecord.chronicleId;
   const narrativeStyle = chronicleRecord.narrativeStyle;
-  const styleName = narrativeStyle?.name;
-  const styleDescription = narrativeStyle?.description;
+  const format = chronicleRecord.format || 'story';
+
+  const titleCtx: TitlePromptContext = {
+    format,
+    narrativeStyleName: narrativeStyle?.name,
+    narrativeStyleDescription: narrativeStyle?.description,
+    narrativeInstructions: narrativeStyle?.format === 'story' ? (narrativeStyle as any).narrativeInstructions : undefined,
+    proseInstructions: narrativeStyle?.format === 'story' ? (narrativeStyle as any).proseInstructions : undefined,
+    documentInstructions: narrativeStyle?.format === 'document' ? (narrativeStyle as any).documentInstructions : undefined,
+  };
 
   // --- Pass 1: Generate candidates ---
-  const candidatesPrompt = buildTitleCandidatesPrompt(content, styleName, styleDescription);
+  const candidatesPrompt = buildTitleCandidatesPrompt(content, titleCtx);
   const candidatesCall = await runTextCall({
     llmClient,
     callType: 'chronicle.title',
@@ -1350,7 +1449,7 @@ async function executeTitleStep(
   let synthesisCall: Awaited<ReturnType<typeof runTextCall>> | undefined;
 
   if (candidates.length >= 2) {
-    const synthesisPrompt = buildTitleSynthesisPrompt(candidates, content, styleName, styleDescription);
+    const synthesisPrompt = buildTitleSynthesisPrompt(candidates, content, titleCtx);
     synthesisCall = await runTextCall({
       llmClient,
       callType: 'chronicle.title',
