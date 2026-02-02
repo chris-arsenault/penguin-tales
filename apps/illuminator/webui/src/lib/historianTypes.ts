@@ -3,8 +3,8 @@
  *
  * Data structures for the historian annotation system.
  * The historian is a persistent scholarly voice that annotates entity
- * descriptions and chronicle narratives with marginal notes — tongue-in-cheek
- * commentary, factual corrections, pedantic observations, and running gags.
+ * descriptions and chronicle narratives with marginal notes — resigned
+ * commentary, factual corrections, weary observations, and dry asides.
  */
 
 // =============================================================================
@@ -12,10 +12,10 @@
 // =============================================================================
 
 export type HistorianNoteType =
-  | 'commentary'    // Color commentary, admiration, general observations
+  | 'commentary'    // Resigned observation, weary admiration, black humor
   | 'correction'    // Factual inconsistency or inaccuracy callout
-  | 'tangent'       // Personal digression, running gag, anecdote
-  | 'skepticism'    // Disputes or questions the account
+  | 'tangent'       // Personal digression, tired aside, memory surfacing unbidden
+  | 'skepticism'    // Disputes or questions the account with quiet exasperation
   | 'pedantic';     // Scholarly pedantic correction (names, dates, terminology)
 
 export interface HistorianNote {
@@ -38,15 +38,15 @@ export interface HistorianConfig {
   name: string;
   /** Background, credentials, institutional affiliation, era they're writing from */
   background: string;
-  /** Personality traits (e.g., "pedantic", "secretly admiring", "allergic to hyperbole") */
+  /** Personality traits (e.g., "world-weary", "quietly compassionate", "resigned to repetition") */
   personalityTraits: string[];
-  /** Known biases or pet peeves (e.g., "distrusts nightshelf accounts", "overvalues written sources") */
+  /** Known biases or blind spots (e.g., "distrusts nightshelf accounts", "overvalues written sources") */
   biases: string[];
-  /** Relationship to the source material (e.g., "admiring but skeptical", "frustrated archivist") */
+  /** Relationship to the source material (e.g., "has outlived most of the people described here", "exhausted custodian of difficult truths") */
   stance: string;
   /** Things the historian knows that aren't in the canon facts */
   privateFacts: string[];
-  /** Recurring bits, references, or running jokes to weave in */
+  /** Recurring preoccupations, refrains, or motifs to weave in */
   runningGags: string[];
 }
 

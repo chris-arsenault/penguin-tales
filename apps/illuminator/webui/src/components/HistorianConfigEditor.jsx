@@ -273,8 +273,8 @@ export default function HistorianConfigEditor({ config, onChange }) {
           lineHeight: '1.5',
         }}>
           Define the scholarly voice that annotates your world's entities and chronicles.
-          This historian will add margin notes — commentary, corrections, tangents, and
-          tongue-in-cheek observations — in a consistent voice across all content.
+          This historian will add margin notes — resigned corrections, weary observations,
+          dry asides — in a consistent voice across all content.
         </div>
         {!isConfigured && (
           <div style={{
@@ -325,7 +325,7 @@ export default function HistorianConfigEditor({ config, onChange }) {
           <textarea
             value={config.background}
             onChange={(e) => update('background', e.target.value)}
-            placeholder="A seasoned archivist who has spent forty years cataloguing the histories of the realm. Known for their meticulous annotations and occasional sarcasm..."
+            placeholder="A seasoned archivist who has spent forty years cataloguing the histories of the realm. Has outlived most of the people described in these texts. Still shows up to work."
             style={{
               width: '100%',
               minHeight: '80px',
@@ -345,20 +345,20 @@ export default function HistorianConfigEditor({ config, onChange }) {
         <div>
           <FieldLabel
             label="Personality Traits"
-            description="Short phrases that define the historian's character"
+            description="Short phrases that define the historian's character — think weary, not wacky"
           />
           <TagInput
             value={config.personalityTraits}
             onChange={(v) => update('personalityTraits', v)}
-            placeholder='e.g., "pedantic", "secretly admiring"'
+            placeholder='e.g., "world-weary", "quietly compassionate"'
           />
         </div>
 
         {/* Biases */}
         <div>
           <FieldLabel
-            label="Biases & Pet Peeves"
-            description="What they trust, distrust, or can't stand"
+            label="Biases & Blind Spots"
+            description="What they trust, distrust, or have given up arguing about"
           />
           <TagInput
             value={config.biases}
@@ -376,7 +376,7 @@ export default function HistorianConfigEditor({ config, onChange }) {
           <textarea
             value={config.stance}
             onChange={(e) => update('stance', e.target.value)}
-            placeholder='e.g., "Admiring but skeptical — believes the core events are real but that chroniclers embellish shamelessly"'
+            placeholder='e.g., "Has read too many of these accounts to be surprised, but still occasionally moved by the human cost of events others reduce to dates and outcomes"'
             style={{
               width: '100%',
               minHeight: '50px',
@@ -409,14 +409,14 @@ export default function HistorianConfigEditor({ config, onChange }) {
         {/* Running Gags */}
         <div>
           <FieldLabel
-            label="Running Gags"
-            description="Recurring references, in-jokes, or bits to occasionally weave into annotations"
+            label="Recurring Preoccupations"
+            description="Refrains, motifs, or things the historian keeps circling back to — not jokes, but patterns they can't stop noticing"
           />
           <ListEditor
             value={config.runningGags}
             onChange={(v) => update('runningGags', v)}
-            placeholder="Add a recurring bit"
-            itemPlaceholder='e.g., "Ongoing feud with Magister Fen over dating methodology"'
+            placeholder="Add a preoccupation"
+            itemPlaceholder='e.g., "The way institutions always outlive the people who built them"'
           />
         </div>
       </div>
