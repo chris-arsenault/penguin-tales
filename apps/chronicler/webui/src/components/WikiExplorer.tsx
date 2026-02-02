@@ -9,8 +9,8 @@
  */
 
 import { useState, useMemo, useEffect, useLayoutEffect, useCallback } from 'react';
-import type { WorldState, LoreData, ImageMetadata, WikiPage, HardState } from '../types/world.ts';
-import { useImageUrl, useImageUrls, useImageMetadata } from '@penguin-tales/image-store';
+import type { WorldState, LoreData, WikiPage, HardState } from '../types/world.ts';
+import { useImageUrl } from '@penguin-tales/image-store';
 import { buildPageIndex, buildPageById } from '../lib/wikiBuilder.ts';
 import { getCompletedChroniclesForSimulation, type ChronicleRecord } from '../lib/chronicleStorage.ts';
 import { getPublishedStaticPagesForProject, type StaticPage } from '../lib/staticPageStorage.ts';
@@ -50,7 +50,14 @@ function buildPageHash(pageId: string | null): string {
   if (!pageId) {
     return '#/';
   }
-  return `#/page/${encodeURIComponent(pageId)}`;
+  return `#/page/${encodePageIdForHash(pageId)}`;
+}
+
+/**
+ * Encode a page ID for hash routing while preserving slashes in slug paths.
+ */
+function encodePageIdForHash(pageId: string): string {
+  return pageId.split('/').map((segment) => encodeURIComponent(segment)).join('/');
 }
 
 function normalizeChronicles(records?: ChronicleRecord[]): ChronicleRecord[] {
@@ -247,45 +254,6 @@ export default function WikiExplorer({
     return buildProminenceScale(values, { distribution: DEFAULT_PROMINENCE_DISTRIBUTION });
   }, [worldData, dataError]);
 
-  // Collect all entity imageIds for bulk loading from the store
-  const entityImageIds = useMemo(() =>
-    worldData.hardState
-      .map(e => e.enrichment?.image?.imageId)
-      .filter((id): id is string => Boolean(id)),
-    [worldData]
-  );
-
-  // Bulk-load URLs and metadata from the shared image store
-  const { urls: entityImageUrls } = useImageUrls(entityImageIds);
-  const imageMetadataMap = useImageMetadata(entityImageIds);
-
-  // Build imageData structure from store (same shape wikiBuilder expects)
-  const imageData = useMemo((): ImageMetadata | null => {
-    if (entityImageUrls.size === 0) return null;
-    const results = [];
-    for (const entity of worldData.hardState) {
-      const imageId = entity.enrichment?.image?.imageId;
-      if (!imageId) continue;
-      const url = entityImageUrls.get(imageId);
-      const meta = imageMetadataMap.get(imageId);
-      if (url) {
-        results.push({
-          imageId,
-          entityId: entity.id,
-          entityName: entity.name,
-          entityKind: entity.kind,
-          prompt: '',
-          localPath: url,
-          thumbPath: url,
-          width: meta?.width,
-          height: meta?.height,
-          aspect: meta?.aspect,
-        });
-      }
-    }
-    return { generatedAt: '', totalImages: results.length, results };
-  }, [worldData, entityImageUrls, imageMetadataMap]);
-
   // Build lightweight page index (fast) - only if data is valid
   const { pageIndex, entityIndex } = useMemo(() => {
     if (dataError) {
@@ -306,7 +274,7 @@ export default function WikiExplorer({
   // Page cache - stores fully built pages by ID
   // Use useMemo to create a NEW cache when data changes, ensuring synchronous invalidation
   // (useEffect runs after render, which causes stale cache reads when chunks load)
-  const pageCache = useMemo(() => new Map<string, WikiPage>(), [worldData, loreData, imageData, chronicles, staticPages]);
+  const pageCache = useMemo(() => new Map<string, WikiPage>(), [worldData, loreData, chronicles, staticPages]);
 
   // Get a page from cache or build it on-demand
   const getPage = useCallback((pageId: string): WikiPage | null => {
@@ -323,7 +291,7 @@ export default function WikiExplorer({
       canonicalId,
       worldData,
       loreData,
-      imageData,
+      null,
       pageIndex,
       chronicles,
       staticPages,
@@ -333,7 +301,7 @@ export default function WikiExplorer({
       pageCache.set(canonicalId, page);
     }
     return page;
-  }, [worldData, loreData, imageData, pageIndex, chronicles, staticPages, prominenceScale, pageCache]);
+  }, [worldData, loreData, pageIndex, chronicles, staticPages, prominenceScale, pageCache]);
 
   // Convert index entries to minimal WikiPage objects for navigation components
   const indexAsPages = useMemo(() => {
@@ -428,10 +396,12 @@ export default function WikiExplorer({
   }, [currentPage, isChronicleIndex, isPagesIndex, isConfluxesIndex, isHuddlesIndex, isPageCategory, pageCategoryNamespace]);
 
   // Handle navigation - updates hash which triggers state update via hashchange
-  // Uses slug for entity page URLs (prettier, rename-friendly)
+  // Uses slug for entity/chronicle page URLs (prettier, rename-friendly)
   const handleNavigate = useCallback((pageId: string) => {
     const entry = pageIndex.byId.get(pageId);
-    const urlId = (entry && entry.type === 'entity') ? entry.slug : pageId;
+    const urlId = (entry && (entry.type === 'entity' || entry.type === 'chronicle') && entry.slug)
+      ? entry.slug
+      : pageId;
     const newHash = buildPageHash(urlId);
     if (window.location.hash !== newHash) {
       window.location.hash = newHash;
@@ -621,7 +591,6 @@ export default function WikiExplorer({
               page={currentPage}
               pages={indexAsPages}
               entityIndex={entityIndex}
-              imageData={imageData}
               disambiguation={currentDisambiguation}
               onNavigate={handleNavigate}
               onNavigateToEntity={handleNavigateToEntity}

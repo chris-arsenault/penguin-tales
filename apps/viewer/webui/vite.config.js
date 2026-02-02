@@ -26,6 +26,7 @@ export default defineConfig({
         'react-dom': { singleton: true, requiredVersion: '^19.0.0' },
         zustand: { singleton: true },
         '@penguin-tales/image-store': { singleton: true },
+        '@penguin-tales/narrative-store': { singleton: true },
       },
     }),
   ],

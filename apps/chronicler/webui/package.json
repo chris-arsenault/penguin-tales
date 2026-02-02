@@ -17,6 +17,7 @@
     "@uiw/react-md-editor": "^4.0.11",
     "fuse.js": "^7.1.0",
     "@penguin-tales/image-store": "file:../../../packages/image-store",
+    "@penguin-tales/narrative-store": "file:../../../packages/narrative-store",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zustand": "^5.0.2"

@@ -2556,3 +2556,129 @@ body {
 .preprint-export-config {
   margin-bottom: var(--space-lg);
 }
+
+/* ============================================================================
+   Chronicle Workspace
+   ============================================================================ */
+
+.chronicle-workspace {
+  display: flex;
+  flex-direction: column;
+  max-width: 900px;
+  height: 100%;
+}
+
+.chronicle-workspace-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg-primary);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+.chronicle-workspace-header-info h3 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.chronicle-workspace-header-stats {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.chronicle-workspace-header-actions {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.workspace-subtabs {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-lg);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.workspace-subtab {
+  padding: var(--space-xs) var(--space-md);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.workspace-subtab:hover {
+  background: var(--bg-primary);
+  color: var(--text-color);
+}
+
+.workspace-subtab.active {
+  background: var(--bg-primary);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.workspace-subtab.right-aligned {
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.workspace-subtab.right-aligned.active {
+  opacity: 1;
+}
+
+.workspace-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg);
+}
+
+.workspace-overflow-menu {
+  position: relative;
+}
+
+.workspace-overflow-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 160px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  padding: 4px;
+}
+
+.workspace-overflow-item {
+  display: block;
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease;
+}
+
+.workspace-overflow-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-color);
+}

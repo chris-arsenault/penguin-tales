@@ -79,6 +79,7 @@ interface EntityTimelineProps {
   onNavigate: (entityId: string) => void;
   onHoverEnter?: (entityId: string, e: React.MouseEvent) => void;
   onHoverLeave?: () => void;
+  loading?: boolean;
 }
 
 export default function EntityTimeline({
@@ -88,6 +89,7 @@ export default function EntityTimeline({
   onNavigate,
   onHoverEnter,
   onHoverLeave,
+  loading = false,
 }: EntityTimelineProps) {
   // Multi-expand state: set of expanded event IDs
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -179,7 +181,7 @@ export default function EntityTimeline({
           <span className={styles.checkboxLabel}>Show prominence-only events</span>
         </label>
         <div className={styles.emptyState}>
-          No timeline events recorded for this entity.
+          {loading ? 'Loading narrative history...' : 'No timeline events recorded for this entity.'}
         </div>
       </div>
     );

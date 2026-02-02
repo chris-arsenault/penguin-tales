@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Fuse from 'fuse.js';
 import { useImageStore, CDNBackend } from '@penguin-tales/image-store';
+import { useNarrativeStore } from '@penguin-tales/narrative-store';
 import ArchivistHost from './remotes/ArchivistHost.jsx';
 import ChroniclerHost from './remotes/ChroniclerHost.jsx';
 
@@ -388,6 +389,13 @@ export default function App() {
     setChunkPlan(null);
     setStatus('loading');
     setError(null);
+    useNarrativeStore.getState().reset();
+    setNarrativeHistoryStatus({
+      loading: false,
+      totalExpected: 0,
+      chunksLoaded: 0,
+      chunksTotal: 0,
+    });
 
     try {
       setBundleRequestUrl(bundleManifestUrl);
@@ -431,6 +439,19 @@ export default function App() {
           chunksLoaded: 0,
           chunksTotal: chunkFiles.length,
         });
+        useNarrativeStore.getState().setStatus({
+          loading: true,
+          totalExpected,
+          chunksLoaded: 0,
+          chunksTotal: chunkFiles.length,
+        });
+      } else {
+        useNarrativeStore.getState().setStatus({
+          loading: false,
+          totalExpected: 0,
+          chunksLoaded: 0,
+          chunksTotal: 0,
+        });
       }
       return;
     } catch (err) {
@@ -445,8 +466,27 @@ export default function App() {
       if (!normalized?.worldData) {
         throw new Error('Bundle is missing worldData.');
       }
+      if (!Array.isArray(normalized.worldData.narrativeHistory)) {
+        normalized.worldData.narrativeHistory = [];
+      }
+      const totalEvents = normalized.worldData.narrativeHistory.length;
       setBundle(normalized);
       setStatus('ready');
+      if (totalEvents > 0) {
+        useNarrativeStore.getState().ingestChunk(normalized.worldData.narrativeHistory);
+      }
+      useNarrativeStore.getState().setStatus({
+        loading: false,
+        totalExpected: totalEvents,
+        chunksLoaded: totalEvents ? 1 : 0,
+        chunksTotal: totalEvents ? 1 : 0,
+      });
+      setNarrativeHistoryStatus({
+        loading: false,
+        totalExpected: totalEvents,
+        chunksLoaded: totalEvents ? 1 : 0,
+        chunksTotal: totalEvents ? 1 : 0,
+      });
     } catch (err) {
       if (sequence !== loadSequence.current) return;
       setStatus('error');
@@ -503,29 +543,22 @@ export default function App() {
           chunksLoaded++;
           if (!items.length) continue;
           if (sequence !== loadSequence.current) return;
-
-          setBundle((prev) => {
-            if (!prev?.worldData) return prev;
-            const existing = Array.isArray(prev.worldData.narrativeHistory)
-              ? prev.worldData.narrativeHistory
-              : [];
-            return {
-              ...prev,
-              worldData: {
-                ...prev.worldData,
-                narrativeHistory: existing.concat(items),
-              },
-            };
-          });
+          useNarrativeStore.getState().ingestChunk(items);
 
           // Update loading progress
           setNarrativeHistoryStatus((prev) => ({
             ...prev,
             chunksLoaded,
           }));
+          useNarrativeStore.getState().setStatus({ chunksLoaded });
         } catch (chunkError) {
           console.warn('Viewer: failed to load narrativeHistory chunk.', chunkError);
           chunksLoaded++;
+          setNarrativeHistoryStatus((prev) => ({
+            ...prev,
+            chunksLoaded,
+          }));
+          useNarrativeStore.getState().setStatus({ chunksLoaded });
         }
       }
 
@@ -535,6 +568,25 @@ export default function App() {
         loading: false,
         chunksLoaded: chunksTotal,
       }));
+      useNarrativeStore.getState().setStatus({
+        loading: false,
+        chunksLoaded: chunksTotal,
+        chunksTotal,
+      });
+
+      const allEvents = useNarrativeStore.getState().getAllEvents();
+      if (allEvents.length > 0) {
+        setBundle((prev) => {
+          if (!prev?.worldData) return prev;
+          return {
+            ...prev,
+            worldData: {
+              ...prev.worldData,
+              narrativeHistory: allEvents,
+            },
+          };
+        });
+      }
     };
 
     const scheduleIdle = window.requestIdleCallback

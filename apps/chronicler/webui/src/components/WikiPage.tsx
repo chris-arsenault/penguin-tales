@@ -10,8 +10,9 @@
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import MDEditor from '@uiw/react-md-editor';
-import type { WikiPage, WikiSection, WikiSectionImage, WikiHistorianNote, HardState, ImageMetadata, DisambiguationEntry, ImageAspect } from '../types/world.ts';
-import { useImageUrl, useImageStore } from '@penguin-tales/image-store';
+import type { WikiPage, WikiSection, WikiSectionImage, WikiHistorianNote, HardState, DisambiguationEntry, ImageAspect } from '../types/world.ts';
+import { useImageUrl, useImageMetadata, useImageStore } from '@penguin-tales/image-store';
+import { useEntityNarrativeEvents, useNarrativeLoading } from '@penguin-tales/narrative-store';
 import { SeedModal, type ChronicleSeedData } from './ChronicleSeedViewer.tsx';
 import { applyWikiLinks } from '../lib/wikiBuilder.ts';
 import { resolveAnchorPhrase } from '../lib/fuzzyAnchor.ts';
@@ -125,6 +126,41 @@ function ChronicleImage({
         <figcaption className={styles.imageCaption}>{image.caption}</figcaption>
       )}
     </figure>
+  );
+}
+
+/**
+ * CoverHeroImage - Full-width hero banner for chronicle cover images
+ * Displays with a fade-to-background gradient overlay and title
+ */
+function CoverHeroImage({
+  imageId,
+  title,
+  onOpen,
+}: {
+  imageId: string;
+  title: string;
+  onOpen?: (imageUrl: string) => void;
+}) {
+  const { url: imageUrl, loading } = useImageUrl(imageId);
+  const [error, setError] = useState(false);
+
+  if (loading || error || !imageUrl) return null;
+
+  return (
+    <div className={styles.coverHero}>
+      <img
+        src={imageUrl}
+        alt={title}
+        className={styles.coverHeroImage}
+        onError={() => setError(true)}
+        onClick={() => onOpen?.(imageUrl)}
+        style={{ cursor: onOpen ? 'zoom-in' : undefined }}
+      />
+      <div className={styles.coverHeroOverlay}>
+        <h1 className={styles.chronicleTitleHero}>{title}</h1>
+      </div>
+    </div>
   );
 }
 
@@ -627,6 +663,10 @@ function MarkdownSection({
   onHoverEnter?: (pageId: string, e: React.MouseEvent) => void;
   onHoverLeave?: () => void;
 }) {
+  const encodePageIdForHash = useCallback((pageId: string) => {
+    return pageId.split('/').map((segment) => encodeURIComponent(segment)).join('/');
+  }, []);
+
   // Pre-process content:
   // 1. Apply wiki links to wrap entity names with [[...]]
   // 2. Convert [[Entity Name]] or [[Entity Name|entityId]] to markdown links with proper URLs
@@ -657,12 +697,12 @@ function MarkdownSection({
 
       if (pageId) {
         // Use #/page/{pageId} format that matches the router
-        return `[${displayName}](#/page/${encodeURIComponent(pageId)})`;
+        return `[${displayName}](#/page/${encodePageIdForHash(pageId)})`;
       }
       // Keep as-is if page not found
       return match;
     });
-  }, [content, entityNameMap, aliasMap, linkableNames]);
+  }, [content, entityNameMap, aliasMap, linkableNames, encodePageIdForHash]);
 
   // Handle clicks on page links within the markdown
   const handleClick = useCallback((e: React.MouseEvent) => {
@@ -795,7 +835,6 @@ interface WikiPageViewProps {
   page: WikiPage;
   pages: WikiPage[];
   entityIndex: Map<string, HardState>;
-  imageData: ImageMetadata | null;
   /** Other pages that share this page's base name (for disambiguation) */
   disambiguation?: DisambiguationEntry[];
   onNavigate: (pageId: string) => void;
@@ -808,7 +847,6 @@ export default function WikiPageView({
   page,
   pages,
   entityIndex,
-  imageData,
   disambiguation,
   onNavigate,
   onNavigateToEntity,
@@ -818,6 +856,9 @@ export default function WikiPageView({
   const isMobile = breakpoint === 'mobile';
   const isTablet = breakpoint === 'tablet';
   const showInfoboxInline = isMobile || isTablet;
+  const isEntityPage = page.type === 'entity' || page.type === 'era';
+  const narrativeEvents = useEntityNarrativeEvents(isEntityPage ? page.id : null);
+  const narrativeLoading = useNarrativeLoading();
   const [showSeedModal, setShowSeedModal] = useState(false);
   const [activeImage, setActiveImage] = useState<{
     url: string;
@@ -874,28 +915,21 @@ export default function WikiPageView({
     return page?.content?.summary;
   }, [hoveredBacklink, pages]);
 
-  // Load image for hovered entity
-  // Build a map for fast image lookup by entityId
-  const imageByEntityId = useMemo(() => {
-    const map = new Map<string, ImageMetadata['results'][0]>();
-    if (imageData?.results) {
-      for (const img of imageData.results) {
-        map.set(img.entityId, img);
+  // Load image for hovered entity on demand
+  const hoveredImageId = hoveredEntity?.enrichment?.image?.imageId;
+  const { url: hoveredImageUrl } = useImageUrl(hoveredImageId);
+
+  const pageById = useMemo(() => new Map(pages.map(p => [p.id, p])), [pages]);
+  const imageIdToEntityId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entity of entityIndex.values()) {
+      const imageId = entity.enrichment?.image?.imageId;
+      if (imageId && !map.has(imageId)) {
+        map.set(imageId, entity.id);
       }
     }
     return map;
-  }, [imageData]);
-
-  // Resolve hovered image URL synchronously using pre-resolved paths
-  const hoveredImageUrl = useMemo(() => {
-    if (!hoveredBacklink) return null;
-    const imageEntry = imageByEntityId.get(hoveredBacklink.id);
-    if (!imageEntry) return null;
-    // Use thumbPath (already resolved by normalizeBundle) or fall back to localPath
-    return imageEntry.thumbPath || imageEntry.localPath || null;
-  }, [hoveredBacklink, imageByEntityId]);
-
-  const pageById = useMemo(() => new Map(pages.map(p => [p.id, p])), [pages]);
+  }, [entityIndex]);
 
   const resolveImageDetails = useCallback(({
     entityId,
@@ -918,9 +952,8 @@ export default function WikiPageView({
       return { title: caption || '', summary: '' };
     }
     let resolvedEntityId = entityId;
-    if (!resolvedEntityId && imageId && imageData?.results) {
-      const match = imageData.results.find(result => result.imageId === imageId);
-      resolvedEntityId = match?.entityId;
+    if (!resolvedEntityId && imageId) {
+      resolvedEntityId = imageIdToEntityId.get(imageId);
     }
 
     let title = '';
@@ -945,7 +978,7 @@ export default function WikiPageView({
     }
 
     return { title, summary };
-  }, [imageData, entityIndex, pageById, page.content.summary, page.title]);
+  }, [imageIdToEntityId, entityIndex, pageById, page.content.summary, page.title]);
 
   const openImageModal = useCallback((imageUrl: string, info: {
     entityId?: string;
@@ -1101,9 +1134,12 @@ export default function WikiPageView({
     return names;
   }, [entityIndex, pages]);
 
-  // Get image for infobox with dimension info
-  const infoboxImage = page.content.infobox?.image?.path || page.images[0]?.path;
-  const infoboxImageAspect = page.content.infobox?.image?.aspect || page.images[0]?.aspect;
+  const infoboxEntity = entityIndex.get(page.id);
+  const infoboxImageId = infoboxEntity?.enrichment?.image?.imageId;
+  const { url: infoboxImageUrl } = useImageUrl(infoboxImageId);
+  const infoboxMetadataMap = useImageMetadata(infoboxImageId ? [infoboxImageId] : []);
+  const infoboxMetadata = infoboxImageId ? infoboxMetadataMap.get(infoboxImageId) : undefined;
+  const infoboxImageAspect = infoboxMetadata?.aspect;
 
   // State for detected aspect (fallback when metadata is missing)
   const [detectedAspect, setDetectedAspect] = useState<ImageAspect | undefined>(undefined);
@@ -1127,20 +1163,16 @@ export default function WikiPageView({
 
   // Handle infobox image click - load full-size for lightbox
   const handleInfoboxImageClick = useCallback(async () => {
-    if (!infoboxImage) return;
+    if (!infoboxImageUrl) return;
     const entityId = entityIndex.has(page.id) ? page.id : undefined;
     // Try to load full-size image for lightbox
-    let fullUrl = infoboxImage;
-    if (entityId) {
-      const entity = entityIndex.get(entityId);
-      const imageId = entity?.enrichment?.image?.imageId;
-      if (imageId) {
-        try {
-          const loaded = await useImageStore.getState().loadUrl(imageId, 'full');
-          if (loaded) fullUrl = loaded;
-        } catch {
-          // Fall back to infobox image path
-        }
+    let fullUrl = infoboxImageUrl;
+    if (entityId && infoboxImageId) {
+      try {
+        const loaded = await useImageStore.getState().loadUrl(infoboxImageId, 'full');
+        if (loaded) fullUrl = loaded;
+      } catch {
+        // Fall back to infobox image path
       }
     }
     openImageModal(fullUrl, {
@@ -1148,33 +1180,54 @@ export default function WikiPageView({
       fallbackTitle: page.title,
       fallbackSummary: page.content.summary,
     });
-  }, [infoboxImage, entityIndex, page.id, page.title, page.content.summary, openImageModal]);
+  }, [infoboxImageUrl, infoboxImageId, entityIndex, page.id, page.title, page.content.summary, openImageModal]);
+
+  const isChronicle = page.type === 'chronicle';
 
   return (
     <div className={styles.container}>
+      {/* Breadcrumbs - always above everything including hero */}
+      <div className={styles.breadcrumbs}>
+        <span
+          className={styles.breadcrumbLink}
+          onClick={() => onNavigate('')}
+        >
+          Home
+        </span>
+        {' / '}
+        <span>
+          {page.type === 'category'
+            ? 'Categories'
+            : page.type === 'chronicle'
+            ? 'Chronicles'
+            : page.type === 'conflux'
+            ? 'Confluxes'
+            : page.type}
+        </span>
+        {' / '}
+        <span className={styles.breadcrumbCurrent}>{page.title}</span>
+      </div>
+
+      {/* Chronicle hero banner with cover image */}
+      {isChronicle && page.content.coverImageId && (
+        <CoverHeroImage
+          imageId={page.content.coverImageId}
+          title={page.title}
+          onOpen={(url) => setActiveImage({ url, title: page.title })}
+        />
+      )}
+
       {/* Header */}
       <div className={styles.header}>
-        <div className={styles.breadcrumbs}>
-          <span
-            className={styles.breadcrumbLink}
-            onClick={() => onNavigate('')}
-          >
-            Home
-          </span>
-          {' / '}
-          <span>
-            {page.type === 'category'
-              ? 'Categories'
-              : page.type === 'chronicle'
-              ? 'Chronicles'
-              : page.type === 'conflux'
-              ? 'Confluxes'
-              : page.type}
-          </span>
-          {' / '}
-          <span className={styles.breadcrumbCurrent}>{page.title}</span>
-        </div>
-        <h1 className={styles.title}>{page.title}</h1>
+
+        {/* Chronicle title: centered display serif (skip if already in hero) */}
+        {isChronicle && !page.content.coverImageId && (
+          <h1 className={styles.chronicleTitle}>{page.title}</h1>
+        )}
+        {/* Non-chronicle title: standard */}
+        {!isChronicle && (
+          <h1 className={styles.title}>{page.title}</h1>
+        )}
 
         {/* Disambiguation notice - Wikipedia-style hatnote */}
         {disambiguation && disambiguation.length > 0 && (
@@ -1205,7 +1258,8 @@ export default function WikiPageView({
           </div>
         )}
 
-        {page.content.summary && (
+        {/* Summary + cover image for non-chronicle pages only */}
+        {!isChronicle && page.content.summary && (
           <div className={styles.summary}>
             {page.content.coverImageId && (
               <ChronicleImage
@@ -1225,7 +1279,8 @@ export default function WikiPageView({
             {page.content.coverImageId && <div className={styles.clearfix} />}
           </div>
         )}
-        {seedData && (
+        {/* Generation context button for non-chronicle pages only */}
+        {!isChronicle && seedData && (
           <button
             className={styles.seedButton}
             onClick={() => setShowSeedModal(true)}
@@ -1240,9 +1295,9 @@ export default function WikiPageView({
         {showInfoboxInline && page.content.infobox && (
           <div className={styles.infoboxInline}>
             <div className={styles.infoboxHeader}>{page.title}</div>
-            {infoboxImage && (
+            {infoboxImageUrl && (
               <img
-                src={infoboxImage}
+                src={infoboxImageUrl}
                 alt={page.title}
                 className={getInfoboxImageClass(effectiveAspect, isMobile)}
                 onLoad={handleInfoboxImageLoad}
@@ -1326,40 +1381,43 @@ export default function WikiPageView({
         {/* Sections */}
         {page.content.sections.map(section => (
           <div key={section.id} id={section.id} className={styles.section}>
-            <h2 className={styles.sectionHeading}>{section.heading}</h2>
-            {section.heading === 'Timeline' && page.timelineEvents && page.timelineEvents.length > 0 ? (
-              <>
-                {/* Prominence Timeline graph - shows prominence changes over time */}
-                <ProminenceTimeline
-                  events={page.timelineEvents}
-                  entityId={page.id}
-                  prominenceScale={prominenceScale}
-                />
-                {/* Entity Timeline table - shows discrete events (excluding prominence-only) */}
-                <EntityTimeline
-                  events={page.timelineEvents}
-                  entityId={page.id}
-                  entityIndex={entityIndex}
-                  onNavigate={handleEntityClick}
-                  onHoverEnter={handleEntityHoverEnter}
-                  onHoverLeave={handleEntityHoverLeave}
-                />
-              </>
-            ) : (
-              <SectionWithImages
-                section={section}
-                entityNameMap={entityNameMap}
-                aliasMap={aliasMap}
-                linkableNames={linkableNames}
-                onNavigate={handleEntityClick}
-                onHoverEnter={handleEntityHoverEnter}
-                onHoverLeave={handleEntityHoverLeave}
-                onImageOpen={handleInlineImageOpen}
-                historianNotes={page.content.historianNotes}
-              />
+            {/* Hide default "Chronicle" heading on chronicle pages */}
+            {!(isChronicle && section.heading === 'Chronicle') && (
+              <h2 className={styles.sectionHeading}>{section.heading}</h2>
             )}
+            <SectionWithImages
+              section={section}
+              entityNameMap={entityNameMap}
+              aliasMap={aliasMap}
+              linkableNames={linkableNames}
+              onNavigate={handleEntityClick}
+              onHoverEnter={handleEntityHoverEnter}
+              onHoverLeave={handleEntityHoverLeave}
+              onImageOpen={handleInlineImageOpen}
+              historianNotes={page.content.historianNotes}
+            />
           </div>
         ))}
+
+        {isEntityPage && (narrativeLoading || narrativeEvents.length > 0) && (
+          <div id="timeline" className={styles.section}>
+            <h2 className={styles.sectionHeading}>Timeline</h2>
+            <ProminenceTimeline
+              events={narrativeEvents}
+              entityId={page.id}
+              prominenceScale={prominenceScale}
+            />
+            <EntityTimeline
+              events={narrativeEvents}
+              entityId={page.id}
+              entityIndex={entityIndex}
+              onNavigate={handleEntityClick}
+              onHoverEnter={handleEntityHoverEnter}
+              onHoverLeave={handleEntityHoverLeave}
+              loading={narrativeLoading}
+            />
+          </div>
+        )}
 
           {/* Unmatched historian notes (not anchored to any section) */}
           {page.content.historianNotes && page.content.historianNotes.length > 0 && (() => {
@@ -1440,9 +1498,9 @@ export default function WikiPageView({
         {!showInfoboxInline && page.content.infobox && (
           <div className={styles.infobox}>
             <div className={styles.infoboxHeader}>{page.title}</div>
-            {infoboxImage && (
+            {infoboxImageUrl && (
               <img
-                src={infoboxImage}
+                src={infoboxImageUrl}
                 alt={page.title}
                 className={getInfoboxImageClass(effectiveAspect, false)}
                 onLoad={handleInfoboxImageLoad}

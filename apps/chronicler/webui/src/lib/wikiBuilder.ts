@@ -50,6 +50,8 @@ export { applyWikiLinks };
 
 import type { ChronicleBackref } from '../types/world.ts';
 
+const DEBUG_WIKI_BUILDER = import.meta.env?.DEV;
+
 /**
  * Resolve the image ID for a chronicle backref based on its imageSource config.
  *
@@ -376,12 +378,14 @@ export function buildPageIndex(
     if (!content) continue;
 
     const title = chronicle.title;
+    const titleSlug = slugify(title);
+    const chronicleSlug = titleSlug ? `chronicle/${titleSlug}` : '';
 
     const entry: PageIndexEntry = {
       id: chronicle.chronicleId,
       title,
       type: 'chronicle',
-      slug: `chronicle/${slugify(title)}`,
+      slug: chronicleSlug,
       summary: chronicle.summary || undefined,
       categories: [],
       chronicle: {
@@ -399,6 +403,9 @@ export function buildPageIndex(
 
     entries.push(entry);
     byId.set(entry.id, entry);
+    if (chronicleSlug && !bySlug.has(chronicleSlug)) {
+      bySlug.set(chronicleSlug, entry.id);
+    }
   }
 
   // Build static page index entries (two-pass for proper cross-page link resolution)
@@ -768,6 +775,8 @@ function buildChroniclePageFromChronicle(
 ): WikiPage {
   const content = getChronicleContent(chronicle);
   const title = chronicle.title;
+  const titleSlug = slugify(title);
+  const chronicleSlug = titleSlug ? `chronicle/${titleSlug}` : '';
 
   // Extract image refs from chronicle
   const imageRefs = chronicle.imageRefs;
@@ -789,7 +798,7 @@ function buildChroniclePageFromChronicle(
 
   return {
     id: chronicle.chronicleId,
-    slug: `chronicle/${slugify(title)}`,
+    slug: chronicleSlug,
     title,
     type: 'chronicle',
     chronicle: {
@@ -1084,23 +1093,27 @@ function buildChronicleSections(
     });
   }
 
-  console.log('[wikiBuilder] buildChronicleSections:', {
-    contentLength: content.length,
-    sectionCount: sections.length,
-    sectionHeadings: sections.map(s => s.heading),
-    sectionLengths: sections.map(s => s.content.length),
-    imageRefsCount: imageRefs?.refs?.length ?? 0,
-  });
+  if (DEBUG_WIKI_BUILDER) {
+    console.log('[wikiBuilder] buildChronicleSections:', {
+      contentLength: content.length,
+      sectionCount: sections.length,
+      sectionHeadings: sections.map(s => s.heading),
+      sectionLengths: sections.map(s => s.content.length),
+      imageRefsCount: imageRefs?.refs?.length ?? 0,
+    });
+  }
 
   // Attach images to sections by anchor text
   if (imageRefs?.refs && worldData) {
     attachImagesToSections(sections, imageRefs.refs, worldData);
   }
 
-  console.log('[wikiBuilder] After image attachment:', {
-    sectionsWithImages: sections.filter(s => s.images && s.images.length > 0).length,
-    imagesPerSection: sections.map(s => ({ heading: s.heading, imageCount: s.images?.length ?? 0 })),
-  });
+  if (DEBUG_WIKI_BUILDER) {
+    console.log('[wikiBuilder] After image attachment:', {
+      sectionsWithImages: sections.filter(s => s.images && s.images.length > 0).length,
+      imagesPerSection: sections.map(s => ({ heading: s.heading, imageCount: s.images?.length ?? 0 })),
+    });
+  }
 
   return { sections };
 }
@@ -1136,19 +1149,21 @@ function attachImagesToSections(
   refs: ChronicleImageRef[],
   worldData: WorldState
 ): void {
-  console.log('[wikiBuilder] attachImagesToSections called with:', {
-    sectionCount: sections.length,
-    refCount: refs.length,
-    refs: refs.map(r => ({
-      refId: r.refId,
-      type: r.type,
-      status: r.status,
-      anchorText: r.anchorText?.slice(0, 50),
-      anchorIndex: r.anchorIndex,
-      size: r.size,
-      hasGeneratedImageId: !!r.generatedImageId,
-    })),
-  });
+  if (DEBUG_WIKI_BUILDER) {
+    console.log('[wikiBuilder] attachImagesToSections called with:', {
+      sectionCount: sections.length,
+      refCount: refs.length,
+      refs: refs.map(r => ({
+        refId: r.refId,
+        type: r.type,
+        status: r.status,
+        anchorText: r.anchorText?.slice(0, 50),
+        anchorIndex: r.anchorIndex,
+        size: r.size,
+        hasGeneratedImageId: !!r.generatedImageId,
+      })),
+    });
+  }
 
   for (const ref of refs) {
     // Skip prompt requests that aren't complete
@@ -1181,14 +1196,16 @@ function attachImagesToSections(
 
     if (!imageId) continue;
 
-    console.log('[wikiBuilder] Attaching image:', {
-      refId: ref.refId,
-      type: ref.type,
-      imageId,
-      anchorText: ref.anchorText?.slice(0, 50),
-      toSection: section.heading,
-      sectionContentPreview: section.content.slice(0, 100),
-    });
+    if (DEBUG_WIKI_BUILDER) {
+      console.log('[wikiBuilder] Attaching image:', {
+        refId: ref.refId,
+        type: ref.type,
+        imageId,
+        anchorText: ref.anchorText?.slice(0, 50),
+        toSection: section.heading,
+        sectionContentPreview: section.content.slice(0, 100),
+      });
+    }
 
     // Initialize images array if needed
     if (!section.images) {
@@ -1346,22 +1363,6 @@ function buildEntityPage(
     });
   }
 
-  // Timeline events (raw events for EntityTimeline component)
-  // Filter events where this entity appears in participantEffects
-  const timelineEvents = (worldData.narrativeHistory ?? []).filter(event =>
-    event.participantEffects?.some(p => p.entity.id === entity.id)
-  );
-
-  // Add Timeline section placeholder if there are events
-  if (timelineEvents.length > 0) {
-    sections.push({
-      id: `section-${sectionIndex++}`,
-      heading: 'Timeline',
-      level: 2,
-      content: '', // Content rendered by EntityTimeline component
-    });
-  }
-
   // Build infobox
   const infobox = buildEntityInfobox(entity, worldData, imageIndex, prominenceScale);
 
@@ -1397,7 +1398,6 @@ function buildEntityPage(
           aspect: imageIndex.get(entity.id)!.aspect,
         }]
       : [],
-    timelineEvents: timelineEvents.length > 0 ? timelineEvents : undefined,
     lastUpdated: entity.updatedAt || entity.createdAt,
   };
 }

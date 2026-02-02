@@ -21,7 +21,8 @@
     "packages/canonry-dsl",
     "packages/canonry-dsl-v2",
     "packages/shared-components",
-    "packages/image-store"
+    "packages/image-store",
+    "packages/narrative-store"
   ],
   "scripts": {
     "build:conduit": "npm --prefix packages/canonry-dsl-v2 run build",
