@@ -876,6 +876,29 @@ Return ONLY valid JSON in this exact format:
 {"summary": "..."}`;
 }
 
+// Words that stay lowercase in title case (unless first word)
+const TITLE_CASE_MINOR = new Set([
+  'a', 'an', 'the', 'and', 'but', 'or', 'nor', 'for', 'yet', 'so',
+  'in', 'on', 'at', 'to', 'by', 'of', 'up', 'as', 'if', 'off',
+  'per', 'via', 'from', 'into', 'with', 'over', 'near', 'upon',
+  'than', 'that', 'when', 'where', 'who',
+]);
+
+function toTitleCase(title: string): string {
+  return title
+    .split(/(\s+|-)/  )
+    .map((segment, i) => {
+      // Preserve whitespace and hyphens as-is
+      if (/^[\s-]+$/.test(segment)) return segment;
+      const lower = segment.toLowerCase();
+      // First word and last word are always capitalized
+      if (i === 0) return segment.charAt(0).toUpperCase() + segment.slice(1);
+      if (TITLE_CASE_MINOR.has(lower)) return lower;
+      return segment.charAt(0).toUpperCase() + segment.slice(1);
+    })
+    .join('');
+}
+
 const TITLE_NUDGES = [
   'Try a poetic image or metaphor.',
   'Frame it around a turning point or decisive action.',
@@ -903,8 +926,10 @@ function buildTitleCandidatesPrompt(
 ${styleContext}
 Rules:
 - Each title: 3-8 words, evocative, faithful to the content
+- Title Case capitalization
 - Each candidate must use a DIFFERENT structural approach (not just synonyms)
 - Vary wildly — mix abstract, concrete, character-focused, thematic, tonal
+- Every title must read as a coherent phrase a reader would recognize as a title
 - Avoid formulaic patterns: no "X's Y" possessives, no starting with "The"
 - ${pickNudge()}
 
@@ -931,11 +956,12 @@ function buildTitleSynthesisPrompt(
 
 ${candidateList}
 ${styleContext}
-Your job: synthesize a FINAL title by combining, remixing, or riffing on the strongest elements from these candidates. You may pick one if it's already perfect, but prefer to create something new that merges the best words, rhythms, or ideas from multiple candidates.
+Your job: synthesize a FINAL title by combining, remixing, or riffing on the strongest elements from these candidates. You may pick one if it's already perfect, but prefer to create something new that merges the best words, rhythms, or ideas from multiple candidates. The result must read as a coherent, natural title — not a collage of fragments.
 
 Rules:
 - 3-8 words
-- Must feel distinct from any single candidate — a mashup, not a selection
+- Title Case capitalization
+- Must read as a single coherent phrase, not disconnected words stitched together
 - Match the narrative style's tone and register
 - No "X's Y" possessives, no starting with "The"
 
@@ -1287,6 +1313,11 @@ async function executeSummaryStep(
     }
   } else if (candidates.length === 1) {
     title = candidates[0];
+  }
+
+  // Enforce title case regardless of what the LLM produced
+  if (title) {
+    title = toTitleCase(title);
   }
 
   // --- Combine costs from all calls ---
