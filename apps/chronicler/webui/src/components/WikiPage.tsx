@@ -157,18 +157,18 @@ const HISTORIAN_NOTE_LABELS: Record<string, string> = {
 };
 
 /**
- * Inject footnote-style superscript markers into markdown content at anchor positions.
- * Returns the modified content and the ordered list of matched notes.
+ * Inject footnote-style superscript markers into markdown content for POPOUT notes only.
+ * Returns the modified content and the ordered list of matched notes (for tooltip lookup).
  */
-function injectHistorianFootnotes(
+function injectPopoutFootnotes(
   content: string,
   notes: WikiHistorianNote[],
 ): { content: string; orderedNotes: WikiHistorianNote[] } {
-  if (!notes || notes.length === 0) return { content, orderedNotes: [] };
+  const popout = (notes || []).filter(n => n.display === 'popout');
+  if (popout.length === 0) return { content, orderedNotes: [] };
 
-  // Resolve all anchors and sort by position (reverse for safe string splicing)
   const resolved: Array<{ note: WikiHistorianNote; index: number; phraseLen: number }> = [];
-  for (const note of notes) {
+  for (const note of popout) {
     const match = resolveAnchorPhrase(note.anchorPhrase, content);
     if (match) {
       resolved.push({ note, index: match.index, phraseLen: match.phrase.length });
@@ -176,10 +176,8 @@ function injectHistorianFootnotes(
   }
   resolved.sort((a, b) => a.index - b.index);
 
-  // Build ordered notes list for tooltip lookup
   const orderedNotes = resolved.map(r => r.note);
 
-  // Inject sups from end to start so indices stay valid
   let result = content;
   for (let i = resolved.length - 1; i >= 0; i--) {
     const { index, phraseLen } = resolved[i];
@@ -192,18 +190,18 @@ function injectHistorianFootnotes(
 }
 
 /**
- * Inject footnotes into a text slice using global indices from orderedNotes.
- * Used when images split content into fragments but footnote numbering must be consistent.
+ * Inject popout footnotes into a text slice using global indices from orderedNotes.
  */
-function injectFootnotesWithGlobalIndex(
+function injectPopoutFootnotesWithGlobalIndex(
   slice: string,
   allNotes: WikiHistorianNote[],
   orderedNotes: WikiHistorianNote[],
 ): string {
-  if (!allNotes || allNotes.length === 0) return slice;
+  const popout = (allNotes || []).filter(n => n.display === 'popout');
+  if (popout.length === 0) return slice;
 
   const resolved: Array<{ note: WikiHistorianNote; index: number; phraseLen: number; globalIdx: number }> = [];
-  for (const note of allNotes) {
+  for (const note of popout) {
     const match = resolveAnchorPhrase(note.anchorPhrase, slice);
     if (match) {
       const globalIdx = orderedNotes.indexOf(note);
@@ -223,6 +221,48 @@ function injectFootnotesWithGlobalIndex(
   }
 
   return result;
+}
+
+/**
+ * HistorianCalloutFloat - Floated callout box for 'full' display notes.
+ * Text flows around this element. Allowed to break right margin.
+ */
+function HistorianCalloutFloat({ note }: { note: WikiHistorianNote }) {
+  const color = HISTORIAN_NOTE_COLORS[note.type] || HISTORIAN_NOTE_COLORS.commentary;
+  const icon = HISTORIAN_NOTE_ICONS[note.type] || '✦';
+  const label = HISTORIAN_NOTE_LABELS[note.type] || 'Commentary';
+
+  return (
+    <aside style={{
+      float: 'right',
+      clear: 'right',
+      width: '280px',
+      margin: '4px -40px 8px 16px',
+      padding: '10px 14px',
+      background: 'rgba(139, 115, 85, 0.08)',
+      borderLeft: `3px solid ${color}`,
+      borderRadius: '0 4px 4px 0',
+      fontSize: '13px',
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontStyle: 'italic',
+      color: 'var(--color-text-muted)',
+      lineHeight: '1.6',
+    }}>
+      <div style={{
+        fontSize: '10px',
+        fontWeight: 700,
+        color,
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        marginBottom: '4px',
+        fontStyle: 'normal',
+        fontFamily: 'system-ui, sans-serif',
+      }}>
+        {icon} {label}
+      </div>
+      {note.text}
+    </aside>
+  );
 }
 
 /**
@@ -308,14 +348,29 @@ function SectionWithImages({
 }) {
   const images = section.images || [];
   const content = section.content;
+  const allNotes = historianNotes || [];
 
-  // Inject historian footnote markers into the content string
+  // Inject popout footnote markers into content (popout notes only)
   const { content: annotatedContent, orderedNotes } = useMemo(
-    () => injectHistorianFootnotes(content, historianNotes || []),
-    [content, historianNotes],
+    () => injectPopoutFootnotes(content, allNotes),
+    [content, allNotes],
   );
 
-  // Hover state for footnote tooltips
+  // Resolve full-display notes to positions for fragment insertion
+  const fullNoteInserts = useMemo(() => {
+    const full = allNotes.filter(n => n.display === 'full');
+    if (full.length === 0) return [];
+    return full
+      .map(n => {
+        const match = resolveAnchorPhrase(n.anchorPhrase, content);
+        if (!match) return null;
+        return { note: n, position: match.index + match.phrase.length };
+      })
+      .filter((x): x is { note: WikiHistorianNote; position: number } => x !== null)
+      .sort((a, b) => a.position - b.position);
+  }, [allNotes, content]);
+
+  // Hover state for popout footnote tooltips
   const [hoveredNote, setHoveredNote] = React.useState<{ note: WikiHistorianNote; pos: { x: number; y: number } } | null>(null);
 
   const handleFootnoteHover = useCallback((e: React.MouseEvent) => {
@@ -336,14 +391,13 @@ function SectionWithImages({
     }
   }, []);
 
-  // Use annotated content for text fragments (with footnote sups injected)
-  const contentForFragments = annotatedContent;
+  const hasInserts = images.length > 0 || fullNoteInserts.length > 0;
 
-  if (images.length === 0) {
+  if (!hasInserts) {
     return (
       <div onMouseOver={handleFootnoteHover} onMouseOut={handleFootnoteLeave}>
         <MarkdownSection
-          content={contentForFragments}
+          content={annotatedContent}
           entityNameMap={entityNameMap}
           aliasMap={aliasMap}
           linkableNames={linkableNames}
@@ -356,10 +410,12 @@ function SectionWithImages({
     );
   }
 
-  // Resolve image positions against the ORIGINAL content, then split the
-  // ANNOTATED content (with footnotes already injected) at paragraph boundaries.
-  // We track character offsets introduced by footnote injection to map positions.
-  const positionedImages: Array<{ image: WikiSectionImage; origPosition: number }> = [];
+  // Build unified insert list: images + full notes, sorted by position in original content
+  type InsertItem =
+    | { kind: 'image'; image: WikiSectionImage; position: number }
+    | { kind: 'fullNote'; note: WikiHistorianNote; position: number };
+
+  const insertItems: InsertItem[] = [];
 
   for (const img of images) {
     const resolved = img.anchorText ? resolveAnchorPhrase(img.anchorText, content) : null;
@@ -370,39 +426,47 @@ function SectionWithImages({
     if (position < 0) {
       position = content.length;
     }
-    positionedImages.push({ image: img, origPosition: position });
+    insertItems.push({ kind: 'image', image: img, position });
   }
 
-  positionedImages.sort((a, b) => a.origPosition - b.origPosition);
+  for (const { note, position } of fullNoteInserts) {
+    insertItems.push({ kind: 'fullNote', note, position });
+  }
 
-  // Split ORIGINAL content at paragraph boundaries for images, then inject
-  // footnotes into each resulting text slice. This keeps footnote numbering
-  // consistent with orderedNotes (from the full-content injection above).
-  // We use a counter to assign globally-consistent data-note-idx values.
+  insertItems.sort((a, b) => a.position - b.position);
+
+  // Build fragments: split original content at paragraph boundaries, then inject
+  // popout footnotes into each text slice for consistent numbering
   const fragments: Array<
     | { type: 'text'; content: string }
     | { type: 'image'; image: WikiSectionImage }
+    | { type: 'fullNote'; note: WikiHistorianNote }
   > = [];
   let lastIndex = 0;
 
-  for (const { image, origPosition } of positionedImages) {
-    const anchorEnd = origPosition + (image.anchorText?.length || 0);
+  for (const item of insertItems) {
+    const anchorEnd = item.kind === 'image'
+      ? item.position + (item.image.anchorText?.length || 0)
+      : item.position;
     const paragraphEnd = content.indexOf('\n\n', anchorEnd);
     const insertPoint = paragraphEnd >= 0 ? paragraphEnd : content.length;
 
     if (insertPoint > lastIndex) {
       const slice = content.slice(lastIndex, insertPoint);
-      // Find which orderedNotes fall in this slice and inject with correct global indices
-      const annotated = injectFootnotesWithGlobalIndex(slice, historianNotes || [], orderedNotes);
+      const annotated = injectPopoutFootnotesWithGlobalIndex(slice, allNotes, orderedNotes);
       fragments.push({ type: 'text', content: annotated });
     }
-    fragments.push({ type: 'image', image });
+    if (item.kind === 'image') {
+      fragments.push({ type: 'image', image: item.image });
+    } else {
+      fragments.push({ type: 'fullNote', note: item.note });
+    }
     lastIndex = paragraphEnd >= 0 ? paragraphEnd + 2 : insertPoint;
   }
 
   if (lastIndex < content.length) {
     const slice = content.slice(lastIndex);
-    const annotated = injectFootnotesWithGlobalIndex(slice, historianNotes || [], orderedNotes);
+    const annotated = injectPopoutFootnotesWithGlobalIndex(slice, allNotes, orderedNotes);
     fragments.push({ type: 'text', content: annotated });
   }
 
@@ -430,6 +494,13 @@ function SectionWithImages({
               </React.Fragment>
             );
           }
+        } else if (fragment.type === 'fullNote') {
+          return (
+            <HistorianCalloutFloat
+              key={`fn-${fragment.note.noteId}`}
+              note={fragment.note}
+            />
+          );
         } else {
           return (
             <MarkdownSection
